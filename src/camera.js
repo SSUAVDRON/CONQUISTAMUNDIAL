@@ -23,8 +23,12 @@ export class Camera {
   fit(mapW, mapH) {
     this.mapW = mapW;
     this.mapH = mapH;
-    this.zoom = Math.min(this.viewW / mapW, this.viewH / mapH) * 0.96;
-    this.minZoom = this.zoom * 0.7;
+    const contain = Math.min(this.viewW / mapW, this.viewH / mapH) * 0.96;
+    const cover = Math.max(this.viewW / mapW, this.viewH / mapH);
+    // En un móvil en vertical, un mapa apaisado entero quedaría como una
+    // franja estrecha: se acerca a medio camino (se ve el centro y se desliza)
+    this.zoom = cover / contain > 2.2 ? contain * Math.sqrt(cover / contain) : contain;
+    this.minZoom = contain * 0.7;
     this.x = (mapW - this.viewW / this.zoom) / 2;
     this.y = (mapH - this.viewH / this.zoom) / 2;
   }

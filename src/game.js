@@ -72,6 +72,8 @@ export class Game {
     // El renderizador activa esto para saber qué píxeles repintar
     this.trackDirty = false;
     this.dirty = [];
+    /** Sube con cada casilla que cambia de dueño (invalida resúmenes guardados). */
+    this.ownerVersion = 0;
 
     this.onEvent = null;
     this.eventLog = [];
@@ -272,6 +274,7 @@ export class Game {
     if (oldId === newId) return;
     const map = this.map;
     owner[t] = newId;
+    this.ownerVersion++;
     if (oldId) {
       const op = this.players[oldId];
       // Saqueo: quien conquista una casilla se lleva su parte del oro del país
@@ -300,7 +303,10 @@ export class Game {
     const c = map.neighbors(t, nb);
     for (let k = 0; k < c; k++) {
       const n = nb[k];
-      this._updateBorder(n);
+      // Solo puede cambiar la frontera de las vecinas del antiguo o del nuevo
+      // dueño (para un tercero, `t` era y sigue siendo ajena)
+      const on = owner[n];
+      if (on && (on === oldId || on === newId)) this._updateBorder(n);
       if (this.trackDirty) this.dirty.push(n);
     }
 
@@ -384,8 +390,35 @@ export class Game {
     return false;
   }
 
-  /** Resumen de vecinos para la IA: casillas de tierra libre y por nación. */
+  /**
+   * Resumen de vecinos para la IA: casillas de tierra libre y por nación.
+   * Se guarda mientras no cambie ninguna casilla (varios bots preguntan por el
+   * mismo líder en el mismo turno); el resultado es idéntico al de recalcularlo.
+   */
   neighborSummary(p) {
+    const v = this.ownerVersion;
+    const hit = p._nbSummary;
+    if (hit && hit.version === v && hit.tick === this.ticks) return hit.value;
+    const value = this._neighborSummary(p);
+    p._nbSummary = { version: v, tick: this.ticks, value };
+    return value;
+  }
+
+  /** ¿Toca `p` alguna casilla de tierra libre? (sale en cuanto encuentra una) */
+  hasWildNeighbor(p) {
+    const map = this.map;
+    const nb = NB_SCAN;
+    for (const t of p.border) {
+      const c = map.neighbors(t, nb);
+      for (let k = 0; k < c; k++) {
+        const n = nb[k];
+        if (map.terrain[n] !== 0 && this.owner[n] === 0) return true;
+      }
+    }
+    return false;
+  }
+
+  _neighborSummary(p) {
     const map = this.map;
     const nb = NB_SCAN;
     const counts = new Map();

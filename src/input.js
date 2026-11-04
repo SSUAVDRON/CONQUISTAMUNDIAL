@@ -23,10 +23,15 @@ export class Input {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('keydown', (e) => this._key(e, true));
     window.addEventListener('keyup', (e) => this._key(e, false));
+    // La posición del lienzo solo cambia al girar o redimensionar: leerla en
+    // cada movimiento del dedo obligaba al navegador a recalcular la página
+    window.addEventListener('resize', () => {
+      this._rect = null;
+    });
   }
 
   _pos(e) {
-    const r = this.canvas.getBoundingClientRect();
+    const r = (this._rect ??= this.canvas.getBoundingClientRect());
     return [e.clientX - r.left, e.clientY - r.top];
   }
 

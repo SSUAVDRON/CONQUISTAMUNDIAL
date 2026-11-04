@@ -795,6 +795,11 @@ function flagSprite() {
   return flagImage && flagImage.complete && flagImage.naturalWidth ? flagImage : null;
 }
 
+/** ¿Está ya cargada la imagen con todas las banderas? */
+export function flagReady() {
+  return !!flagSprite();
+}
+
 export function hasFlag(iso) {
   return !!iso && Object.hasOwn(FLAG_INDEX, iso);
 }

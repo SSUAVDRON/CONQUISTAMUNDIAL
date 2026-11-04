@@ -54,8 +54,12 @@ const state = {
  * sobrado). Los paneles (HTML) siguen nítidos; solo cambia el mapa.
  */
 const quality = { level: 0, slowMs: 0, fastMs: 0, ema: 16.7, drops: 0 };
+// Pantalla táctil como puntero principal (móvil o tableta): el lienzo empieza
+// a 1,5× como mucho (en pantallas de 2,5-3× apenas se nota en el mapa y cuesta
+// el triple de píxeles), baja antes si va justo y no hay tooltip que calcular
+const TOUCH = !!window.matchMedia?.('(pointer: coarse)').matches;
 function dprSteps() {
-  const native = Math.min(2, window.devicePixelRatio || 1);
+  const native = Math.min(TOUCH ? 1.5 : 2, window.devicePixelRatio || 1);
   return [...new Set([native, 1.5, 1.25, 1].filter((d) => d <= native))];
 }
 function currentDpr() {
@@ -68,7 +72,7 @@ function adaptQuality(dt) {
   const steps = dprSteps();
   if (quality.ema > 25 && quality.level < steps.length - 1) {
     quality.slowMs += dt;
-    if (quality.slowMs > 2500) {
+    if (quality.slowMs > (TOUCH ? 1200 : 2500)) {
       quality.level++;
       quality.drops++;
       quality.slowMs = quality.fastMs = 0;
@@ -148,6 +152,10 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   state.human = game.human;
   state.mapSize = mapSize;
   state.renderer = new Renderer(canvas, game, camera);
+  // La misma densidad con la que se creó el lienzo (en móviles de 2,5-3× no es
+  // la del dispositivo): si no, el mapa salía desplazado y los toques no
+  // caían donde se veía
+  state.renderer.setDpr(currentDpr());
   applySettings();
   state.acc = 0;
   state.buildMode = null;
@@ -162,7 +170,8 @@ function startDemo() {
   leaveOnline();
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
-  state.speed = 2;
+  // En el móvil, la partida de fondo del menú va más tranquila (gasta menos)
+  state.speed = TOUCH ? 1 : 2;
   ui.hideHud();
   ui.closeNation();
   home.show();
@@ -257,6 +266,8 @@ function applySettings() {
   }
   state.pointerOn = a.puntero !== false;
   if (state.renderer) {
+    // Modo ligero en pantallas táctiles: sin viñeta y nombres recolocados con menos frecuencia
+    state.renderer.lite = TOUCH;
     state.renderer.options = {
       badges: a.marcadores !== false,
       emojis: a.emojis !== false,
@@ -669,7 +680,7 @@ const input = new Input(canvas, camera, {
   onBuildKey: setBuildMode,
   onHover(sx, sy) {
     state.hover = { tile: sx < 0 ? -1 : tileAt(sx, sy), x: sx, y: sy };
-    if (!state.demo && state.game) ui.updateTooltip(state.game, state.hover.tile, sx, sy);
+    if (!state.demo && state.game && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, sx, sy);
   },
   onRatio: setRatio,
   onRatioStep: (d) => setRatio(state.ratio + d),
@@ -738,14 +749,18 @@ function frame(now) {
   input.update(dt);
   camera.update(now);
   if (!state.demo) ui.animate(dt);
-  state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
+  state.frameNo = (state.frameNo || 0) + 1;
+  if (!(state.demo && TOUCH && state.frameNo & 1)) {
+    state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+  }
   sound.update(state.game, camera, state.human, state.demo);
   updatePointer(now);
 
   if (!state.demo && state.human && now - state.lastHud > 200) {
     state.lastHud = now;
     ui.update(state.game, state.human, state.ratio, state.buildMode);
-    if (state.hover.tile >= 0) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
+    if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
     if (state.net) ui.setNetNote(state.net.status);
     if (tutorial.active) tutorial.update(tutorialState());
     checkEnd();

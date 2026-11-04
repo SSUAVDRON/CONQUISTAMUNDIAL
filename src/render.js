@@ -6,7 +6,7 @@
 import { CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
-import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, emblemFor } from './icons.js';
+import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
@@ -598,7 +598,7 @@ export class Renderer {
     }
     this._flushDirty(now);
     this._updateGlowsAndUpload(now);
-    if (now - this.lastLabelTime > LABEL_INTERVAL_MS) {
+    if (now - this.lastLabelTime > (this.lite ? 2 : 1) * LABEL_INTERVAL_MS) {
       this._updateLabels();
       this.lastLabelTime = now;
     }
@@ -668,6 +668,8 @@ export class Renderer {
    * en cada fotograma costaba).
    */
   _drawVignette() {
+    // En el móvil (modo ligero) no: es una capa a pantalla completa más
+    if (this.lite) return;
     const { ctx, camera } = this;
     const w = camera.viewW;
     const h = camera.viewH;
@@ -1422,16 +1424,16 @@ export class Renderer {
       // Los jugadores y aliados se nombran siempre, aunque sean pequeños
       if (allied || player) size = Math.max(size, 13);
       if (size < 8) continue;
+      // Tamaño en pasos de 1 px (2 px en los grandes): así la imagen guardada
+      // del nombre sirve muchos fotogramas seguidos
+      size = size < 20 ? Math.round(size) : Math.round(size / 2) * 2;
       const traitor = this.game.isTraitor(p);
-      const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
       const me = p === human;
-      ctx.font = `${me ? 800 : player ? 700 : 600} ${size}px system-ui, sans-serif`;
-      const w = ctx.measureText(name).width;
-      const icon = player || size >= 11 ? size * 1.35 : 0;
-      const s2 = size * 0.78;
-      const troops = formatNumber(p.troops);
+      const N = this._nameSprite(p, size, me, allied, traitor, player);
+      const s2 = Math.round(size * 0.78);
       // Caja que ocupa (icono + nombre + tropas) para no pisar otros nombres
-      const x0 = sx - w / 2 - icon - 2;
+      const w = N.w;
+      const x0 = sx - w / 2 - N.iconW - 2;
       const x1 = sx + w / 2 + 2;
       const y0 = sy - size * 0.95;
       const y1 = sy + size * 0.6 + s2 * 0.6;
@@ -1442,38 +1444,155 @@ export class Renderer {
       if (hit && !me) continue;
       boxes.push(x0, y0, x1, y1);
       L.size = size;
-      // Nombres discretos: texto oscuro con un halo claro (el tuyo, en su color vivo)
-      ctx.lineWidth = Math.max(2.5, size / (me ? 4 : 6));
-      ctx.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.55)';
-      ctx.fillStyle = me ? this.options.nameColor || '#ffd23f' : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(28, 32, 40, 0.92)';
-      ctx.strokeText(name, sx, sy - size * 0.35);
-      if (me) {
-        // Tu nombre, en color vivo y con un halo para encontrarlo de un vistazo
-        ctx.shadowColor = ctx.fillStyle;
-        ctx.shadowBlur = Math.min(16, size * 0.6);
+      // Nombre (con su icono) y tropas: imágenes ya dibujadas, centradas
+      // En píxeles enteros del lienzo: copia directa, sin remuestrear
+      const d = this.dpr;
+      ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
+      this._drawTroops(formatNumber(p.troops), sx, sy + size * 0.6, s2, me);
+    }
+  }
+
+  /** Lienzo de una caché de nombres (se reutiliza el elemento si ya existe). */
+  _spriteCanvas(old, cw, ch) {
+    const c = old || document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(cw * this.dpr));
+    c.height = Math.max(1, Math.ceil(ch * this.dpr));
+    const g = c.getContext('2d');
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    return g;
+  }
+
+  _labelEntry(p) {
+    const cache = (this._labelSprites ??= new Map());
+    let e = cache.get(p.id);
+    if (!e) cache.set(p.id, (e = { name: {}, troops: {} }));
+    return e;
+  }
+
+  /**
+   * Nombre de una nación ya dibujado (texto con halo e icono a la izquierda),
+   * guardado como imagen: dibujar texto con contorno cada fotograma es caro, y
+   * en el móvil se nota. Solo se rehace si cambia algo de lo que se ve.
+   */
+  _nameSprite(p, size, me, allied, traitor, player) {
+    const e = this._labelEntry(p).name;
+    const color = me ? this.options.nameColor || '#ffd23f' : '';
+    const flag = !player && flagReady() && hasFlag(p.flag);
+    const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${this.dpr}`;
+    if (e.key === key) return e;
+    e.key = key;
+    const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
+    const font = `${me ? 800 : player ? 700 : 600} ${size}px system-ui, sans-serif`;
+    const mc = this.ctx;
+    mc.font = font;
+    const w = mc.measureText(name).width;
+    const lw = Math.max(2.5, size / (me ? 4 : 6));
+    const blur = me ? Math.min(16, size * 0.6) : 0;
+    const pad = Math.ceil(lw + blur / this.dpr + 2);
+    const iconW = player || size >= 11 ? size * 1.45 : 0;
+    e.w = w;
+    e.iconW = iconW;
+    e.cw = iconW + w + pad * 2;
+    e.ch = size * 1.7 + pad * 2;
+    e.tx = pad + iconW + w / 2;
+    e.ty = pad + size * 0.85;
+    const g = this._spriteCanvas(e.canvas, e.cw, e.ch);
+    e.canvas = g.canvas;
+    // Nombres discretos: texto oscuro con un halo claro (el tuyo, en su color vivo)
+    g.font = font;
+    g.lineWidth = lw;
+    g.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.55)';
+    g.fillStyle = me ? color : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(28, 32, 40, 0.92)';
+    g.strokeText(name, e.tx, e.ty);
+    if (me) {
+      // Tu nombre, en color vivo y con un halo para encontrarlo de un vistazo
+      g.shadowColor = color;
+      g.shadowBlur = blur;
+    }
+    g.fillText(name, e.tx, e.ty);
+    g.shadowBlur = 0;
+    g.shadowColor = 'transparent';
+    if (player) {
+      // Jugador de verdad (no un bot): insignia con una silueta de persona
+      drawPlayerBadge(g, e.tx - w / 2 - size * 0.75, e.ty, size * 1.05, p.color);
+    } else if (iconW) {
+      // Bandera (países reales) o emblema a la izquierda del nombre
+      if (!flag || !drawFlag(g, p.flag, e.tx - w / 2 - size * 0.85, e.ty, size * 0.8)) {
+        drawEmblem(g, emblemFor(p), e.tx - w / 2 - size * 0.75, e.ty, size * 1.15);
       }
-      ctx.fillText(name, sx, sy - size * 0.35);
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-      if (player) {
-        // Jugador de verdad (no un bot): insignia con una silueta de persona
-        drawPlayerBadge(ctx, sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.05, p.color);
-      } else if (icon) {
-        // Bandera (países reales) o emblema a la izquierda del nombre
-        if (!drawFlag(ctx, p.flag, sx - w / 2 - size * 0.85, sy - size * 0.35, size * 0.8)) {
-          drawEmblem(ctx, emblemFor(p), sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.15);
-        }
+    }
+    return e;
+  }
+
+  /**
+   * Juego de caracteres de las cifras de tropas (0-9 . k M) ya dibujados para
+   * un tamaño: las tuyas en tu color; las de los rivales en blanco con un
+   * contorno oscuro suave. Las cifras cambian casi a cada turno, así que se
+   * componen carácter a carácter en vez de dibujar texto cada fotograma.
+   */
+  _digitFont(s2, me) {
+    const color = me ? this.options.nameColor || '#ffd23f' : '';
+    const key = `${s2}|${color}|${this.dpr}`;
+    const fonts = (this._digitFonts ??= new Map());
+    let f = fonts.get(key);
+    if (f) return f;
+    if (fonts.size > 48) fonts.clear();
+    const chars = '0123456789.kM';
+    const font = `600 ${s2}px system-ui, sans-serif`;
+    const lw = Math.max(2.5, s2 / (me ? 5 : 4.5));
+    const pad = Math.ceil(lw / 2 + 1);
+    const mc = this.ctx;
+    mc.font = font;
+    const widths = {};
+    const xs = {};
+    let x = 0;
+    for (const ch of chars) {
+      widths[ch] = mc.measureText(ch).width;
+      xs[ch] = x;
+      x += Math.ceil(widths[ch] + pad * 2) + 2; // 2 px de separación: sin sangrado
+    }
+    const cellH = Math.ceil(s2 * 1.4 + pad * 2);
+    // Arriba solo el contorno y abajo solo el relleno: se dibujan en dos
+    // pasadas para que el contorno de un carácter no tape al anterior
+    const g = this._spriteCanvas(null, x, cellH * 2 + 2);
+    g.font = font;
+    g.textAlign = 'left';
+    g.lineWidth = lw;
+    g.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(22, 28, 40, 0.5)';
+    g.fillStyle = me ? color : 'rgba(255, 255, 255, 0.96)';
+    const ty = pad + s2 * 0.7;
+    for (const ch of chars) {
+      g.strokeText(ch, xs[ch] + pad, ty);
+      g.fillText(ch, xs[ch] + pad, Math.round((cellH + 2) * this.dpr) / this.dpr + ty);
+    }
+    f = { canvas: g.canvas, widths, xs, pad, cellH, ty };
+    fonts.set(key, f);
+    return f;
+  }
+
+  /** Cifra de tropas centrada en (cx, cy) con el juego de caracteres guardado. */
+  _drawTroops(text, cx, cy, s2, me) {
+    const f = this._digitFont(s2, me);
+    const { ctx, dpr } = this;
+    let w = 0;
+    for (let i = 0; i < text.length; i++) w += f.widths[text[i]] || 0;
+    // Cada carácter, en píxeles enteros del lienzo (copia directa, sin remuestrear)
+    const ch = Math.round(f.cellH * dpr);
+    const y = Math.round((cy - f.ty) * dpr) / dpr;
+    for (let pass = 0; pass < 2; pass++) {
+      let x = cx - w / 2;
+      const srcY = pass * Math.round((f.cellH + 2) * dpr);
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const cw = f.widths[c];
+        if (cw === undefined) continue;
+        const sw = Math.round((cw + f.pad * 2) * dpr);
+        ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, Math.round((x - f.pad) * dpr) / dpr, y, sw / dpr, ch / dpr);
+        x += cw;
       }
-      // Tropas: las tuyas en tu color; las de los rivales en blanco con un
-      // contorno oscuro suave (en negro pesaban demasiado sobre el mapa)
-      ctx.font = `600 ${s2}px system-ui, sans-serif`;
-      if (!me) {
-        ctx.strokeStyle = 'rgba(22, 28, 40, 0.5)';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
-      }
-      ctx.lineWidth = Math.max(2.5, s2 / (me ? 5 : 4.5));
-      ctx.strokeText(troops, sx, sy + size * 0.6);
-      ctx.fillText(troops, sx, sy + size * 0.6);
     }
   }
 
@@ -1486,31 +1605,37 @@ export class Renderer {
     if (!L) return;
     const [sx, sy] = camera.worldToScreen(L.x, L.y);
     if (sx < -40 || sy < -60 || sx > camera.viewW + 40 || sy > camera.viewH + 40) return;
-    // Por encima del nombre (si se dibuja) y con un pequeño vaivén
-    // Por encima del nombre tal y como se ha dibujado en este fotograma
+    // Por encima del nombre tal y como se ha dibujado en este fotograma, con
+    // un pequeño vaivén
     const nameSize = L.size || 0;
     const lift = (nameSize ? nameSize * 1.1 : 0) + 18 + Math.sin(now / 260) * 3;
-    const x = sx;
-    const y = sy - lift;
-    ctx.save();
-    ctx.font = '800 11px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const w = 34;
-    const h = 18;
-    ctx.beginPath();
-    ctx.roundRect(x - w / 2, y - h / 2 - 6, w, h, 9);
-    ctx.moveTo(x - 5, y + 3);
-    ctx.lineTo(x, y + 9);
-    ctx.lineTo(x + 5, y + 3);
-    ctx.fillStyle = rgbToCss(human.color);
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#ffffff';
-    ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('TÚ', x, y - 6 + 0.5);
-    ctx.restore();
+    // El globo se dibuja una vez (por color y resolución) y se copia
+    const d = this.dpr;
+    const key = `${human.color}|${d}`;
+    if (this._youKey !== key) {
+      this._youKey = key;
+      const W = 40;
+      const H = 34;
+      const g = this._spriteCanvas(this._youCanvas, W, H);
+      this._youCanvas = g.canvas;
+      const x = W / 2;
+      const y = 22; // punta del globo en (x, y + 9)
+      g.font = '800 11px system-ui, sans-serif';
+      g.beginPath();
+      g.roundRect(x - 17, y - 15, 34, 18, 9);
+      g.moveTo(x - 5, y + 3);
+      g.lineTo(x, y + 9);
+      g.lineTo(x + 5, y + 3);
+      g.fillStyle = rgbToCss(human.color);
+      g.fill();
+      g.lineWidth = 2;
+      g.strokeStyle = '#ffffff';
+      g.stroke();
+      g.fillStyle = '#ffffff';
+      g.fillText('TÚ', x, y - 6 + 0.5);
+    }
+    const c = this._youCanvas;
+    ctx.drawImage(c, Math.round((sx - 20) * d) / d, Math.round((sy - lift - 22) * d) / d, c.width / d, c.height / d);
   }
 
   /**

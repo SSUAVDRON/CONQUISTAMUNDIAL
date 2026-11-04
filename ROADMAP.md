@@ -149,6 +149,10 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   los jugadores; expansión sin casillas sueltas; +15 % de tropas
 - Desplegables con el estilo del juego (fondo oscuro, flecha propia, lista
   legible); tropas de los rivales en blanco en vez de negro
+- Móvil: panel inferior compacto con los 8 edificios a la vista, HUD más
+  pequeño en vertical y en horizontal; dibujo más ligero (resolución 1,5×,
+  nombres y cifras guardados como imágenes, sin desenfoques) y corregido el
+  desfase del mapa en pantallas muy densas
 
 ## Próximo
 

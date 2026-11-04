@@ -27,6 +27,8 @@ export class Player {
     // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
     this.troopMult = 1;
     this.goldMult = 1;
+    /** Resumen de vecinos de la IA guardado (ver Game.neighborSummary). */
+    this._nbSummary = null;
 
     this.troops = 0;
     this.gold = CONFIG.startGold;

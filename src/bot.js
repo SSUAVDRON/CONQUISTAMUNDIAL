@@ -400,8 +400,8 @@ export class ColonyBrain {
   think() {
     const g = this.game;
     const p = this.player;
-    const { wild } = g.neighborSummary(p);
-    if (wild > 0 && !p.attacks.has(0) && p.troops > p.maxTroops() * 0.25) {
+    // Lo barato primero: solo se mira la frontera si de verdad puede expandirse
+    if (!p.attacks.has(0) && p.troops > p.maxTroops() * 0.25 && g.hasWildNeighbor(p)) {
       g.launchAttack(p, 0, Math.floor(p.troops * 0.2));
     }
   }

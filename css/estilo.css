@@ -1792,3 +1792,97 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 .reglas-rejilla .interruptores { grid-column: 1 / -1; flex-wrap: wrap; }
 #sala-ajustes .reglas-rejilla { margin-top: 12px; }
 @media (max-width: 720px) { .reglas-rejilla { grid-template-columns: 1fr; } }
+
+/* =========================================================== Móvil (al final: prevalece)
+   Vertical: panel inferior en tres filas cortas (cifras, fuerza de ataque en una
+   línea y los 8 edificios a la vez, sin deslizar). Horizontal (pantallas bajas):
+   todo en una sola fila. Clasificación, combates y avisos más pequeños. */
+@media (max-width: 720px), (max-height: 500px) and (orientation: landscape) {
+  #panel-jugador {
+    left: calc(6px + env(safe-area-inset-left, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    margin: 0;
+    border-radius: 12px;
+  }
+  #panel-jugador .pj-resumen, #panel-jugador .pj-ataque, #panel-jugador .pj-obras { padding: 0; border: 0; }
+  #panel-jugador .cabecera { margin-bottom: 2px; padding-right: 26px; min-height: 18px; }
+  #panel-jugador .cabecera strong { font-size: 12.5px; }
+  #panel-jugador .barra { height: 5px; margin-bottom: 4px; }
+  #panel-jugador .cifras { gap: 1px 6px; grid-template-columns: 1.75fr 1fr 0.9fr 0.62fr; }
+  #panel-jugador .cifras .valor { font-size: 13px; }
+  #panel-jugador .etq { font-size: 9px; letter-spacing: 0.02em; }
+  #panel-jugador .etq-icono { width: 10px; height: 10px; }
+  #panel-jugador .cifras .sub { font-size: 10px; min-height: 12px; }
+  .pj-plegar { top: 4px; right: 4px; width: 24px; height: 24px; }
+  /* Fuerza de ataque en una línea: cifra a la izquierda y barra a la derecha */
+  #panel-jugador .ratio { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; }
+  #panel-jugador .ratio-titulo { display: none; }
+  #panel-jugador .ratio-cifra strong { font-size: 16px; }
+  #panel-jugador .ratio-cifra span { font-size: 11px; }
+  #ratio { margin: 0; height: 8px; }
+  #ratio::-webkit-slider-thumb { width: 22px; height: 22px; }
+  /* Los 8 edificios a la vez: icono encima y precio debajo */
+  #construir { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; overflow: visible; padding: 0; }
+  #construir button { flex-direction: column; justify-content: center; gap: 0; height: 44px; min-width: 0; padding: 2px 1px; }
+  #construir canvas { width: 22px; height: 22px; }
+  #construir .b-coste { font-size: 9.5px; }
+  #construir .b-tecla { display: none; }
+  #construir .b-num { top: 1px; right: 3px; font-size: 9px; }
+  /* Clasificación y combates, compactos */
+  #columna-izquierda { gap: 5px; }
+  #clasificacion li:nth-child(n+4):not(.yo) { display: none; }
+  #lista-clasificacion .tro { display: none; }
+  #lista-clasificacion li { font-size: 11.5px; }
+  #combates .frente:nth-child(n+2) { display: none; }
+  /* Avisos: los dos últimos, más pequeños y sin icono */
+  #avisos { width: min(220px, calc(100vw - 16px)); padding: 3px 5px 5px; }
+  #avisos .cab-plegable { font-size: 9.5px; padding: 1px 3px 3px; }
+  #eventos { gap: 4px; }
+  #avisos #eventos .evento { grid-template-columns: minmax(0, 1fr) auto; gap: 4px; font-size: 11px; line-height: 1.25; padding: 4px 7px 5px; border-radius: 8px; }
+  #avisos #eventos .ev-icono { display: none; }
+  #avisos #eventos .evento:nth-last-child(n+3) { display: none; }
+  .pista { font-size: 12px; padding: 6px 12px; }
+  /* Galería de mapas del inicio: tarjetas pequeñas, sin tanto desplazamiento */
+  .galeria { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .mapa-tarjeta { padding: 4px 4px 6px; gap: 3px; border-radius: 10px; }
+  .mapa-tarjeta canvas { border-radius: 6px; }
+  .mapa-tarjeta strong { font-size: 12px; }
+  .mapa-tarjeta small { font-size: 10px; }
+}
+@media (max-width: 720px) {
+  #panel-jugador { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; padding: 6px 8px 7px; }
+}
+/* Móvil en horizontal: una sola fila baja */
+@media (max-height: 500px) and (orientation: landscape) {
+  #panel-jugador { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; padding: 5px 34px 6px 8px; }
+  #panel-jugador .pj-resumen { flex: 1.35 1 0; }
+  #panel-jugador .pj-ataque { flex: 0.62 1 0; }
+  #panel-jugador .pj-obras { flex: 1.8 1 0; }
+  #panel-jugador .cabecera { display: none; }
+  #panel-jugador .etq-icono { display: none; }
+  #panel-jugador .ratio { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+  #construir button { height: 40px; }
+  #barra-superior { top: calc(6px + env(safe-area-inset-top, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); gap: 6px; padding: 3px 5px; }
+  #barra-superior .dato { font-size: 12px; }
+  #barra-superior .dato + .dato { padding-left: 6px; }
+  #barra-superior button { padding: 4px 8px; font-size: 12px; }
+  #dato-lider { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .btn-mi-nacion span { display: none; }
+  #columna-izquierda { top: calc(6px + env(safe-area-inset-top, 0px)); left: calc(6px + env(safe-area-inset-left, 0px)); width: 186px; }
+  #columna-izquierda #clasificacion { padding: 3px 6px 5px; }
+  #avisos { right: calc(6px + env(safe-area-inset-right, 0px)); bottom: calc(var(--pj-alto, 60px) + 12px + env(safe-area-inset-bottom, 0px)); }
+  #avisos #eventos .evento:nth-last-child(n+2) { display: none; }
+}
+
+/* Pantallas táctiles: sin desenfoque detrás de los paneles (con el mapa
+   moviéndose, el móvil tendría que volver a desenfocar cada panel en cada
+   fotograma) ni rayas animadas que obligan a repintar; a cambio, fondos algo
+   más opacos para que se sigan leyendo bien */
+@media (pointer: coarse) {
+  * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .panel { --panel: rgba(12, 18, 30, 0.93); }
+  #avisos { background: linear-gradient(180deg, rgba(16, 24, 40, 0.95), rgba(9, 13, 22, 0.97)); }
+  #pj-barra::after, #combates .frente:not(.saliendo) .f-barra-a::after { animation: none; }
+}
