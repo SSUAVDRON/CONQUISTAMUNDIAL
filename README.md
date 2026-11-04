@@ -114,12 +114,12 @@ base de datos.
 
 | Concepto | Cómo funciona |
 |---|---|
-| Despliegue | Los primeros 10 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. Cada nación empieza con una mancha pequeña e irregular (unas 250 casillas; las colonias, menos). |
-| Expansión | Los países crecen con formas irregulares, no en círculos: cada nación tiene sus propios «lóbulos» de ruido que deciden por dónde avanza antes, el terreno difícil (mesetas, montañas) se rodea y se toma después, y hay algo de azar por casilla. Al principio los países son más pequeños que antes; contra otras naciones los frentes son casi como antes (un frente muy irregular es más largo y aceleraba las guerras). |
+| Despliegue | Los primeros 15 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. Cada nación empieza con una mancha pequeña e irregular (unas 250 casillas; las colonias, menos). |
+| Expansión | Al hacer clic en tierra libre (o en un vecino), avanza sobre todo **hacia donde has hecho clic**: todo el lado de tu país que mira hacia allí crece a la vez, en un frente ancho y uniforme, y lo de detrás se queda casi quieto; otro clic en otra dirección reorienta el avance. Los bots crecen con formas irregulares (lóbulos de ruido, terreno y azar), sin dirección fija.|
 | Mapa | Casillas muy pequeñas: los mapas tienen 4 veces la resolución del principio en cada eje (16 veces más casillas; el mundo, 3520×1597). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. Las rutas por mar se buscan primero en una rejilla gruesa y luego solo por ese pasillo, así que siguen siendo rápidas. |
-| Tropas | Crecen solas (más despacio que al principio y con un máximo menor). El máximo y la velocidad dependen de tu territorio; cerca del máximo el crecimiento se frena. |
+| Tropas | Crecen solas. Empiezas con 2.500 y un máximo de base alto (3.000 más lo que da el territorio), así que al principio se generan muchas; luego el máximo y la velocidad dependen de tu territorio y cerca del máximo el crecimiento se frena. |
 | Atacar | Clic en tierra libre o en una nación vecina: se envía el % de tus tropas que marque **Fuerza de ataque**. Repetir el clic refuerza el ataque. |
-| Coste | Tierra libre: 1,5 tropas por casilla (la expansión del principio va poco a poco: hacia el minuto 1 está ocupada un tercio de la tierra, a los 3 minutos casi toda). Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
+| Coste | Tierra libre: 3 tropas por casilla, así que te expandes en proporción a las tropas que mandas: con pocas, poco; con muchas, mucho (en el mundo con 90 naciones, hacia el minuto 1 está ocupado un 40 % de la tierra y a los 3 minutos casi toda). Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Velocidad de conquista | Cuantas más tropas mandas, más rápido avanzas: en tierra libre según las tropas por casilla de frente, contra una nación según tu superioridad sobre su densidad (hasta ×3,5). |

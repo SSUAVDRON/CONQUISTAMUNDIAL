@@ -132,6 +132,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   raíles y trenes de las fábricas, también hacia edificios enemigos
 - Muchas más naciones (hasta 200; partida rápida 90; más países reales en los
   mapas y naciones inventadas si se piden más) y colonias (hasta 300)
+- 15 s para elegir dónde empezar; más tropas al principio; la expansión
+  avanza hacia donde haces clic y en proporción a las tropas enviadas
 
 ## Próximo
 

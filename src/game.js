@@ -463,7 +463,7 @@ export class Game {
       return;
     }
     if (this.hasLandBorder(p, targetId, map.landBody[tile])) {
-      this.launchAttack(p, targetId, troops);
+      this.launchAttack(p, targetId, troops, { focus: tile });
     } else {
       this.launchBoat(p, tile, troops);
     }
@@ -473,7 +473,7 @@ export class Game {
    * Lanza (o refuerza) un ataque terrestre. Si el objetivo nos está atacando a
    * la vez, las tropas de ambos ataques se anulan primero.
    */
-  launchAttack(p, targetId, troops, { deduct = true } = {}) {
+  launchAttack(p, targetId, troops, { deduct = true, focus = -1 } = {}) {
     if (!p.alive || targetId === p.id) return false;
     const target = targetId ? this.players[targetId] : null;
     if (target && (!target.alive || this.isAllied(p.id, targetId))) return false;
@@ -481,8 +481,10 @@ export class Game {
     if (troops < 1) return false;
 
     let atk = p.attacks.get(targetId);
+    if (atk && !atk.done && focus >= 0 && focus !== atk.focus) this._refocus(atk, focus);
     if (!atk || atk.done) {
       atk = new Attack(p, targetId, 0);
+      this._aim(atk, focus);
       this._initFrontier(atk);
       if (atk.inFrontier.size === 0) return false;
       p.attacks.set(targetId, atk);
@@ -517,6 +519,46 @@ export class Game {
     }
   }
 
+  /**
+   * Apunta el ataque hacia `tile` (el clic): guarda el centro de la frontera
+   * del atacante y la dirección hacia el clic. Sin clic (bots), en todas direcciones.
+   */
+  _aim(atk, tile) {
+    atk.focus = tile;
+    if (tile < 0) return;
+    const map = this.map;
+    const W = map.width;
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (const t of atk.attacker.border) {
+      sx += t % W;
+      sy += (t / W) | 0;
+      n++;
+    }
+    if (!n) return;
+    atk.cx = sx / n;
+    atk.cy = sy / n;
+    const vx = (tile % W) - atk.cx;
+    const vy = ((tile / W) | 0) - atk.cy;
+    const len = Math.sqrt(vx * vx + vy * vy);
+    if (len < 1) {
+      atk.focus = -1; // clic encima: en todas direcciones
+      return;
+    }
+    atk.dx = vx / len;
+    atk.dy = vy / len;
+  }
+
+  /** Un nuevo clic sobre el mismo objetivo: el frente se reordena hacia ese punto. */
+  _refocus(atk, tile) {
+    this._aim(atk, tile);
+    const old = [...atk.inFrontier];
+    atk.inFrontier.clear();
+    atk.heap = new MinHeap();
+    for (const t of old) this._addCandidate(atk, t);
+  }
+
   _addCandidate(atk, t) {
     if (atk.inFrontier.has(t)) return;
     atk.inFrontier.add(t);
@@ -530,8 +572,19 @@ export class Game {
     const s = (atk.attacker.id * 7919 + this.seed) | 0;
     const lobes = valueNoise(x, y, CONFIG.growCell, s) * CONFIG.growNoise + valueNoise(x, y, CONFIG.growCell / 3, s + 1) * CONFIG.growNoiseFine;
     const terr = (CONFIG.terrainCost[map.terrain[t]] - 1) * CONFIG.growTerrain;
-    const k = atk.targetId ? CONFIG.growPlayerMult : 1;
-    const key = atk.step + (this.rng.float() * CONFIG.growRandom + lobes + terr) * k - n * CONFIG.growSmooth;
+    let k = atk.targetId ? CONFIG.growPlayerMult : 1;
+    let focus = 0;
+    if (atk.focus >= 0) {
+      // Hacia el clic: el lado que mira hacia allí va antes (según el ángulo,
+      // no la distancia: avanza todo ese frente a la vez), y con poco ruido
+      const vx = x - atk.cx;
+      const vy = y - atk.cy;
+      const len = Math.sqrt(vx * vx + vy * vy);
+      const cos = len > 0 ? (vx * atk.dx + vy * atk.dy) / len : 1;
+      focus = (1 - cos) * CONFIG.growFocus * (atk.targetId ? 0.6 : 1);
+      k *= CONFIG.growFocusNoise;
+    }
+    const key = atk.step + (this.rng.float() * CONFIG.growRandom + lobes + terr) * k - n * CONFIG.growSmooth + focus;
     atk.heap.push(key, t);
   }
 

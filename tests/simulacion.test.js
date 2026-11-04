@@ -141,7 +141,8 @@ test('un ataque contra un vecino conquista casillas y el defensor pierde tropas'
 
   // A se expande hasta tocar a B
   for (let i = 0; i < 40 && !game.hasLandBorder(a, b.id); i++) {
-    game.launchAttack(a, 0, Math.floor(a.troops * 0.5));
+    a.troops = Math.max(a.troops, 20000);
+    game.launchAttack(a, 0, 10000, { focus: tb }); // hacia B
     for (let k = 0; k < 20; k++) game.tick();
   }
   assert.ok(game.hasLandBorder(a, b.id), 'A y B deberían compartir frontera');

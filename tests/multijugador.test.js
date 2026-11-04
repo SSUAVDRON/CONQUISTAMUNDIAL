@@ -1,7 +1,7 @@
 // Tests del multijugador: lockstep con pérdida de mensajes, sin navegador.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RES } from '../src/config.js';
+import { RES, CONFIG } from '../src/config.js';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { NetSync, stateHash } from '../src/multiplayer.js';
@@ -79,7 +79,7 @@ test('lockstep: con un 30 % de mensajes perdidos ambas partidas terminan idénti
   let tilesBefore = -1;
   for (let i = 0; i < TICKS; i++) {
     host._hostStep();
-    if (i === 105 && guestGame.ticks > 100) {
+    if (i === CONFIG.spawnTicks + 5 && guestGame.ticks > CONFIG.spawnTicks) {
       // el invitado ataca tierra libre junto a su frontera
       const me = guestGame.players[2];
       const m = guestGame.map;

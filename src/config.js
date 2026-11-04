@@ -18,10 +18,10 @@ export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
-  spawnTicks: 100, // 10 s
+  spawnTicks: 150, // 15 s para elegir dónde empezar
   spawnRadius: 2.2 * RES, // radio medio de la zona inicial (pequeña e irregular)
   spawnJag: 0.4, // el radio varía ±40 % según la dirección
-  startTroops: 1500,
+  startTroops: 2500,
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
 
   // Victoria: controlar esta fracción de toda la tierra
@@ -29,14 +29,14 @@ export const CONFIG = {
 
   // Tropas: máximo y crecimiento por tick (un 40 % menos que al principio:
   // menos tropas en el mapa y crecen más despacio)
-  maxTroopsBase: 1200,
+  maxTroopsBase: 3000, // máximo de base alto: al principio se generan muchas tropas
   maxTroopsPerTile: 36 / AREA,
-  growthBase: 6,
+  growthBase: 16, // crecimiento de base (pesa sobre todo al principio)
   growthTileMult: 0.3 / RES15, // × casillas^0,75
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
-  wildTileCost: 24 / AREA, // tropas por casilla de tierra libre (llanura): la expansión inicial va poco a poco
+  wildTileCost: 48 / AREA, // tropas por casilla de tierra libre (llanura): lo que te expandes va con las tropas que mandas
   playerTileBaseCost: 1 / AREA, // coste fijo por casilla enemiga
   defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
@@ -55,6 +55,11 @@ export const CONFIG = {
   growRandom: 6, // azar por casilla
   growTerrain: 10, // por cada punto de coste de terreno por encima de la llanura
   growSmooth: 1, // prioridad a las casillas ya rodeadas (rellena huecos)
+  // Expansión dirigida: el lado del país que mira al clic avanza antes (todo a
+  // la vez, en un frente ancho) y el de detrás se retrasa hasta 2 × growFocus
+  // pasos; con menos ruido, para que crezca uniforme hacia allí
+  growFocus: 40,
+  growFocusNoise: 0.25,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
   // Barcos de transporte
