@@ -44,25 +44,33 @@ Pendiente de esta fase, si hace falta al probar:
 Ideas para más adelante: pedir ayuda a los aliados con un botón, ver en el mapa
 contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 
+## ✅ Inicio, perfil y comunidad (hecho)
+
+- Pantallas de inicio con pestañas: jugar, perfil, apariencia, logros, clasificación
+- Perfil: nombre, color, emblema (5 formas, 12 símbolos), título, nivel por experiencia
+- 16 logros con recompensas (símbolos, patrones de territorio, títulos)
+- Clasificación global (enlace de Claude), récords e historial locales
+- Dificultad de los bots (fácil, normal, difícil)
+- Salas multijugador con código y lista de salas abiertas, lockstep con
+  recuperación de mensajes perdidos y control de desincronización
+
 ## Fase 4 — Guerra naval y armas especiales
 
 - Buques de guerra que hunden barcos de transporte
 - Armas de largo alcance que arrasan una zona (caras y con tiempo de carga)
 - Defensas antiaéreas
 
-## Fase 5 — Multijugador online
+## Fase 5 — Multijugador fuera de Claude
 
-La simulación ya es determinista y funciona por *intents*, así que el modelo
-natural es **lockstep**:
+Las salas ya funcionan dentro del enlace de Claude (`room`). Para jugar desde tu
+propio dominio hace falta un servidor que haga lo mismo que `room`:
 
-1. Servidor Node con WebSocket que solo reenvía intents agrupados por tick
-2. Cada cliente ejecuta la misma simulación con la misma semilla
-3. Lobby: crear/unirse a salas, partidas públicas y privadas con código
-4. Detección de desincronización (checksum del mapa de propietarios cada N ticks)
-
-Riesgo a vigilar: `Math.pow`/`Math.sqrt` pueden diferir en el último bit entre
-motores JavaScript. Antes de abrir el multijugador hay que pasar a aritmética
-entera (o de punto fijo) en la simulación, o hacer el servidor autoritativo.
+1. Servidor Node con WebSocket que reenvíe los mensajes de cada sala
+   (`net.js` ya separa el transporte: basta con una tercera variante)
+2. Hosting que admita Node y WebSockets (un plan de hosting compartido normal
+   no suele permitirlo; un VPS o un servicio tipo Render/Fly sí)
+3. Volver a entrar en una partida tras perder la conexión
+4. Cambio de anfitrión si el anfitrión se va (ahora la partida termina)
 
 ## Fase 6 — Pulido
 

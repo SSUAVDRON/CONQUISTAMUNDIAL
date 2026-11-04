@@ -74,3 +74,246 @@ export function drawBuildingIcon(ctx, kind, cx, cy, size, { glyph = '#fff', disc
   }
   ctx.restore();
 }
+
+// ------------------------------------------------------------- emblemas
+
+const EMBLEM_SHAPES = {
+  circulo(ctx) {
+    ctx.arc(0, 0, 9.5, 0, TAU);
+  },
+  escudo(ctx) {
+    ctx.moveTo(-8.5, -9);
+    ctx.lineTo(8.5, -9);
+    ctx.lineTo(8.5, 0);
+    ctx.quadraticCurveTo(8.5, 7, 0, 10);
+    ctx.quadraticCurveTo(-8.5, 7, -8.5, 0);
+    ctx.closePath();
+  },
+  rombo(ctx) {
+    ctx.moveTo(0, -10);
+    ctx.lineTo(9.5, 0);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(-9.5, 0);
+    ctx.closePath();
+  },
+  hexagono(ctx) {
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 9.8, Math.sin(a) * 9.8);
+    }
+    ctx.closePath();
+  },
+  estandarte(ctx) {
+    ctx.moveTo(-8, -10);
+    ctx.lineTo(8, -10);
+    ctx.lineTo(8, 10);
+    ctx.lineTo(0, 5);
+    ctx.lineTo(-8, 10);
+    ctx.closePath();
+  },
+};
+
+function star(ctx, r1, r2, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 ? r2 : r1;
+    const a = (Math.PI / points) * i - Math.PI / 2;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** Símbolos en una caja de unos 12×12 centrada en el origen. */
+const EMBLEM_SYMBOLS = {
+  estrella(ctx) {
+    star(ctx, 6.5, 2.7, 5);
+  },
+  montana(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-7, 5);
+    ctx.lineTo(-2, -4);
+    ctx.lineTo(1, 1);
+    ctx.lineTo(3, -2);
+    ctx.lineTo(7, 5);
+    ctx.closePath();
+    ctx.fill();
+  },
+  ola(ctx) {
+    ctx.lineWidth = 1.8;
+    for (const y of [-2.5, 2.5]) {
+      ctx.beginPath();
+      ctx.moveTo(-7, y);
+      ctx.quadraticCurveTo(-3.5, y - 3.5, 0, y);
+      ctx.quadraticCurveTo(3.5, y + 3.5, 7, y);
+      ctx.stroke();
+    }
+  },
+  arbol(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0, -7);
+    ctx.lineTo(6, 3);
+    ctx.lineTo(-6, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(-1.2, 3, 2.4, 4);
+  },
+  corona(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-7, 5);
+    ctx.lineTo(-7, -4);
+    ctx.lineTo(-3.5, 0);
+    ctx.lineTo(0, -6);
+    ctx.lineTo(3.5, 0);
+    ctx.lineTo(7, -4);
+    ctx.lineTo(7, 5);
+    ctx.closePath();
+    ctx.fill();
+  },
+  torre(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-5, 7);
+    ctx.lineTo(-5, -6);
+    ctx.lineTo(-3, -6);
+    ctx.lineTo(-3, -4);
+    ctx.lineTo(-1, -4);
+    ctx.lineTo(-1, -6);
+    ctx.lineTo(1, -6);
+    ctx.lineTo(1, -4);
+    ctx.lineTo(3, -4);
+    ctx.lineTo(3, -6);
+    ctx.lineTo(5, -6);
+    ctx.lineTo(5, 7);
+    ctx.closePath();
+    ctx.fill();
+  },
+  ancla(ctx) {
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, -5, 1.6, 0, TAU);
+    ctx.moveTo(0, -3.4);
+    ctx.lineTo(0, 6.5);
+    ctx.moveTo(-3.5, -1);
+    ctx.lineTo(3.5, -1);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 1, 5.5, 0.12 * Math.PI, 0.88 * Math.PI);
+    ctx.stroke();
+  },
+  espadas(ctx) {
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(-6, 6);
+    ctx.lineTo(6, -6);
+    ctx.moveTo(6, 6);
+    ctx.lineTo(-6, -6);
+    ctx.moveTo(-5.5, 2);
+    ctx.lineTo(-2, 5.5);
+    ctx.moveTo(5.5, 2);
+    ctx.lineTo(2, 5.5);
+    ctx.stroke();
+  },
+  luna(ctx, bg) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 6.5, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(3, -2, 5.5, 0, TAU);
+    ctx.fill();
+  },
+  sol(ctx) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 3.6, 0, TAU);
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (Math.PI / 4) * i;
+      ctx.moveTo(Math.cos(a) * 5.2, Math.sin(a) * 5.2);
+      ctx.lineTo(Math.cos(a) * 7.5, Math.sin(a) * 7.5);
+    }
+    ctx.stroke();
+  },
+  rayo(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(1.5, -7.5);
+    ctx.lineTo(-4.5, 1);
+    ctx.lineTo(-0.5, 1);
+    ctx.lineTo(-2, 7.5);
+    ctx.lineTo(4.5, -1.5);
+    ctx.lineTo(0.5, -1.5);
+    ctx.closePath();
+    ctx.fill();
+  },
+  llama(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0, -7.5);
+    ctx.bezierCurveTo(5, -2, 6, 2, 4, 5);
+    ctx.quadraticCurveTo(0, 8.5, -4, 5);
+    ctx.bezierCurveTo(-6, 2, -3, -1, -1.5, -2.5);
+    ctx.quadraticCurveTo(-0.5, 0, 1, -0.5);
+    ctx.quadraticCurveTo(1.5, -4, 0, -7.5);
+    ctx.closePath();
+    ctx.fill();
+  },
+};
+
+/** Emblema = forma de fondo + símbolo. `e` = { shape, symbol, bg, fg }. */
+export function drawEmblem(ctx, e, cx, cy, size) {
+  if (!e) return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  const k = size / 20;
+  ctx.scale(k, k);
+  ctx.beginPath();
+  (EMBLEM_SHAPES[e.shape] || EMBLEM_SHAPES.escudo)(ctx);
+  ctx.fillStyle = e.bg;
+  ctx.fill();
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.stroke();
+  ctx.fillStyle = e.fg;
+  ctx.strokeStyle = e.fg;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  (EMBLEM_SYMBOLS[e.symbol] || EMBLEM_SYMBOLS.estrella)(ctx, e.bg);
+  ctx.restore();
+}
+
+/** Emblema estable para quien no ha elegido uno (los bots): sale de su nombre. */
+export function emblemFor(player) {
+  if (player.emblem) return player.emblem;
+  let h = 2166136261;
+  for (let i = 0; i < player.name.length; i++) h = Math.imul(h ^ player.name.charCodeAt(i), 16777619);
+  h >>>= 0;
+  const shapes = ['escudo', 'circulo', 'rombo', 'hexagono', 'estandarte'];
+  const symbols = Object.keys(EMBLEM_SYMBOLS);
+  const [r, g, b] = player.color;
+  const light = r * 0.3 + g * 0.59 + b * 0.11 > 150;
+  player.emblem = {
+    shape: shapes[h % shapes.length],
+    symbol: symbols[(h >>> 4) % symbols.length],
+    bg: `rgb(${r},${g},${b})`,
+    fg: light ? '#1d2230' : '#ffffff',
+  };
+  return player.emblem;
+}
+
+// ------------------------------------------------------------- patrones
+
+/**
+ * Patrones del territorio: devuelven true en las casillas que se pintan con
+ * el tono alternativo. Solo afectan al dibujo, nunca a la simulación.
+ */
+export const PATTERN_FNS = {
+  liso: null,
+  rayas: (x, y) => (x + y) % 6 < 2,
+  puntos: (x, y) => x % 4 === 1 && y % 4 === 1,
+  rejilla: (x, y) => x % 6 === 0 || y % 6 === 0,
+  cuadros: (x, y) => ((x >> 2) + (y >> 2)) % 2 === 0,
+  ondas: (x, y) => (y + Math.round(1.6 * Math.sin(x / 2.2))) % 6 < 2,
+  diamantes: (x, y) => Math.abs((x % 8) - 4) + Math.abs((y % 8) - 4) < 2,
+  espiga: (x, y) => ((x % 8 < 4 ? x + y : x - y) % 8 + 8) % 8 < 2,
+  mosaico: (x, y) => ((x * 7 + y * 13) ^ (x * y)) % 5 === 0,
+};

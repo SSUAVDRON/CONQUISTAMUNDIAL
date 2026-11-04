@@ -3,7 +3,7 @@
 import { CONFIG, TERRAIN } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
-import { drawBuildingIcon } from './icons.js';
+import { PATTERN_FNS, drawBuildingIcon, drawEmblem, emblemFor } from './icons.js';
 
 const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 const FILL_ALPHA = 150;
@@ -56,14 +56,20 @@ export class Renderer {
 
   _buildPalette() {
     this.fill = new Uint32Array(this.game.players.length);
+    this.alt = new Uint32Array(this.game.players.length);
     this.border = new Uint32Array(this.game.players.length);
+    this.patterns = new Array(this.game.players.length).fill(null);
     for (const p of this.game.players) {
       if (!p) continue;
       const [r, g, b] = p.color;
       this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
+      // Patrón del perfil: algunas casillas con un tono más oscuro
+      this.patterns[p.id] = PATTERN_FNS[p.pattern] || null;
+      const [ar, ag, ab] = shadeRgb(p.color, 0.72);
+      this.alt[p.id] = pack(ar, ag, ab, Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para el humano y verde para sus aliados: se reconocen de un vistazo
       const human = this.game.human;
-      const bc = p.isHuman ? [255, 255, 255] : human && human.allies.has(p.id) ? [120, 235, 165] : shadeRgb(p.color, 0.55);
+      const bc = p === human ? [255, 255, 255] : human && human.allies.has(p.id) ? [120, 235, 165] : shadeRgb(p.color, 0.55);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
     }
   }
@@ -113,7 +119,13 @@ export class Renderer {
       return;
     }
     const p = this.game.players[o];
-    this.pixels[i] = p.border.has(i) ? this.border[o] : this.fill[o];
+    if (p.border.has(i)) {
+      this.pixels[i] = this.border[o];
+      return;
+    }
+    const pattern = this.patterns[o];
+    const w = this.game.map.width;
+    this.pixels[i] = pattern && pattern(i % w, (i / w) | 0) ? this.alt[o] : this.fill[o];
   }
 
   _paintAllTerritory() {
@@ -240,7 +252,7 @@ export class Renderer {
       const p = game.players[b.owner];
       drawBuildingIcon(ctx, b.kind, sx, sy, size, {
         disc: rgbToCss(shadeRgb(p.color, 0.7)),
-        ring: p.isHuman ? '#ffffff' : 'rgba(0,0,0,0.7)',
+        ring: p === game.human ? '#ffffff' : 'rgba(0,0,0,0.7)',
       });
     }
   }
@@ -284,7 +296,7 @@ export class Renderer {
       ctx.fillStyle = rgbToCss(p.color);
       ctx.fill();
       ctx.lineWidth = r * 0.35;
-      ctx.strokeStyle = p.isHuman ? '#ffffff' : 'rgba(0,0,0,0.75)';
+      ctx.strokeStyle = p === game.human ? '#ffffff' : 'rgba(0,0,0,0.75)';
       ctx.stroke();
       if (camera.zoom >= 4) {
         ctx.fillStyle = '#fff';
@@ -316,9 +328,14 @@ export class Renderer {
       ctx.font = `600 ${size}px system-ui, sans-serif`;
       ctx.lineWidth = Math.max(2, size / 5);
       ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillStyle = p.isHuman ? '#fff6c8' : allied ? '#b8f5cf' : traitor ? '#ffb4a8' : '#ffffff';
+      ctx.fillStyle = p === human ? '#fff6c8' : allied ? '#b8f5cf' : traitor ? '#ffb4a8' : '#ffffff';
       ctx.strokeText(name, sx, sy - size * 0.35);
       ctx.fillText(name, sx, sy - size * 0.35);
+      if (size >= 11) {
+        // Emblema a la izquierda del nombre
+        const w = ctx.measureText(name).width;
+        drawEmblem(ctx, emblemFor(p), sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.15);
+      }
       const s2 = size * 0.78;
       ctx.font = `500 ${s2}px system-ui, sans-serif`;
       ctx.lineWidth = Math.max(2, s2 / 5);

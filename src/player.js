@@ -1,6 +1,15 @@
 // Estado de una nación (humana o bot).
 import { CONFIG } from './config.js';
 
+/**
+ * x^0,75 solo con raíces cuadradas: a diferencia de Math.pow, da el mismo
+ * resultado en todos los navegadores, requisito del multijugador.
+ */
+export function pow34(x) {
+  const s = Math.sqrt(x);
+  return s * Math.sqrt(s);
+}
+
 export class Player {
   constructor(id, name, color, isHuman) {
     this.id = id;
@@ -29,6 +38,13 @@ export class Player {
     this.eliminatedTick = -1;
     this.lastConqueredBy = 0;
 
+    // Aspecto (perfil): emblema y patrón del territorio
+    this.emblem = null; // { shape, symbol, bg, fg }
+    this.pattern = 'liso';
+
+    /** Contadores de la partida, para logros y estadísticas. */
+    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0 };
+
     // Diplomacia
     this.allies = new Set();
     this.traitorUntil = 0; // tick hasta el que figura como traidor
@@ -46,13 +62,13 @@ export class Player {
   growthPerTick() {
     const max = this.maxTroops();
     if (this.troops >= max) return 0;
-    const raw = CONFIG.growthBase + Math.pow(this.tiles, CONFIG.growthTileExp) * CONFIG.growthTileMult;
+    const raw = CONFIG.growthBase + pow34(this.tiles) * CONFIG.growthTileMult;
     return raw * (1 - this.troops / max);
   }
 
   goldPerTick() {
     if (!this.tiles) return 0;
-    const base = CONFIG.goldBase + Math.pow(this.tiles, CONFIG.goldTileExp) * CONFIG.goldTileMult;
+    const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
     return base * (1 + this.buildings.port * CONFIG.portGoldBonus);
   }
 

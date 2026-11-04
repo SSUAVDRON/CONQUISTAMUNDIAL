@@ -6,6 +6,36 @@ controladas por el ordenador por dominar el mundo, casilla a casilla.
 
 Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 
+## Pantallas
+
+| Pestaña | Qué hay |
+|---|---|
+| Jugar | Partida contra la IA (rivales, mapa, dificultad, semilla) y multijugador: crear sala, unirse con código o desde la lista de salas abiertas. |
+| Perfil | Nombre, color, emblema (forma, símbolo y colores), título, nivel y estadísticas. |
+| Apariencia | Patrón del territorio (lo ven también los demás en partidas online). |
+| Logros | 16 logros; desbloquean símbolos, patrones y títulos. |
+| Clasificación | Global (todos los jugadores del enlace), tus récords y tu historial. |
+
+Cada partida da experiencia (territorio, eliminaciones, edificios, victoria…);
+los niveles desbloquean formas de emblema y patrones. El perfil se guarda en el
+navegador y, en el enlace de Claude, también en tu cuenta.
+
+## Multijugador
+
+- **En el enlace de Claude** (capacidad `room`): crea una sala, comparte el
+  código de 5 caracteres y quien tenga el enlace con acceso de colaborador puede
+  entrar. Hasta 8 personas más los bots que elija el anfitrión.
+- **Fuera de Claude** (fichero suelto o tu hosting): solo entre pestañas del
+  mismo navegador, útil para probar. Jugar entre equipos fuera de Claude
+  necesita un servidor (ver `ROADMAP.md`).
+
+Funciona por *lockstep*: todos ejecutan la misma simulación determinista con la
+misma semilla y solo viajan las acciones. El anfitrión marca el ritmo y reparte
+las acciones de cada tick; si se pierde un mensaje, el invitado pide reenvío y
+repite sus acciones hasta verlas confirmadas. Cada 10 s se comparan huellas del
+estado para detectar desincronizaciones. Por eso la simulación no usa
+`Math.pow` ni nada que pueda variar entre navegadores.
+
 ## Jugar
 
 **Sin instalar nada:** genera el juego en un solo fichero y ábrelo con doble clic.
@@ -96,10 +126,15 @@ dominia/
 │   ├── render.js       Dibujo en canvas: terreno, territorios, barcos, nombres
 │   ├── camera.js       Zoom y desplazamiento
 │   ├── input.js        Ratón, táctil y teclado
-│   ├── ui.js           Panel del jugador, construcción, clasificación, avisos
-│   ├── icons.js        Iconos de edificios (mapa y botones)
+│   ├── ui.js           Interfaz de la partida: panel, construcción, diplomacia, avisos
+│   ├── home.js         Pantallas de inicio y sala de espera
+│   ├── profile.js      Perfil, niveles, logros y desbloqueos
+│   ├── multiplayer.js  Salas y sincronización lockstep
+│   ├── net.js          Transporte: room de Claude o pestañas del navegador
+│   ├── cloud.js        Perfil en la nube y clasificación global (db + user)
+│   ├── icons.js        Iconos de edificios, emblemas y patrones
 │   └── rng.js, noise.js, heap.js, colors.js, names.js, format.js
-└── tests/              simulacion, edificios y diplomacia
+└── tests/              simulación, edificios, diplomacia, perfil y multijugador
 ```
 
 Decisiones de diseño que conviene conservar:
@@ -128,5 +163,20 @@ ticks de bots, el determinismo, el despliegue del jugador, los ataques, los
 barcos, el oro, los edificios y la diplomacia (que nunca haya ataques entre
 aliados, traiciones, envíos, caducidad de propuestas, victoria en alianza).
 
+El test de multijugador simula una red que pierde el 30 % de los mensajes y
+comprueba que anfitrión e invitado acaban con exactamente el mismo estado.
+
 Para depurar en el navegador, el estado está en la consola como
-`window.__dominia` (`__dominia.game`, `__dominia.human`…).
+`window.__dominia` (`__dominia.game`, `__dominia.human`, `__dominia.profile`…).
+
+## Capacidades del enlace de Claude
+
+Al publicar como artefacto se declaran:
+
+- `room` con los temas `start`, `turn`, `intent`, `resend` y `hash` abiertos a
+  colaboradores (los lectores pueden mirar pero no jugar online).
+- `db` con reglas: `clasificacion` la leen todos y cada persona solo escribe su
+  propia fila (`clasificacion/{self}`); `data/users/<id>/perfil` es privado.
+- `user` para saber qué fila es de cada persona (sin nombres ni correos).
+
+Sin estas capacidades (fuera de Claude) el juego funciona igual, en local.

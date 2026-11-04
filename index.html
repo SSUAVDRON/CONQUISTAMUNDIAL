@@ -10,51 +10,179 @@
 <body>
   <canvas id="lienzo"></canvas>
 
-  <!-- Menú principal -->
-  <div id="menu" class="pantalla">
-    <form id="form-inicio" class="tarjeta" autocomplete="off">
-      <h1>Dominia</h1>
-      <p class="lema">Conquista el mundo, casilla a casilla.</p>
+  <!-- Inicio -->
+  <div id="inicio" class="pantalla-inicio">
+    <div class="ini-marco">
+      <header class="ini-cabecera">
+        <div class="ini-marca">
+          <h1>Dominia</h1>
+          <p class="lema">Conquista el mundo, casilla a casilla.</p>
+        </div>
+        <button type="button" id="chip-perfil" class="chip-perfil" data-ir="perfil" aria-label="Abrir tu perfil">
+          <canvas id="chip-emblema" width="80" height="80"></canvas>
+          <span class="chip-textos">
+            <strong id="chip-nombre"></strong>
+            <small id="chip-nivel"></small>
+            <span class="chip-barra"><span id="chip-xp"></span></span>
+          </span>
+        </button>
+      </header>
 
-      <div class="campos">
-        <label>Tu nación
-          <input id="in-nombre" maxlength="18" placeholder="Nombre de tu nación" required>
-        </label>
-        <label class="campo-color">Color
-          <input id="in-color" type="color" value="#2f7dff">
-        </label>
-        <label><span>Rivales: <strong id="out-bots">25</strong></span>
-          <input id="in-bots" type="range" min="5" max="60" value="25">
-        </label>
-        <label>Mapa
-          <select id="in-mapa">
-            <option value="pequeno">Pequeño</option>
-            <option value="mediano" selected>Mediano</option>
-            <option value="grande">Grande</option>
-          </select>
-        </label>
-        <label class="campo-semilla"><span>Semilla <small>(vacía = aleatoria)</small></span>
-          <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
-        </label>
+      <nav class="ini-pestanas" role="tablist" aria-label="Secciones">
+        <button type="button" role="tab" id="tab-jugar" data-vista="jugar" aria-selected="true">Jugar</button>
+        <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false">Perfil</button>
+        <button type="button" role="tab" id="tab-apariencia" data-vista="apariencia" aria-selected="false">Apariencia</button>
+        <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false">Logros <span id="cuenta-logros" class="cuenta"></span></button>
+        <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false">Clasificación</button>
+      </nav>
+
+      <!-- Jugar -->
+      <section class="vista" data-vista="jugar" role="tabpanel" aria-labelledby="tab-jugar">
+        <div class="jugar-rejilla">
+          <form id="form-rapida" class="bloque" autocomplete="off">
+            <h2>Contra la IA</h2>
+            <label class="campo"><span>Rivales <strong id="out-bots">25</strong></span>
+              <input id="in-bots" type="range" min="5" max="60" value="25">
+            </label>
+            <div class="fila-2">
+              <label class="campo"><span>Mapa</span>
+                <select id="in-mapa">
+                  <option value="pequeno">Pequeño</option>
+                  <option value="mediano" selected>Mediano</option>
+                  <option value="grande">Grande</option>
+                </select>
+              </label>
+              <label class="campo"><span>Dificultad</span>
+                <select id="in-dificultad">
+                  <option value="facil">Fácil</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="dificil">Difícil</option>
+                </select>
+              </label>
+            </div>
+            <label class="campo"><span>Semilla <small>(vacía = mapa aleatorio)</small></span>
+              <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
+            </label>
+            <button type="submit" class="principal grande">Jugar</button>
+          </form>
+
+          <div id="bloque-online" class="bloque">
+            <h2>Multijugador <span id="estado-red" class="chip">Conectando…</span></h2>
+            <div class="online-acciones">
+              <button type="button" id="btn-crear-sala" class="principal" disabled>Crear sala</button>
+              <form id="form-unirse" class="unirse" autocomplete="off">
+                <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false">
+                <button type="submit" disabled>Unirse</button>
+              </form>
+            </div>
+            <h3>Salas abiertas</h3>
+            <ul id="lista-salas" class="lista-salas"></ul>
+            <p id="nota-red" class="nota"></p>
+          </div>
+        </div>
+        <details class="ayuda">
+          <summary>Cómo se juega</summary>
+          <ul>
+            <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas.</li>
+            <li><b>Tropas:</b> crecen solas; cuanto más territorio, más tropas y más rápido. Cerca del máximo crecen más despacio.</li>
+            <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>.</li>
+            <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco (máx. 3 a la vez).</li>
+            <li><b>Terreno:</b> las mesetas y montañas cuestan más tropas y tiempo de conquistar.</li>
+            <li><b>Oro y edificios:</b> ganas oro según tu territorio. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (más barcos y oro) y <i>fortalezas</i> (defensa ×2,5 alrededor). Si te conquistan la casilla, el edificio cambia de dueño.</li>
+            <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
+            <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
+            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q/E/R = construir ciudad/puerto/fortaleza · Esc o clic derecho = cancelar · Espacio = pausa · C = centrar en ti.</li>
+          </ul>
+        </details>
+      </section>
+
+      <!-- Perfil -->
+      <section class="vista" data-vista="perfil" role="tabpanel" aria-labelledby="tab-perfil" hidden>
+        <div class="perfil-rejilla">
+          <div class="bloque">
+            <h2>Identidad</h2>
+            <div class="identidad">
+              <canvas id="perfil-emblema" width="200" height="200" aria-label="Tu emblema"></canvas>
+              <div class="identidad-campos">
+                <label class="campo"><span>Nombre de tu nación</span>
+                  <input id="in-nombre" maxlength="18" placeholder="Mi nación">
+                </label>
+                <div class="fila-2">
+                  <label class="campo"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
+                  <label class="campo"><span>Título</span><select id="in-titulo"></select></label>
+                </div>
+              </div>
+            </div>
+            <h3>Forma del emblema</h3>
+            <div id="sel-formas" class="selector" role="radiogroup" aria-label="Forma"></div>
+            <h3>Símbolo</h3>
+            <div id="sel-simbolos" class="selector" role="radiogroup" aria-label="Símbolo"></div>
+            <div class="fila-2">
+              <label class="campo"><span>Fondo del emblema</span><input id="in-emb-fondo" type="color" value="#2f7dff"></label>
+              <label class="campo"><span>Color del símbolo</span><input id="in-emb-figura" type="color" value="#ffffff"></label>
+            </div>
+          </div>
+          <div class="bloque">
+            <h2>Progreso</h2>
+            <div class="nivel">
+              <span class="nivel-num" id="perfil-nivel">1</span>
+              <div class="nivel-datos">
+                <div class="nivel-barra"><span id="perfil-xp-barra"></span></div>
+                <small id="perfil-xp"></small>
+              </div>
+            </div>
+            <dl id="estadisticas" class="estadisticas"></dl>
+            <p id="nota-nube" class="nota"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Apariencia -->
+      <section class="vista" data-vista="apariencia" role="tabpanel" aria-labelledby="tab-apariencia" hidden>
+        <div class="bloque">
+          <h2>Patrón del territorio</h2>
+          <p class="nota">Se ve en tu territorio durante la partida, también para los demás jugadores online. Los bloqueados se ganan con logros o subiendo de nivel.</p>
+          <div id="sel-patrones" class="patrones" role="radiogroup" aria-label="Patrón"></div>
+        </div>
+      </section>
+
+      <!-- Logros -->
+      <section class="vista" data-vista="logros" role="tabpanel" aria-labelledby="tab-logros" hidden>
+        <div class="bloque">
+          <h2>Logros <small id="logros-resumen" class="nota-inline"></small></h2>
+          <ul id="lista-logros" class="logros"></ul>
+        </div>
+      </section>
+
+      <!-- Clasificación -->
+      <section class="vista" data-vista="clasificacion" role="tabpanel" aria-labelledby="tab-clasificacion" hidden>
+        <div class="bloque">
+          <div class="sub-pestanas" role="group" aria-label="Tabla">
+            <button type="button" data-tabla="global" class="activo">Global</button>
+            <button type="button" data-tabla="records">Tus récords</button>
+            <button type="button" data-tabla="historial">Historial</button>
+          </div>
+          <div id="tabla-clasificacion" class="tabla-envoltura"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Sala multijugador -->
+  <div id="sala" class="pantalla" hidden>
+    <div class="tarjeta sala-tarjeta">
+      <div class="sala-cabecera">
+        <h2>Sala <span id="sala-codigo" class="codigo"></span></h2>
+        <button type="button" id="btn-copiar-codigo">Copiar código</button>
       </div>
-
-      <button type="submit" class="principal grande">Jugar</button>
-
-      <details class="ayuda">
-        <summary>Cómo se juega</summary>
-        <ul>
-          <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas.</li>
-          <li><b>Tropas:</b> crecen solas; cuanto más territorio, más tropas y más rápido. Cerca del máximo crecen más despacio.</li>
-          <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>.</li>
-          <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco (máx. 3 a la vez).</li>
-          <li><b>Terreno:</b> las mesetas y montañas cuestan más tropas y tiempo de conquistar.</li>
-          <li><b>Oro y edificios:</b> ganas oro según tu territorio. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (más barcos y oro) y <i>fortalezas</i> (defensa ×2,5 alrededor). Si te conquistan la casilla, el edificio cambia de dueño.</li>
-          <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
-          <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
-          <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q/E/R = construir ciudad/puerto/fortaleza · Esc o clic derecho = cancelar · Espacio = pausa · C = centrar en ti.</li>
-        </ul>
-      </details>
-    </form>
+      <p id="sala-estado" class="nota"></p>
+      <ul id="sala-jugadores" class="sala-jugadores"></ul>
+      <div id="sala-ajustes" class="sala-ajustes"></div>
+      <div class="botones">
+        <button type="button" id="btn-salir-sala">Salir</button>
+        <button type="button" id="btn-empezar" class="principal">Empezar partida</button>
+      </div>
+    </div>
   </div>
 
   <!-- Interfaz de partida -->
@@ -134,6 +262,7 @@
     <div class="tarjeta">
       <h2 id="fin-titulo"></h2>
       <p id="fin-texto"></p>
+      <div id="fin-progreso" class="fin-progreso"></div>
       <div class="botones">
         <button type="button" id="fin-seguir">Seguir mirando</button>
         <button type="button" id="fin-nueva" class="principal">Nueva partida</button>

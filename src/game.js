@@ -61,16 +61,18 @@ export class Game {
     if (id > 65000) throw new Error('Demasiados jugadores');
     const p = new Player(id, name, color, isHuman);
     this.players.push(p);
-    if (isHuman) this.human = p;
+    // El primer humano es el jugador local por defecto; en multijugador se fija aparte
+    if (isHuman && !this.human) this.human = p;
     return p;
   }
 
-  addBots(count) {
+  /** `difficulty`: 'facil' | 'normal' | 'dificil'. */
+  addBots(count, difficulty = 'normal') {
     const existing = this.players.filter(Boolean).map((p) => p.name);
     const names = generateNames(this.rng, count, existing);
     for (let i = 0; i < count; i++) {
       const p = this.addPlayer(names[i], botColor(this.players.length, this.rng), false);
-      const brain = new BotBrain(this, p);
+      const brain = new BotBrain(this, p, difficulty);
       this.bots.push(brain);
       this.brains.set(p.id, brain);
     }
@@ -341,7 +343,7 @@ export class Game {
       if (atk.inFrontier.size === 0) return false;
       p.attacks.set(targetId, atk);
       this.attacks.push(atk);
-      if (target && target.isHuman) this._emit(`⚔ ${p.name} te está atacando`, 'danger');
+      if (target && target === this.human) this._emit(`⚔ ${p.name} te está atacando`, 'danger');
     }
     if (deduct) p.troops -= troops;
 
@@ -492,6 +494,7 @@ export class Game {
   build(p, kind, tile) {
     if (!this.canBuild(p, kind, tile).ok) return false;
     p.gold -= this.buildCost(p, kind);
+    p.stats.built++;
     const b = { id: this._nextBuildingId++, kind, tile, owner: 0 };
     this.buildings.push(b);
     this.buildingAt.set(tile, b);
@@ -519,7 +522,7 @@ export class Game {
       const op = this.players[oldId];
       op.buildings[b.kind]--;
       if (b.kind === 'fort') op.forts.delete(b.tile);
-      if (op.isHuman && newId) this._emit(`Has perdido una ${name} a manos de ${this.players[newId].name}`, 'danger');
+      if (op === this.human && newId) this._emit(`Has perdido una ${name} a manos de ${this.players[newId].name}`, 'danger');
     }
     if (!newId) {
       this.buildings = this.buildings.filter((x) => x !== b);
@@ -529,8 +532,9 @@ export class Game {
     b.owner = newId;
     const np = this.players[newId];
     np.buildings[b.kind]++;
+    if (np.buildings.city > np.stats.maxCities) np.stats.maxCities = np.buildings.city;
     if (b.kind === 'fort') np.forts.add(b.tile);
-    if (np.isHuman) this._emit(built ? `${name} construida` : `Has capturado una ${name}`, 'good');
+    if (np === this.human) this._emit(built ? `${name} construida` : `Has capturado una ${name}`, 'good');
   }
 
   // ------------------------------------------------------------------ barcos
@@ -568,7 +572,7 @@ export class Game {
       done: false,
     });
     const target = targetId ? this.players[targetId] : null;
-    if (target && target.isHuman) this._emit(`🚢 ${p.name} envía un barco contra ti`, 'danger');
+    if (target && target === this.human) this._emit(`🚢 ${p.name} envía un barco contra ti`, 'danger');
     return true;
   }
 
@@ -696,8 +700,9 @@ export class Game {
     boat.troops -= cost;
     if (target) target.troops -= loss;
     this.setOwner(dest, p.id);
+    p.stats.landings++;
     if (!this.launchAttack(p, o, boat.troops, { deduct: false })) p.troops += boat.troops;
-    if (p.isHuman) this._emit('Desembarco con éxito', 'good');
+    if (p === this.human) this._emit('Desembarco con éxito', 'good');
   }
 
   // -------------------------------------------------------------------- tick
@@ -717,6 +722,7 @@ export class Game {
       if (!p.alive) continue;
       p.troops += p.growthPerTick();
       p.gold += p.goldPerTick();
+      if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }
 
     for (let i = 0; i < this.attacks.length; i++) this._processAttack(this.attacks[i]);
@@ -731,7 +737,7 @@ export class Game {
     for (const bot of this.bots) {
       if (!bot.player.alive || this.ticks < bot.nextThink) continue;
       bot.think();
-      bot.nextThink = this.ticks + this.rng.int(CONFIG.botThinkMin, CONFIG.botThinkMax);
+      bot.nextThink = this.ticks + Math.round(this.rng.int(CONFIG.botThinkMin, CONFIG.botThinkMax) * bot.thinkScale);
     }
 
     this._checkEliminations();
@@ -760,10 +766,11 @@ export class Game {
       p.troops = 0;
       // Botín: el oro del eliminado pasa a quien le quitó la última casilla
       const killer = this.players[p.lastConqueredBy];
+      if (killer && killer.alive) killer.stats.kills++;
       if (killer && killer.alive && p.gold > 0) {
         const loot = p.gold * CONFIG.plunderShare;
         killer.gold += loot;
-        if (killer.isHuman) this._emit(`Botín: +${Math.floor(loot)} de oro de ${p.name}`, 'good');
+        if (killer === this.human) this._emit(`Botín: +${Math.floor(loot)} de oro de ${p.name}`, 'good');
       }
       p.gold = 0;
       for (const atk of [...p.attacks.values()]) this._endAttack(atk);
@@ -774,7 +781,7 @@ export class Game {
       for (const b of this.boats) if (b.owner === p.id) b.done = true;
       this.boats = this.boats.filter((b) => !b.done);
       p.boatCount = 0;
-      this._emit(p.isHuman ? 'Has sido derrotado' : `${p.name} ha sido eliminado`, p.isHuman ? 'danger' : 'info');
+      this._emit(p === this.human ? 'Has sido derrotado' : `${p.name} ha sido eliminado`, p === this.human ? 'danger' : 'info');
     }
   }
 
@@ -794,7 +801,7 @@ export class Game {
     if (winner) {
       this.winner = winner;
       this.phase = 'ended';
-      this._emit(winner.isHuman ? '¡Victoria! Dominas el mundo' : `${winner.name} domina el mundo`, winner.isHuman ? 'good' : 'danger');
+      this._emit(winner === this.human ? '¡Victoria! Dominas el mundo' : `${winner.name} domina el mundo`, winner === this.human ? 'good' : 'danger');
       return;
     }
     // Si solo quedan naciones aliadas entre sí, gana la alianza
@@ -806,7 +813,7 @@ export class Game {
         this.winner = rest[0];
         this.winningAlliance = rest;
         this.phase = 'ended';
-        const human = rest.find((p) => p.isHuman);
+        const human = rest.find((p) => p === this.human);
         this._emit(
           human ? '¡Victoria en alianza!' : `La alianza de ${rest.map((p) => p.name).join(', ')} domina el mundo`,
           human ? 'good' : 'danger',
@@ -868,9 +875,9 @@ export class Game {
       decideAt: target.isHuman ? Infinity : this.ticks + this.rng.int(10, 40),
     };
     this.requests.push(req);
-    if (target.isHuman) {
+    if (target === this.human) {
       this._emit(`🤝 ${p.name} te propone una alianza`, 'request', { fromId: p.id });
-    } else if (p.isHuman) {
+    } else if (p === this.human) {
       this._emit(`Propuesta de alianza enviada a ${target.name}`, 'info');
     }
     return true;
@@ -885,7 +892,7 @@ export class Game {
       return this._formAlliance(p, from);
     }
     from.requestCooldown.set(p.id, this.ticks + CONFIG.rejectCooldownTicks);
-    if (from.isHuman) this._emit(`${p.name} rechaza tu alianza`, 'warn');
+    if (from === this.human) this._emit(`${p.name} rechaza tu alianza`, 'warn');
     this.brains.get(from.id)?.onRejected(p);
     return false;
   }
@@ -893,6 +900,8 @@ export class Game {
   _formAlliance(a, b) {
     a.allies.add(b.id);
     b.allies.add(a.id);
+    a.stats.alliances++;
+    b.stats.alliances++;
     this.requests = this.requests.filter((r) => !((r.from === a.id && r.to === b.id) || (r.from === b.id && r.to === a.id)));
     // La paz detiene los ataques entre ambos y devuelve las tropas
     const ab = a.attacks.get(b.id);
@@ -900,7 +909,7 @@ export class Game {
     const ba = b.attacks.get(a.id);
     if (ba) this._endAttack(ba);
     this.diploVersion++;
-    const human = a.isHuman ? a : b.isHuman ? b : null;
+    const human = a === this.human ? a : b === this.human ? b : null;
     if (human) {
       const other = human === a ? b : a;
       this._emit(`🤝 Alianza firmada con ${other.name}`, 'good');
@@ -919,8 +928,8 @@ export class Game {
     p.traitorUntil = this.ticks + CONFIG.traitorTicks;
     p.betrayals++;
     this.diploVersion++;
-    if (p.isHuman) this._emit(`Has roto la alianza con ${other.name}. Eres traidor durante ${CONFIG.traitorTicks / 10} s`, 'warn');
-    else if (other.isHuman) this._emit(`💔 ${p.name} ha roto vuestra alianza`, 'danger');
+    if (p === this.human) this._emit(`Has roto la alianza con ${other.name}. Eres traidor durante ${CONFIG.traitorTicks / 10} s`, 'warn');
+    else if (other === this.human) this._emit(`💔 ${p.name} ha roto vuestra alianza`, 'danger');
     else this._emit(`💔 ${p.name} traiciona a ${other.name}`, 'info');
     this.brains.get(other.id)?.onBetrayed(p);
     return true;
@@ -938,8 +947,8 @@ export class Game {
     p[key] -= amount;
     target[key] += amount;
     const what = key === 'gold' ? 'de oro' : 'tropas';
-    if (p.isHuman) this._emit(`Has enviado ${amount} ${what} a ${target.name}`, 'info');
-    if (target.isHuman) this._emit(`${p.name} te envía ${amount} ${what}`, 'good');
+    if (p === this.human) this._emit(`Has enviado ${amount} ${what} a ${target.name}`, 'info');
+    if (target === this.human) this._emit(`${p.name} te envía ${amount} ${what}`, 'good');
     return true;
   }
 
@@ -948,7 +957,7 @@ export class Game {
     p.lastEmojiTick = this.ticks;
     this.emojis.push({ from: p.id, to: targetId || 0, emoji, tick: this.ticks });
     const target = this.players[targetId];
-    if (target && target.isHuman) this._emit(`${p.name} te envía ${emoji}`, 'info');
+    if (target && target === this.human) this._emit(`${p.name} te envía ${emoji}`, 'info');
     if (target) this.brains.get(target.id)?.onEmoji(p, emoji);
     return true;
   }
@@ -987,6 +996,6 @@ export class Game {
 
   /** Mensajes solo relevantes para el jugador humano. */
   _notify(p, text, kind) {
-    if (p.isHuman) this._emit(text, kind);
+    if (p === this.human) this._emit(text, kind);
   }
 }

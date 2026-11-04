@@ -7,12 +7,15 @@ const FRIENDLY = ['👍', '🤝', '❤️', '😂'];
 const HOSTILE = ['😠', '⚔️', '👎', '🔥'];
 
 export class BotBrain {
-  constructor(game, player) {
+  constructor(game, player, difficulty = 'normal') {
     const r = game.rng;
     this.game = game;
     this.player = player;
     this.nextThink = 0;
-    this.aggression = 0.2 + r.float() * 0.6;
+    // Dificultad: cada cuánto piensan y cuánto les gusta atacar
+    const level = { facil: [1.7, 0.6], normal: [1, 1], dificil: [0.65, 1.25] }[difficulty] || [1, 1];
+    this.thinkScale = level[0];
+    this.aggression = Math.min(1, (0.2 + r.float() * 0.6) * level[1]);
     this.expandRatio = 0.2 + r.float() * 0.3;
     this.diplomacy = r.float(); // 0 = lobo solitario, 1 = diplomático
     this.loyalty = r.float(); // probabilidad de no traicionar por oportunismo
@@ -256,7 +259,9 @@ export class BotBrain {
       if (o === p.id || p.allies.has(o)) continue;
       const strength = o === 0 ? 0 : g.players[o].troops / Math.max(1, p.troops);
       if (strength > 0.6) continue;
-      const dist = Math.hypot(map.x(t) - ox, map.y(t) - oy) / map.width;
+      const dx = map.x(t) - ox;
+      const dy = map.y(t) - oy;
+      const dist = Math.sqrt(dx * dx + dy * dy) / map.width;
       const score = strength + dist;
       if (score < bestScore) {
         bestScore = score;

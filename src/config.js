@@ -20,8 +20,7 @@ export const CONFIG = {
   maxTroopsBase: 2000,
   maxTroopsPerTile: 60,
   growthBase: 10,
-  growthTileMult: 0.5,
-  growthTileExp: 0.75,
+  growthTileMult: 0.5, // × casillas^0,75
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
@@ -37,11 +36,10 @@ export const CONFIG = {
   maxBoats: 3, // sin puertos; cada puerto suma uno
   boatSpeed: 1.5, // casillas por tick
 
-  // Oro: ingreso por tick = base + casillas^exp × mult (× bonus de puertos)
+  // Oro: ingreso por tick = base + casillas^0,75 × mult (× bonus de puertos)
   startGold: 0,
   goldBase: 2,
-  goldTileMult: 0.08,
-  goldTileExp: 0.7,
+  goldTileMult: 0.056,
   plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla
 
   // Edificios

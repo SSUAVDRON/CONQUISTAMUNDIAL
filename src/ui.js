@@ -1,59 +1,19 @@
-// Interfaz HTML: menú, panel del jugador, clasificación, eventos y tooltip.
+// Interfaz HTML de la partida: panel del jugador, clasificación, diplomacia,
+// eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
 import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { drawBuildingIcon } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
-const PREFS_KEY = 'dominia.prefs';
 const MAX_EVENTS = 5;
 const EVENT_MS = 6000;
-
-function loadPrefs() {
-  try {
-    return JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-
-function savePrefs(prefs) {
-  try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  } catch {
-    /* almacenamiento no disponible: no pasa nada */
-  }
-}
 
 export class UI {
   constructor() {
     this.handlers = {};
     this._attackRows = new Map();
     this._leaderSig = '';
-
-    const prefs = loadPrefs();
-    $('in-nombre').value = prefs.name || '';
-    if (prefs.color) $('in-color').value = prefs.color;
-    if (prefs.bots) $('in-bots').value = prefs.bots;
-    if (prefs.map) $('in-mapa').value = prefs.map;
-    $('out-bots').textContent = $('in-bots').value;
-
-    $('in-bots').addEventListener('input', () => {
-      $('out-bots').textContent = $('in-bots').value;
-    });
-
-    $('form-inicio').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const opts = {
-        name: $('in-nombre').value.trim() || 'Mi nación',
-        color: $('in-color').value,
-        bots: Number($('in-bots').value),
-        mapSize: $('in-mapa').value,
-        seed: $('in-semilla').value.trim(),
-      };
-      savePrefs({ name: opts.name, color: opts.color, bots: opts.bots, map: opts.mapSize });
-      this.handlers.onStart?.(opts);
-    });
 
     $('ratio').addEventListener('input', () => this.handlers.onRatio?.(Number($('ratio').value) / 100));
 
@@ -149,16 +109,33 @@ export class UI {
     Object.assign(this.handlers, handlers);
   }
 
-  showMenu() {
-    $('menu').hidden = false;
+  /** Oculta la interfaz de partida (al volver al inicio). */
+  hideHud() {
     $('hud').hidden = true;
     $('fin').hidden = true;
+    $('confirmar').hidden = true;
     $('eventos').replaceChildren();
-    $('in-nombre').focus();
+  }
+
+  /** En multijugador no hay pausa ni cambio de velocidad. */
+  setOnline(online) {
+    $('velocidad').hidden = online;
+  }
+
+  /** Mensaje fijo de estado de la red (o vacío para quitarlo). */
+  setNetNote(text) {
+    const box = $('aviso');
+    if (text) {
+      box.textContent = text;
+      box.hidden = false;
+      box.dataset.red = '1';
+    } else if (box.dataset.red) {
+      delete box.dataset.red;
+      box.hidden = true;
+    }
   }
 
   showHud() {
-    $('menu').hidden = true;
     $('hud').hidden = false;
     $('fin').hidden = true;
     $('eventos').replaceChildren();
@@ -274,9 +251,24 @@ export class UI {
     $('conf-no').focus();
   }
 
-  showEnd(title, text) {
+  /** `progress`: { xp, level, levelUp, achievements: [{icon, name}] } o null. */
+  showEnd(title, text, progress = null) {
     $('fin-titulo').textContent = title;
     $('fin-texto').textContent = text;
+    const box = $('fin-progreso');
+    box.replaceChildren();
+    if (progress) {
+      const xp = document.createElement('p');
+      xp.className = 'fin-xp';
+      xp.textContent = `+${progress.xp} XP${progress.levelUp ? ` · ¡Subes al nivel ${progress.level}!` : ''}`;
+      box.append(xp);
+      for (const a of progress.achievements) {
+        const li = document.createElement('p');
+        li.className = 'fin-logro';
+        li.textContent = `${a.icon} Logro conseguido: ${a.name}`;
+        box.append(li);
+      }
+    }
     $('fin').hidden = false;
   }
 
@@ -311,7 +303,9 @@ export class UI {
 
     // Aviso central: despliegue o construcción en curso
     const aviso = $('aviso');
-    if (game.phase === 'spawn') {
+    if (aviso.dataset.red) {
+      // el estado de la red tiene prioridad
+    } else if (game.phase === 'spawn') {
       const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000));
       aviso.textContent = human.spawned
         ? `Posición elegida. Puedes cambiarla. Empieza en ${left} s`
@@ -400,7 +394,7 @@ export class UI {
         const rank = alive.indexOf(p) + 1;
         const marks = (human.allies.has(p.id) ? ' <span class="marca aliado" title="Aliado">🤝</span>' : '') +
           (game.isTraitor(p) ? ' <span class="marca traidor" title="Traidor">⚠</span>' : '');
-        return `<li data-id="${p.id}" class="${p.isHuman ? 'yo' : ''}">
+        return `<li data-id="${p.id}" class="${p === human ? 'yo' : ''}">
           <span class="pos">${rank}</span>
           <span class="muestra" style="background:${rgbToCss(p.color)}"></span>
           <span class="nom">${escapeHtml(p.name)}${marks}</span>
@@ -436,7 +430,7 @@ export class UI {
       if (game.fortMultiplier(p, tile) > 1) extra.push('zona fortificada');
       extra.push(terrain);
       const human = game.human;
-      const tag = p.isHuman ? ' (tú)' : human && human.allies.has(p.id) ? ' · aliado' : game.isTraitor(p) ? ' · traidor' : '';
+      const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · aliado' : game.isTraitor(p) ? ' · traidor' : '';
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
         ${formatNumber(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>`;
