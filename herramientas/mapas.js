@@ -292,7 +292,7 @@ function buildMap(def, countries, regions, lakes) {
   let land = 0;
   for (let i = 0; i < size; i++) if (terrain[i] !== WATER) land++;
   console.log(`${def.id}: ${proj.w}×${proj.h}, tierra ${((100 * land) / size).toFixed(0)} %, ${list.length} países, ${cleaned.sunk} casillas de islotes hundidas, ${cleaned.filled} de charcas rellenas`);
-  return { name: def.name, w: proj.w, h: proj.h, rle: encodeRle(terrain), countries: list };
+  return { name: def.name, w: proj.w, h: proj.h, lat: def.lat, rle: encodeRle(terrain), countries: list };
 }
 
 async function main() {

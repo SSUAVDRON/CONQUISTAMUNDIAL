@@ -244,6 +244,7 @@ export function loadRealMap(id) {
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
+  map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
   return { map, countries: data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' })) };
 }
 

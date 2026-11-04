@@ -18,9 +18,9 @@ carga con los pasos reales y un consejo.
 
 | Pestaña | Qué hay |
 |---|---|
-| Jugar | Los cuatro modos. En «Contra la IA»: mapa, rivales, dificultad, victoria al 50/70/90 %, oro inicial, misiles y buques activables, semilla. |
-| Perfil | Nombre, color, emblema (forma, símbolo y colores), título, nivel y estadísticas. |
-| Apariencia | Patrón del territorio (lo ven también los demás en partidas online). |
+| Jugar | Portada ilustrada con «Jugar ahora», los cuatro modos con su ilustración y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA»: mapa, rivales, dificultad, victoria al 50/70/90 %, oro inicial, misiles y buques activables, semilla. |
+| Perfil | Tarjeta de perfil (estandarte, emblema con marco, nombre, título y nivel), nombre, color (con 16 colores rápidos), emblema (7 formas, 20 símbolos y colores), título, nivel y estadísticas. |
+| Apariencia | Estandarte (8), marco del emblema (bronce, plata, oro, laurel), color de tu nombre en el mapa (8) y patrón del territorio (lo ven también los demás online). Muchos se desbloquean con nivel o logros. |
 | Logros | 16 logros; desbloquean símbolos, patrones y títulos. |
 | Clasificación | Global (todos los jugadores del enlace), tus récords y tu historial. |
 | Ajustes | Borde rojo al ser atacado, tropas de los ataques sobre el mapa, emojis, animaciones del menú, repetir el tutorial y créditos. |
@@ -111,21 +111,24 @@ base de datos.
 | Concepto | Cómo funciona |
 |---|---|
 | Despliegue | Los primeros 10 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. |
-| Tropas | Crecen solas. El máximo y la velocidad dependen de tu territorio; cerca del máximo el crecimiento se frena. |
+| Mapa | Casillas pequeñas: los mapas tienen el doble de resolución que al principio (el mundo, 1760×798). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. |
+| Tropas | Crecen solas (más despacio que al principio y con un máximo menor). El máximo y la velocidad dependen de tu territorio; cerca del máximo el crecimiento se frena. |
 | Atacar | Clic en tierra libre o en una nación vecina: se envía el % de tus tropas que marque **Fuerza de ataque**. Repetir el clic refuerza el ataque. |
-| Coste | Tierra libre: 3 tropas por casilla. Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
+| Coste | Tierra libre: 0,5 tropas por casilla. Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). |
 | Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. |
 | Saqueo | Cada casilla que conquistas a un país te da su parte de su oro (oro ÷ casillas). Cada 5 s un aviso resume lo saqueado (y lo que te saquean). |
 | Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; 150k de oro con inflación). Clic en el mar mueve el más cercano. Actúan solos a 9 casillas: disparan a buques enemigos, hunden transportes de tropas, **capturan** pesqueros y mercantes rivales (pasan a producir para ti) y bombardean puertos hasta destruirlos. |
-| Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. |
-| Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo (desactivable en Ajustes). |
-| Tropas a la vista | Cada combate tuyo tiene una tarjeta a la derecha: quién ataca a quién, tropas del atacante **VS** tropas del defensor, con una leyenda bajo cada cifra («te ataca con» / «tus tropas», «atacas con» / «sus tropas») y una barra de fuerzas. **Roja** si te atacan (van primero) y **verde** si atacas tú; los marcadores del mapa usan los mismos colores. También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas. |
+| Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |
+| Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo: más rojo y con latido más rápido cuanto más te atacan (tropas frente a las tuyas, número de atacantes, misiles). Desactivable en Ajustes. |
+| Tropas a la vista | Cada combate tuyo tiene una tarjeta debajo de la clasificación: quién ataca a quién, tropas del atacante **VS** tropas del defensor, con una leyenda bajo cada cifra («te ataca con» / «tus tropas», «atacas con» / «sus tropas») y una barra de fuerzas. **Roja** si te atacan (van primero) y **verde** si atacas tú; los marcadores del mapa usan los mismos colores. También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas. |
 | Avisos | En un recuadro abajo a la derecha, con icono según el tipo (ataque, naval, misil, oro, alianza, edificio…). Los nuevos entran por abajo; los repetidos se agrupan (×N). |
-| Panel de abajo | Ancho y bajo: tu estado, la fuerza de ataque y los edificios (con una barra de cuánto oro te falta para cada uno y un martillo si hay obras). Se minimiza con su botón o la tecla **V**. |
-| Gráficos | Relieve iluminado, bosques, nieve, playas, espuma y mar con profundidad; olas y sombras de nubes que se mueven. Las casillas recién conquistadas brillan, saltan chispas y humo en los frentes y unas flechas marcan hacia dónde avanza cada ataque. Barcos dibujados con su rumbo y estela; misiles con humo y sombra; explosión con fogonazo, onda expansiva, hongo de humo y cráter; los antimisiles lanzan un interceptor que estalla en el aire. Todo se desactiva con «Animaciones» en Ajustes. |
+| Paneles plegables | Clasificación, combates y avisos se pliegan desde su cabecera (se recuerda). Plegados, la clasificación muestra tu puesto, los combates cuántos te atacan y cuántos ataques tuyos hay, y los avisos cuántos nuevos tienes. |
+| Clasificación | Tus aliados salen en verde; las colonias, en gris cursiva; tu nombre, en tu color de nombre. |
+| Panel de abajo | Centrado y compacto: tu estado, la fuerza de ataque y los edificios (en gris los que no puedes pagar, con una barra de cuánto oro te falta y un martillo si hay obras). Se minimiza con su botón o la tecla **V**. |
+| Gráficos | Mapa plano (2D) con colores de mapa según el terreno y el clima: praderas, bosques, selva, sabana, desiertos, tundra, mesetas y montañas con cumbres nevadas (en los mapas reales el clima sale de la latitud); playas y mar oscuro casi uniforme; olas y sombras de nubes que se mueven. Las casillas recién conquistadas brillan, saltan chispas y humo en los frentes y unas flechas marcan hacia dónde avanza cada ataque. Barcos dibujados con su rumbo y estela; misiles con humo y sombra; explosión con fogonazo, onda expansiva, hongo de humo y cráter; los antimisiles lanzan un interceptor que estalla en el aire. Todo se desactiva con «Animaciones» en Ajustes. |
 | Barra superior | Tiempo de partida, tu puesto entre las naciones en pie y el líder con su territorio frente a la meta de victoria (se pone ámbar si se acerca). |
 | Oro | Se gana solo, según tu territorio (+10 % por nivel de puerto, +25 % por nivel de fábrica). Una nación pequeña gana unos pocos miles por segundo; una grande, decenas de miles. Al eliminar a una nación te llevas el oro que le quede. Oro inicial opcional: 250k o 1,25M. |
 | Edificios | Se construyen en tu territorio con oro. Deben estar a 5 casillas o más de otro edificio. Si te conquistan la casilla, el edificio (con su nivel) pasa al conquistador. |

@@ -188,6 +188,28 @@ const EMBLEM_SHAPES = {
     ctx.lineTo(-8, 10);
     ctx.closePath();
   },
+  octogono(ctx) {
+    for (let i = 0; i < 8; i++) {
+      const a = (Math.PI / 4) * i + Math.PI / 8;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 10, Math.sin(a) * 10);
+    }
+    ctx.closePath();
+  },
+  cruzado(ctx) {
+    ctx.moveTo(-3.5, -10);
+    ctx.lineTo(3.5, -10);
+    ctx.lineTo(3.5, -3.5);
+    ctx.lineTo(10, -3.5);
+    ctx.lineTo(10, 3.5);
+    ctx.lineTo(3.5, 3.5);
+    ctx.lineTo(3.5, 10);
+    ctx.lineTo(-3.5, 10);
+    ctx.lineTo(-3.5, 3.5);
+    ctx.lineTo(-10, 3.5);
+    ctx.lineTo(-10, -3.5);
+    ctx.lineTo(-3.5, -3.5);
+    ctx.closePath();
+  },
 };
 
 function star(ctx, r1, r2, points) {
@@ -323,6 +345,98 @@ const EMBLEM_SYMBOLS = {
     ctx.closePath();
     ctx.fill();
   },
+  cruz(ctx) {
+    ctx.fillRect(-1.6, -7, 3.2, 14);
+    ctx.fillRect(-6, -2.8, 12, 3.2);
+  },
+  diana(ctx, bg) {
+    for (const [r, c] of [[7, null], [4.8, bg], [2.6, null]]) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, TAU);
+      if (c) {
+        const prev = ctx.fillStyle;
+        ctx.fillStyle = c;
+        ctx.fill();
+        ctx.fillStyle = prev;
+      } else ctx.fill();
+    }
+  },
+  corazon(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0, 6.5);
+    ctx.bezierCurveTo(-8, 1, -6.5, -7, 0, -3);
+    ctx.bezierCurveTo(6.5, -7, 8, 1, 0, 6.5);
+    ctx.closePath();
+    ctx.fill();
+  },
+  trebol(ctx) {
+    for (const [x, y] of [[0, -3.6], [-3.6, 0.6], [3.6, 0.6]]) {
+      ctx.beginPath();
+      ctx.arc(x, y, 3.1, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillRect(-0.8, 1, 1.6, 6);
+  },
+  flecha(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0, -7.5);
+    ctx.lineTo(5.5, -1.5);
+    ctx.lineTo(2, -1.5);
+    ctx.lineTo(2, 7);
+    ctx.lineTo(-2, 7);
+    ctx.lineTo(-2, -1.5);
+    ctx.lineTo(-5.5, -1.5);
+    ctx.closePath();
+    ctx.fill();
+  },
+  casco(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-7.5, 3);
+    ctx.quadraticCurveTo(-7, -6, 0, -6.5);
+    ctx.quadraticCurveTo(7, -6, 7.5, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(-8.5, 3, 17, 2.2);
+  },
+  avion(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0, -7.5);
+    ctx.quadraticCurveTo(1.4, -6, 1.3, -2);
+    ctx.lineTo(7.5, 1.5);
+    ctx.lineTo(7.5, 3);
+    ctx.lineTo(1.2, 1.2);
+    ctx.lineTo(1, 5);
+    ctx.lineTo(3, 6.8);
+    ctx.lineTo(3, 7.6);
+    ctx.lineTo(0, 6.8);
+    ctx.lineTo(-3, 7.6);
+    ctx.lineTo(-3, 6.8);
+    ctx.lineTo(-1, 5);
+    ctx.lineTo(-1.2, 1.2);
+    ctx.lineTo(-7.5, 3);
+    ctx.lineTo(-7.5, 1.5);
+    ctx.lineTo(-1.3, -2);
+    ctx.quadraticCurveTo(-1.4, -6, 0, -7.5);
+    ctx.closePath();
+    ctx.fill();
+  },
+  calavera(ctx, bg) {
+    ctx.beginPath();
+    ctx.arc(0, -1.5, 5.6, 0, TAU);
+    ctx.fill();
+    ctx.fillRect(-3.2, 2.5, 6.4, 4.2);
+    const prev = ctx.fillStyle;
+    ctx.fillStyle = bg;
+    for (const x of [-2.2, 2.2]) {
+      ctx.beginPath();
+      ctx.arc(x, -1.6, 1.5, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillRect(-0.4, 3.2, 0.8, 3.5);
+    ctx.fillRect(-2.3, 3.2, 0.8, 3.5);
+    ctx.fillRect(1.5, 3.2, 0.8, 3.5);
+    ctx.fillStyle = prev;
+  },
   llama(ctx) {
     ctx.beginPath();
     ctx.moveTo(0, -7.5);
@@ -335,6 +449,74 @@ const EMBLEM_SYMBOLS = {
     ctx.fill();
   },
 };
+
+/**
+ * Marco alrededor del emblema (perfil). `kind`: ninguno, bronce, plata, oro o
+ * laurel. Se dibuja centrado en (cx, cy) para un emblema de tamaño `size`.
+ */
+export function drawFrame(ctx, kind, cx, cy, size) {
+  if (!kind || kind === 'ninguno') return;
+  const r = size * 0.56;
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (kind === 'laurel') {
+    ctx.fillStyle = '#7fc46a';
+    ctx.strokeStyle = 'rgba(0, 40, 0, 0.6)';
+    ctx.lineWidth = Math.max(1, size * 0.012);
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 7; i++) {
+        const a = Math.PI / 2 + side * (0.35 + i * 0.32);
+        const x = Math.cos(a) * r;
+        const y = Math.sin(a) * r;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(a + (side > 0 ? -Math.PI / 2.6 : Math.PI / 2.6) + Math.PI / 2);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.035, size * 0.085, 0, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+    return;
+  }
+  const tones = { bronce: ['#f0b37a', '#8a4f22'], plata: ['#f4f7fb', '#7d8794'], oro: ['#fff0a8', '#b8860b'] }[kind];
+  if (!tones) {
+    ctx.restore();
+    return;
+  }
+  const g = ctx.createLinearGradient(-r, -r, r, r);
+  g.addColorStop(0, tones[0]);
+  g.addColorStop(0.5, tones[1]);
+  g.addColorStop(1, tones[0]);
+  ctx.lineWidth = size * 0.07;
+  ctx.strokeStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, TAU);
+  ctx.stroke();
+  // Remaches
+  ctx.fillStyle = tones[0];
+  for (let i = 0; i < 8; i++) {
+    const a = (Math.PI / 4) * i;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * r, Math.sin(a) * r, size * 0.02, 0, TAU);
+    ctx.fill();
+  }
+  if (kind === 'oro') {
+    // Estrellitas arriba
+    ctx.fillStyle = '#ffe680';
+    for (const dx of [-0.22, 0, 0.22]) {
+      ctx.save();
+      ctx.translate(dx * size, -r - size * (dx ? 0.02 : 0.07));
+      ctx.scale(size / 120, size / 120);
+      star(ctx, 6, 2.6, 5);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
 
 /** Emblema = forma de fondo + símbolo. `e` = { shape, symbol, bg, fg }. */
 export function drawEmblem(ctx, e, cx, cy, size) {

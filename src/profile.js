@@ -18,6 +18,8 @@ export const SHAPES = [
   { id: 'rombo', name: 'Rombo', unlock: { level: 2 } },
   { id: 'hexagono', name: 'Hexágono', unlock: { level: 4 } },
   { id: 'estandarte', name: 'Estandarte', unlock: { level: 6 } },
+  { id: 'octogono', name: 'Octógono', unlock: { level: 3 } },
+  { id: 'cruzado', name: 'Cruz', unlock: { level: 8 } },
 ];
 
 export const SYMBOLS = [
@@ -33,7 +35,58 @@ export const SYMBOLS = [
   { id: 'sol', name: 'Sol', unlock: { ach: 'en_compania' } },
   { id: 'rayo', name: 'Rayo', unlock: { ach: 'relampago' } },
   { id: 'llama', name: 'Llama', unlock: { ach: 'tesoro' } },
+  { id: 'cruz', name: 'Cruz', unlock: null },
+  { id: 'diana', name: 'Diana', unlock: null },
+  { id: 'corazon', name: 'Corazón', unlock: null },
+  { id: 'trebol', name: 'Trébol', unlock: { level: 2 } },
+  { id: 'flecha', name: 'Flecha', unlock: { level: 3 } },
+  { id: 'casco', name: 'Casco', unlock: { level: 4 } },
+  { id: 'avion', name: 'Avión', unlock: { level: 6 } },
+  { id: 'calavera', name: 'Calavera', unlock: { ach: 'superviviente' } },
 ];
+
+/** Estandartes: el fondo de tu tarjeta de perfil. */
+export const BANNERS = [
+  { id: 'noche', name: 'Noche', unlock: null },
+  { id: 'oceano', name: 'Océano', unlock: null },
+  { id: 'selva', name: 'Selva', unlock: { level: 2 } },
+  { id: 'desierto', name: 'Desierto', unlock: { level: 3 } },
+  { id: 'atardecer', name: 'Atardecer', unlock: { level: 4 } },
+  { id: 'artico', name: 'Ártico', unlock: { level: 5 } },
+  { id: 'volcan', name: 'Volcán', unlock: { ach: 'lluvia_fuego' } },
+  { id: 'real', name: 'Real', unlock: { ach: 'primera_victoria' } },
+];
+
+/** Marcos alrededor del emblema. */
+export const FRAMES = [
+  { id: 'ninguno', name: 'Sin marco', unlock: null },
+  { id: 'bronce', name: 'Bronce', unlock: { level: 2 } },
+  { id: 'plata', name: 'Plata', unlock: { level: 4 } },
+  { id: 'oro', name: 'Oro', unlock: { level: 7 } },
+  { id: 'laurel', name: 'Laurel', unlock: { ach: 'primera_victoria' } },
+];
+
+/** Color de tu nombre en el mapa ('propio' = el color de tu territorio, más vivo). */
+export const NAME_COLORS = [
+  { id: 'oro', name: 'Oro', color: '#ffd23f', unlock: null },
+  { id: 'blanco', name: 'Blanco', color: '#ffffff', unlock: null },
+  { id: 'cian', name: 'Cian', color: '#5ce1ff', unlock: null },
+  { id: 'naranja', name: 'Naranja', color: '#ffa23d', unlock: null },
+  { id: 'propio', name: 'Tu color', color: null, unlock: null },
+  { id: 'lima', name: 'Lima', color: '#b4ff4d', unlock: { level: 2 } },
+  { id: 'rosa', name: 'Rosa', color: '#ff7ad9', unlock: { level: 3 } },
+  { id: 'rojo', name: 'Rojo', color: '#ff5a5a', unlock: { ach: 'verdugo' } },
+];
+
+/** Color CSS del nombre del jugador según su perfil. */
+export function nameColorOf(p) {
+  const c = NAME_COLORS.find((x) => x.id === p.colorNombre) || NAME_COLORS[0];
+  if (c.color) return c.color;
+  // Su color, aclarado para que se lea sobre el mapa
+  const n = parseInt((p.color || '#2f7dff').slice(1), 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (255 - v) * 0.35));
+  return `rgb(${ch.join(',')})`;
+}
 
 export const PATTERNS = [
   { id: 'liso', name: 'Liso', unlock: null },
@@ -89,7 +142,7 @@ export const ACHIEVEMENTS = [
 /** Qué desbloquea cada logro (para mostrarlo en la ficha del logro). */
 export function rewardsOf(achId) {
   const out = [];
-  for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título']]) {
+  for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre']]) {
     for (const item of list) if (item.unlock && item.unlock.ach === achId) out.push(`${kind}: ${item.name}`);
   }
   return out;
@@ -126,6 +179,9 @@ export function defaultProfile() {
     emblema: { shape: 'escudo', symbol: 'estrella', bg: '#2f7dff', fg: '#ffffff' },
     patron: 'liso',
     titulo: '',
+    estandarte: 'noche',
+    marco: 'ninguno',
+    colorNombre: 'oro',
     xp: 0,
     stats: {
       partidas: 0,
@@ -160,9 +216,13 @@ export function defaultProfile() {
 export function normalizeProfile(p) {
   const d = defaultProfile();
   if (!p || typeof p !== 'object') return d;
+  const pick = (list, v, dflt) => (list.some((x) => x.id === v) ? v : dflt);
   return {
     ...d,
     ...p,
+    estandarte: pick(BANNERS, p.estandarte, d.estandarte),
+    marco: pick(FRAMES, p.marco, d.marco),
+    colorNombre: pick(NAME_COLORS, p.colorNombre, d.colorNombre),
     emblema: { ...d.emblema, ...(p.emblema || {}) },
     stats: { ...d.stats, ...(p.stats || {}) },
     logros: Object.fromEntries(Object.entries(p.logros || {}).filter(([k, v]) => ACHIEVEMENTS.some((a) => a.id === k) && Number.isFinite(v))),

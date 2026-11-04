@@ -12,7 +12,7 @@ import { hexToRgb } from './colors.js';
 import { installFlagSprite } from './icons.js';
 import { hashString } from './rng.js';
 import { formatPercent, formatTime } from './format.js';
-import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName } from './profile.js';
+import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { withLoading } from './loading.js';
 import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
@@ -187,8 +187,10 @@ function applySettings() {
       emojis: a.emojis !== false,
       pointer: state.pointerOn,
       animations: a.animaciones !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+      nameColor: nameColorOf(profile),
     };
   }
+  document.documentElement.style.setProperty('--color-nombre', nameColorOf(profile));
   ui.redAlert = a.alerta !== false;
   document.body.classList.toggle('sin-animaciones', a.animaciones === false);
 }
@@ -372,6 +374,7 @@ const home = new Home(profile, {
   onProfileChange(identity) {
     saveProfile(profile);
     if (identity) scheduleCloudSync();
+    applySettings();
   },
   onQuickPlay: startGame,
   onTutorial() {

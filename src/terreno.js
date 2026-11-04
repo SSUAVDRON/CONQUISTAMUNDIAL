@@ -1,8 +1,8 @@
 // Terreno del mapa, pintado una sola vez al empezar la partida:
 // - el mar a 1 píxel por casilla (se dibuja suavizado): turquesa en la orilla
 //   y cada vez más profundo mar adentro;
-// - la tierra a varios píxeles por casilla, con relieve iluminado desde el
-//   noroeste, bosques, nieve en las cumbres, playas y espuma en la orilla;
+// - la tierra en colores planos de mapa (2D) según su tipo y su clima:
+//   praderas, bosques, desiertos, tundra, mesetas y montañas nevadas, con playa;
 // - texturas que se repiten para las olas y las sombras de las nubes, que el
 //   renderizador mueve en cada frame.
 // Todo esto es solo visual: no afecta a la simulación.
@@ -58,29 +58,6 @@ function valueNoise(x, y, cell, seed) {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
-/** Desenfoque de caja 3×3 en el sitio. */
-function blur(a, w, h) {
-  const tmp = new Float32Array(a.length);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let s = 0;
-      let n = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        const yy = y + dy;
-        if (yy < 0 || yy >= h) continue;
-        for (let dx = -1; dx <= 1; dx++) {
-          const xx = x + dx;
-          if (xx < 0 || xx >= w) continue;
-          s += a[yy * w + xx];
-          n++;
-        }
-      }
-      tmp[y * w + x] = s / n;
-    }
-  }
-  a.set(tmp);
-}
-
 /** Píxeles de terreno por casilla: más en mapas pequeños, sin pasarse de memoria. */
 export function terrainScale(map) {
   return clamp(Math.floor(Math.sqrt(3.2e6 / map.size)), 1, 4);
@@ -95,73 +72,91 @@ export function paintTerrain(map) {
   const S = terrainScale(map);
   const seed = (W * 73856093) ^ (H * 19349663);
 
-  // ---- Altura suavizada e iluminación por casilla
-  const h = new Float32Array(size);
-  for (let i = 0; i < size; i++) {
-    const t = terrain[i];
-    const s = shade[i] / 255;
-    h[i] = t === WATER ? -0.05 : t === PLAINS ? 0.03 + 0.14 * s : t === HIGHLAND ? 0.24 + 0.22 * s : 0.52 + 0.48 * s;
-  }
-  for (let k = 0; k < 2 * RES; k++) blur(h, W, H);
-  const L = [-0.58, -0.66, 0.48];
-  const ll = Math.hypot(L[0], L[1], L[2]);
-  const Lx = L[0] / ll;
-  const Ly = L[1] / ll;
-  const Lz = L[2] / ll;
-  const E = 9 * RES; // exageración del relieve (por casilla: más casillas, menos pendiente)
-
-  // ---- Color iluminado de cada casilla de tierra
+  // ---- Color plano (2D) de cada casilla de tierra según su tipo y su clima.
+  // Sin relieve iluminado ni grano: colores de mapa, con transiciones suaves
+  // entre climas. En los mapas reales el clima sale de la latitud (desiertos
+  // subtropicales, selva ecuatorial, tundra y nieve en el norte).
+  const latOf = (() => {
+    if (!map.lat) return null;
+    const miller = (d) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((d * Math.PI) / 180)));
+    const yTop = miller(map.lat[1]);
+    const yBottom = miller(map.lat[0]);
+    const lats = new Float32Array(H);
+    for (let y = 0; y < H; y++) {
+      const m = yTop - ((y + 0.5) / H) * (yTop - yBottom);
+      lats[y] = (2.5 * (Math.atan(Math.exp(0.8 * m)) - Math.PI / 4) * 180) / Math.PI;
+    }
+    return lats;
+  })();
+  const mixc = (c, d, k) => [c[0] + (d[0] - c[0]) * k, c[1] + (d[1] - c[1]) * k, c[2] + (d[2] - c[2]) * k];
+  const C = {
+    selva: [62, 122, 58],
+    pradera: [111, 160, 78],
+    seca: [150, 166, 92],
+    bosque: [76, 128, 64],
+    sabana: [170, 168, 98],
+    desierto: [214, 194, 138],
+    estepa: [140, 160, 104],
+    tundra: [178, 186, 162],
+    nieve: [230, 236, 240],
+    meseta: [176, 156, 108],
+    mesetaSeca: [198, 168, 116],
+    mesetaFria: [168, 164, 148],
+    roca: [140, 127, 115],
+    rocaOscura: [104, 94, 86],
+  };
   const R = new Float32Array(size);
   const G = new Float32Array(size);
   const B = new Float32Array(size);
   for (let y = 0; y < H; y++) {
+    const lat = latOf ? Math.abs(latOf[y]) : null;
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       const t = terrain[i];
       if (t === WATER) continue;
       const s = shade[i] / 255;
-      const hl = h[x > 0 ? i - 1 : i];
-      const hr = h[x < W - 1 ? i + 1 : i];
-      const hu = h[y > 0 ? i - W : i];
-      const hd = h[y < H - 1 ? i + W : i];
-      const dx = (hr - hl) * 0.5 * E;
-      const dy = (hd - hu) * 0.5 * E;
-      const nl = Math.hypot(dx, dy, 1);
-      const lam = (-dx * Lx - dy * Ly + Lz) / nl;
-      const light = clamp(1 + (lam - Lz) * 1.7, 0.5, 1.45);
-      const moist = valueNoise(x, y, 26 * RES, seed);
-      const forest = valueNoise(x, y, 7 * RES, seed + 11) * 0.65 + valueNoise(x, y, 3 * RES, seed + 23) * 0.35;
-      const tex = (hash2(x, y, seed + 5) - 0.5) * 0.06;
-      let r;
-      let g;
-      let b;
-      if (t === PLAINS) {
-        const k = clamp(moist * 1.1 - 0.05, 0, 1);
-        r = 84 + (166 - 84) * k;
-        g = 142 + (164 - 142) * k;
-        b = 64 + (96 - 64) * k;
-        const f = smooth(0.56, 0.72, forest) * (1 - k * 0.6) * 0.8;
-        r += (52 - r) * f;
-        g += (100 - g) * f;
-        b += (50 - b) * f;
-      } else if (t === HIGHLAND) {
-        const k = clamp(s * 0.8 + moist * 0.3, 0, 1);
-        r = 154 + (118 - 154) * k;
-        g = 146 + (104 - 146) * k;
-        b = 96 + (76 - 96) * k;
+      const moist = valueNoise(x, y, 30 * RES, seed);
+      const forest = valueNoise(x, y, 9 * RES, seed + 11);
+      // Aridez (0 húmedo, 1 desierto) y frío (0 templado, 1 helado)
+      let dry;
+      let cold;
+      if (lat !== null) {
+        const sub = smooth(10, 17, lat) * (1 - smooth(31, 38, lat)); // franja de desiertos
+        dry = clamp(sub * (1.25 - moist * 0.9), 0, 1);
+        cold = smooth(52, 68, lat);
       } else {
-        r = 112 + 34 * s;
-        g = 104 + 34 * s;
-        b = 100 + 34 * s;
-        const snow = smooth(0.5, 0.78, s);
-        r += (238 - r) * snow;
-        g += (242 - g) * snow;
-        b += (248 - b) * snow;
+        dry = smooth(0.32, 0.18, moist);
+        cold = 0;
       }
-      const m = light * (1 + tex);
-      R[i] = r * m;
-      G[i] = g * m;
-      B[i] = b * m;
+      const tropical = lat !== null ? 1 - smooth(8, 16, lat) : 0;
+      let c;
+      if (t === PLAINS) {
+        c = mixc(C.pradera, C.seca, smooth(0.35, 0.75, moist) * 0.6);
+        c = mixc(c, C.selva, tropical * 0.85);
+        c = mixc(c, C.bosque, smooth(0.6, 0.7, forest) * (1 - dry) * (1 - cold) * 0.85);
+        c = mixc(c, dry > 0.55 ? C.desierto : C.sabana, smooth(0.25, 0.75, dry));
+        c = mixc(c, C.estepa, smooth(0, 0.5, cold) * (1 - smooth(0.5, 1, cold)));
+        c = mixc(c, C.tundra, smooth(0.45, 0.85, cold));
+        c = mixc(c, C.nieve, smooth(0.9, 1, cold) * smooth(0.3, 0.6, moist));
+      } else if (t === HIGHLAND) {
+        c = mixc(C.meseta, C.mesetaSeca, dry);
+        c = mixc(c, C.mesetaFria, cold);
+      } else {
+        // Montaña: roca con las cumbres nevadas (más nieve cuanto más al norte)
+        c = mixc(C.roca, C.rocaOscura, smooth(0.2, 0.6, s) * 0.5);
+        // Nieve solo en las cumbres más altas; en el norte, también más abajo
+        const tropic = lat !== null ? 1 - smooth(30, 45, lat) : 0.5;
+        c = mixc(c, C.nieve, smooth(0.66 + tropic * 0.22 - cold * 0.35, 0.8 + tropic * 0.18 - cold * 0.35, s));
+      }
+      // Contorno suave entre tipos de terreno: más «mapa dibujado»
+      const differs = (n) => terrain[n] !== WATER && terrain[n] !== t;
+      if ((x > 0 && differs(i - 1)) || (x < W - 1 && differs(i + 1)) || (y > 0 && differs(i - W)) || (y < H - 1 && differs(i + W))) {
+        const k = t === MOUNTAIN ? 0.82 : t === HIGHLAND ? 0.92 : 1;
+        c = [c[0] * k, c[1] * k, c[2] * k];
+      }
+      R[i] = c[0];
+      G[i] = c[1];
+      B[i] = c[2];
     }
   }
 
@@ -210,10 +205,6 @@ export function paintTerrain(map) {
     const ty = (py + 0.5) / S;
     const cy = Math.floor(ty);
     const fy = ty - cy;
-    const vy = ty - 0.5;
-    const y0 = clamp(Math.floor(vy), 0, H - 1);
-    const y1 = clamp(y0 + 1, 0, H - 1);
-    const wy = clamp(vy - y0, 0, 1);
     for (let pxl = 0; pxl < LW; pxl++) {
       const tx = (pxl + 0.5) / S;
       const cx = Math.floor(tx);
@@ -237,26 +228,10 @@ export function paintTerrain(map) {
         px[o] = ((Math.round(a * 255) << 24) | (b << 16) | (g << 8) | r) >>> 0;
         continue;
       }
-      // Interpolación bilineal del color entre centros de casilla (sin coger agua)
-      const vx = tx - 0.5;
-      const x0 = clamp(Math.floor(vx), 0, W - 1);
-      const x1 = clamp(x0 + 1, 0, W - 1);
-      const wx = clamp(vx - x0, 0, 1);
-      const a00 = y0 * W + x0;
-      const a10 = y0 * W + x1;
-      const a01 = y1 * W + x0;
-      const a11 = y1 * W + x1;
-      const q00 = terrain[a00] === WATER ? i : a00;
-      const q10 = terrain[a10] === WATER ? i : a10;
-      const q01 = terrain[a01] === WATER ? i : a01;
-      const q11 = terrain[a11] === WATER ? i : a11;
-      const w00 = (1 - wx) * (1 - wy);
-      const w10 = wx * (1 - wy);
-      const w01 = (1 - wx) * wy;
-      const w11 = wx * wy;
-      let r = R[q00] * w00 + R[q10] * w10 + R[q01] * w01 + R[q11] * w11;
-      let g = G[q00] * w00 + G[q10] * w10 + G[q01] * w01 + G[q11] * w11;
-      let b = B[q00] * w00 + B[q10] * w10 + B[q01] * w01 + B[q11] * w11;
+      // Color plano de la casilla
+      let r = R[i];
+      let g = G[i];
+      let b = B[i];
       if (m) {
         // Playa (o acantilado en la montaña) junto al agua
         const d = edgeDist(m, fx, fy);
@@ -272,10 +247,9 @@ export function paintTerrain(map) {
           b += (150 - b) * k;
         }
       }
-      const grain = (hash2(pxl, py, seed) - 0.5) * 10;
-      r = clamp(r + grain, 0, 255) | 0;
-      g = clamp(g + grain, 0, 255) | 0;
-      b = clamp(b + grain * 0.8, 0, 255) | 0;
+      r = clamp(r, 0, 255) | 0;
+      g = clamp(g, 0, 255) | 0;
+      b = clamp(b, 0, 255) | 0;
       px[o] = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
     }
   }

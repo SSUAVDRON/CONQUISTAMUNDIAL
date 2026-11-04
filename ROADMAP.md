@@ -97,6 +97,17 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Aliados con franjas verdes y 🤝
 - Edificios por niveles (1-5), inflación del 12 % por compra y obras con duración
 
+## ✅ Casillas pequeñas, HUD plegable e inicio renovado (hecho)
+
+- Mapas al doble de resolución (factor `RES`), con todo reescalado y
+  búsquedas por el mar más rápidas (A*, caché y topes)
+- Tropas más lentas y conquista más barata; alerta roja proporcional
+- Combates bajo la clasificación; paneles plegables; aliados en verde
+- Buque de guerra circular con barra de vida; rastro de los desembarcos
+- Inicio con portada ilustrada, modos ilustrados, arsenal, botones nuevos
+- Personalización: estandartes, marcos, color del nombre, más símbolos y
+  formas, colores rápidos y tarjeta de perfil
+
 ## Próximo
 
 - Sonido y música propios

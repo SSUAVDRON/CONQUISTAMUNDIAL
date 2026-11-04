@@ -49,36 +49,113 @@
       </header>
 
       <nav class="ini-pestanas" role="tablist" aria-label="Secciones">
-        <button type="button" role="tab" id="tab-jugar" data-vista="jugar" aria-selected="true">Jugar</button>
-        <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false">Perfil</button>
-        <button type="button" role="tab" id="tab-apariencia" data-vista="apariencia" aria-selected="false">Apariencia</button>
-        <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false">Logros <span id="cuenta-logros" class="cuenta"></span></button>
-        <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false">Clasificación</button>
-        <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false">Ajustes</button>
+        <button type="button" role="tab" id="tab-jugar" data-vista="jugar" aria-selected="true"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3 L13 8 L5 13 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Jugar</span></button>
+        <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 8.5 a3 3 0 1 0 0 -6 a3 3 0 1 0 0 6 M2.5 14 c0.8 -3 3 -4.5 5.5 -4.5 s4.7 1.5 5.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Perfil</span></button>
+        <button type="button" role="tab" id="tab-apariencia" data-vista="apariencia" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 a6 6 0 1 0 0 12 c1 0 1.4 -0.7 1 -1.6 c-0.5 -1 0.2 -2 1.3 -2 H12 a2 2 0 0 0 2 -2 C14 4.6 11.3 2 8 2 Z M5 7 h0.01 M7.5 4.8 h0.01 M10.5 5.5 h0.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Apariencia</span></button>
+        <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Logros</span> <span id="cuenta-logros" class="cuenta"></span></button>
+        <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 13.5 h11 M4 13.5 v-4 h2.5 v4 M6.5 13.5 v-8 h3 v8 M9.5 13.5 v-6 h2.5 v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clasificación</span></button>
+        <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
       </nav>
 
       <!-- Jugar -->
       <section class="vista" data-vista="jugar" role="tabpanel" aria-labelledby="tab-jugar">
+        <!-- Portada: ilustración de la trinchera de noche, con el botón principal -->
+        <div class="portada">
+          <svg class="portada-arte" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="pt-cielo" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#08112a"/><stop offset="0.5" stop-color="#211f48"/><stop offset="0.8" stop-color="#6d3540"/><stop offset="1" stop-color="#c0613a"/>
+              </linearGradient>
+              <linearGradient id="pt-foco" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stop-color="#fff3c4" stop-opacity="0.32"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/>
+              </linearGradient>
+              <radialGradient id="pt-explo">
+                <stop offset="0" stop-color="#ffe2a0"/><stop offset="0.35" stop-color="#ff8a3a" stop-opacity="0.75"/><stop offset="1" stop-color="#ff4a1a" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="pt-luna" cx="0.4" cy="0.4">
+                <stop offset="0" stop-color="#fffbe8"/><stop offset="1" stop-color="#e3d6ad"/>
+              </radialGradient>
+            </defs>
+            <rect width="1200" height="300" fill="url(#pt-cielo)"/>
+            <g class="pt-estrellas" fill="#fff">
+              <circle cx="60" cy="40" r="1.2"/><circle cx="140" cy="90" r="0.9"/><circle cx="230" cy="30" r="1.4"/><circle cx="330" cy="70" r="1"/>
+              <circle cx="420" cy="25" r="1.1"/><circle cx="510" cy="60" r="0.8"/><circle cx="600" cy="35" r="1.3"/><circle cx="690" cy="80" r="0.9"/>
+              <circle cx="780" cy="28" r="1.2"/><circle cx="860" cy="95" r="0.8"/><circle cx="1060" cy="40" r="1.2"/><circle cx="1130" cy="85" r="1"/>
+              <circle cx="1170" cy="20" r="0.9"/><circle cx="300" cy="110" r="0.7"/><circle cx="560" cy="105" r="0.7"/><circle cx="905" cy="45" r="1"/>
+            </g>
+            <circle cx="985" cy="72" r="26" fill="url(#pt-luna)"/>
+            <circle cx="977" cy="66" r="4" fill="#d8caa0" opacity="0.6"/><circle cx="994" cy="82" r="3" fill="#d8caa0" opacity="0.5"/>
+            <g class="pt-focos">
+              <path class="pt-foco pt-foco-1" d="M260 300 L205 0 L290 0 Z" fill="url(#pt-foco)"/>
+              <path class="pt-foco pt-foco-2" d="M880 300 L860 0 L945 0 Z" fill="url(#pt-foco)"/>
+            </g>
+            <circle class="pt-explo" cx="700" cy="208" r="48" fill="url(#pt-explo)"/>
+            <circle class="pt-explo pt-explo-2" cx="420" cy="214" r="34" fill="url(#pt-explo)"/>
+            <path d="M0 214 L70 178 L140 200 L230 150 L320 196 L410 165 L510 205 L600 158 L690 192 L790 150 L880 196 L980 166 L1080 200 L1200 172 V300 H0 Z" fill="#1b2140"/>
+            <path d="M0 246 Q150 210 300 238 T600 232 T900 242 T1200 230 V300 H0 Z" fill="#131830"/>
+            <g class="pt-avion" fill="#0a0e1c">
+              <path d="M0 0 L26 -3 L34 -10 L38 -10 L36 -2 L52 -1 L56 -6 L60 -6 L59 1 L52 3 L36 4 L38 12 L34 12 L26 5 L0 3 Z"/>
+            </g>
+            <g class="pt-avion pt-avion-2" fill="#0a0e1c">
+              <path d="M0 0 L20 -2 L26 -8 L29 -8 L28 -2 L40 -1 L43 -5 L46 -5 L45 1 L40 2 L28 3 L29 9 L26 9 L20 4 L0 2 Z"/>
+            </g>
+            <g fill="#0d1120">
+              <rect x="790" y="226" width="96" height="18" rx="6"/><rect x="812" y="212" width="44" height="16" rx="5"/>
+              <rect x="852" y="216" width="60" height="5" rx="2"/>
+              <circle cx="806" cy="246" r="7"/><circle cx="826" cy="246" r="7"/><circle cx="846" cy="246" r="7"/><circle cx="866" cy="246" r="7"/>
+            </g>
+            <path d="M0 268 L60 256 L120 268 L180 256 L240 268 L300 256 L360 268 L420 256 L480 268 L540 256 L600 268 L660 256 L720 268 L780 256 L840 268 L900 256 L960 268 L1020 256 L1080 268 L1140 256 L1200 268 V300 H0 Z" fill="#090c17"/>
+            <g fill="#2a2f40">
+              <ellipse cx="80" cy="262" rx="22" ry="7"/><ellipse cx="124" cy="262" rx="22" ry="7"/><ellipse cx="102" cy="252" rx="22" ry="7"/>
+              <ellipse cx="1040" cy="262" rx="22" ry="7"/><ellipse cx="1084" cy="262" rx="22" ry="7"/><ellipse cx="1062" cy="252" rx="22" ry="7"/>
+            </g>
+            <path d="M150 248 q10 -8 20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#3a4157" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <g fill="#06080f">
+              <circle cx="560" cy="226" r="7"/><path d="M552 228 h16 l3 22 h-22 z"/><path d="M566 232 l20 -14" stroke="#06080f" stroke-width="3"/>
+              <circle cx="600" cy="222" r="7"/><path d="M592 224 h16 l3 26 h-22 z"/>
+              <circle cx="640" cy="228" r="7"/><path d="M632 230 h16 l3 20 h-22 z"/><path d="M634 234 l-18 -12" stroke="#06080f" stroke-width="3"/>
+              <rect x="598" y="150" width="3" height="76"/>
+            </g>
+            <path class="pt-bandera" d="M601 152 q14 -6 28 0 t28 0 v22 q-14 -6 -28 0 t-28 0 z" fill="#e0483f"/>
+          </svg>
+          <div class="portada-texto">
+            <span class="portada-saludo" id="portada-saludo">¡A las trincheras!</span>
+            <h1 class="portada-titulo">Conquista el mundo</h1>
+            <p class="portada-sub">Naciones reales, colonias que saquear, buques, misiles y alianzas. Partidas de 15 a 25 minutos.</p>
+            <div class="portada-datos" id="portada-datos"></div>
+            <div class="portada-botones">
+              <button type="button" class="principal grande btn-brillo" id="btn-jugar-ya">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 L13 8 L4 13.5 Z" fill="currentColor"/></svg>
+                Jugar ahora
+              </button>
+              <button type="button" class="secundario" id="btn-elegir">Elegir partida</button>
+            </div>
+          </div>
+        </div>
         <div class="modos">
           <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
-            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M7 24h34M24 7c-6 6-6 28 0 34M24 7c6 6 6 28 0 34" fill="none" stroke="currentColor" stroke-width="2"/><path class="icono-rayo" d="M27 3 L19 26 H25 L21 45 L33 19 H27 Z" fill="#f2b33d" stroke="#1b1405" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <svg class="modo-arte" viewBox="0 0 240 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="ma-1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a3a0e"/><stop offset="1" stop-color="#1c1407"/></linearGradient></defs><rect width="240" height="96" fill="url(#ma-1)"/><g class="ma-giro"><circle cx="120" cy="58" r="40" fill="#1f5a8a"/><path d="M92 40 q12 -10 22 -2 q8 6 2 14 q-10 6 -6 14 q-12 2 -18 -8 q-6 -10 0 -18z M126 30 q18 -2 26 12 q-8 4 -16 0 q-6 -4 -10 -12z M130 62 q14 -6 22 4 q-4 14 -16 18 q-8 -10 -6 -22z" fill="#5fae6b"/><circle cx="120" cy="58" r="40" fill="none" stroke="#bfe3ff" stroke-opacity="0.35" stroke-width="2"/></g><path d="M100 22 l6 -14 6 14" fill="none" stroke="#f2b33d" stroke-width="2"/><rect x="103" y="8" width="2" height="22" fill="#e9eef7"/><path d="M105 9 l12 4 -12 4z" fill="#e0483f"/><path class="ma-rayo" d="M182 14 L170 40 L180 40 L172 62 L196 30 L184 30 L192 14 Z" fill="#ffd23f"/></svg>
             <span class="modo-titulo">Partida rápida</span>
             <span class="modo-texto">El mundo real contra 30 países. Un clic y a la trinchera.</span>
+            <span class="modo-insignia">30 países</span>
           </button>
           <button type="button" class="modo" data-modo="ia" style="--i:1">
-            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 L34 14 M14 42 L38 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M38 38 L14 14 M34 42 L10 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M31 9 L40 8 L39 17 M17 9 L8 8 L9 17" fill="none" stroke="#f2b33d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="modo-arte" viewBox="0 0 240 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="ma-2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14304a"/><stop offset="1" stop-color="#0a1422"/></linearGradient></defs><rect width="240" height="96" fill="url(#ma-2)"/><g opacity="0.25" stroke="#5ce1ff" stroke-width="1"><path d="M0 20 H240 M0 44 H240 M0 68 H240 M40 0 V96 M90 0 V96 M150 0 V96 M200 0 V96"/></g><rect x="92" y="26" width="56" height="46" rx="12" fill="#26384d" stroke="#5ce1ff" stroke-width="2"/><rect x="117" y="14" width="6" height="12" fill="#5ce1ff"/><circle cx="120" cy="12" r="4" fill="#ff6b6b" class="ma-luz"/><rect class="ma-ojos" x="104" y="42" width="12" height="8" rx="2" fill="#5ce1ff"/><rect class="ma-ojos" x="124" y="42" width="12" height="8" rx="2" fill="#5ce1ff"/><rect x="108" y="58" width="24" height="4" rx="2" fill="#5ce1ff" opacity="0.6"/><path d="M40 80 L76 44 M76 80 L40 44" stroke="#f2b33d" stroke-width="4" stroke-linecap="round"/><path d="M164 80 L200 44 M200 80 L164 44" stroke="#f2b33d" stroke-width="4" stroke-linecap="round"/></svg>
             <span class="modo-titulo">Contra la IA</span>
             <span class="modo-texto">Elige mapa, número de rivales, dificultad y reglas.</span>
+            <span class="modo-insignia">A tu medida</span>
           </button>
           <button type="button" class="modo" data-modo="online" style="--i:2">
-            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="17" r="6" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="33" cy="17" r="6" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M5 38c1-7 6-11 11-11s10 4 11 11M22 38c1-7 6-11 11-11s10 4 11 11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle class="icono-pulso" cx="24.5" cy="9" r="3" fill="#5fd38d"/></svg>
+            <svg class="modo-arte" viewBox="0 0 240 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="ma-3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#173a24"/><stop offset="1" stop-color="#0a1a10"/></linearGradient></defs><rect width="240" height="96" fill="url(#ma-3)"/><g fill="none" stroke="#5fd38d" stroke-width="2" class="ma-ondas"><path d="M108 30 q12 -12 24 0"/><path d="M100 22 q20 -20 40 0"/><path d="M92 14 q28 -28 56 0"/></g><path d="M60 40 L84 34 L84 60 Q84 74 60 82 Q36 74 36 60 L36 34 Z" fill="#2f7dff" stroke="#bfe3ff" stroke-width="2"/><path d="M180 40 L204 34 L204 60 Q204 74 180 82 Q156 74 156 60 L156 34 Z" fill="#e0483f" stroke="#ffd0c8" stroke-width="2"/><path d="M60 46 l3 7 7 0 -6 4 2 7 -6 -4 -6 4 2 -7 -6 -4 7 0z" fill="#fff"/><circle cx="180" cy="58" r="8" fill="none" stroke="#fff" stroke-width="3"/><path d="M92 62 h56" stroke="#5fd38d" stroke-width="3" stroke-dasharray="6 5" class="ma-enlace"/></svg>
             <span class="modo-titulo">Multijugador</span>
             <span class="modo-texto">Crea una sala o únete con un código.</span>
+            <span class="modo-insignia">Con amigos</span>
           </button>
           <button type="button" class="modo" data-modo="tutorial" style="--i:3">
-            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 11c6-2 12-2 18 2 6-4 12-4 18-2v26c-6-2-12-2-18 2-6-4-12-4-18-2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 13v26" stroke="currentColor" stroke-width="2"/><path class="icono-marca" d="M30 6 h6 v12 l-3-2 -3 2z" fill="#e0483f"/></svg>
+            <svg class="modo-arte" viewBox="0 0 240 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="ma-4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a1d3a"/><stop offset="1" stop-color="#160a16"/></linearGradient></defs><rect width="240" height="96" fill="url(#ma-4)"/><path d="M60 24 q30 -8 60 4 q30 -12 60 -4 v58 q-30 -8 -60 4 q-30 -12 -60 -4z" fill="#efe2c4"/><path d="M120 28 v58" stroke="#b9a37a" stroke-width="2"/><path d="M72 40 q10 -6 18 2 q6 8 16 2 M72 56 q14 -4 22 4 M134 40 h30 M134 50 h24 M134 60 h28" fill="none" stroke="#8a6d45" stroke-width="2" stroke-linecap="round"/><g class="ma-brujula" transform="translate(196 30)"><circle r="16" fill="#1d2738" stroke="#f2b33d" stroke-width="2"/><path d="M0 -12 L4 0 L0 12 L-4 0 Z" fill="#e0483f"/><path d="M0 0 L4 0 L0 12 L-4 0 Z" fill="#e9eef7"/></g></svg>
             <span class="modo-titulo">Tutorial</span>
             <span class="modo-texto">Aprende lo básico jugando, paso a paso.</span>
+            <span class="modo-insignia">5 minutos</span>
           </button>
         </div>
 
@@ -124,6 +201,10 @@
           <p id="nota-red" class="nota"></p>
         </div>
 
+        <section class="arsenal" aria-label="Tu arsenal">
+          <h3 class="seccion-titulo">Tu arsenal</h3>
+          <div id="arsenal" class="arsenal-lista"></div>
+        </section>
         <details class="ayuda">
           <summary>Cómo se juega</summary>
           <ul>
@@ -148,6 +229,15 @@
 
       <!-- Perfil -->
       <section class="vista" data-vista="perfil" role="tabpanel" aria-labelledby="tab-perfil" hidden>
+        <div id="tarjeta-perfil" class="tarjeta-perfil est-noche">
+          <canvas id="tarjeta-emblema" width="240" height="240" aria-hidden="true"></canvas>
+          <div class="tp-textos">
+            <span class="tp-titulo" id="tp-titulo"></span>
+            <strong class="tp-nombre" id="tp-nombre"></strong>
+            <span class="tp-datos" id="tp-datos"></span>
+          </div>
+          <span class="tp-nivel" id="tp-nivel">1</span>
+        </div>
         <div class="perfil-rejilla">
           <div class="bloque">
             <h2>Identidad</h2>
@@ -161,6 +251,7 @@
                   <label class="campo"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
                   <label class="campo"><span>Título</span><select id="in-titulo"></select></label>
                 </div>
+                <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
               </div>
             </div>
             <h3>Forma del emblema</h3>
@@ -170,6 +261,10 @@
             <div class="fila-2">
               <label class="campo"><span>Fondo del emblema</span><input id="in-emb-fondo" type="color" value="#2f7dff"></label>
               <label class="campo"><span>Color del símbolo</span><input id="in-emb-figura" type="color" value="#ffffff"></label>
+            </div>
+            <div class="fila-2">
+              <div class="muestras" id="mu-emb-fondo" data-campo="in-emb-fondo" role="group" aria-label="Fondos rápidos"></div>
+              <div class="muestras" id="mu-emb-figura" data-campo="in-emb-figura" role="group" aria-label="Colores de símbolo rápidos"></div>
             </div>
           </div>
           <div class="bloque">
@@ -189,6 +284,19 @@
 
       <!-- Apariencia -->
       <section class="vista" data-vista="apariencia" role="tabpanel" aria-labelledby="tab-apariencia" hidden>
+        <div class="apariencia-rejilla">
+          <div class="bloque">
+            <h2>Estandarte</h2>
+            <p class="nota">El fondo de tu tarjeta de perfil y de tu insignia en el menú.</p>
+            <div id="sel-estandartes" class="estandartes" role="radiogroup" aria-label="Estandarte"></div>
+          </div>
+          <div class="bloque">
+            <h2>Marco del emblema</h2>
+            <div id="sel-marcos" class="selector" role="radiogroup" aria-label="Marco"></div>
+            <h2 class="h2-sep">Color de tu nombre en el mapa</h2>
+            <div id="sel-color-nombre" class="colores-nombre" role="radiogroup" aria-label="Color del nombre"></div>
+          </div>
+        </div>
         <div class="bloque">
           <h2>Patrón del territorio</h2>
           <p class="nota">Se ve en tu territorio durante la partida, también para los demás jugadores online. Los bloqueados se ganan con logros o subiendo de nivel.</p>

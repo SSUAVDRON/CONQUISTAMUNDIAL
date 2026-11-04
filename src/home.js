@@ -1,15 +1,36 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
+import { BUILDINGS, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { generateMap } from './map.js';
 import { hexToRgb } from './colors.js';
-import { PATTERN_FNS, drawEmblem } from './icons.js';
+import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFrame } from './icons.js';
+import { drawTransport, drawWarship } from './barcos.js';
+import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import {
-  ACHIEVEMENTS, PATTERNS, SHAPES, SYMBOLS, TITLES,
-  hasAchievement, isUnlocked, levelInfo, rewardsOf, titleName, unlockText,
+  ACHIEVEMENTS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
+  hasAchievement, isUnlocked, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
 } from './profile.js';
+
+/** Colores rápidos para el territorio y el emblema. */
+const SWATCHES = [
+  '#2f7dff', '#1fb5ff', '#20c997', '#3ddc84', '#8bd346', '#ffd23f', '#ffa23d', '#ff6b3d',
+  '#ff4d6d', '#e0483f', '#c2185b', '#b05cff', '#7b5cff', '#5b6b8c', '#f2f4f8', '#1b2133',
+];
+
+/** Lo que se muestra en «Tu arsenal»: dibujo del juego, nombre y para qué sirve. */
+const ARSENAL = [
+  { kind: 'city', text: 'Más tropas máximas' },
+  { kind: 'port', text: 'Pesca, comercio y oro' },
+  { kind: 'fort', text: 'Defensa ×2,5 alrededor' },
+  { kind: 'factory', text: '+25 % de oro' },
+  { kind: 'silo', text: 'Lanza misiles' },
+  { kind: 'sam', text: 'Derriba misiles' },
+  { kind: 'warship', text: 'Domina el mar' },
+  { kind: 'transporte', name: 'Desembarco', text: 'Tropas por mar' },
+  { kind: 'missile', text: 'Arrasa una zona' },
+];
 
 const $ = (id) => document.getElementById(id);
 const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' };
@@ -210,6 +231,12 @@ export class Home {
     }
     $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
 
+    // Portada, arsenal y muestras de color
+    $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
+    $('btn-elegir').addEventListener('click', () => this._mode('ia'));
+    this._buildArsenal();
+    this._buildSwatches();
+
     // Multijugador
     $('btn-crear-sala').addEventListener('click', () => this.h.onCreateRoom?.());
     $('form-unirse').addEventListener('submit', (e) => {
@@ -319,8 +346,172 @@ export class Home {
   _profileChanged() {
     this.renderChip();
     this.renderIdentity();
+    this.renderCard();
     this.renderPatterns();
+    this.renderAppearance();
+    this.renderHero();
     this.h.onProfileChange?.(true);
+  }
+
+  // ------------------------------------------------------- portada y arsenal
+
+  /** Saludo y datos rápidos de la portada. */
+  renderHero() {
+    const p = this.profile;
+    const info = levelInfo(p.xp);
+    $('portada-saludo').textContent = p.nombre ? `¡A las trincheras, ${p.nombre}!` : '¡A las trincheras!';
+    $('portada-datos').replaceChildren(
+      el('span', { class: 'dato-portada' }, el('b', { text: String(info.level) }), ' nivel'),
+      el('span', { class: 'dato-portada' }, el('b', { text: String(p.stats.victorias) }), ' victorias'),
+      el('span', { class: 'dato-portada' }, el('b', { text: String(p.stats.partidas) }), ' partidas'),
+      el('span', { class: 'dato-portada' }, el('b', { text: `${ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length}/${ACHIEVEMENTS.length}` }), ' logros'),
+    );
+  }
+
+  /** Dibujos del juego (edificios, buques, misil) con su nombre y su precio. */
+  _buildArsenal() {
+    const color = '#2f7dff';
+    $('arsenal').replaceChildren(
+      ...ARSENAL.map((item, i) => {
+        const def = BUILDINGS[item.kind];
+        const c = el('canvas', { width: 112, height: 112, 'aria-hidden': 'true' });
+        const ctx = c.getContext('2d');
+        if (item.kind === 'warship') drawWarship(ctx, 56, 56, -0.5, 44, color, true, -0.9, 0);
+        else if (item.kind === 'transporte') drawTransport(ctx, 56, 56, -0.5, 64, color, true, 0);
+        else if (item.kind === 'missile') drawMissileSprite(ctx, 56, 56, -0.8, 64, '#e0483f', 0);
+        else drawBuildingIcon(ctx, item.kind, 56, 56, 84, { disc: '#2a5bb0', ring: '#ffffff' });
+        const price = def ? `${formatNumber(def.base)} oro` : 'Tropas';
+        return el(
+          'div',
+          { class: 'arma', style: `--i:${i}` },
+          el('div', { class: 'arma-dibujo' }, c),
+          el('strong', { text: item.name || def.name }),
+          el('span', { class: 'arma-texto', text: item.text }),
+          el('span', { class: 'arma-precio', text: price }),
+        );
+      }),
+    );
+  }
+
+  /** Muestras de color rápidas junto a cada selector de color. */
+  _buildSwatches() {
+    for (const box of document.querySelectorAll('.muestras[data-campo]')) {
+      const input = $(box.dataset.campo);
+      box.replaceChildren(
+        ...SWATCHES.map((c) =>
+          el('button', {
+            type: 'button',
+            class: 'muestra-color',
+            style: `--c:${c}`,
+            title: c,
+            'aria-label': `Color ${c}`,
+            onclick: () => {
+              input.value = c;
+              input.dispatchEvent(new Event('input'));
+            },
+          }),
+        ),
+      );
+    }
+  }
+
+  // ------------------------------------------------------ tarjeta y aspecto
+
+  /** Tarjeta de perfil: estandarte, emblema con marco, nombre, título y nivel. */
+  renderCard() {
+    const p = this.profile;
+    const card = $('tarjeta-perfil');
+    card.className = `tarjeta-perfil est-${p.estandarte}`;
+    const c = $('tarjeta-emblema');
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.66);
+    drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.66);
+    $('tp-nombre').textContent = p.nombre || 'Sin nombre';
+    $('tp-nombre').style.color = nameColorOf(p);
+    $('tp-titulo').textContent = titleName(p) || 'Recluta';
+    const info = levelInfo(p.xp);
+    $('tp-nivel').textContent = String(info.level);
+    $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
+  }
+
+  renderAppearance() {
+    const p = this.profile;
+    // Estandartes
+    $('sel-estandartes').replaceChildren(
+      ...BANNERS.map((b) => {
+        const ok = isUnlocked(p, b);
+        return el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(b.id === p.estandarte),
+            class: `estandarte est-${b.id}${ok ? '' : ' bloqueada'}`,
+            disabled: !ok,
+            onclick: () => {
+              p.estandarte = b.id;
+              this._profileChanged();
+            },
+          },
+          el('span', { class: 'est-nombre', text: b.name }),
+          ok ? null : el('span', { class: 'est-req', text: `🔒 ${unlockText(b)}` }),
+        );
+      }),
+    );
+    // Marcos
+    $('sel-marcos').replaceChildren(
+      ...FRAMES.map((f) => {
+        const ok = isUnlocked(p, f);
+        const cv = el('canvas', { width: 64, height: 64, class: 'emblema', 'aria-hidden': 'true' });
+        cv.style.width = cv.style.height = '34px';
+        const cx = cv.getContext('2d');
+        drawEmblem(cx, p.emblema, 32, 32, 40);
+        drawFrame(cx, f.id, 32, 32, 40);
+        return el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(f.id === p.marco),
+            class: `opcion${ok ? '' : ' bloqueada'}`,
+            disabled: !ok,
+            title: ok ? f.name : `${f.name}: ${unlockText(f)}`,
+            onclick: () => {
+              p.marco = f.id;
+              this._profileChanged();
+            },
+          },
+          cv,
+          el('span', { text: ok ? f.name : `🔒 ${unlockText(f)}` }),
+        );
+      }),
+    );
+    // Color del nombre
+    $('sel-color-nombre').replaceChildren(
+      ...NAME_COLORS.map((n) => {
+        const ok = isUnlocked(p, n);
+        const color = n.color || nameColorOf({ ...p, colorNombre: 'propio' });
+        return el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(n.id === p.colorNombre),
+            class: `color-nombre${ok ? '' : ' bloqueada'}`,
+            disabled: !ok,
+            style: `--c:${color}`,
+            title: ok ? n.name : `${n.name}: ${unlockText(n)}`,
+            onclick: () => {
+              p.colorNombre = n.id;
+              this._profileChanged();
+            },
+          },
+          el('span', { class: 'cn-muestra', text: p.nombre || 'Mi nación' }),
+          el('span', { class: 'cn-nombre', text: ok ? n.name : `🔒 ${unlockText(n)}` }),
+        );
+      }),
+    );
   }
 
   show() {
@@ -344,6 +535,9 @@ export class Home {
 
   renderAll() {
     this.renderChip();
+    this.renderHero();
+    this.renderCard();
+    this.renderAppearance();
     this.renderIdentity();
     this.renderProgress();
     this.renderPatterns();
@@ -359,7 +553,11 @@ export class Home {
     const c = $('chip-emblema');
     const ctx = c.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
-    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.95);
+    const framed = p.marco && p.marco !== 'ninguno';
+    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * (framed ? 0.72 : 0.95));
+    drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.72);
+    $('chip-perfil').className = `chip-perfil est-${p.estandarte}`;
+    $('chip-nombre').style.color = nameColorOf(p);
     const info = levelInfo(p.xp);
     $('chip-nombre').textContent = p.nombre || 'Sin nombre';
     const title = titleName(p);
