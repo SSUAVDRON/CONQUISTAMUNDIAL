@@ -51,6 +51,11 @@ export class Game {
     this.effects = [];
     /** Edificios en obras (nuevos o mejorándose). */
     this.sites = [];
+    /** Raíles fábrica→estación (ciudad o puerto) y los trenes que circulan por ellos. */
+    this.rails = []; // { key, factory, station, len, nextTrain, train }
+    this._railMap = new Map();
+    this.trains = []; // { id, rail, pos, dir }
+    this._nextTrainId = 1;
     this.buildings = []; // { id, kind, tile, owner }
     this.buildingAt = new Map(); // casilla → edificio
     this._nextBuildingId = 1;
@@ -581,6 +586,102 @@ export class Game {
   /** Radio de una fortaleza de nivel `lvl`. */
   fortRadius(lvl = 1) {
     return CONFIG.fortRadius + CONFIG.fortRadiusPerLevel * (lvl - 1);
+  }
+
+  /** Alcance de los raíles de una fábrica de nivel `lvl`. */
+  railRange(lvl = 1) {
+    return CONFIG.railRange + CONFIG.railRangePerLevel * (lvl - 1);
+  }
+
+  /**
+   * Red de raíles: cada fábrica terminada se une con las ciudades y puertos
+   * terminados a su alcance en la misma masa de tierra, sean de quien sean
+   * (también enemigos), como mucho CONFIG.railMaxPerFactory, los más cercanos.
+   * Los raíles que siguen existiendo conservan su tren.
+   */
+  _updateRailNetwork() {
+    const map = this.map;
+    const keep = new Map();
+    const list = [];
+    for (const f of this.buildings) {
+      if (f.kind !== 'factory' || !f.level) continue;
+      const R = this.railRange(f.level);
+      const fx = map.x(f.tile);
+      const fy = map.y(f.tile);
+      const body = map.landBody[f.tile];
+      const cands = [];
+      for (const s of this.buildings) {
+        if ((s.kind !== 'city' && s.kind !== 'port') || !s.level || map.landBody[s.tile] !== body) continue;
+        const dx = map.x(s.tile) - fx;
+        const dy = map.y(s.tile) - fy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 <= R * R) cands.push([d2, s]);
+      }
+      cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
+      for (let k = 0; k < cands.length && k < CONFIG.railMaxPerFactory; k++) {
+        const [d2, s] = cands[k];
+        const key = `${f.id}:${s.id}`;
+        const r = this._railMap.get(key) || {
+          key,
+          factory: f,
+          station: s,
+          len: Math.max(1, Math.sqrt(d2)),
+          nextTrain: this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax),
+          train: null,
+        };
+        keep.set(key, r);
+        list.push(r);
+      }
+    }
+    if (this.trains.length) this.trains = this.trains.filter((t) => keep.has(t.rail.key));
+    this._railMap = keep;
+    this.rails = list;
+  }
+
+  /** Salen trenes, avanzan y pagan al llegar a cada extremo (ida a la estación y vuelta). */
+  _updateTrains() {
+    if (this.ticks % CONFIG.railRefresh === 0) this._updateRailNetwork();
+    for (const r of this.rails) {
+      if (r.train || this.ticks < r.nextTrain) continue;
+      r.train = { id: this._nextTrainId++, rail: r, pos: 0, dir: 1 };
+      this.trains.push(r.train);
+    }
+    if (!this.trains.length) return;
+    let done = false;
+    for (const t of this.trains) {
+      const r = t.rail;
+      t.pos += CONFIG.trainSpeed * t.dir;
+      if (t.dir > 0 && t.pos >= r.len) {
+        t.pos = r.len;
+        t.dir = -1;
+        this._trainArrive(r, r.station);
+      } else if (t.dir < 0 && t.pos <= 0) {
+        t.pos = 0;
+        t.done = true;
+        done = true;
+        r.train = null;
+        r.nextTrain = this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax);
+        this._trainArrive(r, r.factory);
+      }
+    }
+    if (done) this.trains = this.trains.filter((t) => !t.done);
+  }
+
+  /** Oro de un tren que llega a `at`: para el dueño de la fábrica y una parte para el de la estación. */
+  _trainArrive(r, at) {
+    const f = r.factory;
+    const s = r.station;
+    // Si alguno de los dos edificios ya no existe, el raíl caerá en el próximo recálculo
+    if (this.buildingAt.get(f.tile) !== f || this.buildingAt.get(s.tile) !== s) return;
+    const value = Math.round((CONFIG.trainGoldBase + CONFIG.trainGoldPerTile * r.len) * (1 + CONFIG.trainLevelBonus * (f.level - 1)));
+    const owner = this.players[f.owner];
+    if (!owner || !owner.alive) return;
+    owner.gold += value;
+    owner.stats.trainGold = (owner.stats.trainGold || 0) + value;
+    const so = this.players[s.owner];
+    if (s.owner !== f.owner && so && so.alive) so.gold += Math.round(value * CONFIG.trainReceiverShare);
+    const map = this.map;
+    this.effects.push({ kind: 'train', x: map.x(at.tile) + 0.5, y: map.y(at.tile) + 0.5, gold: value, owner: f.owner, other: s.owner, tick: this.ticks });
   }
 
   /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
@@ -1897,6 +1998,7 @@ export class Game {
     this._updateMerchants();
     this._updateWarships();
     this._updateMissiles();
+    this._updateTrains();
     if (this.effects.length && this.effects[0].tick < this.ticks - 30) {
       this.effects = this.effects.filter((e) => e.tick >= this.ticks - 30);
     }

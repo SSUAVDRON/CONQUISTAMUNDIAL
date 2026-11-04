@@ -4,7 +4,7 @@ import { BUILDINGS, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, START_GOLDS, WIN_S
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { generateMap } from './map.js';
 import { hexToRgb } from './colors.js';
-import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFrame } from './icons.js';
+import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame } from './icons.js';
 import { drawTransport, drawWarship } from './barcos.js';
 import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
@@ -379,7 +379,7 @@ export class Home {
         if (item.kind === 'warship') drawWarship(ctx, 56, 56, -0.5, 44, color, true, -0.9, 0);
         else if (item.kind === 'transporte') drawTransport(ctx, 56, 56, -0.5, 64, color, true, 0);
         else if (item.kind === 'missile') drawMissileSprite(ctx, 56, 56, -0.8, 64, '#e0483f', 0);
-        else drawBuildingIcon(ctx, item.kind, 56, 56, 84, { disc: '#2a5bb0', ring: '#ffffff' });
+        else drawBuildingReal(ctx, item.kind, 56, 56, 84, { ring: '#2f7dff' });
         const price = def ? `${formatNumber(def.base)} oro` : 'Tropas';
         return el(
           'div',

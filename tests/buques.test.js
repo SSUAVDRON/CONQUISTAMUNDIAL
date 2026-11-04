@@ -30,7 +30,7 @@ function navalSetup() {
     if (tc < 0 || !game.spawnPlayer(c, tc)) continue;
     while (game.phase === 'spawn') game.tick();
     game.bots.length = 0;
-    a.gold = b.gold = 1e6;
+    a.gold = b.gold = 1e7;
     if (!buildNow(game, a, 'port', ta) || !buildNow(game, b, 'port', tb)) continue;
     return { map, game, a, b, ta, tb, water };
   }

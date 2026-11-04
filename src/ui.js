@@ -3,7 +3,7 @@
 import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
-import { drawBuildingIcon, flagCss, hasFlag } from './icons.js';
+import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -173,10 +173,12 @@ export class UI {
       const icon = document.createElement('canvas');
       icon.width = 48;
       icon.height = 48;
-      drawBuildingIcon(icon.getContext('2d'), kind, 24, 24, 40, { glyph: '#f2f4f8' });
+      drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
+      // Sin nombre (ocupa menos): el nombre sale al pasar el ratón
+      btn.setAttribute('aria-label', def.name);
       const text = document.createElement('span');
       text.className = 'b-texto';
-      text.innerHTML = `<span class="b-nombre">${def.name}</span><span class="b-coste"></span>`;
+      text.innerHTML = '<span class="b-coste"></span>';
       const count = document.createElement('span');
       count.className = 'b-num';
       btn.append(icon, text, count);
@@ -636,11 +638,11 @@ export class UI {
         // Coste y silos listos
         const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
         const ready = silos.filter((b) => b.readyAt <= game.ticks).length;
-        btn.querySelector('.b-coste').textContent = silos.length ? `${formatNumber(cost)} · ${ready}/${silos.length} listos` : 'Necesita silo';
+        btn.querySelector('.b-coste').textContent = silos.length ? `${formatNumber(cost)} · ${ready}/${silos.length}` : formatNumber(cost);
         btn.querySelector('.b-num').textContent = '';
         unavailable = unavailable || !ready;
       } else {
-        btn.querySelector('.b-coste').textContent = `${formatNumber(cost)} oro`;
+        btn.querySelector('.b-coste').textContent = formatNumber(cost);
         btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}${works[kind] ? ' 🔨' : ''}` : '';
       }
       btn.classList.toggle('caro', unavailable);

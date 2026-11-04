@@ -127,6 +127,9 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   resolución adaptable y clasificación más tranquila
 - Antimisiles y silos con icono triangular; puertos que se mejoran con un
   clic encima; buques con zona fija elegida al botarlos
+- Iconos de edificios a color y fáciles de reconocer; panel solo con icono y
+  precio; estructuras más caras y potentes (antimisiles 3M, inflación 25 %);
+  raíles y trenes de las fábricas, también hacia edificios enemigos
 
 ## Próximo
 

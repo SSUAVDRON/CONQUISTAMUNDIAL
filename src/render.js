@@ -6,7 +6,7 @@
 import { CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
-import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFlag, emblemFor } from './icons.js';
+import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, emblemFor } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
@@ -35,6 +35,37 @@ const FLASH_COLORS = [
 const ALLY_STRIPE = [96, 226, 140];
 
 const lerp = (a, b, t) => a + (b - a) * t;
+
+/** Tren visto desde arriba apuntando en `ang`: locomotora (color del dueño) y dos vagones. */
+function drawTrain(ctx, x, y, ang, L, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  const h = L * 0.34;
+  ctx.lineWidth = Math.max(1, L * 0.06);
+  ctx.strokeStyle = 'rgba(15, 18, 24, 0.85)';
+  for (const off of [-L * 0.72, -L * 1.28]) {
+    ctx.beginPath();
+    ctx.roundRect(off - L * 0.25, -h / 2, L * 0.5, h, h * 0.25);
+    ctx.fillStyle = '#8b6a4a';
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.fillRect(off - L * 0.2, -h / 2 + h * 0.15, L * 0.4, h * 0.2);
+  }
+  ctx.beginPath();
+  ctx.roundRect(-L * 0.22, -h / 2, L * 0.62, h, h * 0.35);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  ctx.fillRect(-L * 0.16, -h / 2 + h * 0.18, L * 0.2, h * 0.64);
+  ctx.beginPath();
+  ctx.arc(L * 0.36, 0, Math.max(1, h * 0.18), 0, Math.PI * 2);
+  ctx.fillStyle = '#ffe48a';
+  ctx.fill();
+  ctx.restore();
+}
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const smooth = (a, b, v) => {
   const t = clamp((v - a) / (b - a), 0, 1);
@@ -602,6 +633,7 @@ export class Renderer {
     ctx.setTransform(dpr, 0, 0, dpr, ox * dpr, oy * dpr);
     ctx.imageSmoothingEnabled = true;
     this.fx.drawDecals(ctx, camera);
+    this._drawRails();
     this._drawBuildings(now);
     this._gen++;
     this._trackEffects();
@@ -674,7 +706,8 @@ export class Renderer {
   // ------------------------------------------------------------- edificios
 
   _buildingSize() {
-    return Math.min(30, Math.max(10, this.camera.zoom * RES * 3));
+    // Algo más grandes que antes: se aprecian los colores y detalles
+    return Math.min(38, Math.max(12, this.camera.zoom * RES * 3.6));
   }
 
   _drawBuildings(now) {
@@ -693,10 +726,9 @@ export class Renderer {
       ctx.fill();
       const building = game.isBuilding ? game.isBuilding(b) : false;
       if (building) ctx.globalAlpha = 0.55;
-      drawBuildingIcon(ctx, b.kind, sx, sy, size, {
-        disc: rgbToCss(shadeRgb(p.color, 0.7)),
-        ring: p === game.human ? '#ffffff' : 'rgba(0,0,0,0.7)',
-      });
+      const spr = this._buildingSprite(b.kind, p, size);
+      const w = spr.width / this.dpr;
+      ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
       ctx.globalAlpha = 1;
       if (building) this._drawConstruction(sx, sy, size, game.buildProgress(b), now);
       else {
@@ -705,6 +737,86 @@ export class Renderer {
       }
       if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
     }
+  }
+
+  /**
+   * Raíles de las fábricas (balasto, traviesas y carril) y los trenes que
+   * circulan por ellos: locomotora del color del dueño con dos vagones.
+   */
+  _drawRails() {
+    const { ctx, game, camera } = this;
+    if (!game.rails.length || camera.zoom * RES < 1.1) return;
+    const map = game.map;
+    const W = camera.viewW;
+    const H = camera.viewH;
+    const segs = this._railSegs || (this._railSegs = []);
+    segs.length = 0;
+    for (const r of game.rails) {
+      const [ax, ay] = camera.worldToScreen(map.x(r.factory.tile) + 0.5, map.y(r.factory.tile) + 0.5);
+      const [bx, by] = camera.worldToScreen(map.x(r.station.tile) + 0.5, map.y(r.station.tile) + 0.5);
+      if (Math.max(ax, bx) < -10 || Math.min(ax, bx) > W + 10 || Math.max(ay, by) < -10 || Math.min(ay, by) > H + 10) continue;
+      segs.push(ax, ay, bx, by);
+    }
+    if (segs.length) {
+      const lw = clamp(camera.zoom * RES * 0.6, 1.4, 4);
+      const path = () => {
+        ctx.beginPath();
+        for (let i = 0; i < segs.length; i += 4) {
+          ctx.moveTo(segs[i], segs[i + 1]);
+          ctx.lineTo(segs[i + 2], segs[i + 3]);
+        }
+      };
+      ctx.lineCap = 'butt';
+      path();
+      ctx.lineWidth = lw * 2;
+      ctx.strokeStyle = 'rgba(38, 30, 22, 0.5)';
+      ctx.stroke();
+      ctx.setLineDash([lw * 0.55, lw * 0.85]);
+      ctx.lineWidth = lw * 1.7;
+      ctx.strokeStyle = '#7a5434';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.lineWidth = Math.max(1, lw * 0.4);
+      ctx.strokeStyle = '#d5d9de';
+      ctx.stroke();
+      ctx.lineCap = 'round';
+    }
+    if (!game.trains.length) return;
+    const L = clamp(camera.zoom * RES * 3.2, 9, 26);
+    for (const t of game.trains) {
+      const r = t.rail;
+      const pos = clamp(t.pos + CONFIG.trainSpeed * t.dir * this._frac, 0, r.len);
+      const k = pos / r.len;
+      const fx = map.x(r.factory.tile) + 0.5;
+      const fy = map.y(r.factory.tile) + 0.5;
+      const sx = map.x(r.station.tile) + 0.5;
+      const sy = map.y(r.station.tile) + 0.5;
+      const [px, py] = camera.worldToScreen(fx + (sx - fx) * k, fy + (sy - fy) * k);
+      if (px < -L * 2 || py < -L * 2 || px > W + L * 2 || py > H + L * 2) continue;
+      const ang = Math.atan2(sy - fy, sx - fx) + (t.dir < 0 ? Math.PI : 0);
+      const owner = game.players[r.factory.owner];
+      drawTrain(ctx, px, py, ang, L, owner ? rgbToCss(owner.color) : '#888');
+    }
+  }
+
+  /**
+   * Edificio a color ya pintado (se dibuja una vez por tipo, dueño y tamaño
+   * y se reutiliza: los degradados y detalles no cuestan en cada fotograma).
+   */
+  _buildingSprite(kind, p, size) {
+    const px = Math.max(8, Math.round((size * this.dpr) / 2) * 2);
+    const human = p === this.game.human;
+    const key = `${kind}|${p.id}|${px}|${human ? 1 : 0}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil(px * 1.45);
+      c = makeCanvas(S, S);
+      drawBuildingReal(c.getContext('2d'), kind, S / 2, S / 2, px, { ring: rgbToCss(p.color), outline: human });
+      this._sprites.set(key, c);
+    }
+    return c;
   }
 
   /** Obra en marcha: anillo de progreso y un andamio que parpadea. */
@@ -1048,6 +1160,16 @@ export class Renderer {
       const visible = this._inView(e.x, e.y, 16);
       const shake = fx.shake;
       const flash = fx.flash;
+      if (e.kind === 'train') {
+        // Oro de un tren: solo si es tuyo o pasa por tu estación, y si se ve
+        const h = game.human;
+        if (!h || !visible) continue;
+        const mine = e.owner === h.id;
+        if (!mine && e.other !== h.id) continue;
+        const amount = mine ? e.gold : Math.round(e.gold * CONFIG.trainReceiverShare);
+        fx.label(e.x, e.y - 1.5 * RES, `+${formatNumber(amount)}`, '#ffd76a', 12, 1.3);
+        continue;
+      }
       if (e.kind === 'boom') {
         fx.explosion(e.x, e.y, CONFIG.missileRadius / RES);
       } else {
@@ -1235,7 +1357,7 @@ export class Renderer {
     }
     const size = Math.max(18, this._buildingSize());
     ctx.globalAlpha = 0.9;
-    drawBuildingIcon(ctx, kind, sx, sy, size, { disc: rgbToCss(human.color), ring: color });
+    drawBuildingReal(ctx, kind, sx, sy, size, { ring: color });
     ctx.globalAlpha = 1;
     if (check.upgrade) {
       // Flecha de «subir de nivel»

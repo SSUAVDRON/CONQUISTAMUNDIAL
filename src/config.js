@@ -82,19 +82,20 @@ export const CONFIG = {
   // Edificios
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
-  cityMaxTroops: 9000, // tropas máximas extra por nivel de ciudad
-  portGoldBonus: 0.1, // +10% de oro por puerto
-  factoryGoldBonus: 0.25, // +25% de oro por fábrica
-  fortRadius: 10 * RES,
-  fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
+  cityMaxTroops: 15000, // tropas máximas extra por nivel de ciudad
+  portGoldBonus: 0.15, // +15% de oro por puerto
+  factoryGoldBonus: 0.35, // +35% de oro por fábrica (y sus trenes)
+  fortRadius: 12 * RES,
+  fortDefenseMult: 3, // coste y tiempo de conquista dentro del radio
   // Precios, niveles y obras
-  inflation: 0.12, // cada compra (edificio, mejora o buque) encarece un 12 % todo lo demás; no afecta a misiles, silos ni antimisiles
+  inflation: 0.25, // cada compra (edificio, mejora o buque) encarece un 25 % todo lo demás; no afecta a misiles, silos ni antimisiles
   maxLevel: 5,
   upgradeCostMult: 0.8, // subir al nivel n+1 cuesta: precio actual × 0,8 × n
   upgradeTimeMult: 0.8, // y tarda el 80 % de la obra nueva
-  // Efecto de cada nivel por encima del 1: ciudad +15k tropas, puerto +10 % de
-  // oro y un pesquero más, fábrica +25 % de oro, fortaleza +2 de radio y +0,4 de
-  // defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto
+  // Efecto de cada nivel por encima del 1: ciudad +15k tropas, puerto +15 % de
+  // oro y un pesquero más, fábrica +35 % de oro y más alcance de raíles,
+  // fortaleza +2 de radio y +0,4 de defensa, silo −15 % de recarga,
+  // antimisiles +3 de radio y +7 % de acierto
   fortRadiusPerLevel: 2 * RES,
   fortMultPerLevel: 0.4,
   siloReloadPerLevel: 0.15,
@@ -114,7 +115,7 @@ export const CONFIG = {
 
   // Economía naval: barcos automáticos de los puertos
   fishPerPort: 2, // pesqueros por puerto
-  fishGold: 37.5, // oro por tick de cada pesquero
+  fishGold: 50, // oro por tick de cada pesquero
   fishRange: 14 * RES, // casillas alrededor del puerto donde faenan
   fishSpeed: 0.3 * RES,
   tradeEveryMin: 200, // ticks entre mercantes de un mismo puerto
@@ -122,6 +123,19 @@ export const CONFIG = {
   tradeGoldPerTile: 450 / RES, // oro por casilla de ruta, al llegar
   tradeReceiverShare: 0.5, // parte para el dueño del puerto de destino
   tradeSpeed: 0.42 * RES,
+
+  // Raíles y trenes de las fábricas
+  railRange: 38 * RES, // alcance de los raíles de una fábrica de nivel 1 (casillas)
+  railRangePerLevel: 8 * RES, // y cuánto más por cada nivel extra
+  railMaxPerFactory: 6, // estaciones (ciudades y puertos) como mucho por fábrica, las más cercanas
+  railRefresh: 20, // ticks entre recálculos de la red
+  trainEveryMin: 150, // ticks entre trenes de un mismo raíl
+  trainEveryMax: 300,
+  trainSpeed: 0.8 * RES, // casillas por tick
+  trainGoldBase: 3000, // oro al llegar a cada extremo del raíl…
+  trainGoldPerTile: 30 / RES, // …más esto por casilla de raíl
+  trainLevelBonus: 0.25, // +25 % por nivel extra de la fábrica
+  trainReceiverShare: 0.5, // si la estación es de otro jugador, se lleva esta parte
 
   // Misiles y antimisiles
   missileRadius: 8 * RES, // casillas arrasadas alrededor del impacto
@@ -132,7 +146,7 @@ export const CONFIG = {
   samRange: 22 * RES, // radio de intercepción de una batería
   samReload: 200, // ticks (20 s) que tarda una batería en recargar tras disparar
   samReloadPerLevel: 0.12, // cada nivel recarga un 12 % más rápido
-  samHitChance: 0.6, // probabilidad de derribar el misil al disparar
+  samHitChance: 0.65, // probabilidad de derribar el misil al disparar
 
   // Diplomacia
   maxAllies: 3,
@@ -152,7 +166,7 @@ export const CONFIG = {
 /** Reglas que se eligen al crear la partida (también en las salas online). */
 export const DEFAULT_RULES = { winShare: 0.7, startGold: 0, missiles: true, warships: true };
 export const WIN_SHARES = [0.5, 0.7, 0.9];
-export const START_GOLDS = [0, 250000, 1250000];
+export const START_GOLDS = [0, 600000, 3000000];
 
 /** Normaliza reglas venidas de fuera (perfil, red). */
 export function cleanRules(raw) {
@@ -172,15 +186,15 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
  * (100 ms cada uno); `fixed`: precio fijo, sin inflación.
  */
 export const BUILDINGS = {
-  city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+9k tropas máximas por nivel' },
-  port: { name: 'Puerto', fem: false, base: 100000, build: 60, key: 'KeyE', coastal: true, desc: 'Pesqueros, mercantes y +10% de oro' },
-  fort: { name: 'Fortaleza', fem: true, base: 75000, build: 40, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
-  factory: { name: 'Fábrica', fem: true, base: 150000, build: 60, key: 'KeyF', desc: '+25% de oro por nivel' },
-  silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar misiles' },
-  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos; recarga 20 s tras cada disparo' },
+  city: { name: 'Ciudad', fem: true, base: 300000, build: 50, key: 'KeyQ', desc: '+15k tropas máximas por nivel' },
+  port: { name: 'Puerto', fem: false, base: 250000, build: 60, key: 'KeyE', coastal: true, desc: 'Pesqueros, mercantes y +15% de oro' },
+  fort: { name: 'Fortaleza', fem: true, base: 200000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor' },
+  factory: { name: 'Fábrica', fem: true, base: 400000, build: 60, key: 'KeyF', desc: '+35% de oro por nivel; une con raíles las ciudades y puertos cercanos (también enemigos) y sus trenes dan oro al llegar' },
+  silo: { name: 'Silo', fem: false, base: 2000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar misiles' },
+  sam: { name: 'Antimisiles', fem: false, base: 3000000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos; recarga 20 s tras cada disparo' },
   // No son edificios: el buque se bota desde un puerto y el misil sale de un silo
-  warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Clic en el mar: patrulla esa zona para siempre; hunde buques y transportes y captura barcos civiles' },
-  missile: { name: 'Misil', fem: false, base: 500000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
+  warship: { name: 'Buque', fem: false, base: 300000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Clic en el mar: patrulla esa zona para siempre; hunde buques y transportes y captura barcos civiles' },
+  missile: { name: 'Misil', fem: false, base: 750000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
 };
 /** Edificios de verdad (no unidades). */
 export const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'];

@@ -17,6 +17,7 @@ export class BotBrain {
     this.thinkScale = level[0];
     this.aggression = Math.min(1, (0.2 + r.float() * 0.6) * level[1]);
     this.expandRatio = 0.2 + r.float() * 0.3;
+    this.saveFor = null; // edificio caro para el que está ahorrando (no gasta en otra cosa)
     this.diplomacy = r.float(); // 0 = lobo solitario, 1 = diplomático
     this.loyalty = r.float(); // probabilidad de no traicionar por oportunismo
     this.nextDiplomacy = CONFIG.spawnTicks + CONFIG.botDiplomacyStartTicks + r.int(0, 300);
@@ -109,6 +110,9 @@ export class BotBrain {
     // Ciudades: con tope (los precios se inflan con cada compra); pasado el tope, mejora
     let want = 'city';
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
+    else if (this.saveFor) want = this.saveFor;
+    // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
+    else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
     else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / (6000 * AREA)) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
     else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / (5000 * AREA)) && g.rng.chance(0.4)) want = 'port';
     else if (p.buildings.city >= 1 && p.buildings.factory < 1 + Math.floor(p.tiles / (3000 * AREA)) && g.rng.chance(0.35)) want = 'factory';
@@ -138,9 +142,15 @@ export class BotBrain {
       if (own && g.canBuild(p, want, own.tile).ok) return g.build(p, want, own.tile);
       if (capped) return false;
     }
-    if (p.gold < g.buildCost(p, want)) return false;
+    if (p.gold < g.buildCost(p, want)) {
+      // Fábricas y puertos son caros: ahorra para ellos en vez de gastar en otra cosa
+      if (want === 'factory' || want === 'port') this.saveFor = want;
+      return false;
+    }
     const tile = this._pickBuildTile(want, threat);
-    return tile >= 0 && g.build(p, want, tile);
+    const ok = tile >= 0 && g.build(p, want, tile);
+    if (ok || tile < 0) this.saveFor = null;
+    return ok;
   }
 
   _pickBuildTile(kind, threat) {

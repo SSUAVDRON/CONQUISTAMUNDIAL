@@ -241,6 +241,238 @@ const EMBLEM_SHAPES = {
   },
 };
 
+// --------------------------------------------- iconos de edificios (mapa)
+// Iconos sencillos y fáciles de reconocer: cada tipo tiene su color de fondo
+// y un símbolo grande con contorno oscuro (casa, ancla, torre, fábrica, misil,
+// escudo). El anillo exterior es del color del dueño.
+
+const OUTLINE = '#1b222c';
+/** Colores de fondo por tipo: [claro, oscuro] (degradado con luz arriba a la izquierda). */
+const TYPE_BG = {
+  city: ['#ffd98a', '#d6952a'],
+  port: ['#8fd0f7', '#2d77bd'],
+  fort: ['#9cc06f', '#4c6c33'],
+  factory: ['#f4a067', '#b0521f'],
+  silo: ['#f2766a', '#a32a22'],
+  sam: ['#6fdccf', '#1d8076'],
+  warship: ['#9fb4ca', '#465a71'],
+  missile: ['#f09a84', '#8e3426'],
+};
+
+/** Rellena y perfila el trazado actual. */
+function fs(ctx, fill, lw = 1.1) {
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = OUTLINE;
+  ctx.stroke();
+}
+
+function rectPath(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+}
+
+function polyPath(ctx, pts) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0], pts[1]);
+  for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+  ctx.closePath();
+}
+
+/** Ciudad: una casa con tejado rojo, chimenea, puerta y ventana. */
+function iconCity(ctx) {
+  rectPath(ctx, 3, -6.6, 1.9, 3.6);
+  fs(ctx, '#a9563c');
+  rectPath(ctx, -5.6, -0.6, 11.2, 7.2);
+  fs(ctx, '#fff7e6');
+  polyPath(ctx, [-7.4, -0.4, 0, -7.6, 7.4, -0.4]);
+  fs(ctx, '#d6452e');
+  rectPath(ctx, -1.5, 2.4, 3, 4.2);
+  fs(ctx, '#8a5a33', 0.8);
+  rectPath(ctx, 2.5, 0.9, 2, 2);
+  fs(ctx, '#7cc4f2', 0.8);
+  rectPath(ctx, -4.5, 0.9, 2, 2);
+  fs(ctx, '#7cc4f2', 0.8);
+}
+
+/** Puerto: un ancla. */
+function iconPort(ctx) {
+  ctx.lineCap = 'round';
+  const path = () => {
+    ctx.beginPath();
+    ctx.arc(0, -5.6, 1.8, 0, TAU);
+    ctx.moveTo(0, -3.8);
+    ctx.lineTo(0, 6.4);
+    ctx.moveTo(-3.6, -1.4);
+    ctx.lineTo(3.6, -1.4);
+    ctx.moveTo(5.9, 1.4);
+    ctx.arc(0, 0.6, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+  };
+  // Contorno claro debajo y ancla azul marino encima: se lee sobre el azul
+  path();
+  ctx.lineWidth = 3.8;
+  ctx.strokeStyle = '#eaf6ff';
+  ctx.stroke();
+  path();
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = '#123150';
+  ctx.stroke();
+  polyPath(ctx, [5.9, 1.4, 7.6, 3.2, 4.8, 3.6]);
+  fs(ctx, '#123150', 0.6);
+  polyPath(ctx, [-5.9, 1.4, -7.6, 3.2, -4.8, 3.6]);
+  fs(ctx, '#123150', 0.6);
+}
+
+/** Fortaleza: torre de piedra con almenas, puerta y bandera roja. */
+function iconFort(ctx) {
+  rectPath(ctx, 4.1, -9.2, 0.7, 4);
+  fs(ctx, '#3a3a3a', 0.4);
+  polyPath(ctx, [4.8, -9.2, 8, -8.2, 4.8, -7.2]);
+  fs(ctx, '#e0402f', 0.7);
+  ctx.beginPath();
+  ctx.moveTo(-5.8, 6.6);
+  ctx.lineTo(-5.8, -5.4);
+  for (const x of [-5.8, -1.3, 3.2]) {
+    ctx.lineTo(x, -5.4);
+    ctx.lineTo(x + 2.6, -5.4);
+    ctx.lineTo(x + 2.6, -3);
+    if (x < 3) ctx.lineTo(x + 4.5, -3);
+  }
+  ctx.lineTo(5.8, 6.6);
+  ctx.closePath();
+  fs(ctx, '#efe9dc');
+  ctx.beginPath();
+  ctx.moveTo(-2, 6.6);
+  ctx.lineTo(-2, 3);
+  ctx.arc(0, 3, 2, Math.PI, 0);
+  ctx.lineTo(2, 6.6);
+  ctx.closePath();
+  fs(ctx, '#4a3a2c', 0.8);
+}
+
+/** Fábrica: nave con tejado de dientes de sierra, chimenea y humo. */
+function iconFactory(ctx) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+  for (const [x, y, r] of [[5, -8.4, 1.7], [3, -9.4, 1.2], [1.4, -9, 0.8]]) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fill();
+  }
+  rectPath(ctx, 3.4, -6.6, 2.8, 13.2);
+  fs(ctx, '#5b626c');
+  polyPath(ctx, [-7.2, 6.6, -7.2, -1.2, -3.6, -4.4, -3.6, -1.2, 0, -4.4, 0, -1.2, 3.4, -1.2, 3.4, 6.6]);
+  fs(ctx, '#3d434c');
+  for (const x of [-6, -2.6, 0.8]) {
+    rectPath(ctx, x, 1.4, 1.8, 1.8);
+    fs(ctx, '#ffd23f', 0.6);
+  }
+}
+
+/** Silo: un misil en vertical con su llama. */
+function iconSilo(ctx) {
+  ctx.beginPath();
+  ctx.ellipse(0, 7, 1.6, 2.3, 0, 0, TAU);
+  ctx.fillStyle = '#ffd23f';
+  ctx.fill();
+  polyPath(ctx, [-2, 2.2, -4.2, 5.4, -2, 5.4]);
+  fs(ctx, '#2f3540', 0.8);
+  polyPath(ctx, [2, 2.2, 4.2, 5.4, 2, 5.4]);
+  fs(ctx, '#2f3540', 0.8);
+  rectPath(ctx, -2, -4, 4, 9.4);
+  fs(ctx, '#ffffff');
+  polyPath(ctx, [-2, -4, 0, -8.8, 2, -4]);
+  fs(ctx, '#2f3540');
+}
+
+/** Antimisiles: un escudo con una flecha hacia arriba. */
+function iconSam(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(0, -8.2);
+  ctx.lineTo(6.6, -5.6);
+  ctx.lineTo(6.2, 0.6);
+  ctx.quadraticCurveTo(5.4, 5.4, 0, 8);
+  ctx.quadraticCurveTo(-5.4, 5.4, -6.2, 0.6);
+  ctx.lineTo(-6.6, -5.6);
+  ctx.closePath();
+  fs(ctx, '#ffffff', 1.2);
+  rectPath(ctx, -0.9, -2.4, 1.8, 7);
+  ctx.fillStyle = '#1d8076';
+  ctx.fill();
+  polyPath(ctx, [-3.4, -1.6, 0, -5.6, 3.4, -1.6]);
+  ctx.fillStyle = '#1d8076';
+  ctx.fill();
+}
+
+/** Buque (panel): casco con puente y cañón. */
+function iconWarship(ctx) {
+  rectPath(ctx, -1.2, -6.8, 1.4, 3.6);
+  fs(ctx, '#7d8a98', 0.6);
+  rectPath(ctx, -3.4, -3.4, 5.6, 4.4);
+  fs(ctx, '#d4dde7');
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(2.2, -1.2);
+  ctx.lineTo(7.6, -3.4);
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = OUTLINE;
+  ctx.stroke();
+  polyPath(ctx, [-8.6, 1, 8.6, 1, 6, 5.8, -6, 5.8]);
+  fs(ctx, '#eef2f6');
+  rectPath(ctx, -6.4, 4.2, 12.8, 1.6);
+  ctx.fillStyle = '#c63a2c';
+  ctx.fill();
+}
+
+/** Misil (panel): en diagonal con su llama. */
+function iconMissile(ctx) {
+  ctx.save();
+  ctx.rotate(Math.PI / 4);
+  iconSilo(ctx);
+  ctx.restore();
+}
+
+const ICONS = { city: iconCity, port: iconPort, fort: iconFort, factory: iconFactory, silo: iconSilo, sam: iconSam, warship: iconWarship, missile: iconMissile };
+
+/**
+ * Icono de edificio: fondo del color de su tipo (círculo, o triángulo para
+ * silo y antimisiles) con el símbolo encima. `ring`: anillo del color del
+ * dueño (en el mapa); `outline`: filo blanco por fuera (tus edificios).
+ */
+export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, ringWidth = 2.4, outline = false } = {}) {
+  const draw = ICONS[kind];
+  if (!draw) return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  const k = size / 20;
+  ctx.scale(k, k);
+  ctx.lineJoin = 'round';
+  const tri = kind === 'sam' || kind === 'silo';
+  const [c0, c1] = TYPE_BG[kind];
+  ctx.beginPath();
+  if (tri) roundedTriangle(ctx, 12.5, 2.4);
+  else ctx.arc(0, 0, 10, 0, TAU);
+  const g = ctx.createRadialGradient(-3.5, -4.5, 1, 0, 0, 12.5);
+  g.addColorStop(0, c0);
+  g.addColorStop(1, c1);
+  ctx.fillStyle = g;
+  ctx.fill();
+  if (outline) {
+    ctx.lineWidth = ringWidth + 1.8;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  }
+  ctx.lineWidth = ring ? ringWidth : 1;
+  ctx.strokeStyle = ring || 'rgba(0, 0, 0, 0.45)';
+  ctx.stroke();
+  if (tri) {
+    ctx.translate(0, 2.6);
+    ctx.scale(0.74, 0.74);
+  } else ctx.scale(0.92, 0.92);
+  draw(ctx);
+  ctx.restore();
+}
+
 function star(ctx, r1, r2, points) {
   ctx.beginPath();
   for (let i = 0; i < points * 2; i++) {
