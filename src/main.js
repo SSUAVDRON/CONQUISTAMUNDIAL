@@ -178,7 +178,8 @@ const tutorial = new Tutorial({
 /** Ajustes del jugador que afectan a la partida (render e interfaz). */
 function applySettings() {
   const a = profile.ajustes;
-  if (state.renderer) state.renderer.options = { badges: a.marcadores !== false, emojis: a.emojis !== false };
+  state.pointerOn = a.puntero !== false;
+  if (state.renderer) state.renderer.options = { badges: a.marcadores !== false, emojis: a.emojis !== false, pointer: state.pointerOn };
   ui.redAlert = a.alerta !== false;
   document.body.classList.toggle('sin-animaciones', a.animaciones === false);
 }
@@ -459,13 +460,68 @@ function focusFront(key) {
   state.ping = { x: at[0], y: at[1], t: performance.now(), danger };
 }
 
-function centerOnHuman() {
-  const { game, human } = state;
-  if (!game || !human || !human.spawned) return;
-  const label = state.renderer.labels.find((l) => l.player === human);
-  if (label) camera.centerOn(label.x, label.y);
-  else camera.centerOn(game.map.x(human.spawnTile), game.map.y(human.spawnTile));
+/** Dónde está tu nación: el punto más interior de tu territorio principal. */
+function myPosition() {
+  const { game, human, renderer } = state;
+  if (!game || !human || !human.spawned || !human.alive) return null;
+  const label = renderer && renderer.labels.find((l) => l.player === human);
+  if (label) return [label.x, label.y];
+  return [game.map.x(human.spawnTile) + 0.5, game.map.y(human.spawnTile) + 0.5];
 }
+
+/** Vuela hasta tu nación y la marca (tecla C, botón «Mi nación» y puntero). */
+function centerOnHuman() {
+  const at = myPosition();
+  if (!at) return;
+  camera.flyTo(at[0], at[1], Math.max(camera.zoom, 3.5));
+  state.ping = { x: at[0], y: at[1], t: performance.now(), danger: false };
+}
+
+// ---------------------------------------------------------------- puntero
+
+const pointerBtn = document.getElementById('puntero');
+const pointerArrow = pointerBtn.querySelector('.puntero-flecha');
+let panelTop = Infinity;
+let panelCheck = 0;
+
+/**
+ * Si tu nación queda fuera de la vista, coloca una flecha en el borde de la
+ * pantalla que apunta hacia ella (sin tapar la barra superior ni tu panel).
+ */
+function updatePointer(now) {
+  const at = !state.demo && state.pointerOn !== false ? myPosition() : null;
+  if (!at) {
+    pointerBtn.hidden = true;
+    return;
+  }
+  if (now - panelCheck > 500) {
+    panelCheck = now;
+    const panel = document.getElementById('panel-jugador');
+    panelTop = panel && !panel.closest('[hidden]') ? panel.getBoundingClientRect().top : camera.viewH;
+  }
+  const W = camera.viewW;
+  const H = camera.viewH;
+  // Márgenes: la punta de la flecha sobresale ~42 px del centro del botón
+  const top = 96;
+  const bottom = Math.min(H - 44, panelTop - 44);
+  const side = 46;
+  const [sx, sy] = camera.worldToScreen(at[0], at[1]);
+  if (sx > side && sx < W - side && sy > top && sy < bottom) {
+    pointerBtn.hidden = true; // a la vista: basta con la marca «TÚ» del mapa
+    return;
+  }
+  const cx = W / 2;
+  const cy = (top + bottom) / 2;
+  const dx = sx - cx;
+  const dy = sy - cy;
+  const k = Math.min((W / 2 - side) / Math.max(1e-6, Math.abs(dx)), ((bottom - top) / 2) / Math.max(1e-6, Math.abs(dy)));
+  pointerBtn.hidden = false;
+  pointerBtn.style.transform = `translate(${Math.round(cx + dx * k - 26)}px, ${Math.round(cy + dy * k - 26)}px)`;
+  pointerArrow.style.transform = `rotate(${Math.atan2(dy, dx) + Math.PI / 2}rad)`;
+}
+
+pointerBtn.addEventListener('click', centerOnHuman);
+document.getElementById('btn-mi-nacion').addEventListener('click', centerOnHuman);
 
 function openNation(id) {
   ui.openNation(id);
@@ -595,6 +651,7 @@ function frame(now) {
   input.update(dt);
   camera.update(now);
   state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+  updatePointer(now);
 
   if (!state.demo && state.human && now - state.lastHud > 200) {
     state.lastHud = now;

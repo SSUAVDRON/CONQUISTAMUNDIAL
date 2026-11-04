@@ -199,7 +199,7 @@ export class Home {
     });
 
     // Ajustes
-    const toggles = { 'aj-alerta': 'alerta', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones' };
+    const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones' };
     for (const [id, key] of Object.entries(toggles)) {
       $(id).checked = this.profile.ajustes[key] !== false;
       $(id).addEventListener('change', () => {

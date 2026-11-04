@@ -145,7 +145,8 @@ base de datos.
 - **Clic en el mar**: mover tu buque de guerra más cercano
 - **Mayús + clic** al construir: colocar varios seguidos · **Esc / clic derecho**: cancelar
 - **Clic derecho / mantener pulsado** sobre otra nación: ficha de diplomacia
-- **C**: centrar en tu nación · **+ / −**: zoom · **Esc**: cerrar
+- **C** o botón **Mi nación**: la cámara vuela a tu nación · **+ / −**: zoom · **Esc**: cerrar
+- **Puntero**: sobre tu nación flota la marca «TÚ»; si la pierdes de vista, una flecha en el borde de la pantalla apunta hacia ella (pulsarla te lleva). Se desactiva en Ajustes.
 - **Clic en una tarjeta de combate** (a la derecha): la cámara vuela a ese frente
 - Clic en la clasificación: centra la cámara en esa nación y abre su ficha
 

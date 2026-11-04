@@ -14,7 +14,8 @@ export const TIPS = [
   'Cada fábrica suma un 25 % al oro que ganas.',
   'Clic derecho (o mantener pulsado) sobre una nación abre su ficha.',
   'Mayús + clic construye varios edificios seguidos.',
-  'Si la pantalla se pone roja, alguien te está atacando: mira tu panel.',
+  'Si la pantalla se pone roja, alguien te está atacando: mira las tarjetas de la derecha.',
+  'Si pierdes de vista tu nación, sigue la flecha del borde o pulsa C.',
   'Las fortalezas hacen que conquistarte cueste dos veces y media más.',
 ];
 

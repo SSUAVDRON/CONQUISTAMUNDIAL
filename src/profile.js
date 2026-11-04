@@ -146,6 +146,7 @@ export function defaultProfile() {
       dificultad: 'normal',
       reglas: { ...DEFAULT_RULES },
       alerta: true, // borde rojo al ser atacado
+      puntero: true, // marca «TÚ» y flecha hacia tu nación
       marcadores: true, // tropas de los ataques sobre el mapa
       emojis: true,
       animaciones: true,

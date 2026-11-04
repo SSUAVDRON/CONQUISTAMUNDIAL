@@ -138,7 +138,7 @@
             <li><b>Oro y edificios:</b> ganas oro según tu territorio. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (más barcos y oro) y <i>fortalezas</i> (defensa ×2,5 alrededor). Si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
             <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
-            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque · M misil · clic en el mar = mover buque · Esc o clic derecho = cancelar · C = centrar en ti · clic en una tarjeta de combate = ir a ese frente.</li>
+            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque · M misil · clic en el mar = mover buque · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente.</li>
           </ul>
         </details>
       </section>
@@ -219,6 +219,7 @@
           <h2>Ajustes</h2>
           <div class="interruptores columna">
             <label class="interruptor"><input type="checkbox" id="aj-alerta"><span>Borde rojo en la pantalla cuando te atacan</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-puntero"><span>Puntero hacia tu nación (marca «TÚ» y flecha en el borde)</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones del menú</span></label>
@@ -293,8 +294,18 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         <span id="dato-lider">—</span>
       </span>
+      <button type="button" id="btn-mi-nacion" class="btn-mi-nacion" title="Ir a tu nación (tecla C)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Mi nación</span>
+      </button>
       <button type="button" id="btn-salir" title="Volver al menú">Menú</button>
     </div>
+
+    <!-- Puntero: aparece en el borde cuando tu nación queda fuera de la vista -->
+    <button type="button" id="puntero" class="puntero" hidden aria-label="Ir a tu nación" title="Ir a tu nación (tecla C)">
+      <svg class="puntero-flecha" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0.5 L27 9.5 L13 9.5 Z"/></svg>
+      <span class="puntero-txt">TÚ</span>
+    </button>
 
     <div id="aviso" hidden></div>
     <div id="eventos"></div>

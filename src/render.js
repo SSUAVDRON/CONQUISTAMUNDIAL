@@ -48,7 +48,7 @@ export class Renderer {
     this.labels = [];
     this.lastLabelTime = -Infinity;
     this.highlightTile = -1;
-    this.options = { badges: true, emojis: true };
+    this.options = { badges: true, emojis: true, pointer: true };
   }
 
   setDpr(dpr) {
@@ -237,6 +237,7 @@ export class Renderer {
     this._drawEffects();
     this._drawMissiles(now);
     this._drawLabels();
+    this._drawYouMarker(now);
     this._drawAttackBadges();
     this._drawEmojis();
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
@@ -598,6 +599,42 @@ export class Renderer {
       ctx.strokeText(troops, sx, sy + size * 0.6);
       ctx.fillText(troops, sx, sy + size * 0.6);
     }
+  }
+
+  /** Marca «TÚ» que flota sobre tu nación para encontrarla de un vistazo. */
+  _drawYouMarker(now) {
+    const { ctx, game, camera } = this;
+    const human = game.human;
+    if (!human || !human.alive || !human.spawned || this.options.pointer === false) return;
+    const L = this.labels.find((l) => l.player === human);
+    if (!L) return;
+    const [sx, sy] = camera.worldToScreen(L.x, L.y);
+    if (sx < -40 || sy < -60 || sx > camera.viewW + 40 || sy > camera.viewH + 40) return;
+    // Por encima del nombre (si se dibuja) y con un pequeño vaivén
+    const radiusPx = L.r * camera.zoom;
+    const nameSize = Math.min(radiusPx * 0.8, (radiusPx * 3) / Math.max(4, human.name.length), 42);
+    const lift = (nameSize >= 7 ? nameSize * 1.1 : 0) + 18 + Math.sin(now / 260) * 3;
+    const x = sx;
+    const y = sy - lift;
+    ctx.save();
+    ctx.font = '800 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const w = 34;
+    const h = 18;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - h / 2 - 6, w, h, 9);
+    ctx.moveTo(x - 5, y + 3);
+    ctx.lineTo(x, y + 9);
+    ctx.lineTo(x + 5, y + 3);
+    ctx.fillStyle = rgbToCss(human.color);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('TÚ', x, y - 6 + 0.5);
+    ctx.restore();
   }
 
   /**
