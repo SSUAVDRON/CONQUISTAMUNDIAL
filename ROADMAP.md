@@ -147,6 +147,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   fábricas activables
 - Nombres más grandes al alejar (sin solaparse) e insignia de persona para
   los jugadores; expansión sin casillas sueltas; +15 % de tropas
+- Desplegables con el estilo del juego (fondo oscuro, flecha propia, lista
+  legible); tropas de los rivales en blanco en vez de negro
 
 ## Próximo
 

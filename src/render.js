@@ -1464,8 +1464,14 @@ export class Renderer {
           drawEmblem(ctx, emblemFor(p), sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.15);
         }
       }
+      // Tropas: las tuyas en tu color; las de los rivales en blanco con un
+      // contorno oscuro suave (en negro pesaban demasiado sobre el mapa)
       ctx.font = `600 ${s2}px system-ui, sans-serif`;
-      ctx.lineWidth = Math.max(2.5, s2 / (me ? 5 : 6));
+      if (!me) {
+        ctx.strokeStyle = 'rgba(22, 28, 40, 0.5)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      }
+      ctx.lineWidth = Math.max(2.5, s2 / (me ? 5 : 4.5));
       ctx.strokeText(troops, sx, sy + size * 0.6);
       ctx.fillText(troops, sx, sy + size * 0.6);
     }
