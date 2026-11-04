@@ -282,18 +282,12 @@ function polyPath(ctx, pts) {
 
 /** Ciudad: una casa con tejado rojo, chimenea, puerta y ventana. */
 function iconCity(ctx) {
-  rectPath(ctx, 3, -6.6, 1.9, 3.6);
-  fs(ctx, '#a9563c');
   rectPath(ctx, -5.6, -0.6, 11.2, 7.2);
-  fs(ctx, '#fff7e6');
-  polyPath(ctx, [-7.4, -0.4, 0, -7.6, 7.4, -0.4]);
-  fs(ctx, '#d6452e');
-  rectPath(ctx, -1.5, 2.4, 3, 4.2);
-  fs(ctx, '#8a5a33', 0.8);
-  rectPath(ctx, 2.5, 0.9, 2, 2);
-  fs(ctx, '#7cc4f2', 0.8);
-  rectPath(ctx, -4.5, 0.9, 2, 2);
-  fs(ctx, '#7cc4f2', 0.8);
+  fs(ctx, '#fff4dc', 1.4);
+  polyPath(ctx, [-7.6, -0.2, 0, -7.8, 7.6, -0.2]);
+  fs(ctx, '#d6452e', 1.4);
+  rectPath(ctx, -1.6, 2.2, 3.2, 4.4);
+  fs(ctx, '#7a4a2a', 1);
 }
 
 /** Puerto: un ancla. */
@@ -360,13 +354,9 @@ function iconFactory(ctx) {
     ctx.fill();
   }
   rectPath(ctx, 3.4, -6.6, 2.8, 13.2);
-  fs(ctx, '#5b626c');
+  fs(ctx, '#6b737e', 1.4);
   polyPath(ctx, [-7.2, 6.6, -7.2, -1.2, -3.6, -4.4, -3.6, -1.2, 0, -4.4, 0, -1.2, 3.4, -1.2, 3.4, 6.6]);
-  fs(ctx, '#3d434c');
-  for (const x of [-6, -2.6, 0.8]) {
-    rectPath(ctx, x, 1.4, 1.8, 1.8);
-    fs(ctx, '#ffd23f', 0.6);
-  }
+  fs(ctx, '#e07a3c', 1.4);
 }
 
 /** Silo: un misil en vertical con su llama. */
@@ -432,6 +422,9 @@ function iconMissile(ctx) {
   ctx.restore();
 }
 
+/** Edificios que se dibujan sin fondo (solo el símbolo). */
+const BARE = new Set(['city', 'port', 'factory']);
+
 const ICONS = { city: iconCity, port: iconPort, fort: iconFort, factory: iconFactory, silo: iconSilo, sam: iconSam, warship: iconWarship, missile: iconMissile };
 
 /**
@@ -448,6 +441,22 @@ export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, ringWid
   ctx.scale(k, k);
   ctx.lineJoin = 'round';
   const tri = kind === 'sam' || kind === 'silo';
+  if (BARE.has(kind)) {
+    // Icono suelto, sin fondo: en el mapa, una peana bajo él con el color del dueño
+    if (ring) {
+      ctx.beginPath();
+      ctx.ellipse(0, 8.6, 8.4, 2.6, 0, 0, TAU);
+      ctx.fillStyle = ring;
+      ctx.fill();
+      ctx.lineWidth = outline ? 1.6 : 1;
+      ctx.strokeStyle = outline ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';
+      ctx.stroke();
+    }
+    ctx.scale(1.08, 1.08);
+    draw(ctx);
+    ctx.restore();
+    return;
+  }
   const [c0, c1] = TYPE_BG[kind];
   ctx.beginPath();
   if (tri) roundedTriangle(ctx, 12.5, 2.4);
