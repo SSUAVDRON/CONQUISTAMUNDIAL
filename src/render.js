@@ -1390,25 +1390,62 @@ export class Renderer {
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
     const human = this.game.human;
+    // Primero tú, tus aliados y los demás jugadores; luego las naciones y al
+    // final las colonias, de mayor a menor. Si un nombre pisa a otro ya
+    // dibujado, se omite (al alejar no se amontonan).
+    const order = (this._labelOrder ??= []);
+    order.length = 0;
     for (const L of this.labels) {
       const p = L.player;
+      // Las colonias, después de todas las naciones
+      L.rank = (p === human ? 4e9 : 0) + (human && human.allies.has(p.id) ? 3e9 : 0) + (p.isHuman ? 2e9 : 0) + (p.weak ? 0 : 1e9) + L.r;
+      L.size = 0;
+      order.push(L);
+    }
+    order.sort((a, b) => b.rank - a.rank);
+    const boxes = (this._labelBoxes ??= []);
+    boxes.length = 0;
+    for (const L of order) {
+      const p = L.player;
       const [sx, sy] = camera.worldToScreen(L.x, L.y);
+      if (sx < -200 || sy < -100 || sx > camera.viewW + 200 || sy > camera.viewH + 100) continue;
       const radiusPx = L.r * camera.zoom;
       const allied = human && p !== human && human.allies.has(p.id);
+      const player = p.isHuman;
       const len = Math.max(4, p.name.length + (allied ? 2 : 0));
+      // Lo que cabe dentro del país…
       let size = Math.min(radiusPx * 0.8, (radiusPx * 3) / len, 42);
-      // Los aliados se nombran siempre (aunque sean pequeños), con el apretón de manos
-      if (allied) size = Math.max(size, Math.min(13, camera.zoom * RES * 4));
+      // …pero al alejar el nombre no encoge con él: tamaño mínimo legible que
+      // crece un poco con el país (aunque se salga de sus fronteras); las
+      // colonias, algo más pequeñas
+      if (radiusPx >= 2) size = Math.max(size, p.weak ? Math.min(12, 8 + radiusPx * 0.8) : Math.min(16, 9 + radiusPx * 1.1));
+      // Los jugadores y aliados se nombran siempre, aunque sean pequeños
+      if (allied || player) size = Math.max(size, 13);
       if (size < 8) continue;
-      if (sx < -200 || sy < -100 || sx > camera.viewW + 200 || sy > camera.viewH + 100) continue;
       const traitor = this.game.isTraitor(p);
       const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
       const me = p === human;
+      ctx.font = `${me ? 800 : player ? 700 : 600} ${size}px system-ui, sans-serif`;
+      const w = ctx.measureText(name).width;
+      const icon = player || size >= 11 ? size * 1.35 : 0;
+      const s2 = size * 0.78;
+      const troops = formatNumber(p.troops);
+      // Caja que ocupa (icono + nombre + tropas) para no pisar otros nombres
+      const x0 = sx - w / 2 - icon - 2;
+      const x1 = sx + w / 2 + 2;
+      const y0 = sy - size * 0.95;
+      const y1 = sy + size * 0.6 + s2 * 0.6;
+      let hit = false;
+      for (let i = 0; i < boxes.length && !hit; i += 4) {
+        hit = x0 < boxes[i + 2] && x1 > boxes[i] && y0 < boxes[i + 3] && y1 > boxes[i + 1];
+      }
+      if (hit && !me) continue;
+      boxes.push(x0, y0, x1, y1);
+      L.size = size;
       // Nombres discretos: texto oscuro con un halo claro (el tuyo, en su color vivo)
-      ctx.font = `${me ? 800 : 600} ${size}px system-ui, sans-serif`;
-      ctx.lineWidth = Math.max(2, size / (me ? 4 : 6));
-      ctx.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.45)';
-      ctx.fillStyle = me ? this.options.nameColor || '#ffd23f' : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(28, 32, 40, 0.9)';
+      ctx.lineWidth = Math.max(2.5, size / (me ? 4 : 6));
+      ctx.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.55)';
+      ctx.fillStyle = me ? this.options.nameColor || '#ffd23f' : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(28, 32, 40, 0.92)';
       ctx.strokeText(name, sx, sy - size * 0.35);
       if (me) {
         // Tu nombre, en color vivo y con un halo para encontrarlo de un vistazo
@@ -1418,17 +1455,17 @@ export class Renderer {
       ctx.fillText(name, sx, sy - size * 0.35);
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
-      if (size >= 11) {
+      if (player) {
+        // Jugador de verdad (no un bot): insignia con una silueta de persona
+        drawPlayerBadge(ctx, sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.05, p.color);
+      } else if (icon) {
         // Bandera (países reales) o emblema a la izquierda del nombre
-        const w = ctx.measureText(name).width;
         if (!drawFlag(ctx, p.flag, sx - w / 2 - size * 0.85, sy - size * 0.35, size * 0.8)) {
           drawEmblem(ctx, emblemFor(p), sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.15);
         }
       }
-      const s2 = size * 0.78;
-      ctx.font = `500 ${s2}px system-ui, sans-serif`;
-      ctx.lineWidth = Math.max(2, s2 / (me ? 5 : 6));
-      const troops = formatNumber(p.troops);
+      ctx.font = `600 ${s2}px system-ui, sans-serif`;
+      ctx.lineWidth = Math.max(2.5, s2 / (me ? 5 : 6));
       ctx.strokeText(troops, sx, sy + size * 0.6);
       ctx.fillText(troops, sx, sy + size * 0.6);
     }
@@ -1444,9 +1481,9 @@ export class Renderer {
     const [sx, sy] = camera.worldToScreen(L.x, L.y);
     if (sx < -40 || sy < -60 || sx > camera.viewW + 40 || sy > camera.viewH + 40) return;
     // Por encima del nombre (si se dibuja) y con un pequeño vaivén
-    const radiusPx = L.r * camera.zoom;
-    const nameSize = Math.min(radiusPx * 0.8, (radiusPx * 3) / Math.max(4, human.name.length), 42);
-    const lift = (nameSize >= 7 ? nameSize * 1.1 : 0) + 18 + Math.sin(now / 260) * 3;
+    // Por encima del nombre tal y como se ha dibujado en este fotograma
+    const nameSize = L.size || 0;
+    const lift = (nameSize ? nameSize * 1.1 : 0) + 18 + Math.sin(now / 260) * 3;
     const x = sx;
     const y = sy - lift;
     ctx.save();
@@ -1649,4 +1686,38 @@ export class Renderer {
     ctx.strokeStyle = `rgba(255,255,255,${0.5 + pulse * 0.5})`;
     ctx.stroke();
   }
+}
+
+/**
+ * Insignia de jugador humano: círculo de su color con borde blanco y una
+ * silueta de persona (cabeza y hombros) en blanco.
+ */
+function drawPlayerBadge(ctx, cx, cy, d, color) {
+  const r = d / 2;
+  const lw = Math.max(1.5, d * 0.1);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  ctx.fill();
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = '#ffffff';
+  ctx.stroke();
+  ctx.clip();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(cx, cy - r * 0.22, r * 0.34, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + r * 0.78, r * 0.62, r * 0.55, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.restore();
+  // Contorno oscuro fino para que se lea sobre colores claros
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + lw * 0.5, 0, Math.PI * 2);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(20, 24, 32, 0.55)';
+  ctx.stroke();
+  ctx.restore();
 }

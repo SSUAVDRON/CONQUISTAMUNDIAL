@@ -145,6 +145,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Reglas personalizables también en multijugador; nuevas: ritmos de tropas y
   oro, precios, tregua inicial, límite de tiempo, alianzas, desembarcos y
   fábricas activables
+- Nombres más grandes al alejar (sin solaparse) e insignia de persona para
+  los jugadores; expansión sin casillas sueltas; +15 % de tropas
 
 ## Próximo
 

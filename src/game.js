@@ -553,6 +553,29 @@ export class Game {
     atk.dy = vy / len;
   }
 
+  /**
+   * Tras conquistar `t` en tierra libre: las casillas libres vecinas que han
+   * quedado encerradas (todas sus vecinas son de `aid` o agua) pasan a ser
+   * suyas sin coste. Evita «bolsas» de una casilla difíciles de clicar.
+   */
+  _fillPockets(t, aid) {
+    const map = this.map;
+    const nb = (this._pocketA ??= new Int32Array(4));
+    const nb2 = (this._pocketB ??= new Int32Array(4));
+    const c = map.neighbors(t, nb);
+    for (let k = 0; k < c; k++) {
+      const n = nb[k];
+      if (this.owner[n] !== 0 || !map.isLand(n)) continue;
+      const c2 = map.neighbors(n, nb2);
+      let closed = true;
+      for (let j = 0; j < c2 && closed; j++) {
+        const m = nb2[j];
+        if (map.isLand(m) && this.owner[m] !== aid) closed = false;
+      }
+      if (closed) this.setOwner(n, aid);
+    }
+  }
+
   /** Un nuevo clic sobre el mismo objetivo: el frente se reordena hacia ese punto. */
   _refocus(atk, tile) {
     this._aim(atk, tile);
@@ -587,7 +610,9 @@ export class Game {
       focus = (1 - cos) * CONFIG.growFocus * (atk.targetId ? 0.6 : 1);
       k *= CONFIG.growFocusNoise;
     }
-    const key = atk.step + (this.rng.float() * CONFIG.growRandom + lobes + terr) * k - n * CONFIG.growSmooth + focus;
+    // Una casilla ya casi rodeada (3 o 4 vecinas propias) va la primera: así no
+    // quedan casillas sueltas sin conquistar dentro o en el borde del país
+    const key = n >= 3 ? atk.step - 100 : atk.step + (this.rng.float() * CONFIG.growRandom + lobes + terr) * k - n * CONFIG.growSmooth + focus;
     atk.heap.push(key, t);
   }
 
@@ -794,6 +819,7 @@ export class Game {
         A.stats.expansionGold = (A.stats.expansionGold || 0) + CONFIG.wildTileGold * A.goldMult;
       }
       this.setOwner(t, aid);
+      if (!target) this._fillPockets(t, aid);
     }
     if (atk.inFrontier.size === 0 || atk.troops < 1) this._endAttack(atk);
   }

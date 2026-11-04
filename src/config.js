@@ -31,12 +31,12 @@ export const CONFIG = {
   // menos tropas en el mapa y crecen más despacio)
   maxTroopsBase: 3000, // máximo de base alto: al principio se generan muchas tropas
   maxTroopsPerTile: 36 / AREA,
-  growthBase: 16, // crecimiento de base (pesa sobre todo al principio)
+  growthBase: 18.4, // crecimiento de base (pesa sobre todo al principio)
   // Curva de crecimiento (en campana): lo más rápido con la mitad del máximo;
   // con muy pocas tropas, más despacio (nunca menos de growthFloor del pico) y
   // por encima del 60 % cada vez menos, hasta 0 en el tope
   growthFloor: 0.15,
-  growthTileMult: 0.3 / RES15, // × casillas^0,75
+  growthTileMult: 0.345 / RES15, // × casillas^0,75
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
@@ -56,7 +56,7 @@ export const CONFIG = {
   growCell: 7 * RES, // tamaño de los lóbulos
   growNoise: 16, // retraso máximo por lóbulos grandes
   growNoiseFine: 6, // y por los pequeños
-  growRandom: 6, // azar por casilla
+  growRandom: 2.5, // azar por casilla (poco: si no, quedan casillas sueltas)
   growTerrain: 10, // por cada punto de coste de terreno por encima de la llanura
   growSmooth: 1, // prioridad a las casillas ya rodeadas (rellena huecos)
   // Expansión dirigida: el lado del país que mira al clic avanza antes y el de
