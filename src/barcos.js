@@ -122,54 +122,90 @@ export function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1) {
 }
 
 /**
- * Buque de guerra: casco gris con franja del dueño, superestructura y dos
- * torretas. `aim`: ángulo de las torretas (pantalla) o null para mirar a proa.
+ * Buque de guerra como insignia circular (se reconoce a cualquier zoom):
+ * anillo del color del dueño, fondo oscuro y la silueta del buque dentro,
+ * girada según su rumbo, con las torretas apuntando al blanco si dispara.
+ * `r` es el radio en píxeles; `aim`, el ángulo de tiro (o null).
  */
-export function drawWarship(ctx, x, y, ang, len, color, mine, aim = null, moving = 1) {
-  if (len < 10) return tiny(ctx, x, y, ang, Math.max(6, len), color, mine);
-  const w = len * 0.26;
+export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving = 1) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(ang);
-  wakeLines(ctx, len, w, moving);
-  shadow(ctx, len, w);
-  hullPath(ctx, len, w, 0.3, 0.7);
-  ctx.fillStyle = '#7b8792';
+  // Estela corta detrás de la insignia
+  if (moving > 0.05) {
+    ctx.save();
+    ctx.rotate(ang);
+    ctx.lineCap = 'round';
+    for (const side of [-1, 1]) {
+      const g = ctx.createLinearGradient(-r * 0.8, 0, -r * 2.4, 0);
+      g.addColorStop(0, `rgba(230, 245, 255, ${0.45 * moving})`);
+      g.addColorStop(1, 'rgba(230, 245, 255, 0)');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = Math.max(1, r * 0.14);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.75, side * r * 0.35);
+      ctx.quadraticCurveTo(-r * 1.5, side * r * 0.7, -r * 2.4, side * r * 1.1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // Sombra
+  ctx.fillStyle = 'rgba(0, 10, 25, 0.4)';
+  ctx.beginPath();
+  ctx.ellipse(r * 0.08, r * 0.16, r * 1.05, r * 1.05, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.lineWidth = Math.max(1, len * 0.035);
-  ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
-  ctx.stroke();
-  // Cubierta y franja de color
-  ctx.save();
-  hullPath(ctx, len * 0.9, w * 0.72, 0.3, 0.7);
-  ctx.fillStyle = '#95a1ab';
-  ctx.fill();
-  ctx.restore();
+  // Anillo del dueño
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fillStyle = color;
-  ctx.fillRect(-len * 0.44, -w * 0.12, len * 0.72, w * 0.24);
-  // Superestructura
-  ctx.fillStyle = '#cfd6dc';
-  ctx.fillRect(-len * 0.12, -w * 0.3, len * 0.24, w * 0.6);
-  ctx.fillStyle = '#5c6873';
-  ctx.fillRect(-len * 0.04, -w * 0.18, len * 0.08, w * 0.36);
-  // Torretas
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, r * 0.1);
+  ctx.strokeStyle = mine ? '#ffffff' : 'rgba(0, 0, 0, 0.75)';
+  ctx.stroke();
+  // Fondo
+  const inner = r * 0.78;
+  const bg = ctx.createRadialGradient(-inner * 0.3, -inner * 0.3, inner * 0.1, 0, 0, inner);
+  bg.addColorStop(0, '#24344a');
+  bg.addColorStop(1, '#0c1420');
+  ctx.beginPath();
+  ctx.arc(0, 0, inner, 0, Math.PI * 2);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  // Silueta del buque, girada con su rumbo
+  ctx.save();
+  ctx.rotate(ang);
+  const L = inner * 1.62;
+  const W = inner * 0.5;
+  ctx.beginPath();
+  ctx.moveTo(L * 0.5, 0);
+  ctx.quadraticCurveTo(L * 0.3, -W * 0.5, L * 0.15, -W * 0.5);
+  ctx.lineTo(-L * 0.44, -W * 0.5);
+  ctx.lineTo(-L * 0.5, -W * 0.3);
+  ctx.lineTo(-L * 0.5, W * 0.3);
+  ctx.lineTo(-L * 0.44, W * 0.5);
+  ctx.lineTo(L * 0.15, W * 0.5);
+  ctx.quadraticCurveTo(L * 0.3, W * 0.5, L * 0.5, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#c9d2da';
+  ctx.fill();
+  ctx.fillStyle = '#8796a3';
+  ctx.fillRect(-L * 0.36, -W * 0.22, L * 0.62, W * 0.44);
+  ctx.fillStyle = '#eef2f5';
+  ctx.fillRect(-L * 0.1, -W * 0.3, L * 0.2, W * 0.6);
   const turret = (tx) => {
     ctx.save();
     ctx.translate(tx, 0);
     ctx.rotate(aim === null ? 0 : aim - ang);
-    ctx.fillStyle = '#3d4750';
-    ctx.fillRect(0, -w * 0.08, len * 0.2, w * 0.16);
+    ctx.fillStyle = '#2e3a46';
+    ctx.fillRect(0, -W * 0.08, L * 0.2, W * 0.16);
     ctx.beginPath();
-    ctx.arc(0, 0, w * 0.27, 0, Math.PI * 2);
-    ctx.fillStyle = '#56626c';
+    ctx.arc(0, 0, W * 0.24, 0, Math.PI * 2);
+    ctx.fillStyle = '#3d4a57';
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.stroke();
     ctx.restore();
   };
-  turret(len * 0.24);
-  turret(-len * 0.28);
+  turret(L * 0.27);
+  turret(-L * 0.27);
+  ctx.restore();
   ctx.restore();
 }
 

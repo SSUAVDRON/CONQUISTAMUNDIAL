@@ -414,7 +414,7 @@ export class Renderer {
     const oy = sh ? (Math.random() - 0.5) * sh : 0;
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#0a1a33';
+    ctx.fillStyle = '#0a1a30';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     const map = game.map;
@@ -470,8 +470,8 @@ export class Renderer {
     const t = this.anim ? now / 1000 : 0;
     const v = this.view;
     const layers = [
-      [this._wavePat, 1 / 9, 0.55, 0.22, 0.9],
-      [this._wavePat2, 1 / 6, -0.35, 0.4, 0.55],
+      [this._wavePat, 1 / 9, 0.55, 0.22, 0.55],
+      [this._wavePat2, 1 / 6, -0.35, 0.4, 0.3],
     ];
     for (const [pat, k, vx, vy, alpha] of layers) {
       if (!pat || !pat.setTransform) continue;
@@ -616,10 +616,14 @@ export class Renderer {
 
   _hpBar(cx, cy, width, frac) {
     const { ctx } = this;
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(cx - width / 2, cy - 2, width, 4);
+    ctx.beginPath();
+    ctx.roundRect(cx - width / 2 - 1, cy - 3, width + 2, 6, 3);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(cx - width / 2, cy - 2, Math.max(2, width * Math.max(0, Math.min(1, frac))), 4, 2);
     ctx.fillStyle = frac > 0.5 ? '#5fd38d' : frac > 0.25 ? '#ffc857' : '#ff6b6b';
-    ctx.fillRect(cx - width / 2, cy - 2, width * Math.max(0, frac), 4);
+    ctx.fill();
   }
 
   // ----------------------------------------------------------------- barcos
@@ -763,7 +767,9 @@ export class Renderer {
       }
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
-      const len = clamp(z * 3.4, 12, 46);
+      // Insignia circular: grande para reconocerla, sin tapar demasiado mapa
+      const r = clamp(z * 1.6, 11, 21);
+      const len = r * 2;
       if (!this._onScreen(sx, sy, len * 2)) continue;
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
@@ -780,9 +786,10 @@ export class Renderer {
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawWarship(ctx, sx, sy, s.ang, len, rgbToCss(p.color), p === game.human, aim, clamp(s.speed * 3, 0, 1));
+      drawWarship(ctx, sx, sy, s.ang, r, rgbToCss(p.color), p === game.human, aim, clamp(s.speed * 3, 0, 1));
       this._maybeWake(s, len, 10);
-      if (ws.hp < CONFIG.warshipHp) this._hpBar(sx, sy - len * 0.45 - 6, Math.max(18, len * 0.7), ws.hp / CONFIG.warshipHp);
+      // Barra de vida, siempre a la vista
+      this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
     }
     for (const [id, st] of this._ships) {
       if (st.gen === gen) continue;
@@ -1009,12 +1016,20 @@ export class Renderer {
       if (sx < -200 || sy < -100 || sx > camera.viewW + 200 || sy > camera.viewH + 100) continue;
       const traitor = this.game.isTraitor(p);
       const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
-      ctx.font = `600 ${size}px system-ui, sans-serif`;
-      ctx.lineWidth = Math.max(2, size / 5);
-      ctx.strokeStyle = allied ? 'rgba(0, 50, 20, 0.75)' : 'rgba(0,0,0,0.6)';
-      ctx.fillStyle = p === human ? '#fff6c8' : allied ? '#b8f5cf' : traitor ? '#ffb4a8' : '#ffffff';
+      const me = p === human;
+      ctx.font = `${me ? 800 : 600} ${size}px system-ui, sans-serif`;
+      ctx.lineWidth = Math.max(2, size / (me ? 4 : 5));
+      ctx.strokeStyle = allied ? 'rgba(0, 50, 20, 0.75)' : me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(0,0,0,0.6)';
+      ctx.fillStyle = me ? this.options.nameColor || '#ffd23f' : allied ? '#b8f5cf' : traitor ? '#ffb4a8' : '#ffffff';
       ctx.strokeText(name, sx, sy - size * 0.35);
+      if (me) {
+        // Tu nombre, en color vivo y con un halo para encontrarlo de un vistazo
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = Math.min(16, size * 0.6);
+      }
       ctx.fillText(name, sx, sy - size * 0.35);
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
       if (size >= 11) {
         // Bandera (países reales) o emblema a la izquierda del nombre
         const w = ctx.measureText(name).width;

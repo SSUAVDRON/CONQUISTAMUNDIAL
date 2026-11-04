@@ -314,20 +314,28 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
 }
 
 /* ---------- Alerta roja: te están atacando ---------- */
+/* --amenaza (0-1) la pone el HUD según cuánto te atacan: más ataque, más rojo y latido más rápido */
 #alerta-roja {
+  --amenaza: 0;
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 3;
   opacity: 0;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(230, 20, 20, 0.38) 100%);
-  box-shadow: inset 0 0 60px rgba(230, 20, 20, 0.45);
-  transition: opacity 0.4s;
+  background: radial-gradient(ellipse at center, transparent calc(72% - var(--amenaza) * 22%), rgba(230, 20, 20, calc(0.12 + var(--amenaza) * 0.4)) 100%);
+  transition: opacity 0.5s;
 }
-#alerta-roja.activa { opacity: 1; animation: latido 1.6s ease-in-out infinite; }
-#alerta-roja.fuerte { background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 30, 30, 0.55) 100%); animation-duration: 0.8s; }
-@keyframes latido { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { #alerta-roja.activa { animation: none; } }
+#alerta-roja.activa { opacity: calc(0.35 + var(--amenaza) * 0.65); }
+#alerta-roja::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 calc(24px + var(--amenaza) * 60px) rgba(255, 30, 30, calc(0.15 + var(--amenaza) * 0.45));
+  opacity: 0;
+}
+#alerta-roja.activa::after { animation: latidoRojo calc(2s - var(--amenaza) * 1.2s) ease-in-out infinite; }
+@keyframes latidoRojo { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #alerta-roja.activa::after { animation: none; opacity: 0.6; } }
 
 /* ---------- Barra superior: datos de la partida ---------- */
 #barra-superior .dato { display: inline-flex; align-items: center; gap: 5px; color: var(--texto-suave); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -1045,7 +1053,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
   height: 7px;
   border-radius: 50%;
   background: var(--acento);
-  animation: latido 1.8s ease-out infinite;
+  animation: latidoAviso 1.8s ease-out infinite;
 }
 #eventos:empty { opacity: 0; transform: translateY(14px); visibility: hidden; transition: opacity 0.35s, transform 0.35s, visibility 0s linear 0.35s; }
 body.con-tutorial #eventos { top: auto; }
@@ -1101,7 +1109,7 @@ body.con-tutorial #eventos { top: auto; }
 @keyframes avisoLlega { from { opacity: 0; transform: translateX(60px) scale(0.94); } }
 @keyframes iconoPop { from { opacity: 0; transform: scale(0.3) rotate(-25deg); } }
 @keyframes sacudida { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
-@keyframes latido { 0% { box-shadow: 0 0 0 0 rgba(242, 179, 61, 0.6); } 70%, 100% { box-shadow: 0 0 0 7px rgba(242, 179, 61, 0); } }
+@keyframes latidoAviso { 0% { box-shadow: 0 0 0 0 rgba(242, 179, 61, 0.6); } 70%, 100% { box-shadow: 0 0 0 7px rgba(242, 179, 61, 0); } }
 @media (prefers-reduced-motion: reduce) {
   #eventos .evento, #eventos .evento.danger, .ev-icono, #eventos::after { animation: none !important; }
 }
@@ -1110,7 +1118,7 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador {
   --pj-color: var(--acento);
   left: calc(12px + env(safe-area-inset-left, 0px));
-  right: calc(356px + env(safe-area-inset-right, 0px));
+  right: calc(314px + env(safe-area-inset-right, 0px));
   width: auto;
   max-width: 1180px;
   transform: none;
@@ -1219,7 +1227,7 @@ body.con-tutorial #eventos { top: auto; }
 /* Avisos: si no caben al lado del panel, encima */
 @media (max-width: 1499px) {
   #panel-jugador { right: calc(12px + env(safe-area-inset-right, 0px)); max-width: none; }
-  #eventos { bottom: calc(var(--pj-alto, 120px) + 24px + env(safe-area-inset-bottom, 0px)); width: 300px; }
+  #avisos { bottom: calc(var(--pj-alto, 120px) + 22px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 860px) {
   #panel-jugador { flex-wrap: wrap; row-gap: 8px; }
@@ -1250,4 +1258,190 @@ body.con-tutorial #eventos { top: auto; }
   #eventos .evento:nth-last-child(n+3) { display: none; }
   .ev-icono { width: 22px; height: 22px; }
   body.con-tutorial #eventos { display: none; }
+}
+
+
+/* =========================================================== HUD compacto y plegable */
+:root { --color-nombre: #ffd23f; }
+
+/* Columna izquierda: clasificación y combates debajo */
+#columna-izquierda {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  width: 228px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+  max-height: calc(100vh - var(--pj-alto, 120px) - 44px);
+  pointer-events: none;
+}
+#columna-izquierda > * { pointer-events: auto; }
+#columna-izquierda #clasificacion { position: static; top: auto; left: auto; width: auto; padding: 5px 7px 7px; flex: none; }
+#combates { position: static; padding: 5px 7px 7px; min-height: 0; overflow: hidden; animation: hudIzquierda 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+#combates[hidden] { display: none; }
+
+/* Cabecera que pliega */
+.cab-plegable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+  padding: 2px 3px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--texto-suave);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cab-plegable:hover { color: var(--texto); background: rgba(255, 255, 255, 0.05); }
+.cab-titulo { flex: none; }
+.cab-extra { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.02em; text-transform: none; color: var(--texto); font-variant-numeric: tabular-nums; }
+.cab-flecha { width: 13px; height: 13px; flex: none; transition: transform 0.3s ease; }
+.plegado .cab-flecha { transform: rotate(-90deg); }
+.cuerpo-plegable { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.32s ease, opacity 0.25s ease; }
+.cuerpo-plegable > div { min-height: 0; overflow: hidden; }
+.plegado .cuerpo-plegable { grid-template-rows: 0fr; opacity: 0; }
+.plegado .cab-plegable { padding-bottom: 2px; }
+.cc-rojo { color: #ff9e9e; font-weight: 800; }
+.cc-verde { color: #8ff2b6; font-weight: 800; }
+#combates.amenaza .cab-plegable { color: #ffb3b3; }
+#combates.plegado.amenaza { animation: amenazaPlegado 1.3s ease-in-out infinite; }
+@keyframes amenazaPlegado { 50% { box-shadow: 0 0 0 1px rgba(255, 90, 90, 0.6), 0 0 18px rgba(255, 60, 60, 0.45); } }
+
+/* Clasificación más compacta; tu fila con tu nombre en color vivo */
+#lista-clasificacion li { padding: 1px 4px; font-size: 12px; gap: 5px; grid-template-columns: 16px 15px 1fr auto auto; }
+#lista-clasificacion .tro { min-width: 38px; font-size: 11px; }
+#lista-clasificacion li.yo .nom-txt { color: var(--color-nombre); font-weight: 800; text-shadow: 0 0 10px rgba(255, 210, 63, 0.35); }
+#pj-nombre { color: var(--color-nombre); text-shadow: 0 0 12px rgba(255, 210, 63, 0.3); }
+.f-lado.yo .f-nombre { color: var(--color-nombre); font-weight: 800; }
+
+/* Tarjetas VS: más pequeñas y más vivas */
+#frentes.frentes { gap: 6px; }
+#combates .frente { padding: 6px 9px 7px; gap: 2px; border-radius: 10px; border-left-width: 3px; overflow: hidden; }
+#combates .f-lado { font-size: 11px; gap: 5px; }
+#combates .f-a, #combates .f-d { font-size: 15px; display: inline-block; }
+#combates .f-vs { font-size: 9.5px; padding: 1px 6px; }
+#combates .f-leyenda { font-size: 8.5px; margin-top: -2px; }
+#combates .f-barra { height: 4px; }
+#combates .f-retirar { top: 4px; right: 4px; width: 18px; height: 18px; font-size: 9px; line-height: 16px; }
+#combates .frente:hover { transform: translateX(3px); }
+#combates .frente.nueva { animation: entrarIzq 0.5s cubic-bezier(0.2, 1.35, 0.4, 1); }
+#combates .frente.nueva::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: barrido 0.9s ease-out forwards;
+}
+#combates .frente:not(.saliendo) .f-vs { animation: vsPulso 1.8s ease-in-out infinite; }
+#combates .frente.entrante:not(.saliendo) .f-vs { animation-duration: 0.9s; }
+#combates .f-barra-a { position: relative; overflow: hidden; }
+#combates .frente:not(.saliendo) .f-barra-a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 4px, transparent 4px 8px);
+  background-size: 11.3px 100%;
+  animation: avance 0.6s linear infinite;
+}
+#combates .frente.saliendo { opacity: 0.4; transform: translateX(-6px) scale(0.97); }
+.golpe { animation: golpe 0.45s ease-out; }
+@keyframes entrarIzq { from { opacity: 0; transform: translateX(-26px) scale(0.95); } }
+@keyframes barrido { from { background-position: 120% 0; } to { background-position: -60% 0; opacity: 0; } }
+@keyframes vsPulso { 50% { transform: scale(1.12); } }
+@keyframes avance { to { background-position: 11.3px 0; } }
+@keyframes golpe { 30% { transform: scale(1.22); color: #fff; text-shadow: 0 0 10px rgba(255, 90, 90, 0.95); } }
+
+/* Avisos: el recuadro es #avisos (con cabecera plegable); #eventos es solo la lista */
+#avisos {
+  position: fixed;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: 290px;
+  max-width: calc(100vw - 24px);
+  padding: 5px 7px 7px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(16, 24, 40, 0.88), rgba(9, 13, 22, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  z-index: 6;
+  transition: opacity 0.35s, transform 0.35s, visibility 0s;
+}
+#avisos.vacio:not(.plegado) { opacity: 0; transform: translateY(14px); visibility: hidden; pointer-events: none; transition: opacity 0.35s, transform 0.35s, visibility 0s linear 0.35s; }
+#avisos #eventos {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: auto;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  opacity: 1;
+  visibility: visible;
+}
+#avisos #eventos::before, #avisos #eventos::after { content: none; display: none; }
+#avisos #eventos .evento { font-size: 12px; padding: 6px 9px 7px 7px; grid-template-columns: 22px 1fr auto; gap: 8px; }
+#avisos .ev-icono { width: 22px; height: 22px; border-radius: 7px; }
+#avisos .ev-icono svg { width: 13px; height: 13px; }
+#cab-avisos.nuevos { padding: 0 6px; border-radius: 999px; background: var(--acento); color: #1b1405; font-weight: 800; animation: iconoPop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.cab-plegable.aviso-nuevo { animation: cabNueva 0.9s ease-out; }
+.cab-plegable.aviso-peligro { animation: cabPeligro 0.9s ease-out 2; }
+@keyframes cabNueva { from { background: rgba(242, 179, 61, 0.35); } }
+@keyframes cabPeligro { from { background: rgba(255, 80, 80, 0.45); color: #fff; } }
+
+/* Barra superior y panel de abajo, un poco más pequeños */
+#barra-superior { padding: 4px 6px; gap: 8px; }
+#barra-superior .dato { font-size: 12.5px; }
+#barra-superior button { padding: 5px 10px; font-size: 13px; }
+#panel-jugador { padding-top: 8px; padding-bottom: 8px; }
+#panel-jugador .cifras .valor { font-size: 14px; }
+#panel-jugador .etq { font-size: 10px; }
+.ratio-cifra strong { font-size: 18px; }
+#construir button { height: 36px; }
+#construir .b-nombre { font-size: 12px; }
+#construir .b-coste { font-size: 10.5px; }
+#construir canvas { width: 24px; height: 24px; }
+
+/* Pantallas bajas: menos tarjetas */
+@media (max-height: 760px) { #combates .frente:nth-child(n+4) { display: none; } }
+@media (max-height: 620px) { #combates .frente:nth-child(n+3) { display: none; } }
+
+@media (max-width: 720px) {
+  #columna-izquierda { top: calc(56px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); width: 176px; gap: 6px; }
+  #columna-izquierda #clasificacion { padding: 4px 6px 5px; }
+  #combates .frentes { position: static; width: auto; }
+  #combates .frente:nth-child(n+3) { display: none; }
+  #avisos {
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--pj-alto, 250px) + 16px + env(safe-area-inset-bottom, 0px));
+    width: min(260px, calc(100vw - 16px));
+  }
+  body.con-tutorial #avisos { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #combates .frente.nueva, #combates .frente.nueva::before, #combates .f-vs, #combates .f-barra-a::after, .golpe, #combates.plegado.amenaza { animation: none !important; }
+}
+/* (después de la definición de #avisos para que prevalezca) */
+@media (min-width: 721px) and (max-width: 1499px) {
+  #avisos { bottom: calc(var(--pj-alto, 120px) + 22px + env(safe-area-inset-bottom, 0px)); }
 }

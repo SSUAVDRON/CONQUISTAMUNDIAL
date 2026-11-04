@@ -279,10 +279,22 @@
   <!-- Interfaz de partida -->
   <div id="hud" hidden>
     <div id="alerta-roja" aria-hidden="true"></div>
-    <aside id="clasificacion" class="panel">
-      <h2>Clasificación</h2>
-      <ol id="lista-clasificacion"></ol>
-    </aside>
+    <!-- Columna izquierda: clasificación y, debajo, los combates en curso. Ambos se pliegan -->
+    <div id="columna-izquierda">
+      <aside id="clasificacion" class="panel plegable" data-plegable="clasificacion">
+        <button type="button" class="cab-plegable" aria-expanded="true" title="Plegar o desplegar">
+          <span class="cab-titulo">Clasificación</span><span class="cab-extra" id="cab-puesto"></span><svg class="cab-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="cuerpo-plegable"><div><ol id="lista-clasificacion"></ol></div></div>
+      </aside>
+      <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
+      <section id="combates" class="panel plegable" data-plegable="combates" hidden>
+        <button type="button" class="cab-plegable" aria-expanded="true" title="Plegar o desplegar">
+          <span class="cab-titulo">Combates</span><span class="cab-extra" id="cab-combates"></span><svg class="cab-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="cuerpo-plegable"><div><ul id="frentes" class="frentes" aria-label="Combates en curso"></ul></div></div>
+      </section>
+    </div>
 
     <div id="barra-superior" class="panel">
       <span class="dato" title="Tiempo de partida">
@@ -311,7 +323,12 @@
     </button>
 
     <div id="aviso" hidden></div>
-    <div id="eventos"></div>
+    <section id="avisos" class="plegable vacio" data-plegable="avisos">
+      <button type="button" class="cab-plegable" aria-expanded="true" title="Plegar o desplegar">
+        <span class="cab-titulo">Avisos</span><span class="cab-extra" id="cab-avisos"></span><svg class="cab-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="cuerpo-plegable"><div><div id="eventos" aria-live="polite"></div></div></div>
+    </section>
 
     <section id="panel-jugador" class="panel">
       <button type="button" id="pj-plegar" class="pj-plegar" aria-expanded="true" title="Minimizar el panel (tecla V)">
@@ -346,9 +363,6 @@
     <div id="columna-derecha">
     <!-- Propuestas de alianza recibidas -->
     <div id="solicitudes"></div>
-
-    <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
-    <ul id="frentes" class="frentes" aria-label="Combates en curso"></ul>
 
     <!-- Diplomacia: ficha de otra nación -->
     <section id="panel-nacion" class="panel" hidden aria-labelledby="pn-nombre">

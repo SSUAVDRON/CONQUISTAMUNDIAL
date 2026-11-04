@@ -40,7 +40,7 @@ function eventCategory(text) {
 
 /** Quita el emoji del principio (el aviso ya lleva su icono). */
 const stripLeadingEmoji = (text) => text.replace(/^(?:\p{Extended_Pictographic}|[⚔⚓])\uFE0F?\s*/u, '');
-const MAX_FRONTS = 5;
+const MAX_FRONTS = 4;
 const FRONT_GRACE_MS = 1800; // un combate que termina se queda un momento atenuado
 
 /** Cifra que se acerca suavemente a su valor (sin saltos ni parpadeos). */
@@ -166,6 +166,14 @@ export class UI {
       this._buildButtons.set(kind, btn);
     }
 
+    // Clasificación, combates y avisos: cabecera que pliega el panel (se recuerda)
+    this._unread = 0;
+    for (const id of ['clasificacion', 'combates', 'avisos']) {
+      this._foldable($(id), (folded) => {
+        if (id === 'avisos' && !folded) this._setUnread(0);
+      });
+    }
+
     // Panel inferior: se puede minimizar (botón o tecla V); se recuerda
     const panel = $('panel-jugador');
     const setFolded = (folded) => {
@@ -231,6 +239,7 @@ export class UI {
     $('fin').hidden = true;
     $('confirmar').hidden = true;
     $('eventos').replaceChildren();
+    this._setUnread(0);
   }
 
   /** Mensaje fijo de estado de la red (o vacío para quitarlo). */
@@ -250,7 +259,9 @@ export class UI {
     $('hud').hidden = false;
     $('fin').hidden = true;
     $('eventos').replaceChildren();
+    this._setUnread(0);
     $('frentes').replaceChildren();
+    $('combates').hidden = true;
     $('solicitudes').replaceChildren();
     $('lista-clasificacion').replaceChildren();
     this._requests.clear();
@@ -438,6 +449,14 @@ export class UI {
     const live = [...box.children].filter((c) => !c.classList.contains('saliendo'));
     for (const old of live.slice(0, Math.max(0, live.length - MAX_EVENTS))) this._dismissEvent(old);
     setTimeout(() => this._dismissEvent(el), EVENT_MS);
+    if ($('avisos').classList.contains('plegado')) {
+      this._setUnread(this._unread + 1);
+      const cab = $('avisos').querySelector('.cab-plegable');
+      cab.classList.remove('aviso-nuevo', 'aviso-peligro');
+      void cab.offsetWidth;
+      cab.classList.add(evt.kind === 'danger' ? 'aviso-peligro' : 'aviso-nuevo');
+    }
+    this._syncAvisos();
   }
 
   /** Sale deslizándose a la derecha y se pliega para que los demás bajen sin saltos. */
@@ -446,7 +465,52 @@ export class UI {
     el.style.maxHeight = `${el.offsetHeight}px`;
     void el.offsetHeight;
     el.classList.add('saliendo');
-    setTimeout(() => el.remove(), 450);
+    setTimeout(() => {
+      el.remove();
+      this._syncAvisos();
+    }, 450);
+  }
+
+  /** El recuadro de avisos se oculta si no hay ninguno (salvo plegado, para poder abrirlo). */
+  _syncAvisos() {
+    $('avisos').classList.toggle('vacio', !$('eventos').children.length && !this._unread);
+  }
+
+  _setUnread(n) {
+    this._unread = n;
+    const badge = $('cab-avisos');
+    badge.textContent = n ? String(n) : '';
+    badge.classList.toggle('nuevos', n > 0);
+    this._syncAvisos();
+  }
+
+  /**
+   * Panel plegable: la cabecera (.cab-plegable) pliega o despliega el cuerpo.
+   * El estado se recuerda en este navegador. `onChange(folded)` opcional.
+   */
+  _foldable(section, onChange) {
+    const key = `trinchera.plegado.${section.dataset.plegable}`;
+    const btn = section.querySelector('.cab-plegable');
+    const set = (folded, save = true) => {
+      section.classList.toggle('plegado', folded);
+      btn.setAttribute('aria-expanded', String(!folded));
+      if (save) {
+        try {
+          localStorage.setItem(key, folded ? '1' : '0');
+        } catch {
+          // sin almacenamiento: dura esta visita
+        }
+      }
+      onChange?.(folded);
+    };
+    let folded = false;
+    try {
+      folded = localStorage.getItem(key) === '1';
+    } catch {
+      folded = false;
+    }
+    set(folded, false);
+    btn.addEventListener('click', () => set(!section.classList.contains('plegado')));
   }
 
   _counter(el, fmt) {
@@ -548,18 +612,39 @@ export class UI {
     this._updateRequests(game, human);
   }
 
-  /** Borde rojo mientras te atacan por tierra, mar o aire (desactivable en Ajustes). */
+  /**
+   * Borde rojo mientras te atacan (desactivable en Ajustes). Su intensidad va
+   * de 0 a 1 según cuánto te atacan: tropas enemigas frente a las tuyas,
+   * cuántos atacantes y si hay misiles en camino. Sube y baja poco a poco.
+   */
   _updateThreat(game, human) {
     const box = $('alerta-roja');
-    const on =
-      this.redAlert !== false &&
-      human.alive &&
-      (game.attacks.some((a) => !a.done && a.targetId === human.id && a.troops >= 1) ||
-        game.boats.some((b) => b.targetId === human.id) ||
-        game.missiles.some((m) => m.targetId === human.id));
-    box.classList.toggle('activa', on);
-    // Más intenso si hay un misil en camino
-    box.classList.toggle('fuerte', on && game.missiles.some((m) => m.targetId === human.id));
+    let incoming = 0;
+    let fronts = 0;
+    if (this.redAlert !== false && human.alive) {
+      for (const a of game.attacks) {
+        if (!a.done && a.targetId === human.id && a.troops >= 1) {
+          incoming += a.troops;
+          fronts++;
+        }
+      }
+      for (const b of game.boats) {
+        if (b.targetId === human.id) {
+          incoming += b.troops;
+          fronts++;
+        }
+      }
+    }
+    const missiles = this.redAlert !== false && human.alive ? game.missiles.filter((m) => m.targetId === human.id).length : 0;
+    let target = 0;
+    if (fronts || missiles) {
+      const ratio = incoming / Math.max(1, human.troops);
+      target = Math.min(1, 0.12 + Math.min(0.5, ratio * 0.45) + (fronts - 1) * 0.1 + missiles * 0.3);
+    }
+    this._threat = (this._threat || 0) + (target - (this._threat || 0)) * 0.35;
+    if (this._threat < 0.02) this._threat = 0;
+    box.style.setProperty('--amenaza', this._threat.toFixed(3));
+    box.classList.toggle('activa', this._threat > 0);
   }
 
   /**
@@ -577,7 +662,7 @@ export class UI {
     const now = performance.now();
     const cards = [];
     const side = (p, fallback) =>
-      p ? { name: p === human ? 'Tú' : p.name, flag: p.flag, color: p.color } : { name: fallback, flag: '', color: null };
+      p ? { name: p === human ? 'Tú' : p.name, flag: p.flag, color: p.color, me: p === human } : { name: fallback, flag: '', color: null };
     for (const atk of game.attacks) {
       if (atk.done || atk.troops < 1) continue;
       const mine = atk.attacker === human;
@@ -657,7 +742,12 @@ export class UI {
       if (c.a === null) f.aEl.textContent = c.aText;
       else f.a.set(c.a);
       if (c.d === null) f.dEl.textContent = c.dText || '—';
-      else f.d.set(c.d);
+      else {
+        // El defensor pierde tropas: la cifra «encaja el golpe»
+        if (f.lastD !== undefined && c.d < f.lastD * 0.985) this._pulse(f.dEl, 'golpe', now);
+        f.lastD = c.d;
+        f.d.set(c.d);
+      }
       const share = c.kind === 'misil' ? c.progress : c.d === null ? 1 : c.a / (c.a + Math.max(1, c.d));
       const pct = Math.round(Math.max(0.04, Math.min(1, share)) * 100);
       f.barA.style.width = `${pct}%`;
@@ -676,6 +766,13 @@ export class UI {
         this._fronts.delete(key);
       }
     }
+    // Cabecera: cuántos te atacan y cuántos ataques tuyos hay
+    const inc = cards.filter((c) => c.incoming).length;
+    const out = cards.length - inc;
+    const box = $('combates');
+    box.hidden = !list.querySelector('.frente');
+    box.classList.toggle('amenaza', inc > 0);
+    $('cab-combates').innerHTML = `${inc ? `<span class="cc-rojo">🛡 ${inc}</span>` : ''}${out ? `<span class="cc-verde">⚔ ${out}</span>` : ''}`;
     let more = this._moreFronts;
     if (cards.length > MAX_FRONTS) {
       if (!more) {
@@ -687,6 +784,15 @@ export class UI {
     } else if (more) {
       more.remove();
     }
+  }
+
+  /** Reinicia una animación CSS en `el` (como mucho cada 600 ms). */
+  _pulse(el, cls, now) {
+    if (now - (el._pulseAt || 0) < 600) return;
+    el._pulseAt = now;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
   }
 
   _dropFront(f) {
@@ -706,7 +812,7 @@ export class UI {
     li.title = 'Ir a este frente';
     const who = (s, align) => {
       const box = document.createElement('span');
-      box.className = `f-lado ${align}`;
+      box.className = `f-lado ${align}${s.me ? ' yo' : ''}`;
       const mark = document.createElement('span');
       if (hasFlag(s.flag)) {
         mark.className = 'bandera';
@@ -789,7 +895,9 @@ export class UI {
     const list = $('lista-clasificacion');
     const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
     const rows = alive.slice(0, 10);
-    if (alive.indexOf(human) >= 10) rows.push(human);
+    const rank = alive.indexOf(human);
+    if (rank >= 10) rows.push(human);
+    $('cab-puesto').textContent = rank >= 0 ? `${rank + 1}.º` : '';
     const leaderTiles = alive.length ? alive[0].tiles : 1;
     const animate = !document.body.classList.contains('sin-animaciones');
     const before = new Map();

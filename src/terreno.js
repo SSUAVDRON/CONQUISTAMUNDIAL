@@ -224,17 +224,17 @@ export function paintTerrain(map) {
       const m = edge[i];
       if (terrain[i] === WATER) {
         if (!m) continue;
-        // Espuma pegada a la orilla y un velo turquesa algo más lejos
+        // Una línea de espuma tenue pegada a la orilla (el mar es casi uniforme)
         const d = edgeDist(m, fx, fy);
         const wob = (hash2(pxl, py, seed + 3) - 0.5) * 0.08;
-        const foam = smooth(0.3, 0.04, d + wob);
-        const veil = smooth(0.75, 0.25, d) * 0.22;
-        const a = Math.max(foam * 0.75, veil);
+        const foam = smooth(0.24, 0.03, d + wob);
+        const veil = smooth(0.6, 0.2, d) * 0.05;
+        const a = Math.max(foam * 0.3, veil);
         if (a <= 0.01) continue;
-        const k = foam * 0.75 >= veil ? 1 : 0;
-        const r = k ? 236 : 120;
-        const g = k ? 246 : 214;
-        const b = k ? 250 : 222;
+        const k = foam * 0.3 >= veil ? 1 : 0;
+        const r = k ? 170 : 60;
+        const g = k ? 196 : 100;
+        const b = k ? 214 : 140;
         px[o] = ((Math.round(a * 255) << 24) | (b << 16) | (g << 8) | r) >>> 0;
         continue;
       }
@@ -315,16 +315,16 @@ export function paintTerrain(map) {
       const i = y * W + x;
       const o = i * 4;
       const d = terrain[i] === WATER ? dist[i] : 0;
-      // turquesa → azul medio → azul profundo
+      // Mar oscuro y casi uniforme: la orilla apenas un poco más clara que el fondo
       const k1 = smooth(0.5, 4, d);
       const k2 = smooth(3, 26, d);
-      let r = 74 + (40 - 74) * k1;
-      let g = 168 + (104 - 168) * k1;
-      let b = 184 + (160 - 184) * k1;
+      let r = 26 + (19 - 26) * k1;
+      let g = 64 + (50 - 64) * k1;
+      let b = 102 + (90 - 102) * k1;
       r += (12 - r) * k2;
-      g += (32 - g) * k2;
-      b += (72 - b) * k2;
-      const n = (valueNoise(x, y, 18, seed + 7) - 0.5) * 18 * k2;
+      g += (34 - g) * k2;
+      b += (70 - b) * k2;
+      const n = (valueNoise(x, y, 18, seed + 7) - 0.5) * 7 * k2;
       wd[o] = clamp(r + n * 0.5, 0, 255);
       wd[o + 1] = clamp(g + n * 0.8, 0, 255);
       wd[o + 2] = clamp(b + n, 0, 255);

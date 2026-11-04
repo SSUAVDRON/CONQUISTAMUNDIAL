@@ -10,23 +10,24 @@ export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
   spawnTicks: 100, // 10 s
   spawnRadius: 4,
-  startTroops: 2500,
+  startTroops: 1500,
   minSpawnBodySize: 150, // no se puede empezar en islotes minúsculos
 
   // Victoria: controlar esta fracción de toda la tierra
   winLandShare: 0.7,
 
-  // Tropas: máximo y crecimiento por tick
-  maxTroopsBase: 2000,
-  maxTroopsPerTile: 60,
-  growthBase: 10,
-  growthTileMult: 0.5, // × casillas^0,75
+  // Tropas: máximo y crecimiento por tick (un 40 % menos que al principio:
+  // menos tropas en el mapa y crecen más despacio)
+  maxTroopsBase: 1200,
+  maxTroopsPerTile: 36,
+  growthBase: 6,
+  growthTileMult: 0.3, // × casillas^0,75
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
-  wildTileCost: 3, // tropas por casilla de tierra libre (llanura)
-  playerTileBaseCost: 1.5, // coste fijo por casilla enemiga
-  defenseDensityMult: 1.0, // coste extra por cada tropa/casilla del defensor
+  wildTileCost: 2, // tropas por casilla de tierra libre (llanura)
+  playerTileBaseCost: 1, // coste fijo por casilla enemiga
+  defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
   attackRateWild: 0.1, // casillas por tick por casilla de frente (tierra libre)
   attackRatePlayer: 0.04, // ídem contra jugadores (se escala con la superioridad)
@@ -51,7 +52,7 @@ export const CONFIG = {
   // Edificios
   buildingMinDist: 5, // casillas mínimas entre dos edificios
   portSnap: 6, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
-  cityMaxTroops: 15000, // tropas máximas extra por ciudad
+  cityMaxTroops: 9000, // tropas máximas extra por nivel de ciudad
   portGoldBonus: 0.1, // +10% de oro por puerto
   factoryGoldBonus: 0.25, // +25% de oro por fábrica
   fortRadius: 10,
@@ -138,7 +139,7 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
  * (100 ms cada uno); `fixed`: precio fijo, sin inflación.
  */
 export const BUILDINGS = {
-  city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+15k tropas máximas por nivel' },
+  city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+9k tropas máximas por nivel' },
   port: { name: 'Puerto', fem: false, base: 100000, build: 60, key: 'KeyE', coastal: true, desc: 'Pesqueros, mercantes y +10% de oro' },
   fort: { name: 'Fortaleza', fem: true, base: 75000, build: 40, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
   factory: { name: 'Fábrica', fem: true, base: 150000, build: 60, key: 'KeyF', desc: '+25% de oro por nivel' },
