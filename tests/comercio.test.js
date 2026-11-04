@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
+import { buildNow, terminarObras } from './ayuda.js';
 import { CONFIG } from '../src/config.js';
 
 /** Dos naciones con puerto en el mismo mar y un tercero neutral. */
@@ -28,7 +29,7 @@ function setup() {
     while (game.phase === 'spawn') game.tick();
     game.bots.length = 0;
     a.gold = b.gold = 1e6;
-    if (!game.build(a, 'port', ta) || !game.build(b, 'port', tb)) continue;
+    if (!buildNow(game, a, 'port', ta) || !buildNow(game, b, 'port', tb)) continue;
     return { map, game, a, b, ta, tb, water };
   }
   throw new Error('sin semilla válida');
@@ -72,7 +73,7 @@ test('un buque de guerra captura los barcos automáticos enemigos', () => {
   const { game, a, b, ta, tb, water } = setup();
   for (let i = 0; i < 200; i++) game.tick(); // B ya tiene pesqueros
   assert.ok(game.merchants.some((m) => m.owner === b.id && m.kind === 'fish'));
-  game.build(a, 'warship', ta);
+  buildNow(game, a, 'warship', ta);
   game.moveWarship(a, water(tb));
   for (let i = 0; i < 1500 && !game.merchants.some((m) => m.kind === 'fish' && m.owner === a.id && m.port !== game.buildings.find((x) => x.owner === a.id && x.kind === 'port')?.id); i++) game.tick();
   assert.ok(a.stats.captured >= 1, 'A debería haber capturado algún barco');

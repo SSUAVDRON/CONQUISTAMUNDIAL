@@ -100,6 +100,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   });
   game.human = localIndex >= 0 ? players[localIndex] : null;
   game.addBots(bots, difficulty, countries);
+  // Colonias: presas fáciles repartidas por el mapa (más cuantos más rivales)
+  game.addColonies(Math.max(3, Math.min(14, Math.round(bots * 0.4))));
   game.start();
 
   state.game = game;
@@ -179,7 +181,14 @@ const tutorial = new Tutorial({
 function applySettings() {
   const a = profile.ajustes;
   state.pointerOn = a.puntero !== false;
-  if (state.renderer) state.renderer.options = { badges: a.marcadores !== false, emojis: a.emojis !== false, pointer: state.pointerOn };
+  if (state.renderer) {
+    state.renderer.options = {
+      badges: a.marcadores !== false,
+      emojis: a.emojis !== false,
+      pointer: state.pointerOn,
+      animations: a.animaciones !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+    };
+  }
   ui.redAlert = a.alerta !== false;
   document.body.classList.toggle('sin-animaciones', a.animaciones === false);
 }
@@ -673,6 +682,7 @@ applySettings();
 // Acceso desde la consola del navegador para depurar: __dominia.game, __dominia.human…
 window.__dominia = state;
 window.__trinchera = state;
+state.camera = camera; // para pruebas automáticas
 state.profile = profile;
 
 startDemo();

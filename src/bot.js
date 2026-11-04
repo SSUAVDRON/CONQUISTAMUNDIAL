@@ -42,7 +42,7 @@ export class BotBrain {
     if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
     if (p.buildings.warship && r.chance(0.2)) this._commandWarships();
-    if (p.buildings.silo && r.chance(0.15 + this.aggression * 0.2)) this._fireMissile(counts);
+    if (p.active.silo && r.chance(0.15 + this.aggression * 0.2)) this._fireMissile(counts);
 
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.troops > max * 0.1) {
@@ -107,19 +107,36 @@ export class BotBrain {
       return dx * dx + dy * dy <= reach;
     });
 
+    // Ciudades: con tope (los precios se inflan con cada compra); pasado el tope, mejora
     let want = 'city';
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / 2500)) want = 'fort';
     else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / 6000) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
     else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / 5000) && g.rng.chance(0.4)) want = 'port';
     else if (p.buildings.city >= 1 && p.buildings.factory < 1 + Math.floor(p.tiles / 3000) && g.rng.chance(0.35)) want = 'factory';
     else if (p.tiles > 2000 && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
-    else if (p.buildings.port > 0 && p.buildings.warship < p.buildings.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
+    else if (p.active.port > 0 && p.buildings.warship < p.active.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
-    if (p.gold < g.buildCost(p, want)) return false;
     if (want === 'warship') {
-      const port = g.buildings.find((b) => b.owner === p.id && b.kind === 'port');
+      if (p.gold < g.buildCost(p, want)) return false;
+      const port = g.buildings.find((b) => b.owner === p.id && b.kind === 'port' && b.level > 0);
       return !!port && g.build(p, 'warship', port.tile);
     }
+    // A veces mejora uno que ya tiene en vez de levantar otro (sale más barato).
+    // Si ya tiene todas las ciudades que quería, solo mejora.
+    const capped = want === 'city' && p.buildings.city >= 2 + Math.floor(p.tiles / 1500);
+    if (want !== 'sam' && (capped || g.rng.chance(0.4))) {
+      // Con el tope de ciudades, mejora la ciudad o fábrica de menor nivel
+      const kinds = capped ? ['city', 'factory'] : [want];
+      let own = null;
+      for (const b of g.buildings) {
+        if (b.owner !== p.id || !kinds.includes(b.kind) || !b.level || b.target || b.level >= CONFIG.maxLevel) continue;
+        if (!own || b.level < own.level) own = b;
+      }
+      if (own) want = own.kind;
+      if (own && g.canBuild(p, want, own.tile).ok) return g.build(p, want, own.tile);
+      if (capped) return false;
+    }
+    if (p.gold < g.buildCost(p, want)) return false;
     const tile = this._pickBuildTile(want, threat);
     return tile >= 0 && g.build(p, want, tile);
   }
@@ -150,7 +167,12 @@ export class BotBrain {
       return -1;
     }
 
-    const pool = kind === 'port' ? map.coastTiles : map.landTiles;
+    let pool = map.landTiles;
+    if (kind === 'port') {
+      // Solo su propia costa (elegir al azar entre toda la del mapa casi nunca acertaba)
+      pool = map.coastTiles.filter((t) => g.owner[t] === p.id);
+      if (!pool.length) return -1;
+    }
     for (let i = 0; i < 150; i++) {
       const t = pool[r.int(0, pool.length - 1)];
       if (g.owner[t] !== p.id) continue;
@@ -358,4 +380,36 @@ export class BotBrain {
     }
     return best;
   }
+}
+
+/**
+ * Cerebro de una colonia: solo se expande por tierra libre. No ataca a las
+ * naciones, no construye y no firma alianzas: es una presa fácil con oro.
+ */
+export class ColonyBrain {
+  constructor(game, player) {
+    this.game = game;
+    this.player = player;
+    this.nextThink = 0;
+    this.thinkScale = 1.6;
+    this.grudges = new Set();
+  }
+
+  think() {
+    const g = this.game;
+    const p = this.player;
+    const { wild } = g.neighborSummary(p);
+    if (wild > 0 && !p.attacks.has(0) && p.troops > p.maxTroops() * 0.25) {
+      g.launchAttack(p, 0, Math.floor(p.troops * 0.2));
+    }
+  }
+
+  wantsAlliance() {
+    return false;
+  }
+
+  onRejected() {}
+  onAllied() {}
+  onBetrayed() {}
+  onEmoji() {}
 }

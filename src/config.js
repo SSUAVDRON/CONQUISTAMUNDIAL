@@ -33,7 +33,7 @@ export const CONFIG = {
   minAttackBudget: 0.25,
 
   // Barcos de transporte
-  maxBoats: 3, // sin puertos; cada puerto suma uno
+  maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
   boatSpeed: 0.8, // casillas por tick
 
   // Oro: ingreso por tick = base + casillas^0,75 × mult (× bonus de puertos)
@@ -41,14 +41,34 @@ export const CONFIG = {
   goldBase: 50,
   goldTileMult: 1.4,
   plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla
+  tileLootShare: 1, // al conquistar una casilla te llevas su parte del oro del país (oro ÷ casillas)
+
+  // Colonias: bots débiles que no son naciones (presa fácil con oro que saquear)
+  colonyStrength: 0.45, // tropas máximas y crecimiento respecto a una nación
+  colonyDefenseMult: 0.55, // conquistarlas cuesta menos
+  colonySpawnRadius: 2,
 
   // Edificios
   buildingMinDist: 5, // casillas mínimas entre dos edificios
+  portSnap: 6, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   cityMaxTroops: 15000, // tropas máximas extra por ciudad
   portGoldBonus: 0.1, // +10% de oro por puerto
   factoryGoldBonus: 0.25, // +25% de oro por fábrica
   fortRadius: 10,
   fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
+  // Precios, niveles y obras
+  inflation: 0.12, // cada compra (edificio, mejora o buque) encarece un 12 % todo lo demás; no afecta a misiles, silos ni antimisiles
+  maxLevel: 5,
+  upgradeCostMult: 0.8, // subir al nivel n+1 cuesta: precio actual × 0,8 × n
+  upgradeTimeMult: 0.8, // y tarda el 80 % de la obra nueva
+  // Efecto de cada nivel por encima del 1: ciudad +15k tropas, puerto +10 % de
+  // oro y un pesquero más, fábrica +25 % de oro, fortaleza +2 de radio y +0,4 de
+  // defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto
+  fortRadiusPerLevel: 2,
+  fortMultPerLevel: 0.4,
+  siloReloadPerLevel: 0.15,
+  samRangePerLevel: 3,
+  samHitPerLevel: 0.07,
 
   // Buques de guerra
   warshipHp: 100,
@@ -113,18 +133,23 @@ export function cleanRules(raw) {
 
 export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '⚔️', '🏳️', '❤️'];
 
-/** Tipos de edificio. El coste sube con cada edificio del mismo tipo que ya tengas. */
+/**
+ * Tipos de edificio. `base`: precio sin inflación; `build`: ticks de obra
+ * (100 ms cada uno); `fixed`: precio fijo, sin inflación.
+ */
 export const BUILDINGS = {
-  city: { name: 'Ciudad', fem: true, base: 125000, step: 125000, key: 'KeyQ', desc: '+15k tropas máximas' },
-  port: { name: 'Puerto', fem: false, base: 100000, step: 100000, key: 'KeyE', coastal: true, desc: '+1 barco y +10% de oro' },
-  fort: { name: 'Fortaleza', fem: true, base: 75000, step: 75000, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
-  factory: { name: 'Fábrica', fem: true, base: 150000, step: 150000, key: 'KeyF', desc: '+25% de oro' },
-  silo: { name: 'Silo', fem: false, base: 1000000, step: 1000000, key: 'KeyG', desc: 'Permite lanzar misiles' },
-  sam: { name: 'Antimisiles', fem: false, base: 1500000, step: 750000, key: 'KeyH', desc: 'Derriba misiles enemigos cercanos' },
+  city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+15k tropas máximas por nivel' },
+  port: { name: 'Puerto', fem: false, base: 100000, build: 60, key: 'KeyE', coastal: true, desc: 'Pesqueros, mercantes y +10% de oro' },
+  fort: { name: 'Fortaleza', fem: true, base: 75000, build: 40, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
+  factory: { name: 'Fábrica', fem: true, base: 150000, build: 60, key: 'KeyF', desc: '+25% de oro por nivel' },
+  silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar misiles' },
+  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos' },
   // No son edificios: el buque se bota desde un puerto y el misil sale de un silo
-  warship: { name: 'Buque', fem: false, base: 150000, step: 75000, key: 'KeyT', unit: 'ship', desc: 'Hunde barcos y bombardea puertos' },
-  missile: { name: 'Misil', fem: false, base: 500000, step: 0, key: 'KeyM', unit: 'missile', desc: 'Arrasa una zona enemiga' },
+  warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Hunde barcos y bombardea puertos' },
+  missile: { name: 'Misil', fem: false, base: 500000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
 };
+/** Edificios de verdad (no unidades). */
+export const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'];
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
 
 /** Mapas aleatorios (generados con la semilla). */

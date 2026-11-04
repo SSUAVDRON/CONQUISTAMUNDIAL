@@ -116,22 +116,30 @@ base de datos.
 | Coste | Tierra libre: 3 tropas por casilla. Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
-| Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 + 1 por puerto). |
-| Buques de guerra | Se botan desde un puerto propio (máx. 3 por puerto; 150k de oro, +75k cada uno). Clic en el mar mueve el más cercano. Actúan solos a 9 casillas: disparan a buques enemigos, hunden transportes de tropas, **capturan** pesqueros y mercantes rivales (pasan a producir para ti) y bombardean puertos hasta destruirlos. |
+| Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). |
+| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. |
+| Saqueo | Cada casilla que conquistas a un país te da su parte de su oro (oro ÷ casillas). Cada 5 s un aviso resume lo saqueado (y lo que te saquean). |
+| Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; 150k de oro con inflación). Clic en el mar mueve el más cercano. Actúan solos a 9 casillas: disparan a buques enemigos, hunden transportes de tropas, **capturan** pesqueros y mercantes rivales (pasan a producir para ti) y bombardean puertos hasta destruirlos. |
 | Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. |
 | Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo (desactivable en Ajustes). |
 | Tropas a la vista | Cada combate tuyo tiene una tarjeta a la derecha: quién ataca a quién, tropas del atacante **VS** tropas del defensor, con una leyenda bajo cada cifra («te ataca con» / «tus tropas», «atacas con» / «sus tropas») y una barra de fuerzas. **Roja** si te atacan (van primero) y **verde** si atacas tú; los marcadores del mapa usan los mismos colores. También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas. |
+| Avisos | En un recuadro abajo a la derecha, con icono según el tipo (ataque, naval, misil, oro, alianza, edificio…). Los nuevos entran por abajo; los repetidos se agrupan (×N). |
+| Panel de abajo | Ancho y bajo: tu estado, la fuerza de ataque y los edificios (con una barra de cuánto oro te falta para cada uno y un martillo si hay obras). Se minimiza con su botón o la tecla **V**. |
+| Gráficos | Relieve iluminado, bosques, nieve, playas, espuma y mar con profundidad; olas y sombras de nubes que se mueven. Las casillas recién conquistadas brillan, saltan chispas y humo en los frentes y unas flechas marcan hacia dónde avanza cada ataque. Barcos dibujados con su rumbo y estela; misiles con humo y sombra; explosión con fogonazo, onda expansiva, hongo de humo y cráter; los antimisiles lanzan un interceptor que estalla en el aire. Todo se desactiva con «Animaciones» en Ajustes. |
 | Barra superior | Tiempo de partida, tu puesto entre las naciones en pie y el líder con su territorio frente a la meta de victoria (se pone ámbar si se acerca). |
-| Oro | Se gana solo, según tu territorio (+10 % por cada puerto, +25 % por fábrica). Una nación pequeña gana unos pocos miles por segundo; una grande, decenas de miles. Si eliminas a una nación, te llevas su oro. Oro inicial opcional: 250k o 1,25M. |
-| Edificios | Se construyen en tu territorio con oro; cada uno del mismo tipo cuesta más que el anterior. Si te conquistan la casilla, el edificio pasa al conquistador. Deben estar a 5 casillas o más de otro edificio. |
-| Ciudad | +15.000 tropas máximas. 125k de oro, +125k por cada ciudad que ya tengas. |
-| Puerto | En la costa. +1 barco simultáneo y +10 % de oro. Saca 2 pesqueros que faenan cerca y dan oro mientras naveguen, y cada 20-40 s un mercante hacia el puerto de otra nación con la que no estés en guerra: al llegar cobráis los dos (tú más). 100k, +100k. |
-| Fortaleza | En un radio de 10 casillas, conquistarte cuesta ×2,5 tropas y tiempo. 75k, +75k. |
-| Fábrica | +25 % de oro por cada una. 150k, +150k. |
-| Silo | Permite lanzar misiles; cada silo recarga en 15 s. 1M, +1M. |
-| Misil | 500k cada uno, lanzado desde un silo a 220 casillas como máximo. Arrasa un círculo de radio 8: las casillas enemigas quedan libres, se destruyen sus edificios, el defensor pierde tropas y los barcos y buques alcanzados sufren daños. Nunca afecta a ti ni a tus aliados. |
-| Antimisiles | Dispara a los misiles enemigos que pasan a 22 casillas o menos; acierta un 60 % de las veces y recarga en 8 s. Varios misiles a la vez saturan la defensa. 1,5M, +750k. |
-| Alianzas | Clic derecho (o mantener pulsado) sobre otra nación abre su ficha: proponer alianza, enviar tropas u oro (solo a aliados, según la fuerza de ataque) y emojis. Máximo 3 aliados. Los aliados no pueden atacarse; al firmar, los ataques entre ambos se detienen y las tropas vuelven. |
+| Oro | Se gana solo, según tu territorio (+10 % por nivel de puerto, +25 % por nivel de fábrica). Una nación pequeña gana unos pocos miles por segundo; una grande, decenas de miles. Al eliminar a una nación te llevas el oro que le quede. Oro inicial opcional: 250k o 1,25M. |
+| Edificios | Se construyen en tu territorio con oro. Deben estar a 5 casillas o más de otro edificio. Si te conquistan la casilla, el edificio (con su nivel) pasa al conquistador. |
+| Obras | Cada edificio tarda en construirse y no hace nada hasta terminar (anillo de progreso sobre el icono): fortaleza 4 s, ciudad 5 s, puerto y fábrica 6 s, silo 9 s, **antimisiles 16 s**. Subir de nivel tarda el 80 % de eso. |
+| Inflación | Cada compra (edificio, mejora o buque) encarece un **12 %** todo lo demás. Silos, misiles y antimisiles tienen precio fijo. |
+| Niveles | Con un edificio seleccionado, clic sobre uno tuyo del mismo tipo: sube de nivel (hasta 5; estrellas bajo el icono). Cuesta precio actual × 0,8 × nivel. Cada nivel repite el efecto: ciudad +15k tropas, puerto +10 % de oro y un pesquero más, fábrica +25 % de oro, fortaleza +2 de radio y +0,4 de defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto. |
+| Ciudad | +15.000 tropas máximas. 125k de oro (sin inflación). |
+| Puerto | En la costa: basta con hacer clic cerca de tu orilla (se coloca en la casilla costera libre más cercana, hasta 6 casillas, también si pulsas en el agua). +10 % de oro. Saca 2 pesqueros que faenan cerca y dan oro mientras naveguen, y cada 20-40 s un mercante hacia el puerto de otra nación con la que no estés en guerra: al llegar cobráis los dos (tú más). 100k. |
+| Fortaleza | En un radio de 10 casillas, conquistarte cuesta ×2,5 tropas y tiempo. 75k. |
+| Fábrica | +25 % de oro. 150k. |
+| Silo | Permite lanzar misiles; cada silo recarga en 15 s. 1M fijo. |
+| Misil | 500k fijo, lanzado desde un silo a 220 casillas como máximo. Arrasa un círculo de radio 8: las casillas enemigas quedan libres, se destruyen sus edificios, el defensor pierde tropas y los barcos y buques alcanzados sufren daños. Nunca afecta a ti ni a tus aliados. |
+| Antimisiles | Dispara a los misiles enemigos que pasan a 22 casillas o menos; acierta un 60 % de las veces y recarga en 8 s. Varios misiles a la vez saturan la defensa. 1,5M fijo. |
+| Alianzas | Los aliados se ven con **franjas verdes** sobre su territorio, frontera verde y 🤝 junto al nombre. Clic derecho (o mantener pulsado) sobre otra nación abre su ficha: proponer alianza, enviar tropas u oro (solo a aliados, según la fuerza de ataque) y emojis. Máximo 3 aliados. Los aliados no pueden atacarse; al firmar, los ataques entre ambos se detienen y las tropas vuelven. |
 | Propuestas | Las que recibes aparecen con Aceptar/Rechazar y caducan a los 15 s. Si te rechazan, debes esperar 1 min para volver a proponer. |
 | Traición | Romper una alianza (pide doble confirmación) te marca como traidor 60 s: conquistarte cuesta ×0,6 y los bots no se fían de ti. |
 | Victoria | Controlar el 70 % de la tierra, ser el último en pie o que solo queden naciones aliadas entre sí. |

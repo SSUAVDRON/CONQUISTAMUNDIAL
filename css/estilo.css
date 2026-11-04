@@ -1004,3 +1004,250 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
   #lista-clasificacion li.sube, #lista-clasificacion li.baja { animation: none !important; }
   .ev-tiempo { animation-duration: 0s !important; transform: scaleX(0); }
 }
+
+/* =========================================================== Avisos: recuadro abajo a la derecha */
+#eventos {
+  top: auto;
+  left: auto;
+  transform: none;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: 330px;
+  max-width: calc(100vw - 24px);
+  align-items: stretch;
+  gap: 6px;
+  padding: 30px 8px 8px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(16, 24, 40, 0.88), rgba(9, 13, 22, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  z-index: 6;
+  transition: opacity 0.35s, transform 0.35s, visibility 0s;
+}
+#eventos::before {
+  content: "Avisos";
+  position: absolute;
+  top: 9px;
+  left: 14px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+#eventos::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acento);
+  animation: latido 1.8s ease-out infinite;
+}
+#eventos:empty { opacity: 0; transform: translateY(14px); visibility: hidden; transition: opacity 0.35s, transform 0.35s, visibility 0s linear 0.35s; }
+body.con-tutorial #eventos { top: auto; }
+#eventos .evento {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px 9px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02));
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.3;
+  max-height: 140px;
+  overflow: hidden;
+  animation: avisoLlega 0.45s cubic-bezier(0.18, 0.9, 0.25, 1.12);
+  transition: opacity 0.35s, transform 0.35s, max-height 0.35s 0.05s, padding 0.35s 0.05s, margin 0.35s 0.05s, border-width 0.35s;
+}
+#eventos .evento::before { content: none; display: none; }
+#eventos .evento.danger { background: linear-gradient(90deg, rgba(255, 80, 80, 0.2), rgba(255, 80, 80, 0.04)); border-color: rgba(255, 107, 107, 0.3); animation: avisoLlega 0.45s cubic-bezier(0.18, 0.9, 0.25, 1.12), sacudida 0.45s 0.45s; }
+#eventos .evento.good { background: linear-gradient(90deg, rgba(95, 211, 141, 0.14), rgba(95, 211, 141, 0.03)); border-color: rgba(95, 211, 141, 0.2); }
+#eventos .evento.warn { background: linear-gradient(90deg, rgba(255, 200, 87, 0.13), rgba(255, 200, 87, 0.03)); border-color: rgba(255, 200, 87, 0.2); }
+#eventos .evento.rebote { animation: rebote 0.35s ease-out; }
+#eventos .evento.saliendo {
+  opacity: 0;
+  transform: translateX(48px) scale(0.96);
+  max-height: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: -6px;
+  border-width: 0;
+}
+.ev-texto { min-width: 0; overflow-wrap: anywhere; }
+.ev-icono {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: #9fc4ff;
+  background: rgba(110, 160, 255, 0.16);
+  animation: iconoPop 0.5s 0.1s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.ev-icono svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.evento.good .ev-icono { color: var(--bien); background: rgba(95, 211, 141, 0.18); box-shadow: 0 0 12px rgba(95, 211, 141, 0.25); }
+.evento.danger .ev-icono { color: #ff9a9a; background: rgba(255, 107, 107, 0.22); box-shadow: 0 0 14px rgba(255, 80, 80, 0.4); }
+.evento.warn .ev-icono { color: var(--aviso); background: rgba(255, 200, 87, 0.18); }
+.evento.cat-logro .ev-icono { color: #ffd34d; background: rgba(255, 211, 77, 0.2); box-shadow: 0 0 16px rgba(255, 211, 77, 0.4); }
+.evento.cat-oro .ev-icono { color: #ffd34d; }
+#eventos .ev-tiempo { height: 2px; opacity: 0.8; }
+@keyframes avisoLlega { from { opacity: 0; transform: translateX(60px) scale(0.94); } }
+@keyframes iconoPop { from { opacity: 0; transform: scale(0.3) rotate(-25deg); } }
+@keyframes sacudida { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
+@keyframes latido { 0% { box-shadow: 0 0 0 0 rgba(242, 179, 61, 0.6); } 70%, 100% { box-shadow: 0 0 0 7px rgba(242, 179, 61, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  #eventos .evento, #eventos .evento.danger, .ev-icono, #eventos::after { animation: none !important; }
+}
+
+/* =========================================================== Panel inferior: ancho, bajo y plegable */
+#panel-jugador {
+  --pj-color: var(--acento);
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  right: calc(356px + env(safe-area-inset-right, 0px));
+  width: auto;
+  max-width: 1180px;
+  transform: none;
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  padding: 10px 40px 10px 14px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(20, 28, 46, 0.93), rgba(9, 13, 22, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: padding 0.3s ease;
+}
+#panel-jugador::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--pj-color) 20%, var(--pj-color) 80%, transparent);
+  box-shadow: 0 0 12px var(--pj-color);
+  opacity: 0.85;
+}
+#hud:not([hidden]) #panel-jugador { animation: hudSube 0.5s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes hudSube { from { opacity: 0; transform: translateY(18px); } }
+.pj-col { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.pj-resumen { flex: 1.15 1 0; }
+.pj-ataque { flex: 0.6 1 0; padding: 0 14px; border-left: 1px solid rgba(255, 255, 255, 0.07); border-right: 1px solid rgba(255, 255, 255, 0.07); transition: flex-grow 0.35s ease; }
+.pj-obras { flex: 1.75 1 0; transition: flex-grow 0.35s ease, opacity 0.25s ease, margin 0.35s ease; }
+#panel-jugador .cabecera { margin-bottom: 5px; }
+#panel-jugador .cabecera strong { font-size: 14px; letter-spacing: 0.01em; }
+#panel-jugador .barra { height: 7px; margin-bottom: 7px; }
+#panel-jugador .cifras { margin-bottom: 0; gap: 6px; }
+#panel-jugador .cifras .valor { font-size: 15px; }
+.pj-plegar {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 8px;
+}
+.pj-plegar svg { width: 14px; height: 14px; transition: transform 0.3s ease; }
+#panel-jugador.plegado .pj-plegar svg { transform: rotate(180deg); }
+
+/* Fuerza de ataque: cifra grande y barra rellena hasta el valor */
+.ratio { gap: 3px; }
+.ratio-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.ratio-cifra { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ratio-cifra strong { font-size: 20px; font-weight: 800; color: var(--acento); }
+.ratio-cifra span { font-size: 12px; }
+#ratio {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  margin: 4px 0 2px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #d99a2b, var(--acento) var(--valor, 20%), rgba(255, 255, 255, 0.12) var(--valor, 20%));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+#ratio::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff3d2; border: 3px solid var(--acento); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(242, 179, 61, 0.18); transition: transform 0.15s; }
+#ratio::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff3d2; border: 3px solid var(--acento); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+#ratio:active::-webkit-slider-thumb { transform: scale(1.18); }
+
+/* Botones de construcción: compactos, con relleno de «cuánto falta» */
+#construir { margin-top: 0; gap: 5px; }
+#construir button {
+  height: 40px;
+  padding: 4px 8px 4px 5px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+}
+#construir button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: var(--progreso, 100%);
+  background: var(--acento);
+  opacity: 0.65;
+  transition: width 0.4s ease;
+}
+#construir button:not(.caro)::after { background: var(--bien); opacity: 0.55; }
+#construir canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
+#construir button.en-obras canvas { animation: martillo 0.9s ease-in-out infinite; }
+#construir .b-num { top: 2px; right: 5px; font-size: 10.5px; }
+@keyframes martillo { 50% { transform: rotate(-9deg) translateY(-1px); } }
+
+/* Plegado: solo tropas, oro, territorio, barcos y la fuerza de ataque */
+#panel-jugador.plegado { padding-top: 7px; padding-bottom: 7px; }
+#panel-jugador.plegado .pj-obras { flex-grow: 0; opacity: 0; margin-left: -14px; pointer-events: none; height: 0; overflow: hidden; align-self: flex-start; }
+#panel-jugador.plegado .cabecera, #panel-jugador.plegado .ratio-titulo, #panel-jugador.plegado .cifras .sub { display: none; }
+#panel-jugador.plegado .barra { margin-bottom: 5px; }
+#panel-jugador.plegado .etq { font-size: 0; gap: 0; }
+#panel-jugador.plegado .etq-icono { width: 13px; height: 13px; }
+#panel-jugador.plegado .cifras div { flex-direction: row; align-items: center; gap: 5px; }
+#panel-jugador.plegado .ratio-cifra strong { font-size: 16px; }
+#panel-jugador.plegado #ratio { margin: 2px 0 0; }
+
+/* Avisos: si no caben al lado del panel, encima */
+@media (max-width: 1499px) {
+  #panel-jugador { right: calc(12px + env(safe-area-inset-right, 0px)); max-width: none; }
+  #eventos { bottom: calc(var(--pj-alto, 120px) + 24px + env(safe-area-inset-bottom, 0px)); width: 300px; }
+}
+@media (max-width: 860px) {
+  #panel-jugador { flex-wrap: wrap; row-gap: 8px; }
+  .pj-resumen { flex: 1 1 58%; }
+  .pj-ataque { flex: 1 1 28%; border-right: none; padding-right: 0; }
+  .pj-obras { flex: 1 1 100%; }
+  #panel-jugador.plegado .pj-obras { display: none; }
+}
+@media (max-width: 720px) {
+  #panel-jugador { left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); padding: 8px 36px 9px 10px; gap: 8px; }
+  .pj-resumen { flex: 1 1 100%; }
+  .pj-ataque { flex: 1 1 100%; padding: 0; border: none; }
+  .ratio-cifra strong { font-size: 16px; }
+  #construir button { height: 38px; }
+  #aviso { bottom: calc(var(--pj-alto, 250px) + 20px + env(safe-area-inset-bottom, 0px)); }
+  .tutorial { bottom: calc(var(--pj-alto, 250px) + 20px + env(safe-area-inset-bottom, 0px)); }
+  #eventos {
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--pj-alto, 250px) + 16px + env(safe-area-inset-bottom, 0px));
+    width: min(270px, calc(100vw - 16px));
+    flex-direction: column;
+    padding: 24px 6px 6px;
+  }
+  #eventos::before { top: 6px; font-size: 9.5px; }
+  #eventos::after { top: 9px; }
+  #eventos .evento { font-size: 12px; padding: 6px 8px; grid-template-columns: 22px 1fr auto; gap: 7px; }
+  #eventos .evento:nth-child(n+3) { display: grid; }
+  #eventos .evento:nth-last-child(n+3) { display: none; }
+  .ev-icono { width: 22px; height: 22px; }
+  body.con-tutorial #eventos { display: none; }
+}

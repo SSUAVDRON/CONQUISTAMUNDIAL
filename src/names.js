@@ -26,3 +26,26 @@ export function generateNames(rng, count, exclude = []) {
   while (names.length < count) names.push(`${rng.pick(PREFIXES)}${rng.pick(SUFFIXES)} ${n++}`);
   return names;
 }
+
+const COLONY_KINDS = ['Colonia de', 'Aldea de', 'Asentamiento de', 'Misión de', 'Feudo de', 'Puesto de', 'Caserío de', 'Factoría de'];
+const PLACES = [
+  'Valdeoro', 'Robledal', 'la Ribera', 'Santa Clara', 'Arenales', 'los Pinos', 'Brezal', 'Altamira', 'Encinar',
+  'Piedrahita', 'Villaverde', 'Riscal', 'Matorral', 'Salinas', 'Olmedo', 'Torrecilla', 'Valmayor', 'Cañaveral',
+  'Hondonada', 'Mirasol', 'Lagunilla', 'Pedregal', 'Rocafría', 'Sotobosque', 'Peñasco', 'Puerto Viejo', 'San Telmo',
+  'Monteclaro', 'Fuentefría', 'Navarredonda', 'Aguasvivas', 'Campoalto',
+];
+
+/** Nombres de colonias: «Colonia de Valdeoro», «Aldea de Brezal»… */
+export function generateColonyNames(rng, count, exclude = []) {
+  const used = new Set(exclude.map((n) => n.toLowerCase()));
+  const names = [];
+  let guard = 0;
+  while (names.length < count && guard++ < count * 60) {
+    const name = `${rng.pick(COLONY_KINDS)} ${rng.pick(PLACES)}`;
+    if (used.has(name.toLowerCase())) continue;
+    used.add(name.toLowerCase());
+    names.push(name);
+  }
+  while (names.length < count) names.push(`Colonia ${names.length + 1}`);
+  return names;
+}

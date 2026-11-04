@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
+import { buildNow, terminarObras } from './ayuda.js';
 import { BUILDINGS, CONFIG } from '../src/config.js';
 
 /** Tres naciones en la masa de tierra mayor, ya en juego y con oro de sobra. */
@@ -37,15 +38,19 @@ function setup(seed = 11) {
 test('la fábrica sube el oro un 25 %', () => {
   const { game, a, ta } = setup();
   const before = a.goldPerTick();
-  assert.ok(game.build(a, 'factory', ta));
+  assert.ok(buildNow(game, a, 'factory', ta));
   assert.ok(Math.abs(a.goldPerTick() - before * (1 + CONFIG.factoryGoldBonus)) < 1e-9);
-  assert.equal(game.buildCost(a, 'factory'), BUILDINGS.factory.base + BUILDINGS.factory.step);
+  assert.equal(game.buildCost(a, 'factory'), Math.round(BUILDINGS.factory.base * (1 + CONFIG.inflation)));
+  // Nivel 2: otro 25 %
+  assert.ok(buildNow(game, a, 'factory', ta), 'clic sobre la fábrica = mejorarla');
+  assert.ok(Math.abs(a.goldPerTick() - before * (1 + 2 * CONFIG.factoryGoldBonus)) < 1e-9);
+  assert.equal(a.buildings.factory, 1, 'sigue siendo una fábrica');
 });
 
 test('sin silo no hay misiles; con silo, el misil arrasa la zona y quita tropas', () => {
   const { map, game, a, b, ta, tb } = setup();
   assert.equal(game.canBuild(a, 'missile', tb).ok, false, 'sin silo no se puede');
-  assert.ok(game.build(a, 'silo', ta));
+  assert.ok(buildNow(game, a, 'silo', ta));
   assert.equal(game.canBuild(a, 'missile', ta).ok, false, 'no se puede atacar territorio propio');
 
   // B deja de expandirse para medir solo el efecto del misil
@@ -53,7 +58,7 @@ test('sin silo no hay misiles; con silo, el misil arrasa la zona y quita tropas'
   const tilesBefore = b.tiles;
   const troopsBefore = b.troops;
   const goldBefore = a.gold;
-  assert.ok(game.build(a, 'missile', tb));
+  assert.ok(buildNow(game, a, 'missile', tb));
   assert.equal(a.gold, goldBefore - BUILDINGS.missile.base);
   assert.equal(game.missiles.length, 1);
   assert.equal(game.canBuild(a, 'missile', tb).ok, false, 'el silo está recargando');
@@ -70,7 +75,7 @@ test('sin silo no hay misiles; con silo, el misil arrasa la zona y quita tropas'
 
 test('los misiles no dañan a los aliados ni se pueden lanzar contra ellos', () => {
   const { game, a, b, ta, tb } = setup();
-  game.build(a, 'silo', ta);
+  buildNow(game, a, 'silo', ta);
   game.proposeAlliance(a, b);
   game.proposeAlliance(b, a);
   assert.equal(game.canBuild(a, 'missile', tb).ok, false);
@@ -79,10 +84,10 @@ test('los misiles no dañan a los aliados ni se pueden lanzar contra ellos', () 
 test('los antimisiles derriban misiles enemigos (a veces fallan) y recargan', () => {
   const { map, game, a, b, ta, tb } = setup();
   for (const atk of [...b.attacks.values()]) game._endAttack(atk);
-  game.build(a, 'silo', ta);
+  buildNow(game, a, 'silo', ta);
   const dist = (t, u) => Math.hypot(map.x(t) - map.x(u), map.y(t) - map.y(u));
   const samTile = [...map.landTiles].find((t) => game.owner[t] === b.id && dist(t, tb) < 6 && game.canBuild(b, 'sam', t).ok);
-  assert.ok(samTile !== undefined && game.build(b, 'sam', samTile), 'B construye antimisiles');
+  assert.ok(samTile !== undefined && buildNow(game, b, 'sam', samTile), 'B construye antimisiles');
   const sam = game.buildings.find((x) => x.owner === b.id && x.kind === 'sam');
   const silo = game.buildings.find((x) => x.owner === a.id && x.kind === 'silo');
   let shots = 0;
@@ -98,7 +103,7 @@ test('los antimisiles derriban misiles enemigos (a veces fallan) y recargan', ()
     silo.readyAt = 0;
     sam.readyAt = 0;
     const t0 = game.ticks;
-    assert.ok(game.build(a, 'missile', target));
+    assert.ok(buildNow(game, a, 'missile', target));
     for (let i = 0; i < 200 && game.missiles.length; i++) game.tick();
     const fired = game.effects.filter((e) => e.tick > t0 && (e.kind === 'intercept' || e.kind === 'miss'));
     shots += fired.length;

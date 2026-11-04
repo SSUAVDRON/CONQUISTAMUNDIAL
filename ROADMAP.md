@@ -86,6 +86,17 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   con el oro ×25 para mantener el ritmo; silos, misiles y antimisiles quedan
   relativamente más caros que antes
 
+## ✅ Gráficos, colonias, niveles y obras (hecho)
+
+- Mapa con relieve iluminado, playas, espuma, mar con profundidad, olas y nubes
+- Batallas animadas: destellos al conquistar, chispas y humo, flechas de avance
+- Barcos dibujados con rumbo y estela; misiles, explosiones e interceptaciones nuevas
+- Avisos en un recuadro abajo a la derecha; panel inferior ancho y minimizable (V)
+- Puertos en cualquier costa (el clic se ajusta a la orilla); 3 transportes a la vez
+- Colonias débiles con oro; saqueo de oro casilla a casilla
+- Aliados con franjas verdes y 🤝
+- Edificios por niveles (1-5), inflación del 12 % por compra y obras con duración
+
 ## Próximo
 
 - Sonido y música propios

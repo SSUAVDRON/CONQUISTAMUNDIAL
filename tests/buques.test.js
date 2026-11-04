@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
+import { buildNow, terminarObras } from './ayuda.js';
 import { BUILDINGS, CONFIG } from '../src/config.js';
 
 /** Dos naciones con puerto en la misma costa (busca una semilla que sirva). */
@@ -30,7 +31,7 @@ function navalSetup() {
     while (game.phase === 'spawn') game.tick();
     game.bots.length = 0;
     a.gold = b.gold = 1e6;
-    if (!game.build(a, 'port', ta) || !game.build(b, 'port', tb)) continue;
+    if (!buildNow(game, a, 'port', ta) || !buildNow(game, b, 'port', tb)) continue;
     return { map, game, a, b, ta, tb, water };
   }
   throw new Error('sin semilla válida');
@@ -48,15 +49,17 @@ test('construir un buque exige puerto y oro, y su coste sube', () => {
 
   const { game: g2, a, ta } = navalSetup();
   const before = a.gold;
-  assert.ok(g2.build(a, 'warship', ta));
+  const cost = g2.buildCost(a, 'warship');
+  assert.equal(cost, Math.round(BUILDINGS.warship.base * (1 + CONFIG.inflation * a.purchases)), 'el puerto ya encareció el buque');
+  assert.ok(buildNow(g2, a, 'warship', ta));
   assert.equal(a.buildings.warship, 1);
-  assert.equal(a.gold, before - BUILDINGS.warship.base);
-  assert.equal(g2.buildCost(a, 'warship'), BUILDINGS.warship.base + BUILDINGS.warship.step);
+  assert.equal(a.gold, before - cost);
+  assert.ok(g2.buildCost(a, 'warship') > cost, 'cada compra encarece la siguiente');
 });
 
 test('un buque navega hasta donde se le manda', () => {
   const { map, game, a, ta, tb, water } = navalSetup();
-  game.build(a, 'warship', ta);
+  buildNow(game, a, 'warship', ta);
   const dest = water(tb);
   assert.ok(game.moveWarship(a, dest));
   for (let i = 0; i < 400 && game.warships[0].path; i++) game.tick();
@@ -68,7 +71,7 @@ test('un buque navega hasta donde se le manda', () => {
 
 test('un buque hunde transportes enemigos y destruye puertos', () => {
   const { game, a, b, ta, tb, water } = navalSetup();
-  game.build(a, 'warship', ta);
+  buildNow(game, a, 'warship', ta);
   game.moveWarship(a, water(tb));
   // B manda un barco hacia la costa de A (no a su puerto, que podría capturar)
   b.troops = 50000;
@@ -88,8 +91,8 @@ test('un buque hunde transportes enemigos y destruye puertos', () => {
 
 test('dos buques enemigos se cañonean hasta que uno se hunde; los aliados no', () => {
   const { game, a, b, ta, tb, water } = navalSetup();
-  game.build(a, 'warship', ta);
-  game.build(b, 'warship', tb);
+  buildNow(game, a, 'warship', ta);
+  buildNow(game, b, 'warship', tb);
   // Aliados: nadie dispara
   game.proposeAlliance(a, b);
   game.proposeAlliance(b, a);

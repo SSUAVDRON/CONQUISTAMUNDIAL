@@ -16,6 +16,9 @@ export class Player {
     this.name = name;
     this.color = color; // [r, g, b]
     this.isHuman = isHuman;
+    /** Colonia: bot débil que no es una nación (ni construye ni firma alianzas). */
+    this.weak = false;
+    this.strength = 1;
 
     this.troops = 0;
     this.gold = CONFIG.startGold;
@@ -33,7 +36,12 @@ export class Player {
     /** Edificios por tipo (se actualiza al construir, capturar o perder). */
     // warship = buques a flote; missile no se usa (el misil no se acumula)
     this.buildings = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0, missile: 0 };
-    /** Fortalezas propias (casillas), para calcular la defensa. */
+    /** Edificios terminados por tipo y suma de sus niveles (los que están en obras no cuentan). */
+    this.active = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
+    this.levels = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
+    /** Compras con inflación hechas en la partida (encarecen las siguientes). */
+    this.purchases = 0;
+    /** Fortalezas propias terminadas (casillas), para calcular la defensa. */
     this.forts = new Set();
 
     this.maxTilesReached = 0;
@@ -58,7 +66,7 @@ export class Player {
   }
 
   maxTroops() {
-    return CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.buildings.city * CONFIG.cityMaxTroops;
+    return (CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.levels.city * CONFIG.cityMaxTroops) * this.strength;
   }
 
   /** Crecimiento por tick: rápido con pocas tropas, se frena al acercarse al máximo. */
@@ -66,17 +74,17 @@ export class Player {
     const max = this.maxTroops();
     if (this.troops >= max) return 0;
     const raw = CONFIG.growthBase + pow34(this.tiles) * CONFIG.growthTileMult;
-    return raw * (1 - this.troops / max);
+    return raw * this.strength * (1 - this.troops / max);
   }
 
   goldPerTick() {
     if (!this.tiles) return 0;
     const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
-    return base * (1 + this.buildings.port * CONFIG.portGoldBonus + this.buildings.factory * CONFIG.factoryGoldBonus);
+    return base * (1 + this.levels.port * CONFIG.portGoldBonus + this.levels.factory * CONFIG.factoryGoldBonus);
   }
 
   maxBoats() {
-    return CONFIG.maxBoats + this.buildings.port;
+    return CONFIG.maxBoats;
   }
 
   troopsInAttacks() {

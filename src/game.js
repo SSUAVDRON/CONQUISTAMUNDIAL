@@ -1,12 +1,12 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { BUILDINGS, CONFIG, EMOJIS, cleanRules } from './config.js';
+import { BUILDINGS, CONFIG, EMOJIS, STRUCTURE_KINDS, cleanRules } from './config.js';
 import { formatNumber } from './format.js';
 import { Rng } from './rng.js';
 import { Player } from './player.js';
 import { Attack } from './attack.js';
-import { BotBrain } from './bot.js';
-import { generateNames } from './names.js';
+import { BotBrain, ColonyBrain } from './bot.js';
+import { generateColonyNames, generateNames } from './names.js';
 import { botColor } from './colors.js';
 
 // Buffers de vecinos, uno por función para evitar reentradas
@@ -38,6 +38,8 @@ export class Game {
     this._nextMerchantId = 1;
     /** Efectos visuales recientes: explosiones e intercepciones (no afectan a la simulación). */
     this.effects = [];
+    /** Edificios en obras (nuevos o mejorándose). */
+    this.sites = [];
     this.buildings = []; // { id, kind, tile, owner }
     this.buildingAt = new Map(); // casilla → edificio
     this._nextBuildingId = 1;
@@ -94,6 +96,23 @@ export class Game {
         p.flag = countries[i].iso || '';
       }
       const brain = new BotBrain(this, p, difficulty);
+      this.bots.push(brain);
+      this.brains.set(p.id, brain);
+    }
+  }
+
+  /** Colonias: bots débiles con nombres como «Colonia de Valdeoro». */
+  addColonies(count) {
+    const existing = this.players.filter(Boolean).map((p) => p.name);
+    const names = generateColonyNames(this.rng, count, existing);
+    for (const name of names) {
+      // Tonos apagados (tierra, piedra): se distinguen de las naciones
+      const base = this.rng.pick([[150, 128, 104], [128, 132, 140], [146, 134, 116], [120, 128, 112], [150, 120, 120], [118, 116, 138]]);
+      const v = this.rng.int(-14, 14);
+      const p = this.addPlayer(name, base.map((c) => Math.max(0, Math.min(255, c + v))), false);
+      p.weak = true;
+      p.strength = CONFIG.colonyStrength;
+      const brain = new ColonyBrain(this, p);
       this.bots.push(brain);
       this.brains.set(p.id, brain);
     }
@@ -174,7 +193,7 @@ export class Game {
     if (map.landBodySizes[body] < minBody) return false;
     if (p.spawned) this._releaseAll(p);
 
-    const r = CONFIG.spawnRadius;
+    const r = p.weak ? CONFIG.colonySpawnRadius : CONFIG.spawnRadius;
     const cx = map.x(tile);
     const cy = map.y(tile);
     for (let dy = -r; dy <= r; dy++) {
@@ -212,6 +231,13 @@ export class Game {
     owner[t] = newId;
     if (oldId) {
       const op = this.players[oldId];
+      // Saqueo: quien conquista una casilla se lleva su parte del oro del país
+      if (newId && op.gold > 0 && op.tiles > 0) {
+        const loot = (op.gold / op.tiles) * CONFIG.tileLootShare;
+        op.gold -= loot;
+        this.players[newId].gold += loot;
+        if (this.human) this._trackLoot(newId, oldId, loot);
+      }
       op.tiles--;
       op.border.delete(t);
       if (newId) op.lastConqueredBy = newId;
@@ -247,6 +273,37 @@ export class Game {
         if (atk && !atk.done) this._addCandidate(atk, n);
       }
     }
+  }
+
+  /** Suma el saqueo que afecta al humano para avisarle de vez en cuando (no toca la simulación). */
+  _trackLoot(toId, fromId, loot) {
+    const h = this.human.id;
+    if (toId !== h && fromId !== h) return;
+    const acc = (this._loot ??= { gained: 0, lost: 0, from: new Map(), by: new Map() });
+    if (toId === h) {
+      acc.gained += loot;
+      acc.from.set(fromId, (acc.from.get(fromId) || 0) + loot);
+    } else {
+      acc.lost += loot;
+      acc.by.set(toId, (acc.by.get(toId) || 0) + loot);
+    }
+  }
+
+  /** Cada 5 s: «Saqueo: +X de oro de Y» y «Te han saqueado X». */
+  _flushLoot() {
+    const acc = this._loot;
+    if (!acc || this.ticks % 50 !== 0) return;
+    const top = (m) => [...m.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (acc.gained >= 1) {
+      const [id] = top(acc.from);
+      const more = acc.from.size > 1 ? ' y otros' : '';
+      this._emit(`💰 Saqueo: +${formatNumber(acc.gained)} de oro de ${this.players[id].name}${more}`, 'good');
+    }
+    if (acc.lost >= 1) {
+      const [id] = top(acc.by);
+      this._emit(`💰 ${this.players[id].name} te ha saqueado ${formatNumber(acc.lost)} de oro`, 'warn');
+    }
+    this._loot = null;
   }
 
   _updateBorder(t) {
@@ -327,8 +384,9 @@ export class Game {
         }
       } else if (it.type === 'build') {
         if (this.phase !== 'playing') continue;
-        const check = this.canBuild(p, it.kind, it.tile);
-        if (check.ok) this.build(p, it.kind, it.tile);
+        const tile = this.snapBuildTile(p, it.kind, it.tile);
+        const check = this.canBuild(p, it.kind, tile);
+        if (check.ok) this.build(p, it.kind, tile);
         else this._notify(p, check.reason, 'warn');
       } else if (it.type === 'moveWarship') {
         if (this.phase === 'playing') this.moveWarship(p, it.tile);
@@ -454,6 +512,7 @@ export class Game {
     if (!target) return { cost: CONFIG.wildTileCost * m, loss: 0, slow: m };
     let fort = this.fortMultiplier(target, t);
     if (this.isTraitor(target)) fort *= CONFIG.traitorDefenseMult;
+    if (target.weak) fort *= CONFIG.colonyDefenseMult;
     const density = target.troops / Math.max(1, target.tiles);
     return {
       cost: (CONFIG.playerTileBaseCost + density * CONFIG.defenseDensityMult) * m * fort,
@@ -468,13 +527,25 @@ export class Game {
     const map = this.map;
     const x = map.x(t);
     const y = map.y(t);
-    const r2 = CONFIG.fortRadius * CONFIG.fortRadius;
+    let best = 1;
     for (const f of defender.forts) {
+      const lvl = this.buildingAt.get(f)?.level || 1;
+      const r = this.fortRadius(lvl);
       const dx = map.x(f) - x;
       const dy = map.y(f) - y;
-      if (dx * dx + dy * dy <= r2) return CONFIG.fortDefenseMult;
+      if (dx * dx + dy * dy <= r * r) best = Math.max(best, CONFIG.fortDefenseMult + CONFIG.fortMultPerLevel * (lvl - 1));
     }
-    return 1;
+    return best;
+  }
+
+  /** Radio de una fortaleza de nivel `lvl`. */
+  fortRadius(lvl = 1) {
+    return CONFIG.fortRadius + CONFIG.fortRadiusPerLevel * (lvl - 1);
+  }
+
+  /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
+  samRange(lvl = 1) {
+    return CONFIG.samRange + CONFIG.samRangePerLevel * (lvl - 1);
   }
 
   _processAttack(atk) {
@@ -541,9 +612,37 @@ export class Game {
     return true;
   }
 
+  /**
+   * Precio actual: cada compra con inflación (edificio, mejora o buque)
+   * encarece un CONFIG.inflation todo lo demás. Antimisiles y misiles, fijos.
+   */
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
-    return def.base + def.step * (p.buildings[kind] || 0);
+    if (def.fixed) return def.base;
+    return Math.round(def.base * (1 + CONFIG.inflation * p.purchases));
+  }
+
+  /** Precio de subir `b` un nivel. */
+  upgradeCost(p, b) {
+    return Math.round(this.buildCost(p, b.kind) * CONFIG.upgradeCostMult * b.level);
+  }
+
+  /** Edificio propio del tipo `kind` en el clic (o a 2 casillas): se mejoraría. */
+  upgradeTarget(p, kind, tile) {
+    if (tile < 0 || tile >= this.map.size) return null;
+    const b = this.buildingAt.get(tile) || this.buildingNear(tile, 3);
+    return b && b.owner === p.id && b.kind === kind ? b : null;
+  }
+
+  /** ¿Está en obras (nuevo o mejorándose)? */
+  isBuilding(b) {
+    return b.target > 0;
+  }
+
+  /** Avance de la obra, de 0 a 1. */
+  buildProgress(b) {
+    if (!b.target) return 1;
+    return Math.max(0, Math.min(1, 1 - (b.buildEnd - this.ticks) / Math.max(1, b.buildTime)));
   }
 
   /** Comprueba si `p` puede construir `kind` en `tile`; si no, explica por qué. */
@@ -557,22 +656,65 @@ export class Game {
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
       return { ok: false, reason: 'Solo puedes construir en tu territorio' };
     }
+    // Sobre un edificio propio del mismo tipo: se sube de nivel
+    const up = this.upgradeTarget(p, kind, tile);
+    if (up) {
+      if (up.target) return { ok: false, reason: `${def.name}: ya está en obras`, upgrade: up };
+      if (up.level >= CONFIG.maxLevel) return { ok: false, reason: `${def.name}: ya está al nivel máximo`, upgrade: up };
+      const cost = this.upgradeCost(p, up);
+      if (p.gold < cost) return { ok: false, reason: `Te falta oro: subir de nivel cuesta ${formatNumber(cost)}`, upgrade: up };
+      return { ok: true, reason: '', upgrade: up, cost };
+    }
     if (def.coastal && !map.coastal[tile]) return { ok: false, reason: 'El puerto tiene que estar en la costa' };
     const near = this.buildingNear(tile, CONFIG.buildingMinDist);
     if (near) return { ok: false, reason: `Demasiado cerca de otro edificio (${BUILDINGS[near.kind].name})` };
     const cost = this.buildCost(p, kind);
-    if (p.gold < cost) return { ok: false, reason: `Te falta oro: ${def.name} cuesta ${Math.ceil(cost)}` };
-    return { ok: true, reason: '' };
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: ${def.name} cuesta ${formatNumber(cost)}` };
+    return { ok: true, reason: '', cost };
+  }
+
+  /**
+   * Los puertos no exigen atinar en la orilla: si el clic no es una casilla
+   * costera propia y libre, se usa la más cercana (hasta CONFIG.portSnap
+   * casillas, también si se hace clic en el agua). Determinista.
+   */
+  snapBuildTile(p, kind, tile) {
+    const def = BUILDINGS[kind];
+    const map = this.map;
+    if (!def || !def.coastal || tile < 0 || tile >= map.size) return tile;
+    const free = (t) => map.coastal[t] && this.owner[t] === p.id && !this.buildingNear(t, CONFIG.buildingMinDist);
+    if (free(tile)) return tile;
+    const R = CONFIG.portSnap;
+    const x0 = map.x(tile);
+    const y0 = map.y(tile);
+    let best = -1;
+    let bestD = Infinity;
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dx = -R; dx <= R; dx++) {
+        const d = dx * dx + dy * dy;
+        if (d > R * R || d >= bestD || !map.inBounds(x0 + dx, y0 + dy)) continue;
+        const t = map.index(x0 + dx, y0 + dy);
+        if (!free(t)) continue;
+        best = t;
+        bestD = d;
+      }
+    }
+    return best >= 0 ? best : tile;
   }
 
   build(p, kind, tile) {
     const check = this.canBuild(p, kind, tile);
     if (!check.ok) return false;
+    const def = BUILDINGS[kind];
+    if (check.upgrade) return this._startUpgrade(p, check.upgrade);
     p.gold -= this.buildCost(p, kind);
-    if (BUILDINGS[kind].unit === 'ship') return this._launchWarship(p, check.water);
-    if (BUILDINGS[kind].unit === 'missile') return this._launchMissile(p, check.silo, tile);
+    if (!def.fixed) p.purchases++;
+    if (def.unit === 'ship') return this._launchWarship(p, check.water);
+    if (def.unit === 'missile') return this._launchMissile(p, check.silo, tile);
     p.stats.built++;
-    const b = { id: this._nextBuildingId++, kind, tile, owner: 0 };
+    // Empieza la obra: nivel 0 (sin efecto) hasta que termine
+    const b = { id: this._nextBuildingId++, kind, tile, owner: 0, level: 0, target: 1, buildEnd: this.ticks + def.build, buildTime: def.build };
+    this.sites.push(b);
     if (kind === 'port') {
       b.hp = CONFIG.portHp;
       b.hitTick = -Infinity;
@@ -585,6 +727,65 @@ export class Game {
     this.buildingAt.set(tile, b);
     this._transferBuilding(b, 0, p.id, true);
     return true;
+  }
+
+  _startUpgrade(p, b) {
+    const def = BUILDINGS[b.kind];
+    p.gold -= this.upgradeCost(p, b);
+    if (!def.fixed) p.purchases++;
+    p.stats.built++;
+    const time = Math.round(def.build * CONFIG.upgradeTimeMult);
+    b.target = b.level + 1;
+    b.buildEnd = this.ticks + time;
+    b.buildTime = time;
+    this.sites.push(b);
+    if (p === this.human) this._emit(`Mejorando ${def.name.toLowerCase()} a nivel ${b.target} (${Math.round(time / 10)} s)`, 'info');
+    return true;
+  }
+
+  /** Termina las obras cuyo plazo ha vencido. */
+  _updateSites() {
+    if (!this.sites.length) return;
+    let changed = false;
+    for (const b of this.sites) {
+      if (!b.target || this.buildingAt.get(b.tile) !== b) {
+        changed = true;
+        continue;
+      }
+      if (this.ticks < b.buildEnd) continue;
+      const upgraded = b.level > 0;
+      b.level = b.target;
+      b.target = 0;
+      changed = true;
+      const p = this.players[b.owner];
+      this._recount(p);
+      if (b.kind === 'port' && !upgraded) b.nextFish = this.ticks + 10;
+      if (p === this.human) {
+        const def = BUILDINGS[b.kind];
+        this._emit(upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`, 'good');
+      }
+    }
+    if (changed) this.sites = this.sites.filter((b) => b.target && this.buildingAt.get(b.tile) === b);
+  }
+
+  /** Recalcula los contadores de edificios de `p` (totales, terminados, niveles, fortalezas). */
+  _recount(p) {
+    if (!p) return;
+    for (const k of STRUCTURE_KINDS) {
+      p.buildings[k] = 0;
+      p.active[k] = 0;
+      p.levels[k] = 0;
+    }
+    p.forts.clear();
+    for (const b of this.buildings) {
+      if (b.owner !== p.id) continue;
+      p.buildings[b.kind]++;
+      if (b.level > 0) {
+        p.active[b.kind]++;
+        p.levels[b.kind] += b.level;
+        if (b.kind === 'fort') p.forts.add(b.tile);
+      }
+    }
   }
 
   /** Primer edificio a menos de `dist` casillas de `tile` (o null). */
@@ -605,24 +806,26 @@ export class Game {
     const def = BUILDINGS[b.kind];
     const name = def.name;
     const some = `${def.fem ? 'una' : 'un'} ${name.toLowerCase()}`; // "una ciudad", "un puerto"
-    if (oldId) {
-      const op = this.players[oldId];
-      op.buildings[b.kind]--;
-      if (b.kind === 'fort') op.forts.delete(b.tile);
-      if (op === this.human && newId) this._emit(`Has perdido ${some} a manos de ${this.players[newId].name}`, 'danger');
-    }
     if (!newId) {
       this.buildings = this.buildings.filter((x) => x !== b);
       this.buildingAt.delete(b.tile);
+      if (oldId) this._recount(this.players[oldId]);
       return;
     }
     b.owner = newId;
+    if (oldId) {
+      const op = this.players[oldId];
+      this._recount(op);
+      if (op === this.human) this._emit(`Has perdido ${some} a manos de ${this.players[newId].name}`, 'danger');
+    }
     const np = this.players[newId];
-    np.buildings[b.kind]++;
+    this._recount(np);
     if (np.buildings.city > np.stats.maxCities) np.stats.maxCities = np.buildings.city;
     if (np.buildings.factory > np.stats.maxFactories) np.stats.maxFactories = np.buildings.factory;
-    if (b.kind === 'fort') np.forts.add(b.tile);
-    if (np === this.human) this._emit(built ? `${name} ${def.fem ? 'construida' : 'construido'}` : `Has capturado ${some}`, 'good');
+    if (np === this.human) {
+      if (built) this._emit(`Obras: ${name.toLowerCase()} lista en ${Math.round(b.buildTime / 10)} s`, 'info');
+      else this._emit(`Has capturado ${some}${b.level > 1 ? ` de nivel ${b.level}` : ''}`, 'good');
+    }
   }
 
   // ------------------------------------------------------- economía naval
@@ -639,12 +842,12 @@ export class Game {
     const map = this.map;
     // Nuevos barcos (cada 10 ticks basta)
     if (this.ticks % 10 === 0) {
-      const ports = this.buildings.filter((b) => b.kind === 'port' && b.water >= 0);
+      const ports = this.buildings.filter((b) => b.kind === 'port' && b.water >= 0 && b.level > 0);
       for (const b of ports) {
         if (this.ticks >= b.nextFish) {
           b.nextFish = this.ticks + 100;
           const fleet = this.merchants.filter((m) => m.kind === 'fish' && m.port === b.id).length;
-          if (fleet < CONFIG.fishPerPort) this._spawnMerchant(b, 'fish', null, 0);
+          if (fleet < CONFIG.fishPerPort + b.level - 1) this._spawnMerchant(b, 'fish', null, 0);
         }
         if (this.ticks >= b.nextTrade) {
           b.nextTrade = this.ticks + this.rng.int(CONFIG.tradeEveryMin, CONFIG.tradeEveryMax);
@@ -768,7 +971,7 @@ export class Game {
     let best = null;
     let bestD = Infinity;
     for (const b of this.buildings) {
-      if (b.owner !== p.id || b.kind !== 'silo' || b.readyAt > this.ticks) continue;
+      if (b.owner !== p.id || b.kind !== 'silo' || !b.level || b.readyAt > this.ticks) continue;
       const dx = map.x(b.tile) - map.x(tile);
       const dy = map.y(b.tile) - map.y(tile);
       const d = dx * dx + dy * dy;
@@ -782,16 +985,16 @@ export class Game {
 
   _canLaunchMissile(p, tile) {
     const map = this.map;
-    if (!p.buildings.silo) return { ok: false, reason: 'Necesitas un silo para lanzar misiles' };
+    if (!p.active.silo) return { ok: false, reason: p.buildings.silo ? 'Tu silo aún está en obras' : 'Necesitas un silo para lanzar misiles' };
     if (tile < 0 || tile >= map.size || !map.isLand(tile)) return { ok: false, reason: 'Apunta a territorio enemigo' };
     const o = this.owner[tile];
     if (!o) return { ok: false, reason: 'Ahí no hay nadie: apunta a territorio enemigo' };
     if (o === p.id || this.isAllied(p.id, o)) return { ok: false, reason: 'No puedes atacar tu territorio ni el de tus aliados' };
     const cost = this.buildCost(p, 'missile');
-    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un misil cuesta ${Math.ceil(cost)}` };
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un misil cuesta ${formatNumber(cost)}` };
     const silo = this.readySilo(p, tile);
     if (!silo) {
-      const any = this.buildings.some((b) => b.owner === p.id && b.kind === 'silo' && b.readyAt <= this.ticks);
+      const any = this.buildings.some((b) => b.owner === p.id && b.kind === 'silo' && b.level > 0 && b.readyAt <= this.ticks);
       return { ok: false, reason: any ? `Fuera de alcance (máx. ${CONFIG.missileRange} casillas desde un silo)` : 'Tus silos están recargando' };
     }
     return { ok: true, reason: '', silo };
@@ -799,7 +1002,7 @@ export class Game {
 
   _launchMissile(p, silo, tile) {
     const map = this.map;
-    silo.readyAt = this.ticks + CONFIG.siloReload;
+    silo.readyAt = this.ticks + Math.round(CONFIG.siloReload * (1 - CONFIG.siloReloadPerLevel * (silo.level - 1)));
     const dx = map.x(tile) - map.x(silo.tile);
     const dy = map.y(tile) - map.y(silo.tile);
     const targetId = this.owner[tile];
@@ -832,19 +1035,19 @@ export class Game {
   _updateMissiles() {
     if (!this.missiles.length) return;
     const W = this.map.width;
-    const r2 = CONFIG.samRange * CONFIG.samRange;
     for (const m of this.missiles) {
       m.progress = Math.min(1, m.progress + CONFIG.missileSpeed / m.dist);
       const [mx, my] = this.missilePos(m);
       // Baterías antimisiles enemigas del lanzador que estén listas y a tiro
       for (const b of this.buildings) {
-        if (b.kind !== 'sam' || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
+        if (b.kind !== 'sam' || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
         const dx = (b.tile % W) + 0.5 - mx;
         const dy = Math.floor(b.tile / W) + 0.5 - my;
-        if (dx * dx + dy * dy > r2) continue;
+        const range = this.samRange(b.level);
+        if (dx * dx + dy * dy > range * range) continue;
         // La batería dispara (y recarga) acierte o no
         b.readyAt = this.ticks + CONFIG.samReload;
-        const hit = this.rng.float() < CONFIG.samHitChance;
+        const hit = this.rng.float() < Math.min(0.92, CONFIG.samHitChance + CONFIG.samHitPerLevel * (b.level - 1));
         this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
         if (!hit) continue;
         m.dead = true;
@@ -927,7 +1130,7 @@ export class Game {
     let best = null;
     let bestD = Infinity;
     for (const b of this.buildings) {
-      if (b.owner !== p.id || b.kind !== 'port') continue;
+      if (b.owner !== p.id || b.kind !== 'port' || !b.level) continue;
       const dx = map.x(b.tile) - map.x(tile);
       const dy = map.y(b.tile) - map.y(tile);
       const d = dx * dx + dy * dy;
@@ -940,12 +1143,14 @@ export class Game {
   }
 
   _canBuildWarship(p, tile) {
-    if (!p.buildings.port) return { ok: false, reason: 'Necesitas un puerto para botar buques' };
-    if (p.buildings.warship >= p.buildings.port * CONFIG.warshipsPerPort) {
-      return { ok: false, reason: `Máximo ${CONFIG.warshipsPerPort} buques por puerto` };
+    if (!p.active.port) return { ok: false, reason: p.buildings.port ? 'Tu puerto aún está en obras' : 'Necesitas un puerto para botar buques' };
+    // 3 por puerto y 1 más por cada nivel extra de los puertos
+    const cap = p.active.port * CONFIG.warshipsPerPort + (p.levels.port - p.active.port);
+    if (p.buildings.warship >= cap) {
+      return { ok: false, reason: `Máximo ${cap} buques: mejora o construye puertos` };
     }
     const cost = this.buildCost(p, 'warship');
-    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un buque cuesta ${Math.ceil(cost)}` };
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un buque cuesta ${formatNumber(cost)}` };
     const port = this.nearestPort(p, tile >= 0 && tile < this.map.size ? tile : p.spawnTile);
     const nb = NB_MISC;
     const c = this.map.neighbors(port.tile, nb);
@@ -1342,6 +1547,8 @@ export class Game {
     for (let i = 0; i < this.attacks.length; i++) this._processAttack(this.attacks[i]);
     this.attacks = this.attacks.filter((a) => !a.done);
 
+    this._updateSites();
+    this._flushLoot();
     this._updateBoats();
     this._updateMerchants();
     this._updateWarships();
@@ -1471,6 +1678,7 @@ export class Game {
   /** ¿Puede `p` proponer alianza a `target` ahora mismo? Si no, explica por qué. */
   canPropose(p, target) {
     if (!target || target === p || !target.alive) return { ok: false, reason: 'No disponible' };
+    if (target.weak || p.weak) return { ok: false, reason: 'Las colonias no firman alianzas' };
     if (p.allies.has(target.id)) return { ok: false, reason: 'Ya sois aliados' };
     if (this.pendingRequest(p.id, target.id)) return { ok: false, reason: 'Propuesta enviada' };
     if (p.allies.size >= CONFIG.maxAllies) return { ok: false, reason: `Máximo ${CONFIG.maxAllies} aliados` };

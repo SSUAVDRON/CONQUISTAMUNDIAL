@@ -8,6 +8,38 @@ import { drawBuildingIcon, flagCss, hasFlag } from './icons.js';
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
 const EVENT_MS = 6000;
+
+/** Iconos de los avisos (SVG de 16×16, trazo con currentColor). */
+const EVENT_ICONS = {
+  ataque: '<path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5 M13 13 L5 5 M11 14 L3 6 M5.5 3.5 L2.5 2.5 L3.5 5.5" />',
+  naval: '<circle cx="8" cy="3.5" r="1.5"/><path d="M8 5v9 M5 7.5h6 M2.5 9.5c0 3 2.5 4.5 5.5 4.5s5.5-1.5 5.5-4.5"/>',
+  misil: '<path d="M10.5 2.5 L13.5 2.5 L13.5 5.5 L7 12 L4 9 Z M4 9 L2 9.5 L2.5 7.5 L5 7 M7 12 L6.5 14 L8.5 13.5 L9 11 M3 13 L5 11"/>',
+  escudo: '<path d="M8 1.8 L13.5 4 V8 C13.5 11 11 13.3 8 14.3 C5 13.3 2.5 11 2.5 8 V4 Z M5.5 8 L7.3 9.8 L10.8 6.2"/>',
+  alianza: '<path d="M1.5 7 L4.5 4.5 L7.5 6 L10 4.5 L14.5 7 M4.5 4.5 L2 10 L6.5 13.5 L8.5 12 M14.5 7 L12 11 L9.5 13 L7 10.5 M12 11 L9 8.5"/>',
+  oro: '<ellipse cx="8" cy="5" rx="5" ry="2.2"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5 M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8"/>',
+  edificio: '<path d="M2 14 V7 L6 4 L10 7 V14 Z M10 14 V9 H14 V14 M1 14 H15 M5 14 V11 H7 V14"/>',
+  muerte: '<path d="M8 2 C4.7 2 3 4.3 3 7 C3 8.7 3.8 9.8 5 10.5 V13 H11 V10.5 C12.2 9.8 13 8.7 13 7 C13 4.3 11.3 2 8 2 Z M6.5 13 V11.5 M9.5 13 V11.5"/><circle cx="6" cy="7" r="1.1"/><circle cx="10" cy="7" r="1.1"/>',
+  logro: '<path d="M8 1.8 L9.9 5.8 L14.2 6.3 L11 9.2 L11.9 13.5 L8 11.3 L4.1 13.5 L5 9.2 L1.8 6.3 L6.1 5.8 Z"/>',
+  info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2 V11.2 M8 4.8 V5"/>',
+};
+
+/** Tipo de aviso según su texto (para el icono). */
+function eventCategory(text) {
+  const t = text.toLowerCase();
+  if (/logro/.test(t)) return 'logro';
+  if (/misil|💥|🚀|arrasad/.test(t)) return /derribad/.test(t) ? 'escudo' : 'misil';
+  if (/derribad|🛡/.test(t)) return 'escudo';
+  if (/alianza|aliad|traici|traidor|🤝|💔/.test(t)) return 'alianza';
+  if (/eliminad|derrotad|ha caído/.test(t)) return 'muerte';
+  if (/oro|botín|robado|🏴/.test(t)) return 'oro';
+  if (/barco|buque|puerto|mercante|pesquero|desembar|🚢|⚓|mar\b/.test(t)) return 'naval';
+  if (/construid|ciudad|fortaleza|fábrica|silo|antimisiles|edificio|mejorad|nivel/.test(t)) return 'edificio';
+  if (/ataca|tropas|⚔|conquista|frontera/.test(t)) return 'ataque';
+  return 'info';
+}
+
+/** Quita el emoji del principio (el aviso ya lleva su icono). */
+const stripLeadingEmoji = (text) => text.replace(/^(?:\p{Extended_Pictographic}|[⚔⚓])\uFE0F?\s*/u, '');
 const MAX_FRONTS = 5;
 const FRONT_GRACE_MS = 1800; // un combate que termina se queda un momento atenuado
 
@@ -116,7 +148,9 @@ export class UI {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.dataset.kind = kind;
-      btn.title = `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`;
+      btn.title = def.unit
+        ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
+        : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
       const icon = document.createElement('canvas');
       icon.width = 48;
       icon.height = 48;
@@ -130,6 +164,38 @@ export class UI {
       btn.addEventListener('click', () => this.handlers.onBuildMode?.(kind));
       $('construir').append(btn);
       this._buildButtons.set(kind, btn);
+    }
+
+    // Panel inferior: se puede minimizar (botón o tecla V); se recuerda
+    const panel = $('panel-jugador');
+    const setFolded = (folded) => {
+      panel.classList.toggle('plegado', folded);
+      $('pj-plegar').setAttribute('aria-expanded', String(!folded));
+      $('pj-plegar').title = folded ? 'Mostrar el panel completo (tecla V)' : 'Minimizar el panel (tecla V)';
+      try {
+        localStorage.setItem('trinchera.panelPlegado', folded ? '1' : '0');
+      } catch {
+        // sin almacenamiento: solo dura esta visita
+      }
+    };
+    let folded = false;
+    try {
+      folded = localStorage.getItem('trinchera.panelPlegado') === '1';
+    } catch {
+      folded = false;
+    }
+    setFolded(folded);
+    $('pj-plegar').addEventListener('click', () => setFolded(!panel.classList.contains('plegado')));
+    document.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyV' || e.ctrlKey || e.metaKey || e.altKey || $('hud').hidden) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      setFolded(!panel.classList.contains('plegado'));
+    });
+    // Su altura real, para que los avisos se coloquen encima cuando no caben al lado
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        document.documentElement.style.setProperty('--pj-alto', `${Math.round(panel.offsetHeight)}px`);
+      }).observe(panel);
     }
 
     $('lista-clasificacion').addEventListener('click', (e) => {
@@ -352,21 +418,35 @@ export class UI {
       return;
     }
     const el = document.createElement('div');
-    el.className = `evento ${evt.kind || 'info'}`;
+    const cat = eventCategory(evt.text);
+    el.className = `evento ${evt.kind || 'info'} cat-${cat}`;
     el.style.setProperty('--dur', `${EVENT_MS}ms`);
+    const icon = document.createElement('span');
+    icon.className = 'ev-icono';
+    icon.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true">${EVENT_ICONS[cat]}</svg>`;
     const text = document.createElement('span');
     text.className = 'ev-texto';
-    text.textContent = evt.text;
+    text.textContent = stripLeadingEmoji(evt.text);
     const times = document.createElement('span');
     times.className = 'ev-veces';
     const bar = document.createElement('span');
     bar.className = 'ev-tiempo';
-    el.append(text, times, bar);
-    box.prepend(el);
+    el.append(icon, text, times, bar);
+    // Los nuevos entran por abajo, junto a la esquina; los viejos suben y se van
+    box.append(el);
     this._lastEvent = { text: evt.text, at: now, count: 1, el };
-    while (box.children.length > MAX_EVENTS) box.lastChild.remove();
-    setTimeout(() => el.classList.add('saliendo'), EVENT_MS);
-    setTimeout(() => el.remove(), EVENT_MS + 500);
+    const live = [...box.children].filter((c) => !c.classList.contains('saliendo'));
+    for (const old of live.slice(0, Math.max(0, live.length - MAX_EVENTS))) this._dismissEvent(old);
+    setTimeout(() => this._dismissEvent(el), EVENT_MS);
+  }
+
+  /** Sale deslizándose a la derecha y se pliega para que los demás bajen sin saltos. */
+  _dismissEvent(el) {
+    if (!el.isConnected || el.classList.contains('saliendo')) return;
+    el.style.maxHeight = `${el.offsetHeight}px`;
+    void el.offsetHeight;
+    el.classList.add('saliendo');
+    setTimeout(() => el.remove(), 450);
   }
 
   _counter(el, fmt) {
@@ -400,7 +480,8 @@ export class UI {
         aviso.textContent = `Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`;
       } else {
         const where = def.unit ? 'cerca de uno de tus puertos' : def.coastal ? 'en tu costa' : 'en tu territorio';
-        aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro). Esc para cancelar`;
+        const up = def.unit ? '' : ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
+        aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`;
       }
       aviso.hidden = false;
     } else {
@@ -412,6 +493,7 @@ export class UI {
 
     // Panel del jugador
     $('pj-color').style.background = rgbToCss(human.color);
+    $('panel-jugador').style.setProperty('--pj-color', rgbToCss(human.color));
     $('pj-nombre').textContent = human.name;
     const max = human.maxTroops();
     $('pj-estado').textContent = human.alive ? '' : 'Derrotado · modo espectador';
@@ -430,11 +512,17 @@ export class UI {
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
     $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''} · clic en el mar` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
-    $('ratio-tropas').textContent = `(${formatNumber(human.troops * ratio)} tropas)`;
+    $('ratio-tropas').textContent = `${formatNumber(human.troops * ratio)} tropas`;
+    $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
 
+    const works = {};
+    for (const b of game.sites) if (b.owner === human.id) works[b.kind] = (works[b.kind] || 0) + 1;
     for (const [kind, btn] of this._buildButtons) {
       const cost = game.buildCost(human, kind);
       let unavailable = human.gold < cost;
+      // Lo que falta para poder pagarlo, como relleno del botón
+      btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
+      btn.classList.toggle('en-obras', !!works[kind]);
       if (kind === 'missile') {
         // Coste y silos listos
         const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
@@ -444,7 +532,7 @@ export class UI {
         unavailable = unavailable || !ready;
       } else {
         btn.querySelector('.b-coste').textContent = `${formatNumber(cost)} oro`;
-        btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}` : '';
+        btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}${works[kind] ? ' 🔨' : ''}` : '';
       }
       btn.classList.toggle('caro', unavailable);
       btn.hidden = !game.isAllowed(kind);
@@ -786,11 +874,15 @@ export class UI {
       const p = game.players[o];
       const b = game.buildingNear(tile, 2);
       const extra = [];
-      if (b) extra.push(BUILDINGS[b.kind].name);
+      if (b) {
+        const lvl = b.level ? ` nv. ${b.level}` : '';
+        const work = b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : '';
+        extra.push(`${BUILDINGS[b.kind].name}${lvl}${work}`);
+      }
       if (game.fortMultiplier(p, tile) > 1) extra.push('zona fortificada');
       extra.push(terrain);
       const human = game.human;
-      const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · aliado' : game.isTraitor(p) ? ' · traidor' : '';
+      const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
         ${formatNumber(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>`;

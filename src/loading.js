@@ -17,6 +17,13 @@ export const TIPS = [
   'Si la pantalla se pone roja, alguien te está atacando: mira las tarjetas de la derecha.',
   'Si pierdes de vista tu nación, sigue la flecha del borde o pulsa C.',
   'Las fortalezas hacen que conquistarte cueste dos veces y media más.',
+  'Las colonias son débiles y guardan oro: conquístalas pronto.',
+  'Cada casilla que conquistas te da su parte del oro de ese país.',
+  'Haz clic sobre un edificio tuyo con su tipo seleccionado para subirlo de nivel.',
+  'Cada compra encarece el resto: elige bien qué construyes primero.',
+  'Los antimisiles tardan en construirse: no esperes a ver el misil.',
+  'Pulsa V para minimizar el panel de abajo y ver más mapa.',
+  'Para un puerto basta con hacer clic cerca de tu costa.',
 ];
 
 /** Espera a que el navegador pinte (para que la barra avance de verdad). */
