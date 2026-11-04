@@ -1745,3 +1745,17 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 #construir button:not(.caro) .b-coste { color: var(--acento); }
 /* Portada: nuestro mapa pintado en un lienzo */
 canvas.portada-arte { object-fit: cover; background: #122d5a; }
+/* Barra de tropas: franja donde más rápido crecen (entre el 35 y el 65 % del máximo) */
+#panel-jugador .barra::before {
+  content: "";
+  position: absolute;
+  left: 35%;
+  width: 30%;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  background: rgba(95, 211, 141, 0.16);
+  border-left: 1px solid rgba(255, 255, 255, 0.55);
+  border-right: 1px solid rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}

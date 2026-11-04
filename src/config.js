@@ -32,6 +32,10 @@ export const CONFIG = {
   maxTroopsBase: 3000, // máximo de base alto: al principio se generan muchas tropas
   maxTroopsPerTile: 36 / AREA,
   growthBase: 16, // crecimiento de base (pesa sobre todo al principio)
+  // Curva de crecimiento (en campana): lo más rápido con la mitad del máximo;
+  // con muy pocas tropas, más despacio (nunca menos de growthFloor del pico) y
+  // por encima del 60 % cada vez menos, hasta 0 en el tope
+  growthFloor: 0.15,
   growthTileMult: 0.3 / RES15, // × casillas^0,75
 
   // Ataques

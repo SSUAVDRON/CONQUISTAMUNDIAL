@@ -74,12 +74,19 @@ export class Player {
     return (CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.levels.city * CONFIG.cityMaxTroops) * this.strength;
   }
 
-  /** Crecimiento por tick: rápido con pocas tropas, se frena al acercarse al máximo. */
+  /**
+   * Crecimiento por tick, en campana: lo más rápido con la mitad del máximo;
+   * con muy pocas tropas se genera menos y por encima del 60 % cada vez menos
+   * (0 en el tope). Conviene no gastarlo todo ni dejar que se llene.
+   */
   growthPerTick() {
     const max = this.maxTroops();
     if (this.troops >= max) return 0;
+    const x = Math.max(0, this.troops) / max;
+    const bell = 4 * x * (1 - x);
+    const f = x < 0.5 ? CONFIG.growthFloor + (1 - CONFIG.growthFloor) * bell : bell;
     const raw = CONFIG.growthBase + pow34(this.tiles) * CONFIG.growthTileMult;
-    return raw * this.strength * (1 - this.troops / max);
+    return raw * this.strength * f;
   }
 
   goldPerTick() {

@@ -154,7 +154,7 @@
           <summary>Cómo se juega</summary>
           <ul>
             <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas.</li>
-            <li><b>Tropas:</b> crecen solas (al principio, muchas); cuanto más territorio, más tropas y más rápido. Cerca del máximo crecen más despacio.</li>
+            <li><b>Tropas:</b> crecen solas; cuanto más territorio, más tropas y más rápido. Crecen más rápido con la <i>mitad</i> de tu máximo (la franja marcada en la barra): con muy pocas se genera poco y por encima del 60 % cada vez menos. No lo gastes todo ni dejes que se llene.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>: tu país avanza hacia donde haces clic, y cuantas más tropas mandas, más lejos y más rápido llega (cada casilla libre cuesta tropas).</li>
             <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco de transporte desde tu costa (máx. 3 a la vez).</li>
             <li><b>Colonias:</b> además de las naciones hay colonias («Colonia de…», «Aldea de…»): débiles, no firman alianzas y guardan oro. Hay muchas por todo el mapa: presa fácil al empezar.</li>
@@ -406,7 +406,7 @@
         <strong id="pj-nombre"></strong>
         <span id="pj-estado"></span>
       </div>
-      <div class="barra" title="Tropas / máximo"><div id="pj-barra"></div></div>
+      <div class="barra" title="Tropas / máximo. Crecen más rápido en la franja marcada (cerca de la mitad del máximo)"><div id="pj-barra"></div></div>
       <div class="cifras">
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Tropas</span><span class="valor"><span id="pj-tropas">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub" id="pj-crec"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
