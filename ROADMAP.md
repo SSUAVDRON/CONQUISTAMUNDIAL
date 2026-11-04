@@ -136,6 +136,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   avanza hacia donde haces clic y en proporción a las tropas enviadas
 - Oro al expandirse (por casilla libre) e ingresos casi proporcionales al
   territorio; música de fondo y efectos de sonido sintetizados
+- Estilo más sobrio: pictogramas blancos para los edificios, territorio
+  suave y semitransparente con bordes finos y nombres en texto oscuro
 
 ## Próximo
 

@@ -11,8 +11,8 @@ import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 
-const FILL_ALPHA = 128;
-const INNER_ALPHA = 185;
+const FILL_ALPHA = 118; // territorio semitransparente: se ve el relieve debajo
+const PASTEL = 0.28; // los colores de las naciones, algo aclarados (tonos suaves)
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
@@ -175,21 +175,20 @@ export class Renderer {
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
-      const [r, g, b] = p.color;
+      // Relleno en un tono suave del color de la nación; borde fino de su tono oscuro
+      const [r, g, b] = shadeRgb(p.color, 1 + PASTEL);
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
       this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
-      // Junto a la frontera, el color es más intenso: el territorio parece en relieve
-      const [ir, ig, ib] = shadeRgb(p.color, 1.08);
-      this.inner[p.id] = pack(Math.min(255, ir), Math.min(255, ig), Math.min(255, ib), INNER_ALPHA);
+      this.inner[p.id] = this.fill[p.id]; // sin franja interior: el territorio es plano
       // Patrón del perfil: algunas casillas con un tono más oscuro.
       // Los aliados llevan franjas verdes en diagonal: se reconocen de un vistazo.
       this.patterns[p.id] = PATTERN_FNS[p.pattern] || null;
       const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(p.color, 0.72);
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para el humano y verde para sus aliados
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(p.color, 0.55);
-      this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(p.color, 0.62);
+      this.border[p.id] = pack(bc[0], bc[1], bc[2], p === human || ally ? 255 : 225);
       GLOW_MIX.forEach((stages, kind) => stages.forEach(([gr, gg, gb, m], st) => {
         this.glowCol[kind][st][p.id] = pack(Math.round(lerp(r, gr, m)), Math.round(lerp(g, gg, m)), Math.round(lerp(b, gb, m)), 235);
       }));
@@ -709,8 +708,8 @@ export class Renderer {
   // ------------------------------------------------------------- edificios
 
   _buildingSize() {
-    // Algo más grandes que antes: se aprecian los colores y detalles
-    return Math.min(38, Math.max(12, this.camera.zoom * RES * 3.6));
+    // Iconos pequeños y discretos: el mapa manda
+    return Math.min(30, Math.max(11, this.camera.zoom * RES * 3));
   }
 
   _drawBuildings(now) {
@@ -1405,10 +1404,11 @@ export class Renderer {
       const traitor = this.game.isTraitor(p);
       const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
       const me = p === human;
+      // Nombres discretos: texto oscuro con un halo claro (el tuyo, en su color vivo)
       ctx.font = `${me ? 800 : 600} ${size}px system-ui, sans-serif`;
-      ctx.lineWidth = Math.max(2, size / (me ? 4 : 5));
-      ctx.strokeStyle = allied ? 'rgba(0, 50, 20, 0.75)' : me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(0,0,0,0.6)';
-      ctx.fillStyle = me ? this.options.nameColor || '#ffd23f' : allied ? '#b8f5cf' : traitor ? '#ffb4a8' : '#ffffff';
+      ctx.lineWidth = Math.max(2, size / (me ? 4 : 6));
+      ctx.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.45)';
+      ctx.fillStyle = me ? this.options.nameColor || '#ffd23f' : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(28, 32, 40, 0.9)';
       ctx.strokeText(name, sx, sy - size * 0.35);
       if (me) {
         // Tu nombre, en color vivo y con un halo para encontrarlo de un vistazo
@@ -1427,7 +1427,7 @@ export class Renderer {
       }
       const s2 = size * 0.78;
       ctx.font = `500 ${s2}px system-ui, sans-serif`;
-      ctx.lineWidth = Math.max(2, s2 / 5);
+      ctx.lineWidth = Math.max(2, s2 / (me ? 5 : 6));
       const troops = formatNumber(p.troops);
       ctx.strokeText(troops, sx, sy + size * 0.6);
       ctx.fillText(troops, sx, sy + size * 0.6);

@@ -377,15 +377,11 @@ function paintGlyph(ctx, g, color, outline) {
   }
 }
 
-/** Edificios que se dibujan sin forma de fondo (solo el pictograma y una peana). */
-const BARE = new Set(['city', 'port', 'factory']);
-
 /**
  * Icono de edificio. Sin `ring` (panel de construcción): solo el pictograma
- * blanco. Con `ring` (el color del dueño, en el mapa): ciudad, puerto y
- * fábrica sueltos sobre una peana de ese color; fortaleza (círculo), silo y
- * antimisiles (triángulo) sobre una forma de ese color. `outline`: tuyo
- * (filo blanco).
+ * blanco. Con `ring` (el color del dueño, en el mapa): pictograma claro sobre
+ * un disco oscuro semitransparente (triángulo para silo y antimisiles) con un
+ * anillo fino de ese color. `outline`: tuyo (filo blanco por fuera).
  */
 export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline = false, color = '#ffffff' } = {}) {
   const g = glyphs()[kind];
@@ -400,39 +396,26 @@ export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline
     ctx.restore();
     return;
   }
-  if (BARE.has(kind)) {
-    ctx.beginPath();
-    ctx.ellipse(0, 8.8, 8.6, 2.6, 0, 0, TAU);
-    ctx.fillStyle = ring;
-    ctx.fill();
-    ctx.lineWidth = outline ? 1.6 : 1;
-    ctx.strokeStyle = outline ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';
-    ctx.stroke();
-    paintGlyph(ctx, g, color, true);
-    ctx.restore();
-    return;
-  }
   const tri = kind === 'sam' || kind === 'silo';
   ctx.beginPath();
   if (tri) roundedTriangle(ctx, 12.5, 2.4);
   else ctx.arc(0, 0, 10, 0, TAU);
-  ctx.fillStyle = ring;
-  ctx.fill();
-  // Un poco de sombra hacia abajo: el color del dueño no se ve plano
-  const shade = ctx.createLinearGradient(0, -10, 0, 10);
-  shade.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
-  shade.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
-  ctx.fillStyle = shade;
+  ctx.fillStyle = 'rgba(30, 34, 42, 0.62)';
   ctx.fill();
   ctx.lineJoin = 'round';
-  ctx.lineWidth = outline ? 2.4 : 1.4;
-  ctx.strokeStyle = outline ? '#ffffff' : 'rgba(0, 0, 0, 0.7)';
+  if (outline) {
+    ctx.lineWidth = 3.4;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = ring;
   ctx.stroke();
   if (tri) {
     ctx.translate(0, 2.4);
-    ctx.scale(0.66, 0.66);
-  } else ctx.scale(0.74, 0.74);
-  paintGlyph(ctx, g, color, false);
+    ctx.scale(0.62, 0.62);
+  } else ctx.scale(0.7, 0.7);
+  paintGlyph(ctx, g, color === '#ffffff' ? '#eef2f7' : color, false);
   ctx.restore();
 }
 
