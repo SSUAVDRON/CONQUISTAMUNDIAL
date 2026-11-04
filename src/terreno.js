@@ -346,3 +346,68 @@ function paintTerrainNow(map) {
   bctx.drawImage(land, 0, 0);
   return { base, scale: S };
 }
+
+/**
+ * Vista previa ligera de un mapa (miniaturas y portada del inicio), con el
+ * mismo estilo que la partida: color por altura, relieve sombreado, filo claro
+ * en la costa y mar azul marino. Muestrea casillas en vez de pintarlas todas.
+ * `data`: { w, h, terrain, relief, tileKm }; `crop`: [x0, y0, x1, y1] en casillas.
+ */
+export function paintMapPreview(canvas, data, crop = null) {
+  const { w, h, terrain, relief } = data;
+  const [x0, y0, x1, y1] = crop || [0, 0, w, h];
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const img = ctx.createImageData(W, H);
+  const d = img.data;
+  const sx = (x1 - x0) / W;
+  const sy = (y1 - y0) / H;
+  const FALLBACK_M = [0, 150, 1200, 2600];
+  const elev = (tx, ty) => {
+    const xi = Math.max(0, Math.min(w - 1, tx | 0));
+    const yi = Math.max(0, Math.min(h - 1, ty | 0));
+    const t = terrain[yi * w + xi];
+    if (t === WATER) return 0;
+    if (!relief) return FALLBACK_M[t];
+    const fx = tx / relief.step;
+    const fy = ty / relief.step;
+    const gx = Math.max(0, Math.min(relief.w - 2, fx | 0));
+    const gy = Math.max(0, Math.min(relief.h - 2, fy | 0));
+    const ax = fx - gx;
+    const ay = fy - gy;
+    const k = gy * relief.w + gx;
+    const r = relief.data;
+    return r[k] + (r[k + 1] - r[k]) * ax + (r[k + relief.w] - r[k]) * ay + (r[k] - r[k + 1] - r[k + relief.w] + r[k + relief.w + 1]) * ax * ay;
+  };
+  // Pendiente exagerada según los km que abarca cada píxel de la vista previa
+  const kz = 22 / (Math.max(sx, sy) * Math.max(0.5, data.tileKm || 5) * 1000);
+  for (let py = 0; py < H; py++) {
+    const ty = y0 + (py + 0.5) * sy;
+    for (let px = 0; px < W; px++) {
+      const tx = x0 + (px + 0.5) * sx;
+      const i = Math.min(h - 1, ty | 0) * w + Math.min(w - 1, tx | 0);
+      const o = (py * W + px) * 4;
+      d[o + 3] = 255;
+      if (terrain[i] === WATER) {
+        d[o] = 18;
+        d[o + 1] = 45;
+        d[o + 2] = 90;
+        continue;
+      }
+      const e = elev(tx, ty);
+      hypso(e);
+      const dx = (elev(tx + sx, ty) - elev(tx - sx, ty)) * 0.5 * kz;
+      const dy = (elev(tx, ty + sy) - elev(tx, ty - sy)) * 0.5 * kz;
+      const lit = (dx + dy + 1) / Math.sqrt(1 + dx * dx + dy * dy);
+      let m = clamp(1 + (lit - 1) * 0.55, 0.62, 1.2);
+      // Filo claro junto al agua
+      const coast = terrain[Math.min(h - 1, (ty + sy) | 0) * w + Math.min(w - 1, tx | 0)] === WATER || terrain[Math.min(h - 1, ty | 0) * w + Math.min(w - 1, (tx + sx) | 0)] === WATER;
+      if (coast) m = Math.max(m, 1.12);
+      d[o] = clamp(cr * m, 0, 255);
+      d[o + 1] = clamp(cg * m, 0, 255);
+      d[o + 2] = clamp(cb * m, 0, 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}

@@ -293,7 +293,7 @@ const RELIEF_MAX_M = 6500;
  * `step` casillas. Formato: un byte por muestra (raíz de la altura); un 0 va
  * seguido de cuántos ceros repite.
  */
-function decodeRelief({ w, h, step, data }) {
+export function decodeRelief({ w, h, step, data }) {
   const bin = atob(data);
   const out = new Float32Array(w * h);
   let o = 0;

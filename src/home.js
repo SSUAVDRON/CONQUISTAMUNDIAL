@@ -2,7 +2,8 @@
 // clasificación, y la sala de espera del multijugador.
 import { BUILDINGS, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
-import { generateMap } from './map.js';
+import { decodeRelief, generateMap } from './map.js';
+import { paintMapPreview } from './terreno.js';
 import { hexToRgb } from './colors.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame } from './icons.js';
 import { drawTransport, drawWarship } from './barcos.js';
@@ -56,46 +57,120 @@ function fillMapSelect(select) {
   select.replaceChildren(real, random);
 }
 
-// Colores de las miniaturas: agua, llanura, meseta, montaña
-const THUMB_COLORS = [[23, 58, 104], [104, 150, 82], [160, 148, 100], [150, 140, 130]];
+/** Datos de un mapa real ya decodificados (terreno y relieve), para miniaturas y portada. */
+const realCache = new Map();
+function realPreviewData(id) {
+  let d = realCache.get(id);
+  if (d) return d;
+  const data = REAL_MAP_DATA[id];
+  const { w, h } = data;
+  const terrain = new Uint8Array(w * h);
+  const bin = atob(data.rle);
+  for (let k = 0, i = 0; k < bin.length; k++) {
+    const b = bin.charCodeAt(k);
+    terrain.fill(b >> 6, i, i + (b & 63) + 1);
+    i += (b & 63) + 1;
+  }
+  const mid = data.lat ? (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180 : 0;
+  const tileKm = data.lon ? ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w : 5;
+  d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries };
+  realCache.set(id, d);
+  return d;
+}
 
-/** Miniatura de un mapa: real (desde sus datos) o aleatorio (con una semilla fija). */
+/** Miniatura de un mapa (real o aleatorio con semilla fija) con el mismo estilo que la partida. */
 function mapThumb(id, width = 168) {
-  let w;
-  let h;
-  let terrain;
-  if (REAL_MAP_DATA[id]) {
-    ({ w, h } = REAL_MAP_DATA[id]);
-    terrain = new Uint8Array(w * h);
-    const bin = atob(REAL_MAP_DATA[id].rle);
-    for (let k = 0, i = 0; k < bin.length; k++) {
-      const b = bin.charCodeAt(k);
-      terrain.fill(b >> 6, i, i + (b & 63) + 1);
-      i += (b & 63) + 1;
-    }
-  } else {
+  let data;
+  if (REAL_MAP_DATA[id]) data = realPreviewData(id);
+  else {
     const size = MAP_SIZES[id];
     const map = generateMap(Math.round(size.w / (3 * RES)), Math.round(size.h / (3 * RES)), 7 + Object.keys(MAP_SIZES).indexOf(id));
-    ({ width: w, height: h, terrain } = map);
+    data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3 };
   }
-  const height = Math.round((width * h) / w);
+  const height = Math.round((width * data.h) / data.w);
   const c = el('canvas', { width, height, 'aria-hidden': 'true' });
-  const ctx = c.getContext('2d');
-  const img = ctx.createImageData(width, height);
-  for (let y = 0; y < height; y++) {
-    const sy = Math.min(h - 1, Math.floor((y * h) / height));
-    for (let x = 0; x < width; x++) {
-      const t = terrain[sy * w + Math.min(w - 1, Math.floor((x * w) / width))];
-      const [r, g, b] = THUMB_COLORS[t];
-      const o = (y * width + x) * 4;
-      img.data[o] = r;
-      img.data[o + 1] = g;
-      img.data[o + 2] = b;
-      img.data[o + 3] = 255;
+  paintMapPreview(c, data);
+  return c;
+}
+
+/**
+ * Portada: nuestro mapa del mundo (de la costa de América a Oriente Próximo,
+ * con Europa y el Mediterráneo en la parte que no tapa el texto) y las
+ * naciones como territorios suaves con borde fino, igual que en la partida.
+ * Cada casilla de tierra es del país cuyo centro le queda más cerca,
+ * contando su tamaño (los países grandes llegan más lejos).
+ */
+function paintCover(canvas) {
+  const data = realPreviewData('mundo');
+  const x0 = Math.round(data.w * 0.235);
+  const x1 = Math.round(data.w * 0.67);
+  const cropW = x1 - x0;
+  const cropH = Math.round((cropW * canvas.height) / canvas.width);
+  const y0 = Math.round(data.h * 0.13);
+  paintMapPreview(canvas, data, [x0, y0, x1, y0 + cropH]);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const k = W / cropW;
+  // Países a la vista (o cerca): posición en píxeles, peso por tamaño y color suave
+  const nations = [];
+  data.countries.forEach(([, tile, area], i) => {
+    const x = ((tile % data.w) - x0 + 0.5) * k;
+    const y = (Math.floor(tile / data.w) - y0 + 0.5) * k;
+    if (x < -W * 0.3 || y < -H * 0.5 || x > W * 1.3 || y > H * 1.5) return;
+    const hue = (i * 137.508 + 20) % 360;
+    const [r, g, b] = hslRgb(hue, 0.5, 0.62);
+    const [br, bg, bb] = hslRgb(hue, 0.5, 0.3);
+    nations.push({ x, y, w: (area / Math.PI) * k * k * 0.7, c: [r, g, b], e: [br, bg, bb] });
+  });
+  if (!nations.length) return;
+  const img = ctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  const owner = new Int16Array(W * H).fill(-1);
+  const maxD2 = (110 * k) ** 2;
+  for (let py = 0; py < H; py++) {
+    const ty = Math.min(data.h - 1, Math.floor(y0 + (py + 0.5) / k));
+    for (let px = 0; px < W; px++) {
+      const tx = Math.min(data.w - 1, Math.floor(x0 + (px + 0.5) / k));
+      if (data.terrain[ty * data.w + tx] === 0) continue;
+      let best = -1;
+      let bestV = Infinity;
+      let bestD2 = 0;
+      for (let n = 0; n < nations.length; n++) {
+        const q = nations[n];
+        const d2 = (q.x - px) ** 2 + (q.y - py) ** 2;
+        const v = d2 - q.w;
+        if (v < bestV) {
+          bestV = v;
+          best = n;
+          bestD2 = d2;
+        }
+      }
+      if (best >= 0 && bestD2 < maxD2 + nations[best].w) owner[py * W + px] = best;
     }
   }
+  for (let i = 0; i < W * H; i++) {
+    const o = owner[i];
+    if (o < 0) continue;
+    const x = i % W;
+    const edge = (x > 0 && owner[i - 1] !== o) || (x < W - 1 && owner[i + 1] !== o) || (i >= W && owner[i - W] !== o) || (i < W * (H - 1) && owner[i + W] !== o);
+    const [r, g, b] = edge ? nations[o].e : nations[o].c;
+    const a = edge ? 0.85 : 0.4;
+    const p = i * 4;
+    d[p] = d[p] + (r - d[p]) * a;
+    d[p + 1] = d[p + 1] + (g - d[p + 1]) * a;
+    d[p + 2] = d[p + 2] + (b - d[p + 2]) * a;
+  }
   ctx.putImageData(img, 0, 0);
-  return c;
+}
+
+/** HSL (h en grados, s y l de 0 a 1) a [r, g, b]. */
+function hslRgb(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
 /** Control segmentado (botones excluyentes). */
@@ -181,6 +256,9 @@ export class Home {
     const a = this.profile.ajustes;
     this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...a.reglas } };
     this._buildGallery();
+    // Portada con nuestro mapa (un poco después, para que el menú salga al instante)
+    const cover = $('portada-mapa');
+    if (cover) setTimeout(() => paintCover(cover), 60);
     segmented($('seg-dificultad'), [['facil', 'Fácil'], ['normal', 'Normal'], ['dificil', 'Difícil']], this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
     });

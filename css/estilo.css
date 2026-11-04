@@ -1556,20 +1556,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .portada-botones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .portada-botones .principal.grande { width: auto; padding: 12px 26px; display: inline-flex; align-items: center; gap: 10px; border-radius: 12px; }
 .portada-botones svg { width: 16px; height: 16px; }
-.pt-estrellas circle { animation: titilar 3s ease-in-out infinite; }
-.pt-estrellas circle:nth-child(3n) { animation-delay: 1s; }
-.pt-estrellas circle:nth-child(3n + 1) { animation-delay: 2s; }
-.pt-foco { transform-box: fill-box; transform-origin: 50% 100%; animation: foco 7s ease-in-out infinite alternate; }
-.pt-foco-2 { animation-duration: 9s; animation-direction: alternate-reverse; }
-.pt-explo { transform-box: fill-box; transform-origin: center; animation: explosionLejana 2.8s ease-out infinite; }
-.pt-explo-2 { animation-delay: 1.4s; }
-.pt-avion { animation: volar 16s linear infinite; }
-.pt-avion-2 { animation-duration: 22s; animation-delay: -9s; }
-.pt-bandera { transform-box: fill-box; transform-origin: 0 50%; animation: ondear 1.6s ease-in-out infinite; }
-@keyframes titilar { 50% { opacity: 0.25; } }
-@keyframes foco { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
-@keyframes explosionLejana { 0% { opacity: 0; transform: scale(0.4); } 15% { opacity: 1; } 100% { opacity: 0; transform: scale(1.3); } }
-@keyframes volar { from { transform: translate(-80px, 120px); } to { transform: translate(1280px, 70px); } }
 @keyframes ondear { 50% { transform: skewY(4deg) scaleX(0.94); } }
 
 /* Tarjetas de modo (solo texto) */
@@ -1673,9 +1659,8 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   .tp-nivel { width: 44px; height: 44px; font-size: 18px; right: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .btn-brillo::after, .pt-estrellas circle, .pt-foco, .pt-explo, .pt-avion, .pt-bandera, .arma, .portada, .tarjeta-perfil { animation: none !important; }
+  .btn-brillo::after, .arma, .portada, .tarjeta-perfil { animation: none !important; }
 }
-.sin-animaciones .pt-avion { transform: translate(300px, 90px); }
 .portada { margin-bottom: 14px; }
 .arsenal { margin-top: 18px; }
 @media (max-width: 720px) {
@@ -1758,3 +1743,5 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 #construir .b-tecla { position: absolute; top: 2px; left: 5px; font-size: 9.5px; font-weight: 700; color: var(--texto-suave); line-height: 1; pointer-events: none; }
 #construir .b-coste { color: #e9eef6; font-weight: 600; }
 #construir button:not(.caro) .b-coste { color: var(--acento); }
+/* Portada: nuestro mapa pintado en un lienzo */
+canvas.portada-arte { object-fit: cover; background: #122d5a; }

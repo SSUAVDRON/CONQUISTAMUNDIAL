@@ -138,6 +138,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   territorio; música de fondo y efectos de sonido sintetizados
 - Estilo más sobrio: pictogramas blancos para los edificios, territorio
   suave y semitransparente con bordes finos y nombres en texto oscuro
+- Inicio con nuestros mapas: portada y miniaturas pintadas desde los datos
+  de los mapas, en el mismo estilo que la partida
 
 ## Próximo
 

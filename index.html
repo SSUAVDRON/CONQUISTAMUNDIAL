@@ -61,63 +61,7 @@
       <section class="vista" data-vista="jugar" role="tabpanel" aria-labelledby="tab-jugar">
         <!-- Portada: ilustración de la trinchera de noche, con el botón principal -->
         <div class="portada">
-          <svg class="portada-arte" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <defs>
-              <linearGradient id="pt-cielo" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#08112a"/><stop offset="0.5" stop-color="#211f48"/><stop offset="0.8" stop-color="#6d3540"/><stop offset="1" stop-color="#c0613a"/>
-              </linearGradient>
-              <linearGradient id="pt-foco" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stop-color="#fff3c4" stop-opacity="0.32"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/>
-              </linearGradient>
-              <radialGradient id="pt-explo">
-                <stop offset="0" stop-color="#ffe2a0"/><stop offset="0.35" stop-color="#ff8a3a" stop-opacity="0.75"/><stop offset="1" stop-color="#ff4a1a" stop-opacity="0"/>
-              </radialGradient>
-              <radialGradient id="pt-luna" cx="0.4" cy="0.4">
-                <stop offset="0" stop-color="#fffbe8"/><stop offset="1" stop-color="#e3d6ad"/>
-              </radialGradient>
-            </defs>
-            <rect width="1200" height="300" fill="url(#pt-cielo)"/>
-            <g class="pt-estrellas" fill="#fff">
-              <circle cx="60" cy="40" r="1.2"/><circle cx="140" cy="90" r="0.9"/><circle cx="230" cy="30" r="1.4"/><circle cx="330" cy="70" r="1"/>
-              <circle cx="420" cy="25" r="1.1"/><circle cx="510" cy="60" r="0.8"/><circle cx="600" cy="35" r="1.3"/><circle cx="690" cy="80" r="0.9"/>
-              <circle cx="780" cy="28" r="1.2"/><circle cx="860" cy="95" r="0.8"/><circle cx="1060" cy="40" r="1.2"/><circle cx="1130" cy="85" r="1"/>
-              <circle cx="1170" cy="20" r="0.9"/><circle cx="300" cy="110" r="0.7"/><circle cx="560" cy="105" r="0.7"/><circle cx="905" cy="45" r="1"/>
-            </g>
-            <circle cx="985" cy="72" r="26" fill="url(#pt-luna)"/>
-            <circle cx="977" cy="66" r="4" fill="#d8caa0" opacity="0.6"/><circle cx="994" cy="82" r="3" fill="#d8caa0" opacity="0.5"/>
-            <g class="pt-focos">
-              <path class="pt-foco pt-foco-1" d="M260 300 L205 0 L290 0 Z" fill="url(#pt-foco)"/>
-              <path class="pt-foco pt-foco-2" d="M880 300 L860 0 L945 0 Z" fill="url(#pt-foco)"/>
-            </g>
-            <circle class="pt-explo" cx="700" cy="208" r="48" fill="url(#pt-explo)"/>
-            <circle class="pt-explo pt-explo-2" cx="420" cy="214" r="34" fill="url(#pt-explo)"/>
-            <path d="M0 214 L70 178 L140 200 L230 150 L320 196 L410 165 L510 205 L600 158 L690 192 L790 150 L880 196 L980 166 L1080 200 L1200 172 V300 H0 Z" fill="#1b2140"/>
-            <path d="M0 246 Q150 210 300 238 T600 232 T900 242 T1200 230 V300 H0 Z" fill="#131830"/>
-            <g class="pt-avion" fill="#0a0e1c">
-              <path d="M0 0 L26 -3 L34 -10 L38 -10 L36 -2 L52 -1 L56 -6 L60 -6 L59 1 L52 3 L36 4 L38 12 L34 12 L26 5 L0 3 Z"/>
-            </g>
-            <g class="pt-avion pt-avion-2" fill="#0a0e1c">
-              <path d="M0 0 L20 -2 L26 -8 L29 -8 L28 -2 L40 -1 L43 -5 L46 -5 L45 1 L40 2 L28 3 L29 9 L26 9 L20 4 L0 2 Z"/>
-            </g>
-            <g fill="#0d1120">
-              <rect x="790" y="226" width="96" height="18" rx="6"/><rect x="812" y="212" width="44" height="16" rx="5"/>
-              <rect x="852" y="216" width="60" height="5" rx="2"/>
-              <circle cx="806" cy="246" r="7"/><circle cx="826" cy="246" r="7"/><circle cx="846" cy="246" r="7"/><circle cx="866" cy="246" r="7"/>
-            </g>
-            <path d="M0 268 L60 256 L120 268 L180 256 L240 268 L300 256 L360 268 L420 256 L480 268 L540 256 L600 268 L660 256 L720 268 L780 256 L840 268 L900 256 L960 268 L1020 256 L1080 268 L1140 256 L1200 268 V300 H0 Z" fill="#090c17"/>
-            <g fill="#2a2f40">
-              <ellipse cx="80" cy="262" rx="22" ry="7"/><ellipse cx="124" cy="262" rx="22" ry="7"/><ellipse cx="102" cy="252" rx="22" ry="7"/>
-              <ellipse cx="1040" cy="262" rx="22" ry="7"/><ellipse cx="1084" cy="262" rx="22" ry="7"/><ellipse cx="1062" cy="252" rx="22" ry="7"/>
-            </g>
-            <path d="M150 248 q10 -8 20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#3a4157" stroke-width="1.5" stroke-dasharray="3 3"/>
-            <g fill="#06080f">
-              <circle cx="560" cy="226" r="7"/><path d="M552 228 h16 l3 22 h-22 z"/><path d="M566 232 l20 -14" stroke="#06080f" stroke-width="3"/>
-              <circle cx="600" cy="222" r="7"/><path d="M592 224 h16 l3 26 h-22 z"/>
-              <circle cx="640" cy="228" r="7"/><path d="M632 230 h16 l3 20 h-22 z"/><path d="M634 234 l-18 -12" stroke="#06080f" stroke-width="3"/>
-              <rect x="598" y="150" width="3" height="76"/>
-            </g>
-            <path class="pt-bandera" d="M601 152 q14 -6 28 0 t28 0 v22 q-14 -6 -28 0 t-28 0 z" fill="#e0483f"/>
-          </svg>
+          <canvas class="portada-arte" id="portada-mapa" width="1200" height="300" aria-hidden="true"></canvas>
           <div class="portada-texto">
             <span class="portada-saludo" id="portada-saludo">¡A las trincheras!</span>
             <h1 class="portada-titulo">Conquista el mundo</h1>
