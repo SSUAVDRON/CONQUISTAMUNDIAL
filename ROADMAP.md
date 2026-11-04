@@ -54,11 +54,22 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Salas multijugador con código y lista de salas abiertas, lockstep con
   recuperación de mensajes perdidos y control de desincronización
 
-## Fase 4 — Guerra naval y armas especiales
+## ✅ Mapas reales, buques y tropas visibles (hecho)
 
-- Buques de guerra que hunden barcos de transporte
+- Mapas del mundo, Europa, Norteamérica, Sudamérica, África y Asia (Natural
+  Earth, dominio público) con cordilleras, mesetas y lagos; bots como países
+- Buques de guerra: se botan en puertos, navegan con clic en el mar, hunden
+  transportes y buques y destruyen puertos; la IA los usa
+- Tropas de cada ataque visibles en el frente y en el panel (también las que
+  te atacan y los barcos en camino)
+
+## Fase 4 — Armas especiales
+
 - Armas de largo alcance que arrasan una zona (caras y con tiempo de carga)
 - Defensas antiaéreas
+- Más mapas reales: Oceanía, Oriente Medio, el Mediterráneo, un continente a
+  más resolución (basta con añadir regiones en `herramientas/mapas.js`)
+- Elegir jugar como un país concreto en los mapas reales
 
 ## Fase 5 — Multijugador fuera de Claude
 

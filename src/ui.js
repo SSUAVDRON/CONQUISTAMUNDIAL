@@ -313,7 +313,7 @@ export class UI {
       aviso.hidden = false;
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
-      const where = def.coastal ? 'en tu costa' : 'en tu territorio';
+      const where = def.unit ? 'cerca de uno de tus puertos' : def.coastal ? 'en tu costa' : 'en tu territorio';
       aviso.textContent = `Toca ${where} para construir: ${def.name} (${formatNumber(game.buildCost(human, buildMode))} de oro). Esc para cancelar`;
       aviso.hidden = false;
     } else {
@@ -337,6 +337,7 @@ export class UI {
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
     $('pj-terr').textContent = formatPercent(human.tiles / landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
+    $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''} · clic en el mar` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
     $('ratio-tropas').textContent = `(${formatNumber(human.troops * ratio)} tropas)`;
 
@@ -355,31 +356,56 @@ export class UI {
     this._updateRequests(game, human);
   }
 
+  /**
+   * Chips de combate: tus ataques (con botón de retirada), los ataques que
+   * recibes y los barcos en camino, siempre con sus tropas.
+   */
   _updateAttacks(game, human) {
     const list = $('lista-ataques');
     const seen = new Set();
-    for (const atk of human.attacks.values()) {
-      seen.add(atk.targetId);
-      let row = this._attackRows.get(atk.targetId);
-      if (!row) {
-        row = document.createElement('li');
-        const label = document.createElement('span');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.dataset.target = atk.targetId;
-        btn.title = 'Retirarse (se pierde la mitad de las tropas del ataque)';
-        btn.textContent = '✕';
-        row.append(label, btn);
-        list.append(row);
-        this._attackRows.set(atk.targetId, row);
+    const row = (key, text, incoming, cancelTarget = null) => {
+      seen.add(key);
+      let li = this._attackRows.get(key);
+      if (!li) {
+        li = document.createElement('li');
+        if (incoming) li.className = 'entrante';
+        li.append(document.createElement('span'));
+        if (cancelTarget !== null) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.target = cancelTarget;
+          btn.title = 'Retirarse (se pierde la mitad de las tropas del ataque)';
+          btn.setAttribute('aria-label', 'Retirarse');
+          btn.textContent = '✕';
+          li.append(btn);
+        }
+        // Lo que te ataca va primero: es lo urgente
+        if (incoming) list.prepend(li);
+        else list.append(li);
+        this._attackRows.set(key, li);
       }
+      li.firstChild.textContent = text;
+    };
+    for (const atk of human.attacks.values()) {
       const name = atk.targetId ? game.players[atk.targetId].name : 'Tierra libre';
-      row.firstChild.textContent = `⚔ ${name} · ${formatNumber(atk.troops)}`;
+      row(`o${atk.targetId}`, `⚔ ${name} · ${formatNumber(atk.troops)}`, false, atk.targetId);
     }
-    for (const [id, row] of this._attackRows) {
-      if (!seen.has(id)) {
-        row.remove();
-        this._attackRows.delete(id);
+    for (const atk of game.attacks) {
+      if (atk.done || atk.targetId !== human.id) continue;
+      row(`i${atk.attacker.id}`, `🛡 ${atk.attacker.name} te ataca · ${formatNumber(atk.troops)}`, true);
+    }
+    for (const b of game.boats) {
+      if (b.owner === human.id) {
+        const to = b.targetId ? game.players[b.targetId].name : 'tierra libre';
+        row(`b${b.id}`, `🚢 hacia ${to} · ${formatNumber(b.troops)}`, false);
+      } else if (b.targetId === human.id) {
+        row(`B${b.id}`, `🚢 ${game.players[b.owner].name} llega · ${formatNumber(b.troops)}`, true);
+      }
+    }
+    for (const [key, li] of this._attackRows) {
+      if (!seen.has(key)) {
+        li.remove();
+        this._attackRows.delete(key);
       }
     }
   }

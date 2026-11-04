@@ -231,7 +231,9 @@ export class Renderer {
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this._drawBuildings();
+    this._drawWarships();
     this._drawLabels();
+    this._drawAttackBadges();
     this._drawEmojis();
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
@@ -254,6 +256,67 @@ export class Renderer {
         disc: rgbToCss(shadeRgb(p.color, 0.7)),
         ring: p === game.human ? '#ffffff' : 'rgba(0,0,0,0.7)',
       });
+      if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
+    }
+  }
+
+  _hpBar(cx, cy, width, frac) {
+    const { ctx } = this;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(cx - width / 2, cy - 2, width, 4);
+    ctx.fillStyle = frac > 0.5 ? '#5fd38d' : frac > 0.25 ? '#ffc857' : '#ff6b6b';
+    ctx.fillRect(cx - width / 2, cy - 2, width * Math.max(0, frac), 4);
+  }
+
+  _drawWarships() {
+    const { ctx, game, camera } = this;
+    if (!game.warships.length) return;
+    const W = game.map.width;
+    const size = Math.min(28, Math.max(12, camera.zoom * 2.8));
+    for (const ws of game.warships) {
+      let wx = (ws.tile % W) + 0.5;
+      let wy = Math.floor(ws.tile / W) + 0.5;
+      if (ws.path && ws.pos < ws.path.length - 1) {
+        const n = ws.path[ws.pos + 1];
+        const t = Math.min(1, ws.progress);
+        wx = lerp(wx, (n % W) + 0.5, t);
+        wy = lerp(wy, Math.floor(n / W) + 0.5, t);
+      }
+      const [sx, sy] = camera.worldToScreen(wx, wy);
+      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size) continue;
+      const p = game.players[ws.owner];
+      // Disparo: línea hasta el objetivo durante el tick en que dispara
+      if (game.ticks - ws.fireTick <= 1 && ws.fireAt >= 0) {
+        const [tx, ty] = camera.worldToScreen((ws.fireAt % W) + 0.5, Math.floor(ws.fireAt / W) + 0.5);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(tx, ty);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(255, 190, 90, 0.9)';
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(tx, ty, 3 + (game.ticks % 2) * 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 150, 60, 0.8)';
+        ctx.fill();
+      }
+      drawBuildingIcon(ctx, 'warship', sx, sy, size, {
+        disc: rgbToCss(shadeRgb(p.color, 0.75)),
+        ring: p === game.human ? '#ffffff' : 'rgba(0,0,0,0.75)',
+      });
+      if (ws.hp < CONFIG.warshipHp) this._hpBar(sx, sy - size * 0.72, size, ws.hp / CONFIG.warshipHp);
+      // Destino del buque propio
+      if (p === game.human && ws.path) {
+        const dest = ws.path[ws.path.length - 1];
+        const [dx, dy] = camera.worldToScreen((dest % W) + 0.5, Math.floor(dest / W) + 0.5);
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(dx, dy);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
   }
 
@@ -262,8 +325,13 @@ export class Renderer {
     const human = game.human;
     if (!human) return;
     const map = game.map;
-    const ok = game.canBuild(human, kind, tile).ok;
-    const [sx, sy] = camera.worldToScreen(map.x(tile) + 0.5, map.y(tile) + 0.5);
+    const check = game.canBuild(human, kind, tile);
+    const ok = check.ok;
+    let [sx, sy] = camera.worldToScreen(map.x(tile) + 0.5, map.y(tile) + 0.5);
+    if (kind === 'warship' && ok) {
+      // El buque sale del puerto propio más cercano
+      [sx, sy] = camera.worldToScreen(map.x(check.water) + 0.5, map.y(check.water) + 0.5);
+    }
     const color = ok ? '#5fd38d' : '#ff6b6b';
     if (kind === 'fort') {
       ctx.beginPath();
@@ -298,7 +366,8 @@ export class Renderer {
       ctx.lineWidth = r * 0.35;
       ctx.strokeStyle = p === game.human ? '#ffffff' : 'rgba(0,0,0,0.75)';
       ctx.stroke();
-      if (camera.zoom >= 4) {
+      const mine = game.human && (b.owner === game.human.id || b.targetId === game.human.id);
+      if (camera.zoom >= 4 || mine) {
         ctx.fillStyle = '#fff';
         ctx.font = `bold ${r * 1.1}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
@@ -342,6 +411,48 @@ export class Renderer {
       const troops = formatNumber(p.troops);
       ctx.strokeText(troops, sx, sy + size * 0.6);
       ctx.fillText(troops, sx, sy + size * 0.6);
+    }
+  }
+
+  /**
+   * Marcador con las tropas en el frente de cada ataque entre el humano y otra
+   * nación: rojo si le atacan, con su color si ataca él.
+   */
+  _drawAttackBadges() {
+    const { ctx, game, camera } = this;
+    const human = game.human;
+    if (!human || !game.attacks.length) return;
+    const W = game.map.width;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 12px system-ui, sans-serif';
+    for (const atk of game.attacks) {
+      if (atk.done || atk.troops < 1 || !atk.targetId) continue;
+      const incoming = atk.targetId === human.id;
+      if (!incoming && atk.attacker !== human) continue;
+      // Centro aproximado del frente: media de unas cuantas casillas candidatas
+      let sx = 0;
+      let sy = 0;
+      let n = 0;
+      for (const t of atk.inFrontier) {
+        sx += t % W;
+        sy += (t / W) | 0;
+        if (++n >= 48) break;
+      }
+      if (!n) continue;
+      const [x, y] = camera.worldToScreen(sx / n + 0.5, sy / n + 0.5);
+      if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
+      const text = `${incoming ? '🛡' : '⚔'} ${formatNumber(atk.troops)}`;
+      const w = ctx.measureText(text).width + 14;
+      ctx.beginPath();
+      ctx.roundRect(x - w / 2, y - 10, w, 20, 10);
+      ctx.fillStyle = incoming ? 'rgba(190, 40, 40, 0.92)' : 'rgba(12, 18, 30, 0.88)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = incoming ? '#ffb3b3' : rgbToCss(human.color);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, x, y + 0.5);
     }
   }
 

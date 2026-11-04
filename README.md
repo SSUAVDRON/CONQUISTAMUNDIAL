@@ -20,6 +20,25 @@ Cada partida da experiencia (territorio, eliminaciones, edificios, victoria…);
 los niveles desbloquean formas de emblema y patrones. El perfil se guarda en el
 navegador y, en el enlace de Claude, también en tu cuenta.
 
+## Mapas
+
+- **Mundo real:** Mundo, Europa, Norteamérica, Sudamérica, África y Asia. Los
+  bots son países reales (los más grandes del mapa, hasta uno por país) y
+  aparecen en su ubicación. Cordilleras y mesetas reales hacen más lento y
+  caro avanzar.
+- **Aleatorios:** pequeño, mediano y grande, generados con la semilla.
+
+Los mapas reales salen de [Natural Earth](https://www.naturalearthdata.com)
+(dominio público). Para regenerarlos o añadir regiones (`DEFS` en el script):
+
+```bash
+node herramientas/mapas.js <carpeta con los .geojson de Natural Earth>
+```
+
+Necesita `ne_50m_admin_0_countries`, `ne_50m_geography_regions_polys` y
+`ne_50m_lakes` (GeoJSON, en github.com/nvkelso/natural-earth-vector). Escribe
+`src/mapas-reales.js`.
+
 ## Multijugador
 
 - **En el enlace de Claude** (capacidad `room`): crea una sala, comparte el
@@ -76,7 +95,9 @@ base de datos.
 | Coste | Tierra libre: 3 tropas por casilla. Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
-| Barcos | Clic en una costa sin frontera terrestre: sale un barco desde tu costa más cercana (máx. 3 + 1 por puerto). |
+| Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 + 1 por puerto). |
+| Buques de guerra | Se botan desde un puerto propio (máx. 3 por puerto; 6k de oro, +3k cada uno). Clic en el mar mueve el más cercano. Disparan solos a lo que tengan a 9 casillas: primero buques enemigos, luego transportes (los hunden con sus tropas) y luego puertos, que acaban destruidos si no se retiran. |
+| Tropas a la vista | Cada ataque tuyo o contra ti muestra sus tropas en el frente del mapa (rojo si te atacan) y en tu panel, igual que los barcos en camino. |
 | Oro | Se gana solo, según tu territorio (+10 % por cada puerto). Si eliminas a una nación, te llevas su oro. |
 | Edificios | Se construyen en tu territorio con oro; cada uno del mismo tipo cuesta más que el anterior. Si te conquistan la casilla, el edificio pasa al conquistador. Deben estar a 5 casillas o más de otro edificio. |
 | Ciudad | +15.000 tropas máximas. 5k de oro, +5k por cada ciudad que ya tengas. |
@@ -91,7 +112,8 @@ base de datos.
 
 - **Arrastrar**: mover el mapa · **Rueda / pellizco**: zoom · **WASD / flechas**: desplazarse
 - **1–9 / 0**: fuerza de ataque 10 %–100 % · **Mayús + rueda**: ajuste fino
-- **Q / E / R**: construir ciudad / puerto / fortaleza (o los botones del panel), luego clic en el mapa
+- **Q / E / R / T**: construir ciudad / puerto / fortaleza / buque (o los botones del panel), luego clic en el mapa
+- **Clic en el mar**: mover tu buque de guerra más cercano
 - **Mayús + clic** al construir: colocar varios seguidos · **Esc / clic derecho**: cancelar
 - **Clic derecho / mantener pulsado** sobre otra nación: ficha de diplomacia
 - **Espacio**: pausa · **C**: centrar en tu nación · **+ / −**: zoom · **Esc**: cerrar
@@ -114,13 +136,15 @@ dominia/
 ├── css/estilo.css
 ├── servidor.js         Servidor estático para desarrollo (npm start)
 ├── herramientas/
-│   └── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
+│   ├── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
+│   └── mapas.js        Genera src/mapas-reales.js desde Natural Earth
 ├── src/
 │   ├── config.js       ← Todos los números de equilibrio (empieza aquí para ajustar)
 │   ├── main.js         Bucle principal y unión de las piezas
 │   ├── game.js         Simulación: propiedad de casillas, ataques, barcos, victoria
 │   ├── bot.js          IA de las naciones rivales
-│   ├── map.js          Generación procedural del mundo
+│   ├── map.js          Mundo procedural y carga de mapas reales
+│   ├── mapas-reales.js GENERADO: mapas reales (herramientas/mapas.js)
 │   ├── player.js       Estado de cada nación
 │   ├── attack.js       Estado de un ataque (frente de casillas)
 │   ├── render.js       Dibujo en canvas: terreno, territorios, barcos, nombres
@@ -134,7 +158,7 @@ dominia/
 │   ├── cloud.js        Perfil en la nube y clasificación global (db + user)
 │   ├── icons.js        Iconos de edificios, emblemas y patrones
 │   └── rng.js, noise.js, heap.js, colors.js, names.js, format.js
-└── tests/              simulación, edificios, diplomacia, perfil y multijugador
+└── tests/              simulación, edificios, buques, diplomacia, mapas, perfil y multijugador
 ```
 
 Decisiones de diseño que conviene conservar:

@@ -6,7 +6,7 @@
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-import { TICK_MS } from './config.js';
+import { MAP_IDS, TICK_MS } from './config.js';
 import { selfPeer } from './net.js';
 
 export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash'];
@@ -170,7 +170,7 @@ export class Sala {
     const payload = {
       seed: d.seed >>> 0,
       settings: {
-        mapSize: ['pequeno', 'mediano', 'grande'].includes(d.settings.mapSize) ? d.settings.mapSize : 'mediano',
+        mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
         bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
         difficulty: ['facil', 'normal', 'dificil'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
       },
@@ -192,7 +192,7 @@ export class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship']);
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
 function cleanIntent(raw) {
@@ -204,7 +204,7 @@ function cleanIntent(raw) {
   if (int(raw.fromId) !== undefined) out.fromId = raw.fromId;
   if (typeof raw.ratio === 'number' && raw.ratio >= 0 && raw.ratio <= 1) out.ratio = raw.ratio;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
-  if (raw.kind === 'city' || raw.kind === 'port' || raw.kind === 'fort') out.kind = raw.kind;
+  if (['city', 'port', 'fort', 'warship'].includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;

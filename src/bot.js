@@ -41,6 +41,7 @@ export class BotBrain {
     }
     if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
+    if (p.buildings.warship && r.chance(0.2)) this._commandWarships();
 
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.troops > max * 0.1) {
@@ -98,8 +99,13 @@ export class BotBrain {
     let want = 'city';
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / 2500)) want = 'fort';
     else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / 5000) && g.rng.chance(0.4)) want = 'port';
+    else if (p.buildings.port > 0 && p.buildings.warship < p.buildings.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
     if (p.gold < g.buildCost(p, want)) return false;
+    if (want === 'warship') {
+      const port = g.buildings.find((b) => b.owner === p.id && b.kind === 'port');
+      return !!port && g.build(p, 'warship', port.tile);
+    }
     const tile = this._pickBuildTile(want, threat);
     return tile >= 0 && g.build(p, want, tile);
   }
@@ -240,6 +246,38 @@ export class BotBrain {
     if (!g.rng.chance(0.3)) return;
     const pool = HOSTILE.includes(emoji) || this.grudges.has(from.id) ? HOSTILE : FRIENDLY;
     g.sendEmoji(this.player, from.id, g.rng.pick(pool));
+  }
+
+  /** Manda los buques parados contra el puerto enemigo más cercano. */
+  _commandWarships() {
+    const g = this.game;
+    const p = this.player;
+    const map = g.map;
+    for (const ws of g.warships) {
+      if (ws.owner !== p.id || ws.path || ws.dead || ws.fireTick > g.ticks - 20) continue;
+      let best = null;
+      let bestD = 140 * 140;
+      for (const b of g.buildings) {
+        if (b.kind !== 'port' || b.owner === p.id || p.allies.has(b.owner)) continue;
+        const dx = map.x(b.tile) - map.x(ws.tile);
+        const dy = map.y(b.tile) - map.y(ws.tile);
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          best = b;
+        }
+      }
+      if (!best) continue;
+      // Agua junto al puerto objetivo
+      const nb = new Int32Array(4);
+      const c = map.neighbors(best.tile, nb);
+      for (let k = 0; k < c; k++) {
+        if (map.terrain[nb[k]] === 0) {
+          g.moveWarship(p, nb[k], ws);
+          break;
+        }
+      }
+    }
   }
 
   /** Elige una costa ajena débil, preferiblemente cercana. */

@@ -204,7 +204,7 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .ratio { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--texto-suave); }
 .ratio strong { color: var(--texto); }
 
-#construir { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+#construir { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
 #construir button {
   display: flex;
   align-items: center;
@@ -238,6 +238,7 @@ button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
   font-size: 12px;
 }
 #lista-ataques button { padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; }
+#lista-ataques li.entrante { background: rgba(255, 107, 107, 0.18); color: #ffd6d6; padding-right: 8px; }
 
 /* ---------- Diplomacia ---------- */
 button.peligro { background: rgba(255, 107, 107, 0.16); border-color: rgba(255, 107, 107, 0.5); color: #ffd0d0; }
@@ -333,6 +334,7 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   #aviso { top: auto; bottom: calc(270px + env(safe-area-inset-bottom, 0px)); }
   #eventos { top: auto; bottom: calc(262px + env(safe-area-inset-bottom, 0px)); flex-direction: column-reverse; }
   #panel-jugador { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px 10px; }
+  #construir { grid-template-columns: repeat(2, 1fr); }
   #construir button { padding: 4px 6px 4px 4px; gap: 4px; }
   #construir canvas { width: 20px; height: 20px; }
   #construir .b-nombre { font-size: 12px; }

@@ -62,7 +62,7 @@ export const TITLES = [
 export const ACHIEVEMENTS = [
   { id: 'primera_partida', icon: '🌱', name: 'Primeros pasos', desc: 'Juega una partida', check: () => true },
   { id: 'primera_victoria', icon: '🏆', name: 'Conquistador', desc: 'Gana una partida', check: (r) => r.won || r.alliedWin },
-  { id: 'gran_victoria', icon: '🌍', name: 'Señor del mundo', desc: 'Gana en un mapa grande', check: (r) => (r.won || r.alliedWin) && r.mapSize === 'grande' },
+  { id: 'gran_victoria', icon: '🌍', name: 'Señor del mundo', desc: 'Gana en el mapa del mundo o en uno grande', check: (r) => (r.won || r.alliedWin) && (r.mapSize === 'grande' || r.mapSize === 'mundo') },
   { id: 'relampago', icon: '⚡', name: 'Guerra relámpago', desc: 'Gana en menos de 12 minutos', check: (r) => r.won && r.seconds < 720 },
   { id: 'alianza_victoriosa', icon: '🤝', name: 'Juntos somos más', desc: 'Gana en alianza', check: (r) => r.alliedWin },
   { id: 'verdugo', icon: '⚔️', name: 'Verdugo', desc: 'Elimina a 5 naciones en una partida', check: (r) => r.kills >= 5 },
@@ -132,7 +132,7 @@ export function defaultProfile() {
     },
     logros: {}, // id → fecha (ms)
     historial: [], // { fecha, resultado, pct, duracion, mapa, rivales, online }
-    ajustes: { bots: 25, mapa: 'mediano', dificultad: 'normal' },
+    ajustes: { bots: 25, mapa: 'mundo', dificultad: 'normal' },
     actualizado: 0,
   };
 }

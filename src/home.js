@@ -1,6 +1,7 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { MAP_SIZES } from './config.js';
+import { MAP_SIZES, REAL_MAPS, mapLabel } from './config.js';
+import { REAL_MAP_DATA } from './mapas-reales.js';
 import { hexToRgb } from './colors.js';
 import { PATTERN_FNS, drawEmblem } from './icons.js';
 import { formatPercent, formatTime } from './format.js';
@@ -22,6 +23,20 @@ function el(tag, attrs = {}, ...children) {
   }
   for (const c of children) if (c != null) node.append(c);
   return node;
+}
+
+/** Opciones del selector de mapa: mundo real primero, luego aleatorios. */
+function fillMapSelect(select) {
+  const real = el('optgroup', { label: 'Mundo real (los bots son países)' },
+    ...Object.entries(REAL_MAPS).map(([id, name]) => el('option', { value: id, text: name })));
+  const random = el('optgroup', { label: 'Aleatorio' },
+    ...Object.entries(MAP_SIZES).map(([id, m]) => el('option', { value: id, text: m.label })));
+  select.replaceChildren(real, random);
+}
+
+/** Máximo de bots en un mapa real: uno por país disponible. */
+function maxBotsFor(mapId) {
+  return REAL_MAP_DATA[mapId] ? REAL_MAP_DATA[mapId].countries.length : 60;
 }
 
 function emblemCanvas(emblem, size = 32) {
@@ -67,9 +82,17 @@ export class Home {
     $('chip-perfil').addEventListener('click', () => this.setView('perfil'));
 
     // Partida contra la IA
-    $('in-bots').addEventListener('input', () => {
+    fillMapSelect($('in-mapa'));
+    const syncBots = () => {
+      const max = Math.min(60, maxBotsFor($('in-mapa').value));
+      $('in-bots').max = String(max);
+      if (Number($('in-bots').value) > max) $('in-bots').value = String(max);
       $('out-bots').textContent = $('in-bots').value;
-    });
+      $('nota-rivales').textContent = REAL_MAPS[$('in-mapa').value] ? `(hasta ${max} países)` : '';
+    };
+    this._syncBots = syncBots;
+    $('in-bots').addEventListener('input', syncBots);
+    $('in-mapa').addEventListener('change', syncBots);
     $('form-rapida').addEventListener('submit', (e) => {
       e.preventDefault();
       const opts = {
@@ -130,10 +153,11 @@ export class Home {
     $('btn-copiar-codigo').addEventListener('click', () => this.h.onCopyCode?.());
 
     const a = this.profile.ajustes;
-    $('in-bots').value = a.bots;
-    $('out-bots').textContent = a.bots;
     $('in-mapa').value = a.mapa;
+    if (!$('in-mapa').value) $('in-mapa').value = 'mundo';
+    $('in-bots').value = a.bots;
     $('in-dificultad').value = a.dificultad;
+    syncBots();
   }
 
   _profileChanged() {
@@ -422,7 +446,7 @@ export class Home {
           el('td', { text: `${g.resultado}${g.online ? ' · online' : ''}` }),
           el('td', { class: 'num', text: formatPercent(g.pct) }),
           el('td', { class: 'num', text: formatTime(g.duracion) }),
-          el('td', { text: (MAP_SIZES[g.mapa] || {}).label || g.mapa }),
+          el('td', { text: mapLabel(g.mapa) }),
         ),
       );
     }
@@ -472,7 +496,7 @@ export class Home {
             'span',
             { class: 'sala-info' },
             el('strong', { text: `Sala de ${String(r.nombre || 'alguien').slice(0, 18)}` }),
-            el('small', { text: `${r.jugadores || 1} jugador${r.jugadores === 1 ? '' : 'es'} · mapa ${(MAP_SIZES[r.mapa] || {}).label || '—'} · ${Number(r.bots) || 0} bots` }),
+            el('small', { text: `${r.jugadores || 1} jugador${r.jugadores === 1 ? '' : 'es'} · ${mapLabel(r.mapa)} · ${Number(r.bots) || 0} bots` }),
           ),
           el('button', { type: 'button', 'data-code': r.code, text: 'Entrar' }),
         ),
@@ -516,17 +540,18 @@ export class Home {
             el('input', { id: 'sala-bots', type: 'range', min: '0', max: '50', value: String(s.bots), oninput: () => this._lobbyChanged() })),
           el('div', { class: 'fila-2' },
             el('label', { class: 'campo' }, el('span', { text: 'Mapa' }),
-              el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() }, ...Object.entries(MAP_SIZES).map(([k, v]) => el('option', { value: k, text: v.label })))),
+              el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
             el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
               el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
         );
+        fillMapSelect($('sala-mapa'));
         $('sala-mapa').value = s.mapSize;
         $('sala-dificultad').value = s.difficulty;
       }
     } else {
       delete box.dataset.host;
       box.replaceChildren(
-        el('p', { class: 'nota', text: s ? `Mapa ${(MAP_SIZES[s.mapSize] || {}).label || '—'} · ${s.bots} bots · dificultad ${DIFFICULTY[s.difficulty] || 'normal'}` : 'Esperando al anfitrión…' }),
+        el('p', { class: 'nota', text: s ? `Mapa ${mapLabel(s.mapSize)} · ${s.bots} bots · dificultad ${DIFFICULTY[s.difficulty] || 'normal'}` : 'Esperando al anfitrión…' }),
       );
     }
 
@@ -536,6 +561,9 @@ export class Home {
   }
 
   _lobbyChanged() {
+    const max = Math.min(50, maxBotsFor($('sala-mapa').value));
+    $('sala-bots').max = String(max);
+    if (Number($('sala-bots').value) > max) $('sala-bots').value = String(max);
     $('sala-out-bots').textContent = $('sala-bots').value;
     this.h.onRoomSettings?.({
       bots: Number($('sala-bots').value),

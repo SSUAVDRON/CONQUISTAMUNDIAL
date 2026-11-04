@@ -54,6 +54,21 @@ export function drawBuildingIcon(ctx, kind, cx, cy, size, { glyph = '#fff', disc
     ctx.beginPath();
     ctx.arc(0, 0.8, 5.6, 0.12 * Math.PI, 0.88 * Math.PI);
     ctx.stroke();
+  } else if (kind === 'warship') {
+    // Casco con puente y cañón
+    ctx.beginPath();
+    ctx.moveTo(-8, 1.5);
+    ctx.lineTo(8, 1.5);
+    ctx.lineTo(5.5, 6);
+    ctx.lineTo(-5.5, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(-3.5, -3, 5, 4.5);
+    ctx.fillRect(-1.5, -6.5, 1.6, 3.5);
+    ctx.beginPath();
+    ctx.moveTo(1.5, -1.2);
+    ctx.lineTo(7, -3.2);
+    ctx.stroke();
   } else if (kind === 'fort') {
     // Torre almenada
     ctx.beginPath();

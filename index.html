@@ -41,16 +41,12 @@
         <div class="jugar-rejilla">
           <form id="form-rapida" class="bloque" autocomplete="off">
             <h2>Contra la IA</h2>
-            <label class="campo"><span>Rivales <strong id="out-bots">25</strong></span>
+            <label class="campo"><span>Rivales <strong id="out-bots">25</strong> <small id="nota-rivales"></small></span>
               <input id="in-bots" type="range" min="5" max="60" value="25">
             </label>
             <div class="fila-2">
               <label class="campo"><span>Mapa</span>
-                <select id="in-mapa">
-                  <option value="pequeno">Pequeño</option>
-                  <option value="mediano" selected>Mediano</option>
-                  <option value="grande">Grande</option>
-                </select>
+                <select id="in-mapa"></select>
               </label>
               <label class="campo"><span>Dificultad</span>
                 <select id="in-dificultad">
@@ -60,7 +56,7 @@
                 </select>
               </label>
             </div>
-            <label class="campo"><span>Semilla <small>(vacía = mapa aleatorio)</small></span>
+            <label class="campo"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
               <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
             </label>
             <button type="submit" class="principal grande">Jugar</button>
@@ -86,7 +82,8 @@
             <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas.</li>
             <li><b>Tropas:</b> crecen solas; cuanto más territorio, más tropas y más rápido. Cerca del máximo crecen más despacio.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>.</li>
-            <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco (máx. 3 a la vez).</li>
+            <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco de transporte (máx. 3 a la vez + 1 por puerto).</li>
+          <li><b>Buques de guerra:</b> se botan desde tus puertos (tecla T). Haz clic en el mar para mover el más cercano. Hunden transportes y buques enemigos y bombardean sus puertos hasta destruirlos.</li>
             <li><b>Terreno:</b> las mesetas y montañas cuestan más tropas y tiempo de conquistar.</li>
             <li><b>Oro y edificios:</b> ganas oro según tu territorio. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (más barcos y oro) y <i>fortalezas</i> (defensa ×2,5 alrededor). Si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
@@ -217,7 +214,7 @@
         <div><span class="etq">Tropas</span><span class="valor" id="pj-tropas">0</span><small class="sub" id="pj-crec"></small></div>
         <div><span class="etq">Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
         <div><span class="etq">Territorio</span><span class="valor" id="pj-terr">0%</span></div>
-        <div><span class="etq">Barcos</span><span class="valor" id="pj-barcos">0</span></div>
+        <div><span class="etq">Barcos</span><span class="valor" id="pj-barcos">0</span><small class="sub" id="pj-buques"></small></div>
       </div>
       <label class="ratio">
         <span>Fuerza de ataque <strong id="ratio-valor">20%</strong> <span id="ratio-tropas"></span></span>

@@ -1,8 +1,9 @@
 // Mapa del mundo: rejilla de casillas con tipo de terreno. Se genera de forma
 // procedural a partir de una semilla (continentes + islas + cordilleras).
 import { TERRAIN } from './config.js';
-import { Rng } from './rng.js';
+import { Rng, hashString } from './rng.js';
 import { createNoise2D, fbm } from './noise.js';
+import { REAL_MAP_DATA } from './mapas-reales.js';
 
 const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 
@@ -219,4 +220,73 @@ function cleanup(width, height, terrain, shade) {
 
 function markEdge(id, arr) {
   if (id >= 0) arr[id] = 1;
+}
+
+// ------------------------------------------------------------ mapas reales
+
+/**
+ * Carga un mapa del mundo real. Devuelve { map, countries } donde countries =
+ * [{ name, tile, area }] de mayor a menor (la casilla es la más interior).
+ */
+export function loadRealMap(id) {
+  const data = REAL_MAP_DATA[id];
+  if (!data) throw new Error(`Mapa desconocido: ${id}`);
+  const { w, h } = data;
+  const size = w * h;
+  const terrain = new Uint8Array(size);
+  const bin = atob(data.rle);
+  let i = 0;
+  for (let k = 0; k < bin.length; k++) {
+    const b = bin.charCodeAt(k);
+    const n = (b & 63) + 1;
+    terrain.fill(b >> 6, i, i + n);
+    i += n;
+  }
+  if (i !== size) throw new Error(`Mapa ${id} dañado`);
+  const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
+  return { map, countries: data.countries.map(([name, tile, area]) => ({ name, tile, area })) };
+}
+
+/** Tonos: profundidad del mar por distancia a la costa; textura y cumbres en tierra. */
+function realShade(id, w, h, terrain) {
+  const size = w * h;
+  const shade = new Uint8Array(size);
+  const rough = createNoise2D(hashString(id));
+  // Distancia al tipo de terreno distinto (agua→costa, montaña→falda)
+  const dist = new Uint8Array(size).fill(255);
+  const queue = new Int32Array(size);
+  const nb = new Int32Array(4);
+  const tmp = { width: w, size, neighbors: GameMap.prototype.neighbors };
+  let head = 0;
+  let tail = 0;
+  for (let t = 0; t < size; t++) {
+    const c = tmp.neighbors(t, nb);
+    for (let k = 0; k < c; k++) {
+      if (terrain[nb[k]] !== terrain[t] && (terrain[t] === WATER || terrain[t] === MOUNTAIN)) {
+        dist[t] = 1;
+        queue[tail++] = t;
+        break;
+      }
+    }
+  }
+  while (head < tail) {
+    const t = queue[head++];
+    const c = tmp.neighbors(t, nb);
+    for (let k = 0; k < c; k++) {
+      const n = nb[k];
+      if (terrain[n] === terrain[t] && dist[n] === 255 && dist[t] < 254) {
+        dist[n] = dist[t] + 1;
+        queue[tail++] = n;
+      }
+    }
+  }
+  for (let t = 0; t < size; t++) {
+    const x = t % w;
+    const y = (t / w) | 0;
+    const grain = fbm(rough, x / 6, y / 6, 3);
+    if (terrain[t] === WATER) shade[t] = Math.min(255, dist[t] * 14);
+    else if (terrain[t] === MOUNTAIN) shade[t] = clampByte(Math.min(dist[t], 8) * 26 + (grain - 0.5) * 60);
+    else shade[t] = clampByte(grain * 255);
+  }
+  return shade;
 }

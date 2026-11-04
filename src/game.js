@@ -1,6 +1,7 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
 import { BUILDINGS, CONFIG, EMOJIS } from './config.js';
+import { formatNumber } from './format.js';
 import { Rng } from './rng.js';
 import { Player } from './player.js';
 import { Attack } from './attack.js';
@@ -14,6 +15,7 @@ const NB_BORDER = new Int32Array(4);
 const NB_COUNT = new Int32Array(4);
 const NB_SCAN = new Int32Array(4);
 const NB_BFS = new Int32Array(4);
+const NB_MISC = new Int32Array(4);
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -26,6 +28,8 @@ export class Game {
     this.bots = [];
     this.attacks = [];
     this.boats = [];
+    this.warships = []; // { id, owner, tile, hp, path, pos, progress, fireTick, fireAt }
+    this._nextWarshipId = 1;
     this.buildings = []; // { id, kind, tile, owner }
     this.buildingAt = new Map(); // casilla → edificio
     this._nextBuildingId = 1;
@@ -66,12 +70,18 @@ export class Game {
     return p;
   }
 
-  /** `difficulty`: 'facil' | 'normal' | 'dificil'. */
-  addBots(count, difficulty = 'normal') {
+  /**
+   * `difficulty`: 'facil' | 'normal' | 'dificil'.
+   * `countries` (mapas reales): [{ name, tile }] — los bots son esos países y
+   * aparecen en su ubicación.
+   */
+  addBots(count, difficulty = 'normal', countries = null) {
     const existing = this.players.filter(Boolean).map((p) => p.name);
-    const names = generateNames(this.rng, count, existing);
+    const names = countries ? countries.slice(0, count).map((c) => c.name) : generateNames(this.rng, count, existing);
+    count = Math.min(count, names.length);
     for (let i = 0; i < count; i++) {
       const p = this.addPlayer(names[i], botColor(this.players.length, this.rng), false);
+      if (countries) p.homeTile = countries[i].tile;
       const brain = new BotBrain(this, p, difficulty);
       this.bots.push(brain);
       this.brains.set(p.id, brain);
@@ -87,6 +97,9 @@ export class Game {
     this.ticks = 0;
     this.phase = 'spawn';
     for (const bot of this.bots) {
+      const home = bot.player.homeTile;
+      const near = home >= 0 ? this._freeTileNear(home, 10, 30) : -1;
+      if (near >= 0 && this.spawnPlayer(bot.player, near, 30)) continue;
       const t = this.findSpawnTile();
       if (t >= 0) this.spawnPlayer(bot.player, t);
     }
@@ -120,13 +133,33 @@ export class Game {
     return -1;
   }
 
+  /** Casilla de tierra libre más cercana a `tile` (en espiral, hasta `radius`). */
+  _freeTileNear(tile, radius, minBody) {
+    const map = this.map;
+    const cx = map.x(tile);
+    const cy = map.y(tile);
+    for (let r = 0; r <= radius; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = cx + dx;
+          const y = cy + dy;
+          if (!map.inBounds(x, y)) continue;
+          const t = map.index(x, y);
+          if (map.isLand(t) && this.owner[t] === 0 && map.landBodySizes[map.landBody[t]] >= minBody) return t;
+        }
+      }
+    }
+    return -1;
+  }
+
   /** Coloca (o recoloca, durante el despliegue) a un jugador en `tile`. */
-  spawnPlayer(p, tile) {
+  spawnPlayer(p, tile, minBody = CONFIG.minSpawnBodySize) {
     const map = this.map;
     if (this.phase !== 'spawn' || !p.alive) return false;
     if (tile < 0 || tile >= map.size || !map.isLand(tile) || this.owner[tile] !== 0) return false;
     const body = map.landBody[tile];
-    if (map.landBodySizes[body] < CONFIG.minSpawnBodySize) return false;
+    if (map.landBodySizes[body] < minBody) return false;
     if (p.spawned) this._releaseAll(p);
 
     const r = CONFIG.spawnRadius;
@@ -285,6 +318,8 @@ export class Game {
         const check = this.canBuild(p, it.kind, it.tile);
         if (check.ok) this.build(p, it.kind, it.tile);
         else this._notify(p, check.reason, 'warn');
+      } else if (it.type === 'moveWarship') {
+        if (this.phase === 'playing') this.moveWarship(p, it.tile);
       } else if (it.type === 'cancelAttack') {
         const atk = p.attacks.get(it.targetId);
         if (atk) this._endAttack(atk, 0.5); // retirarse cuesta la mitad de las tropas
@@ -343,7 +378,8 @@ export class Game {
       if (atk.inFrontier.size === 0) return false;
       p.attacks.set(targetId, atk);
       this.attacks.push(atk);
-      if (target && target === this.human) this._emit(`⚔ ${p.name} te está atacando`, 'danger');
+      if (target && target === this.human) this._emit(`⚔ ${p.name} te ataca con ${formatNumber(troops)} tropas`, 'danger');
+      else if (p === this.human && target) this._emit(`⚔ Atacas a ${target.name} con ${formatNumber(troops)} tropas`, 'info');
     }
     if (deduct) p.troops -= troops;
 
@@ -480,6 +516,7 @@ export class Game {
     const map = this.map;
     const def = BUILDINGS[kind];
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
+    if (def.unit) return this._canBuildWarship(p, tile);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
       return { ok: false, reason: 'Solo puedes construir en tu territorio' };
     }
@@ -492,10 +529,16 @@ export class Game {
   }
 
   build(p, kind, tile) {
-    if (!this.canBuild(p, kind, tile).ok) return false;
+    const check = this.canBuild(p, kind, tile);
+    if (!check.ok) return false;
     p.gold -= this.buildCost(p, kind);
+    if (BUILDINGS[kind].unit) return this._launchWarship(p, check.water);
     p.stats.built++;
     const b = { id: this._nextBuildingId++, kind, tile, owner: 0 };
+    if (kind === 'port') {
+      b.hp = CONFIG.portHp;
+      b.hitTick = -Infinity;
+    }
     this.buildings.push(b);
     this.buildingAt.set(tile, b);
     this._transferBuilding(b, 0, p.id, true);
@@ -517,12 +560,14 @@ export class Game {
 
   /** Los edificios cambian de manos con su casilla; sin dueño, se destruyen. */
   _transferBuilding(b, oldId, newId, built = false) {
-    const name = BUILDINGS[b.kind].name;
+    const def = BUILDINGS[b.kind];
+    const name = def.name;
+    const some = `${def.fem ? 'una' : 'un'} ${name.toLowerCase()}`; // "una ciudad", "un puerto"
     if (oldId) {
       const op = this.players[oldId];
       op.buildings[b.kind]--;
       if (b.kind === 'fort') op.forts.delete(b.tile);
-      if (op === this.human && newId) this._emit(`Has perdido una ${name} a manos de ${this.players[newId].name}`, 'danger');
+      if (op === this.human && newId) this._emit(`Has perdido ${some} a manos de ${this.players[newId].name}`, 'danger');
     }
     if (!newId) {
       this.buildings = this.buildings.filter((x) => x !== b);
@@ -534,7 +579,226 @@ export class Game {
     np.buildings[b.kind]++;
     if (np.buildings.city > np.stats.maxCities) np.stats.maxCities = np.buildings.city;
     if (b.kind === 'fort') np.forts.add(b.tile);
-    if (np === this.human) this._emit(built ? `${name} construida` : `Has capturado una ${name}`, 'good');
+    if (np === this.human) this._emit(built ? `${name} ${def.fem ? 'construida' : 'construido'}` : `Has capturado ${some}`, 'good');
+  }
+
+  // -------------------------------------------------------- buques de guerra
+
+  /** Puerto propio más cercano a `tile` (o null). */
+  nearestPort(p, tile) {
+    const map = this.map;
+    let best = null;
+    let bestD = Infinity;
+    for (const b of this.buildings) {
+      if (b.owner !== p.id || b.kind !== 'port') continue;
+      const dx = map.x(b.tile) - map.x(tile);
+      const dy = map.y(b.tile) - map.y(tile);
+      const d = dx * dx + dy * dy;
+      if (d < bestD) {
+        bestD = d;
+        best = b;
+      }
+    }
+    return best;
+  }
+
+  _canBuildWarship(p, tile) {
+    if (!p.buildings.port) return { ok: false, reason: 'Necesitas un puerto para botar buques' };
+    if (p.buildings.warship >= p.buildings.port * CONFIG.warshipsPerPort) {
+      return { ok: false, reason: `Máximo ${CONFIG.warshipsPerPort} buques por puerto` };
+    }
+    const cost = this.buildCost(p, 'warship');
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un buque cuesta ${Math.ceil(cost)}` };
+    const port = this.nearestPort(p, tile >= 0 && tile < this.map.size ? tile : p.spawnTile);
+    const nb = NB_MISC;
+    const c = this.map.neighbors(port.tile, nb);
+    for (let k = 0; k < c; k++) if (this.map.terrain[nb[k]] === 0) return { ok: true, reason: '', water: nb[k] };
+    return { ok: false, reason: 'Ese puerto no tiene agua al lado' };
+  }
+
+  _launchWarship(p, water) {
+    p.buildings.warship++;
+    p.stats.built++;
+    this.warships.push({
+      id: this._nextWarshipId++,
+      owner: p.id,
+      tile: water,
+      hp: CONFIG.warshipHp,
+      path: null,
+      pos: 0,
+      progress: 0,
+      fireTick: -Infinity,
+      fireAt: -1,
+    });
+    this._notify(p, 'Buque botado. Haz clic en el mar para moverlo', 'good');
+    return true;
+  }
+
+  /** Envía el buque propio más cercano (o el indicado) a una casilla de agua. */
+  moveWarship(p, tile, ws = null) {
+    const map = this.map;
+    if (tile < 0 || tile >= map.size || map.terrain[tile] !== 0) return false;
+    if (!ws) {
+      let bestD = Infinity;
+      for (const w of this.warships) {
+        if (w.owner !== p.id || w.dead) continue;
+        const dx = map.x(w.tile) - map.x(tile);
+        const dy = map.y(w.tile) - map.y(tile);
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          ws = w;
+        }
+      }
+    }
+    if (!ws) {
+      this._notify(p, 'No tienes buques. Constrúyelos en un puerto', 'warn');
+      return false;
+    }
+    const path = this._waterPath(ws.tile, tile);
+    if (!path) {
+      this._notify(p, 'Tu buque no puede llegar a ese mar', 'warn');
+      return false;
+    }
+    ws.path = path;
+    ws.pos = 0;
+    ws.progress = 0;
+    return true;
+  }
+
+  /** Ruta por el agua de `from` a `to` (búsqueda en anchura desde el destino). */
+  _waterPath(from, to) {
+    if (from === to) return null;
+    const map = this.map;
+    // Mares distintos: no hace falta buscar
+    if (map.waterBody[from] !== map.waterBody[to]) return null;
+    const terrain = map.terrain;
+    const stamp = this._nextStamp();
+    const seen = this._stampArr;
+    const parent = this._parent;
+    const queue = this._queue;
+    const nb = NB_BFS;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = to;
+    seen[to] = stamp;
+    parent[to] = -1;
+    while (head < tail) {
+      const t = queue[head++];
+      if (t === from) break;
+      const c = map.neighbors(t, nb);
+      for (let k = 0; k < c; k++) {
+        const n = nb[k];
+        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        seen[n] = stamp;
+        parent[n] = t;
+        queue[tail++] = n;
+      }
+    }
+    if (seen[from] !== stamp) return null;
+    const path = [];
+    for (let t = from; t !== -1; t = parent[t]) path.push(t);
+    return Int32Array.from(path);
+  }
+
+  _isEnemy(a, b) {
+    return a !== b && !this.isAllied(a, b);
+  }
+
+  _updateWarships() {
+    if (!this.warships.length) return;
+    const map = this.map;
+    const r2 = CONFIG.warshipRange * CONFIG.warshipRange;
+    const W = map.width;
+    for (const ws of this.warships) {
+      if (ws.dead) continue;
+      if (!this.players[ws.owner].alive) {
+        ws.dead = true;
+        continue;
+      }
+      // Movimiento
+      if (ws.path) {
+        ws.progress += CONFIG.warshipSpeed;
+        while (ws.progress >= 1 && ws.pos < ws.path.length - 1) {
+          ws.pos++;
+          ws.progress -= 1;
+        }
+        ws.tile = ws.path[ws.pos];
+        if (ws.pos >= ws.path.length - 1) ws.path = null;
+      }
+      // Combate: buques enemigos, luego transportes, luego puertos
+      const x = ws.tile % W;
+      const y = (ws.tile / W) | 0;
+      const dist2 = (t) => {
+        const dx = (t % W) - x;
+        const dy = ((t / W) | 0) - y;
+        return dx * dx + dy * dy;
+      };
+      let target = null;
+      let kind = '';
+      let best = r2 + 1;
+      for (const other of this.warships) {
+        if (other.dead || !this._isEnemy(ws.owner, other.owner)) continue;
+        const d = dist2(other.tile);
+        if (d < best) [best, target, kind] = [d, other, 'warship'];
+      }
+      if (!target) {
+        for (const b of this.boats) {
+          if (b.done || !this._isEnemy(ws.owner, b.owner)) continue;
+          const d = dist2(b.path[b.pos]);
+          if (d < best) [best, target, kind] = [d, b, 'boat'];
+        }
+      }
+      if (!target) {
+        for (const b of this.buildings) {
+          if (b.kind !== 'port' || !this._isEnemy(ws.owner, b.owner)) continue;
+          const d = dist2(b.tile);
+          if (d < best) [best, target, kind] = [d, b, 'port'];
+        }
+      }
+      if (!target) continue;
+      ws.fireTick = this.ticks;
+      ws.fireAt = kind === 'boat' ? target.path[target.pos] : target.tile;
+      const me = this.players[ws.owner];
+      if (kind === 'warship') {
+        target.hp -= CONFIG.warshipDamage;
+        if (target.hp <= 0) {
+          target.dead = true;
+          me.stats.sunk++;
+          const victim = this.players[target.owner];
+          if (me === this.human) this._emit(`Has hundido un buque de ${victim.name}`, 'good');
+          else if (victim === this.human) this._emit(`${me.name} ha hundido uno de tus buques`, 'danger');
+        }
+      } else if (kind === 'boat') {
+        target.done = true;
+        const victim = this.players[target.owner];
+        victim.boatCount--;
+        me.stats.sunk++;
+        if (me === this.human) this._emit(`Has hundido un barco de ${victim.name} con ${formatNumber(target.troops)} tropas`, 'good');
+        else if (victim === this.human) this._emit(`${me.name} ha hundido tu barco (${formatNumber(target.troops)} tropas)`, 'danger');
+      } else {
+        target.hp -= CONFIG.warshipDamage;
+        target.hitTick = this.ticks;
+        if (target.hp <= 0) {
+          const victim = this.players[target.owner];
+          this._transferBuilding(target, target.owner, 0);
+          if (me === this.human) this._emit(`Has destruido un puerto de ${victim.name}`, 'good');
+          else if (victim === this.human) this._emit(`${me.name} ha destruido uno de tus puertos`, 'danger');
+        }
+      }
+    }
+    // Hundidos y buques de naciones eliminadas
+    if (this.warships.some((w) => w.dead)) {
+      for (const w of this.warships) if (w.dead) this.players[w.owner].buildings.warship--;
+      this.warships = this.warships.filter((w) => !w.dead);
+    }
+    this.boats = this.boats.filter((b) => !b.done);
+    // Los puertos que no reciben fuego se reparan
+    for (const b of this.buildings) {
+      if (b.kind === 'port' && b.hp < CONFIG.portHp && this.ticks - b.hitTick > 50) {
+        b.hp = Math.min(CONFIG.portHp, b.hp + CONFIG.portRegen);
+      }
+    }
   }
 
   // ------------------------------------------------------------------ barcos
@@ -572,7 +836,8 @@ export class Game {
       done: false,
     });
     const target = targetId ? this.players[targetId] : null;
-    if (target && target === this.human) this._emit(`🚢 ${p.name} envía un barco contra ti`, 'danger');
+    if (target && target === this.human) this._emit(`🚢 ${p.name} envía un barco con ${formatNumber(troops)} tropas contra ti`, 'danger');
+    else if (p === this.human) this._emit(`🚢 Barco en camino con ${formatNumber(troops)} tropas`, 'info');
     return true;
   }
 
@@ -729,6 +994,7 @@ export class Game {
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateBoats();
+    this._updateWarships();
     this._processRequests();
     if (this.emojis.length && this.emojis[0].tick < this.ticks - CONFIG.emojiTicks) {
       this.emojis = this.emojis.filter((e) => e.tick >= this.ticks - CONFIG.emojiTicks);

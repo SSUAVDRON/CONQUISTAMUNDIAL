@@ -23,6 +23,7 @@ export class Player {
     this.alive = true;
     this.spawned = false;
     this.spawnTile = -1;
+    this.homeTile = -1; // mapas reales: casilla de su país
 
     /** Casillas propias que tocan algo ajeno (otra nación, tierra libre o agua). */
     this.border = new Set();
@@ -30,7 +31,7 @@ export class Player {
     this.attacks = new Map();
     this.boatCount = 0;
     /** Edificios por tipo (se actualiza al construir, capturar o perder). */
-    this.buildings = { city: 0, port: 0, fort: 0 };
+    this.buildings = { city: 0, port: 0, fort: 0, warship: 0 }; // warship = buques a flote
     /** Fortalezas propias (casillas), para calcular la defensa. */
     this.forts = new Set();
 
@@ -43,7 +44,7 @@ export class Player {
     this.pattern = 'liso';
 
     /** Contadores de la partida, para logros y estadísticas. */
-    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0 };
+    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0, sunk: 0 };
 
     // Diplomacia
     this.allies = new Set();

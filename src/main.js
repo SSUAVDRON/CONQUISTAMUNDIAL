@@ -1,7 +1,7 @@
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_SIZES, TICK_MS } from './config.js';
-import { generateMap } from './map.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_SIZES, REAL_MAPS, TICK_MS } from './config.js';
+import { generateMap, loadRealMap } from './map.js';
 import { Game } from './game.js';
 import { Renderer } from './render.js';
 import { Camera } from './camera.js';
@@ -77,8 +77,14 @@ function myIdentity() {
  * cuál es este navegador (-1 = nadie, como en la demo del inicio).
  */
 function newGame({ seed, mapSize, bots, difficulty, humans, localIndex }) {
-  const size = MAP_SIZES[mapSize] || MAP_SIZES.mediano;
-  const map = generateMap(size.w, size.h, seed);
+  let map;
+  let countries = null;
+  if (REAL_MAPS[mapSize]) {
+    ({ map, countries } = loadRealMap(mapSize)); // los bots serán países reales
+  } else {
+    const size = MAP_SIZES[mapSize] || MAP_SIZES.mediano;
+    map = generateMap(size.w, size.h, seed);
+  }
   const game = new Game({ map, seed });
   const used = new Set();
   const players = humans.map((h) => {
@@ -91,7 +97,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex }) {
     return p;
   });
   game.human = localIndex >= 0 ? players[localIndex] : null;
-  game.addBots(bots, difficulty);
+  game.addBots(bots, difficulty, countries);
   game.start();
 
   state.game = game;
@@ -110,7 +116,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex }) {
 function startDemo() {
   leaveOnline();
   state.demo = true;
-  newGame({ seed: randomSeed(), mapSize: 'mediano', bots: 24, difficulty: 'normal', humans: [], localIndex: -1 });
+  newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
   state.speed = 2;
   ui.hideHud();
   ui.closeNation();
@@ -411,6 +417,11 @@ const input = new Input(canvas, camera, {
     if (state.buildMode) {
       humanIntent({ type: 'build', tile, kind: state.buildMode });
       if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
+      return;
+    }
+    if (!state.game.map.isLand(tile)) {
+      // Clic en el mar: mover el buque propio más cercano
+      if (state.human.buildings.warship) humanIntent({ type: 'moveWarship', tile });
       return;
     }
     humanIntent({ type: 'action', tile, ratio: state.ratio });

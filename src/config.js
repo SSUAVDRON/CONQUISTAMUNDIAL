@@ -49,6 +49,15 @@ export const CONFIG = {
   fortRadius: 10,
   fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
 
+  // Buques de guerra
+  warshipHp: 100,
+  warshipDamage: 1.5, // vida que quitan por tick a otro buque o a un puerto
+  warshipRange: 9, // casillas
+  warshipSpeed: 1.2, // casillas por tick
+  warshipsPerPort: 3,
+  portHp: 80,
+  portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
+
   // Diplomacia
   maxAllies: 3,
   allianceRequestTicks: 150, // 15 s para responder a una propuesta
@@ -68,14 +77,33 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
 
 /** Tipos de edificio. El coste sube con cada edificio del mismo tipo que ya tengas. */
 export const BUILDINGS = {
-  city: { name: 'Ciudad', base: 5000, step: 5000, key: 'KeyQ', desc: '+15k tropas máximas' },
-  port: { name: 'Puerto', base: 4000, step: 4000, key: 'KeyE', coastal: true, desc: '+1 barco y +10% de oro' },
-  fort: { name: 'Fortaleza', base: 3000, step: 3000, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
+  city: { name: 'Ciudad', fem: true, base: 5000, step: 5000, key: 'KeyQ', desc: '+15k tropas máximas' },
+  port: { name: 'Puerto', fem: false, base: 4000, step: 4000, key: 'KeyE', coastal: true, desc: '+1 barco y +10% de oro' },
+  fort: { name: 'Fortaleza', fem: true, base: 3000, step: 3000, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
+  // No es un edificio: se bota desde un puerto propio y navega
+  warship: { name: 'Buque', fem: false, base: 6000, step: 3000, key: 'KeyT', unit: true, desc: 'Hunde barcos y bombardea puertos' },
 };
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
 
+/** Mapas aleatorios (generados con la semilla). */
 export const MAP_SIZES = {
   pequeno: { w: 360, h: 210, label: 'Pequeño' },
   mediano: { w: 520, h: 300, label: 'Mediano' },
   grande: { w: 720, h: 420, label: 'Grande' },
 };
+
+/** Mapas del mundo real (datos en mapas-reales.js); los bots son países. */
+export const REAL_MAPS = {
+  mundo: 'Mundo',
+  europa: 'Europa',
+  norteamerica: 'Norteamérica',
+  sudamerica: 'Sudamérica',
+  africa: 'África',
+  asia: 'Asia',
+};
+
+export const MAP_IDS = [...Object.keys(REAL_MAPS), ...Object.keys(MAP_SIZES)];
+
+export function mapLabel(id) {
+  return REAL_MAPS[id] || (MAP_SIZES[id] && MAP_SIZES[id].label) || '—';
+}
