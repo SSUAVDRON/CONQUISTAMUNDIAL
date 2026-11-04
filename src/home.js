@@ -124,7 +124,7 @@ export function rulesSummary(r) {
 
 /** Máximo de bots en un mapa real: uno por país disponible. */
 function maxBotsFor(mapId) {
-  return REAL_MAP_DATA[mapId] ? REAL_MAP_DATA[mapId].countries.length : 60;
+  return REAL_MAP_DATA[mapId] ? REAL_MAP_DATA[mapId].countries.length : 90;
 }
 
 function emblemCanvas(emblem, size = 32) {
@@ -197,7 +197,7 @@ export class Home {
       this.choice.rules.warships = $('in-buques').checked;
     });
     this._syncBots = () => {
-      const max = Math.min(60, maxBotsFor(this.choice.map));
+      const max = Math.min(90, maxBotsFor(this.choice.map));
       $('in-bots').max = String(max);
       if (Number($('in-bots').value) > max) $('in-bots').value = String(max);
       $('out-bots').textContent = $('in-bots').value;
@@ -290,7 +290,7 @@ export class Home {
   /** Clic en una tarjeta de modo. */
   _mode(mode) {
     if (mode === 'rapida') {
-      this.h.onQuickPlay?.({ bots: 30, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES } });
+      this.h.onQuickPlay?.({ bots: 45, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
     } else {
@@ -891,7 +891,7 @@ export class Home {
         box.dataset.host = '1';
         box.replaceChildren(
           el('label', { class: 'campo' }, el('span', {}, 'Bots ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
-            el('input', { id: 'sala-bots', type: 'range', min: '0', max: '50', value: String(s.bots), oninput: () => this._lobbyChanged() })),
+            el('input', { id: 'sala-bots', type: 'range', min: '0', max: '90', value: String(s.bots), oninput: () => this._lobbyChanged() })),
           el('div', { class: 'fila-2' },
             el('label', { class: 'campo' }, el('span', { text: 'Mapa' }),
               el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
@@ -915,7 +915,7 @@ export class Home {
   }
 
   _lobbyChanged() {
-    const max = Math.min(50, maxBotsFor($('sala-mapa').value));
+    const max = Math.min(90, maxBotsFor($('sala-mapa').value));
     $('sala-bots').max = String(max);
     if (Number($('sala-bots').value) > max) $('sala-bots').value = String(max);
     $('sala-out-bots').textContent = $('sala-bots').value;

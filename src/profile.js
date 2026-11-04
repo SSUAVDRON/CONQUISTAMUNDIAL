@@ -197,7 +197,7 @@ export function defaultProfile() {
     logros: {}, // id → fecha (ms)
     historial: [], // { fecha, resultado, pct, duracion, mapa, rivales, online }
     ajustes: {
-      bots: 25,
+      bots: 40,
       mapa: 'mundo',
       dificultad: 'normal',
       reglas: { ...DEFAULT_RULES },

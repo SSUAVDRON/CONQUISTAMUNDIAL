@@ -136,8 +136,8 @@
           <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
             <svg class="modo-arte" viewBox="0 0 240 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="ma-1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a3a0e"/><stop offset="1" stop-color="#1c1407"/></linearGradient></defs><rect width="240" height="96" fill="url(#ma-1)"/><g class="ma-giro"><circle cx="120" cy="58" r="40" fill="#1f5a8a"/><path d="M92 40 q12 -10 22 -2 q8 6 2 14 q-10 6 -6 14 q-12 2 -18 -8 q-6 -10 0 -18z M126 30 q18 -2 26 12 q-8 4 -16 0 q-6 -4 -10 -12z M130 62 q14 -6 22 4 q-4 14 -16 18 q-8 -10 -6 -22z" fill="#5fae6b"/><circle cx="120" cy="58" r="40" fill="none" stroke="#bfe3ff" stroke-opacity="0.35" stroke-width="2"/></g><path d="M100 22 l6 -14 6 14" fill="none" stroke="#f2b33d" stroke-width="2"/><rect x="103" y="8" width="2" height="22" fill="#e9eef7"/><path d="M105 9 l12 4 -12 4z" fill="#e0483f"/><path class="ma-rayo" d="M182 14 L170 40 L180 40 L172 62 L196 30 L184 30 L192 14 Z" fill="#ffd23f"/></svg>
             <span class="modo-titulo">Partida rápida</span>
-            <span class="modo-texto">El mundo real contra 30 países. Un clic y a la trinchera.</span>
-            <span class="modo-insignia">30 países</span>
+            <span class="modo-texto">El mundo real contra 45 países y un centenar de colonias. Un clic y a la trinchera.</span>
+            <span class="modo-insignia">45 países</span>
           </button>
           <button type="button" class="modo" data-modo="ia" style="--i:1">
             <svg class="modo-arte" viewBox="0 0 240 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="ma-2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14304a"/><stop offset="1" stop-color="#0a1422"/></linearGradient></defs><rect width="240" height="96" fill="url(#ma-2)"/><g opacity="0.25" stroke="#5ce1ff" stroke-width="1"><path d="M0 20 H240 M0 44 H240 M0 68 H240 M40 0 V96 M90 0 V96 M150 0 V96 M200 0 V96"/></g><rect x="92" y="26" width="56" height="46" rx="12" fill="#26384d" stroke="#5ce1ff" stroke-width="2"/><rect x="117" y="14" width="6" height="12" fill="#5ce1ff"/><circle cx="120" cy="12" r="4" fill="#ff6b6b" class="ma-luz"/><rect class="ma-ojos" x="104" y="42" width="12" height="8" rx="2" fill="#5ce1ff"/><rect class="ma-ojos" x="124" y="42" width="12" height="8" rx="2" fill="#5ce1ff"/><rect x="108" y="58" width="24" height="4" rx="2" fill="#5ce1ff" opacity="0.6"/><path d="M40 80 L76 44 M76 80 L40 44" stroke="#f2b33d" stroke-width="4" stroke-linecap="round"/><path d="M164 80 L200 44 M200 80 L164 44" stroke="#f2b33d" stroke-width="4" stroke-linecap="round"/></svg>
@@ -167,8 +167,8 @@
           <h3>Mapa</h3>
           <div id="galeria-mapas" class="galeria" role="radiogroup" aria-label="Mapa"></div>
           <div class="opciones">
-            <label class="campo"><span>Rivales <strong id="out-bots">25</strong> <small id="nota-rivales"></small></span>
-              <input id="in-bots" type="range" min="5" max="60" value="25">
+            <label class="campo"><span>Rivales <strong id="out-bots">40</strong> <small id="nota-rivales"></small></span>
+              <input id="in-bots" type="range" min="5" max="90" value="40">
             </label>
             <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
             <div class="campo"><span>Victoria al conquistar</span><div class="segmentos" id="seg-victoria" role="radiogroup" aria-label="Victoria"></div></div>
@@ -212,7 +212,7 @@
             <li><b>Tropas:</b> crecen solas; cuanto más territorio, más tropas y más rápido. Cerca del máximo crecen más despacio.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>: cuantas más tropas mandas, más rápido conquistas.</li>
             <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco de transporte desde tu costa (máx. 3 a la vez).</li>
-            <li><b>Colonias:</b> además de las naciones hay colonias («Colonia de…», «Aldea de…»): débiles, no firman alianzas y guardan oro. Presa fácil al empezar.</li>
+            <li><b>Colonias:</b> además de las naciones hay colonias («Colonia de…», «Aldea de…»): débiles, no firman alianzas y guardan oro. Hay muchas por todo el mapa: presa fácil al empezar.</li>
             <li><b>Saqueo:</b> cada casilla que conquistas te da su parte del oro de ese país.</li>
           <li><b>Fábricas:</b> cada una suma un 25% al oro que ganas (tecla F).</li>
           <li><b>Misiles:</b> construye un silo (G) y lanza misiles (M) contra territorio enemigo: arrasan una zona, dejan las casillas libres y destruyen sus edificios. Los <i>antimisiles</i> (H) intentan derribar los misiles enemigos que pasan cerca; tras cada disparo recargan 20 s (anillo azul sobre la batería).</li>

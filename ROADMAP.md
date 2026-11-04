@@ -119,6 +119,9 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   irregulares (lóbulos de ruido, terreno y azar)
 - Mapa físico: color por altura y relieve sombreado; en los mapas reales,
   altura de verdad (ETOPO5 de NOAA) que también decide el tipo de terreno
+- Muchas más colonias (según la tierra del mapa, hasta 140) y más rivales
+  (partida rápida con 45, hasta 90); expansión inicial gradual (la tierra
+  libre cuesta más tropas y se avanza más despacio)
 
 ## Próximo
 

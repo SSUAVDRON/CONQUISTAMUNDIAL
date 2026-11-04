@@ -11,7 +11,7 @@ Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 ## Pantallas
 
 El inicio tiene cuatro modos en tarjetas animadas: **Partida rápida** (mundo
-real contra 30 países, un clic), **Contra la IA** (galería de mapas con
+real contra 45 países y un centenar de colonias, un clic), **Contra la IA** (galería de mapas con
 miniaturas y opciones), **Multijugador** y **Tutorial** (partida guiada paso a
 paso que avanza con lo que haces). Antes de cada partida hay una pantalla de
 carga con los pasos reales y un consejo.
@@ -119,12 +119,12 @@ base de datos.
 | Mapa | Casillas muy pequeñas: los mapas tienen 4 veces la resolución del principio en cada eje (16 veces más casillas; el mundo, 3520×1597). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. Las rutas por mar se buscan primero en una rejilla gruesa y luego solo por ese pasillo, así que siguen siendo rápidas. |
 | Tropas | Crecen solas (más despacio que al principio y con un máximo menor). El máximo y la velocidad dependen de tu territorio; cerca del máximo el crecimiento se frena. |
 | Atacar | Clic en tierra libre o en una nación vecina: se envía el % de tus tropas que marque **Fuerza de ataque**. Repetir el clic refuerza el ataque. |
-| Coste | Tierra libre: 0,125 tropas por casilla. Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
+| Coste | Tierra libre: 1,5 tropas por casilla (la expansión del principio va poco a poco: hacia el minuto 1 está ocupada un tercio de la tierra, a los 3 minutos casi toda). Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Velocidad de conquista | Cuantas más tropas mandas, más rápido avanzas: en tierra libre según las tropas por casilla de frente, contra una nación según tu superioridad sobre su densidad (hasta ×3,5). |
 | Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). |
-| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. |
+| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. Hay muchas: una por cada 875 casillas de tierra de la rejilla original, hasta 140 (unas 130 en el mundo); con menos de 20 rivales, proporcionalmente menos. |
 | Saqueo | Cada casilla que conquistas a un país te da su parte de su oro (oro ÷ casillas). Cada 5 s un aviso resume lo saqueado (y lo que te saquean). |
 | Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; 150k de oro con inflación). Van solos: cada uno patrulla una zona (al botarlo, la de su puerto; clic en el mar asigna otra al más cercano y se ve como un círculo discontinuo). A tiro disparan a buques enemigos, hunden transportes de tropas y **capturan** pesqueros y mercantes rivales (pasan a producir para ti); si un intruso entra en su zona, lo persiguen. No atacan puertos. |
 | Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. Todos los barcos van algo más despacio que al principio (transportes, buques, pesqueros y mercantes). Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |

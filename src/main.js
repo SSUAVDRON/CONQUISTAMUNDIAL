@@ -1,6 +1,6 @@
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, mapLabel } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, colonyCount, mapLabel } from './config.js';
 import { generateMap, loadRealMap } from './map.js';
 import { Game } from './game.js';
 import { Renderer } from './render.js';
@@ -100,8 +100,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   });
   game.human = localIndex >= 0 ? players[localIndex] : null;
   game.addBots(bots, difficulty, countries);
-  // Colonias: presas fáciles repartidas por el mapa (más cuantos más rivales)
-  game.addColonies(Math.max(3, Math.min(14, Math.round(bots * 0.4))));
+  // Colonias: muchas presas fáciles repartidas por el mapa
+  game.addColonies(colonyCount(map.landCount, bots));
   game.start();
 
   state.game = game;
@@ -209,7 +209,7 @@ async function openSala(code, isHost) {
   if (!transport) return;
   leaveOnline();
   const settings = {
-    bots: Math.min(50, profile.ajustes.bots),
+    bots: Math.min(90, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
     rules: { ...DEFAULT_RULES, ...profile.ajustes.reglas },

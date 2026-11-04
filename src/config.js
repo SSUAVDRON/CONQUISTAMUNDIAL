@@ -36,11 +36,11 @@ export const CONFIG = {
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
-  wildTileCost: 2 / AREA, // tropas por casilla de tierra libre (llanura)
+  wildTileCost: 24 / AREA, // tropas por casilla de tierra libre (llanura): la expansión inicial va poco a poco
   playerTileBaseCost: 1 / AREA, // coste fijo por casilla enemiga
   defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
-  attackRateWild: 0.055 * RES, // casillas por tick por casilla de frente (tierra libre; el frente irregular es más largo)
+  attackRateWild: 0.03 * RES, // casillas por tick por casilla de frente (tierra libre; el frente irregular es más largo)
   attackRatePlayer: 0.04 * RES, // ídem contra jugadores (se escala con la superioridad)
   // Cuantas más tropas por casilla de frente, más rápido avanza (hasta ×3,5)
   attackSpeedMax: 3.5,
@@ -76,6 +76,8 @@ export const CONFIG = {
   colonyStrength: 0.45, // tropas máximas y crecimiento respecto a una nación
   colonyDefenseMult: 0.55, // conquistarlas cuesta menos
   colonySpawnRadius: 1.5 * RES,
+  colonyLandPer: 875 * AREA, // una colonia por cada tantas casillas de tierra…
+  colonyMax: 140, // …hasta este máximo
 
   // Edificios
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
@@ -185,6 +187,16 @@ export const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
 
 /** Mapas aleatorios (generados con la semilla). */
+/**
+ * Colonias de una partida: muchas, según la tierra del mapa (una cada
+ * CONFIG.colonyLandPer casillas, hasta CONFIG.colonyMax); con pocos rivales
+ * (p. ej. el tutorial), proporcionalmente menos.
+ */
+export function colonyCount(landCount, bots) {
+  const n = Math.round((landCount / CONFIG.colonyLandPer) * Math.min(1, bots / 20));
+  return Math.max(3, Math.min(CONFIG.colonyMax, n));
+}
+
 export const MAP_SIZES = {
   pequeno: { w: 360 * RES, h: 210 * RES, label: 'Pequeño' },
   mediano: { w: 520 * RES, h: 300 * RES, label: 'Mediano' },
