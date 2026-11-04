@@ -247,7 +247,7 @@ async function openSala(code, isHost) {
   if (!transport) return;
   leaveOnline();
   const settings = {
-    bots: Math.min(90, profile.ajustes.bots),
+    bots: Math.min(200, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
     rules: { ...DEFAULT_RULES, ...profile.ajustes.reglas },

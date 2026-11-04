@@ -11,7 +11,7 @@ Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 ## Pantallas
 
 El inicio tiene cuatro modos en tarjetas: **Partida rápida** (mundo
-real contra 45 países y un centenar de colonias, un clic), **Contra la IA** (galería de mapas con
+real contra 90 países y cientos de colonias, un clic), **Contra la IA** (galería de mapas con
 miniaturas y opciones), **Multijugador** y **Tutorial** (partida guiada paso a
 paso que avanza con lo que haces). Antes de cada partida hay una pantalla de
 carga con los pasos reales y un consejo.
@@ -124,7 +124,8 @@ base de datos.
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Velocidad de conquista | Cuantas más tropas mandas, más rápido avanzas: en tierra libre según las tropas por casilla de frente, contra una nación según tu superioridad sobre su densidad (hasta ×3,5). |
 | Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). |
-| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. Hay muchas: una por cada 875 casillas de tierra de la rejilla original, hasta 140 (unas 130 en el mundo); con menos de 20 rivales, proporcionalmente menos. |
+| Naciones | Hasta 200 rivales en cualquier mapa (partida rápida: 90). En los mapas reales primero salen los países de verdad, con su bandera y en su sitio (mundo 151, Europa 52, África 72, Asia 74, Sudamérica 20, Norteamérica 17); si pides más, el resto son naciones inventadas repartidas por el mapa. |
+| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. Hay muchísimas: una por cada 500 casillas de tierra de la rejilla original, hasta 300 (unas 225 en el mundo); con menos de 20 rivales, proporcionalmente menos. |
 | Saqueo | Cada casilla que conquistas a un país te da su parte de su oro (oro ÷ casillas). Cada 5 s un aviso resume lo saqueado (y lo que te saquean). |
 | Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; 300k de oro con inflación). Van solos y su zona **se elige al botarlos y ya no se cambia**: con la T, clic en el mar (sale del puerto propio más cercano que dé a ese mar y la vista previa muestra el círculo que patrullará) o en tu costa (patrulla junto al puerto). La zona se ve como un círculo discontinuo. A tiro disparan a buques enemigos, hunden transportes de tropas y **capturan** pesqueros y mercantes rivales (pasan a producir para ti); si un intruso entra en su zona, lo persiguen. No atacan puertos. |
 | Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. Todos los barcos van algo más despacio que al principio (transportes, buques, pesqueros y mercantes). Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |

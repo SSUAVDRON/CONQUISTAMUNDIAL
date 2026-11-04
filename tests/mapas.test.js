@@ -52,9 +52,16 @@ test('los bots de un mapa real son países y aparecen en su ubicación', () => {
   assert.ok(game.bots.some((b) => b.player.tiles > 200 * AREA));
 });
 
-test('pedir más bots que países se limita a los países disponibles', () => {
+test('pedir más bots que países añade naciones inventadas además de los países', () => {
   const { map, countries } = loadRealMap('norteamerica');
   const game = new Game({ map, seed: 1 });
   game.addBots(60, 'normal', countries);
-  assert.equal(game.bots.length, countries.length);
+  assert.equal(game.bots.length, 60);
+  const players = game.bots.map((b) => b.player);
+  // Primero todos los países reales (con bandera), luego las inventadas (sin bandera)
+  players.slice(0, countries.length).forEach((p, i) => assert.equal(p.name, countries[i].name));
+  assert.ok(players.slice(countries.length).every((p) => !p.flag && !countries.some((c) => c.name === p.name)));
+  assert.equal(new Set(players.map((p) => p.name)).size, 60, 'sin nombres repetidos');
+  game.start();
+  assert.ok(players.every((p) => p.spawned), 'todas aparecen en el mapa');
 });

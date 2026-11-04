@@ -130,6 +130,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Iconos de edificios a color y fáciles de reconocer; panel solo con icono y
   precio; estructuras más caras y potentes (antimisiles 3M, inflación 25 %);
   raíles y trenes de las fábricas, también hacia edificios enemigos
+- Muchas más naciones (hasta 200; partida rápida 90; más países reales en los
+  mapas y naciones inventadas si se piden más) y colonias (hasta 300)
 
 ## Próximo
 

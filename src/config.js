@@ -76,8 +76,8 @@ export const CONFIG = {
   colonyStrength: 0.45, // tropas máximas y crecimiento respecto a una nación
   colonyDefenseMult: 0.55, // conquistarlas cuesta menos
   colonySpawnRadius: 1.5 * RES,
-  colonyLandPer: 875 * AREA, // una colonia por cada tantas casillas de tierra…
-  colonyMax: 140, // …hasta este máximo
+  colonyLandPer: 500 * AREA, // una colonia por cada tantas casillas de tierra…
+  colonyMax: 300, // …hasta este máximo
 
   // Edificios
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios

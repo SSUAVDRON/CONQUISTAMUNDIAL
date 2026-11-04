@@ -33,6 +33,10 @@ const PLACES = [
   'Piedrahita', 'Villaverde', 'Riscal', 'Matorral', 'Salinas', 'Olmedo', 'Torrecilla', 'Valmayor', 'Cañaveral',
   'Hondonada', 'Mirasol', 'Lagunilla', 'Pedregal', 'Rocafría', 'Sotobosque', 'Peñasco', 'Puerto Viejo', 'San Telmo',
   'Monteclaro', 'Fuentefría', 'Navarredonda', 'Aguasvivas', 'Campoalto',
+  'Valdelobos', 'Robleda', 'Peñarroja', 'Valverde', 'Fresneda', 'Castrillo', 'Almenara', 'Vegaluz', 'Cerroblanco',
+  'Losares', 'Quintanar', 'Pozoseco', 'Arroyofrío', 'Villalba', 'Torreblanca', 'Hoyalta', 'Morales', 'Pinarejo',
+  'Sauceda', 'Valdemora', 'Llanoverde', 'Castañar', 'Rivera Baja', 'Campillo', 'Serranía', 'Navaluenga', 'Cantalobos',
+  'Villacierva', 'Robregordo', 'Albarrán', 'Majadahonda', 'Fuenterrubia', 'Valtierra', 'Montenegro', 'Escobar',
 ];
 
 /** Nombres de colonias: «Colonia de Valdeoro», «Aldea de Brezal»… */

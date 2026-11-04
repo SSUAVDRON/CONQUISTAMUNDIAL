@@ -25,11 +25,11 @@ const PLAINS = 1;
 const HIGHLAND = 2;
 const MOUNTAIN = 3;
 // Medidas pensadas para la rejilla original: RES las adapta a la resolución actual
-const MIN_COUNTRY_TILES = 40 * AREA;
+const MIN_COUNTRY_TILES = 10 * AREA;
 // Jugabilidad: nada de islas ni lagos de unas pocas casillas
 const MIN_ISLAND_TILES = 40 * AREA;
 const MAX_LAKE_TILES = 12 * AREA;
-const MAX_COUNTRIES = 90;
+const MAX_COUNTRIES = 200;
 
 // Alturas (m) que separan llanura, meseta y montaña
 const HIGHLAND_M = 700;

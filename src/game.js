@@ -109,13 +109,16 @@ export class Game {
    */
   addBots(count, difficulty = 'normal', countries = null) {
     const existing = this.players.filter(Boolean).map((p) => p.name);
-    const names = countries ? countries.slice(0, count).map((c) => c.name) : generateNames(this.rng, count, existing);
-    count = Math.min(count, names.length);
+    // En los mapas reales, primero los países (con su bandera y su sitio);
+    // si se piden más, el resto son naciones inventadas repartidas por el mapa
+    const real = countries ? countries.slice(0, count) : [];
+    const extra = generateNames(this.rng, Math.max(0, count - real.length), [...existing, ...real.map((c) => c.name)]);
     for (let i = 0; i < count; i++) {
-      const p = this.addPlayer(names[i], botColor(this.players.length, this.rng), false);
-      if (countries) {
-        p.homeTile = countries[i].tile;
-        p.flag = countries[i].iso || '';
+      const c = real[i];
+      const p = this.addPlayer(c ? c.name : extra[i - real.length], botColor(this.players.length, this.rng), false);
+      if (c) {
+        p.homeTile = c.tile;
+        p.flag = c.iso || '';
       }
       const brain = new BotBrain(this, p, difficulty);
       this.bots.push(brain);

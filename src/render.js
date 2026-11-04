@@ -230,7 +230,8 @@ export class Renderer {
    */
   _baseFor(z) {
     const S = this.baseScale;
-    const want = z * 1.5 < S / 4 ? 4 : z * 1.5 < S / 2 ? 2 : 1;
+    // A menos de ~0,7 píxeles por casilla la copia a la mitad se ve igual y pesa 4 veces menos
+    const want = z < S * 0.3 ? 4 : z < S * 0.7 ? 2 : 1;
     if (want === 1) return [this.baseCanvas, S];
     return [this._mip(want), S / want];
   }
@@ -293,6 +294,8 @@ export class Renderer {
     const watch = this.anim && this.camera.zoom * RES >= 1.2;
     const H = map.height;
     const glowFrom = this._glow.head;
+    // El brillo solo se ve con casillas de más de un píxel y dentro de la pantalla
+    const glowOn = this.anim && this.camera.zoom * this.dpr >= 1.2;
     for (let k = 0; k < dirty.length; k++) {
       const t = dirty[k];
       this._paintTile(t);
@@ -317,7 +320,7 @@ export class Renderer {
       prev[t] = o;
       const kind = was && o ? 0 : o ? 1 : 2;
       if (kind < 2) {
-        if (this.anim) this._pushGlow(t, o, now, kind);
+        if (glowOn && this._inView(x, y, 2)) this._pushGlow(t, o, now, kind);
       } else this._pushFlash(t, now, kind);
       if (watch && kind < 2 && this._inView(x, (t / W) | 0, 2)) (kind === 0 ? battles : wild).push(t);
     }
@@ -1397,7 +1400,7 @@ export class Renderer {
       let size = Math.min(radiusPx * 0.8, (radiusPx * 3) / len, 42);
       // Los aliados se nombran siempre (aunque sean pequeños), con el apretón de manos
       if (allied) size = Math.max(size, Math.min(13, camera.zoom * RES * 4));
-      if (size < 7) continue;
+      if (size < 8) continue;
       if (sx < -200 || sy < -100 || sx > camera.viewW + 200 || sy > camera.viewH + 100) continue;
       const traitor = this.game.isTraitor(p);
       const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
