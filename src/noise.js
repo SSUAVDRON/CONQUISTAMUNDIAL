@@ -50,3 +50,30 @@ export function fbm(noise, x, y, octaves, lacunarity = 2, gain = 0.5) {
   }
   return sum / norm;
 }
+
+// Sin estado (no hace falta crear un generador): lo usan el pintado del
+// terreno y la simulación (formas irregulares de expansión). Determinista.
+
+/** Hash entero de (x, y, semilla) → [0, 1). */
+export function hash2(x, y, s) {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 2147483647)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** Ruido de valor suave (no periódico) con celdas de `cell` casillas → [0, 1]. */
+export function valueNoise(x, y, cell, seed) {
+  const fx = x / cell;
+  const fy = y / cell;
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const tx = fx - x0;
+  const ty = fy - y0;
+  const sx = tx * tx * (3 - 2 * tx);
+  const sy = ty * ty * (3 - 2 * ty);
+  const a = hash2(x0, y0, seed);
+  const b = hash2(x0 + 1, y0, seed);
+  const c = hash2(x0, y0 + 1, seed);
+  const d = hash2(x0 + 1, y0 + 1, seed);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}

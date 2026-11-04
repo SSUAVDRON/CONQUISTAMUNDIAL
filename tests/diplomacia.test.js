@@ -28,6 +28,8 @@ function twoNeighbors(seed = 11) {
     for (let k = 0; k < 20; k++) game.tick();
   }
   assert.ok(game.hasLandBorder(a, b.id), 'A y B deberían ser vecinos');
+  // A deja de expandirse: si no, acabaría ganando la partida y el reloj se pararía
+  for (const atk of [...a.attacks.values()]) game._endAttack(atk);
   return { map, game, a, b };
 }
 

@@ -1,13 +1,13 @@
 // Dibujo en canvas. Capas, de abajo arriba:
-//   mar (con olas que se mueven) → tierra con relieve → territorios → destellos
-//   de las casillas recién conquistadas → sombras de nubes → cráteres →
+//   mar (con olas que se mueven) → tierra en colores planos → territorios → destellos
+//   de las casillas recién conquistadas → cráteres →
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
 import { CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
 import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFlag, emblemFor } from './icons.js';
-import { makeCloudTexture, makeWaveTexture, paintTerrain } from './terreno.js';
+import { makeWaveTexture, paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 
@@ -61,9 +61,7 @@ export class Renderer {
     this.waterCanvas = terrain.water;
     this.landCanvas = terrain.land;
     this.waveTex = makeWaveTexture();
-    this.cloudTex = makeCloudTexture();
     this._wavePat = null;
-    this._cloudPat = null;
     this._vignette = null;
 
     this.territoryCanvas = makeCanvas(width, height);
@@ -458,7 +456,6 @@ export class Renderer {
     ctx.drawImage(this.landCanvas, 0, 0, map.width, map.height);
     ctx.drawImage(this.territoryCanvas, 0, 0);
     this._drawFlashes(now);
-    this._drawClouds(now);
 
     ctx.setTransform(dpr, 0, 0, dpr, ox * dpr, oy * dpr);
     ctx.imageSmoothingEnabled = true;
@@ -512,24 +509,6 @@ export class Renderer {
       ctx.fillStyle = pat;
       ctx.fillRect(v.x0 - 1, v.y0 - 1, v.x1 - v.x0 + 2, v.y1 - v.y0 + 2);
     }
-    ctx.globalAlpha = 1;
-  }
-
-  /** Sombras de nubes que pasan despacio (se apagan al acercarse mucho). */
-  _drawClouds(now) {
-    const { ctx, camera } = this;
-    const a = 0.2 * (1 - smooth(5, 10, camera.zoom * RES));
-    if (a <= 0.01 || typeof DOMMatrix === 'undefined') return;
-    if (!this._cloudPat) this._cloudPat = ctx.createPattern(this.cloudTex, 'repeat');
-    if (!this._cloudPat || !this._cloudPat.setTransform) return;
-    const k = 0.75 * RES;
-    const period = 256 * k;
-    const t = this.anim ? now / 1000 : 0;
-    this._cloudPat.setTransform(new DOMMatrix([k, 0, 0, k, (t * 1.6 * RES) % period, (t * 0.5 * RES) % period]));
-    const v = this.view;
-    ctx.globalAlpha = a;
-    ctx.fillStyle = this._cloudPat;
-    ctx.fillRect(v.x0 - 1, v.y0 - 1, v.x1 - v.x0 + 2, v.y1 - v.y0 + 2);
     ctx.globalAlpha = 1;
   }
 

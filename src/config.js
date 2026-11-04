@@ -19,7 +19,8 @@ export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
   spawnTicks: 100, // 10 s
-  spawnRadius: 4 * RES,
+  spawnRadius: 2.6 * RES, // radio medio de la zona inicial (pequeña e irregular)
+  spawnJag: 0.4, // el radio varía ±40 % según la dirección
   startTroops: 1500,
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
 
@@ -39,12 +40,22 @@ export const CONFIG = {
   playerTileBaseCost: 1 / AREA, // coste fijo por casilla enemiga
   defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
-  attackRateWild: 0.1 * RES, // casillas por tick por casilla de frente (tierra libre)
+  attackRateWild: 0.055 * RES, // casillas por tick por casilla de frente (tierra libre; el frente irregular es más largo)
   attackRatePlayer: 0.04 * RES, // ídem contra jugadores (se escala con la superioridad)
   // Cuantas más tropas por casilla de frente, más rápido avanza (hasta ×3,5)
   attackSpeedMax: 3.5,
   wildTroopsRef: 10, // tropas por casilla de frente a partir de las que la expansión acelera
   minAttackBudget: 0.25 * RES,
+  // Forma de la expansión (solo cambia el orden, no la velocidad): retraso en
+  // «pasos» de cada casilla del frente. Lóbulos de ruido, terreno difícil y
+  // azar hacen que los países crezcan irregulares y no como círculos.
+  growCell: 7 * RES, // tamaño de los lóbulos
+  growNoise: 16, // retraso máximo por lóbulos grandes
+  growNoiseFine: 6, // y por los pequeños
+  growRandom: 6, // azar por casilla
+  growTerrain: 10, // por cada punto de coste de terreno por encima de la llanura
+  growSmooth: 1, // prioridad a las casillas ya rodeadas (rellena huecos)
+  growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
   // Barcos de transporte
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
@@ -64,7 +75,7 @@ export const CONFIG = {
   // Colonias: bots débiles que no son naciones (presa fácil con oro que saquear)
   colonyStrength: 0.45, // tropas máximas y crecimiento respecto a una nación
   colonyDefenseMult: 0.55, // conquistarlas cuesta menos
-  colonySpawnRadius: 2 * RES,
+  colonySpawnRadius: 1.5 * RES,
 
   // Edificios
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios

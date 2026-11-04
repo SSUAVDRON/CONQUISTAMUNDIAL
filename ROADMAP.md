@@ -114,6 +114,9 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Antimisiles con recarga de 20 s visible (anillo con segundos) e
   interceptación con estela y rótulo «¡DERRIBADO!»; resumen del panel más
   compacto con el máximo de tropas grande
+- Mapa de colores planos (montañas gris claro, sin sombras de nubes ni
+  contornos oscuros); salida pequeña e irregular; expansión con formas
+  irregulares (lóbulos de ruido, terreno y azar)
 
 ## Próximo
 

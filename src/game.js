@@ -9,6 +9,7 @@ import { Attack } from './attack.js';
 import { BotBrain, ColonyBrain } from './bot.js';
 import { generateColonyNames, generateNames } from './names.js';
 import { botColor } from './colors.js';
+import { valueNoise } from './noise.js';
 
 // Buffers de vecinos, uno por función para evitar reentradas
 const NB_SET = new Int32Array(4);
@@ -32,6 +33,7 @@ export class Game {
   constructor({ map, seed = 1, rules = null }) {
     this.map = map;
     this.rules = cleanRules(rules);
+    this.seed = seed >>> 0;
     this.rng = new Rng((seed ^ 0x5bd1e995) >>> 0);
     this.owner = new Uint16Array(map.size); // 0 = nadie
     this.players = [null]; // el índice coincide con el id; 0 está reservado
@@ -208,12 +210,28 @@ export class Game {
     if (map.landBodySizes[body] < minBody) return false;
     if (p.spawned) this._releaseAll(p);
 
+    // Zona inicial pequeña e irregular: el radio cambia según la dirección
+    // (ruido sobre la circunferencia, sin trigonometría para que sea igual en
+    // todos los navegadores). La forma es estrellada, así que siempre es conexa.
     const r = p.weak ? CONFIG.colonySpawnRadius : CONFIG.spawnRadius;
+    const jag = CONFIG.spawnJag;
+    const R = Math.ceil(r * (1 + jag) + 1);
+    const s = (p.id * 7919 + this.seed) | 0;
     const cx = map.x(tile);
     const cy = map.y(tile);
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (dx * dx + dy * dy > r * r + 1) continue;
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dx = -R; dx <= R; dx++) {
+        const d2 = dx * dx + dy * dy;
+        if (d2 > R * R) continue;
+        if (d2 > 2) {
+          const d = Math.sqrt(d2);
+          const ux = dx / d + 2;
+          const uy = dy / d + 2;
+          const n = valueNoise(ux * 1.3, uy * 1.3, 1, s) * 2 - 1;
+          const f = valueNoise(ux * 3.5, uy * 3.5, 1, s + 1) * 2 - 1;
+          const rr = r * (1 + jag * n + 0.12 * f);
+          if (d2 > rr * rr + 1) continue;
+        }
         const x = cx + dx;
         const y = cy + dy;
         if (!map.inBounds(x, y)) continue;
@@ -496,9 +514,18 @@ export class Game {
   _addCandidate(atk, t) {
     if (atk.inFrontier.has(t)) return;
     atk.inFrontier.add(t);
-    // Primero las casillas más rodeadas por el atacante: frontera más suave
+    // Orden de conquista: primero las casillas más rodeadas (frontera sin
+    // huecos), después según lóbulos de ruido propios de cada nación, terreno
+    // difícil y algo de azar → crecimiento irregular, no en círculos
+    const map = this.map;
     const n = this._countOwnedNeighbors(t, atk.attacker.id);
-    const key = atk.step + this.rng.float() * 2.5 - n * 1.25;
+    const x = t % map.width;
+    const y = (t / map.width) | 0;
+    const s = (atk.attacker.id * 7919 + this.seed) | 0;
+    const lobes = valueNoise(x, y, CONFIG.growCell, s) * CONFIG.growNoise + valueNoise(x, y, CONFIG.growCell / 3, s + 1) * CONFIG.growNoiseFine;
+    const terr = (CONFIG.terrainCost[map.terrain[t]] - 1) * CONFIG.growTerrain;
+    const k = atk.targetId ? CONFIG.growPlayerMult : 1;
+    const key = atk.step + (this.rng.float() * CONFIG.growRandom + lobes + terr) * k - n * CONFIG.growSmooth;
     atk.heap.push(key, t);
   }
 
