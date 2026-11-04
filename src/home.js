@@ -5,7 +5,7 @@ import { REAL_MAP_DATA } from './mapas-reales.js';
 import { generateMap } from './map.js';
 import { hexToRgb } from './colors.js';
 import { PATTERN_FNS, drawEmblem } from './icons.js';
-import { formatPercent, formatTime } from './format.js';
+import { formatNumber, formatPercent, formatTime } from './format.js';
 import {
   ACHIEVEMENTS, PATTERNS, SHAPES, SYMBOLS, TITLES,
   hasAchievement, isUnlocked, levelInfo, rewardsOf, titleName, unlockText,
@@ -95,7 +95,7 @@ function segmented(box, options, current, onChange) {
 export function rulesSummary(r) {
   if (!r) return '';
   const parts = [`victoria al ${Math.round(r.winShare * 100)} %`];
-  if (r.startGold) parts.push(`${r.startGold / 1000}k de oro inicial`);
+  if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (!r.missiles) parts.push('sin misiles');
   if (!r.warships) parts.push('sin buques');
   return parts.join(' · ');
@@ -164,7 +164,7 @@ export class Home {
     segmented($('seg-victoria'), WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`]), this.choice.rules.winShare, (v) => {
       this.choice.rules.winShare = v;
     });
-    segmented($('seg-oro'), START_GOLDS.map((v) => [v, v ? `${v / 1000}k` : 'Nada']), this.choice.rules.startGold, (v) => {
+    segmented($('seg-oro'), START_GOLDS.map((v) => [v, v ? formatNumber(v) : 'Nada']), this.choice.rules.startGold, (v) => {
       this.choice.rules.startGold = v;
     });
     $('in-misiles').checked = this.choice.rules.missiles;

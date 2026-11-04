@@ -488,7 +488,8 @@ export class UI {
     const list = $('frentes');
     const now = performance.now();
     const cards = [];
-    const side = (p, fallback) => (p ? { name: p.name, flag: p.flag, color: p.color } : { name: fallback, flag: '', color: null });
+    const side = (p, fallback) =>
+      p ? { name: p === human ? 'Tú' : p.name, flag: p.flag, color: p.color } : { name: fallback, flag: '', color: null };
     for (const atk of game.attacks) {
       if (atk.done || atk.troops < 1) continue;
       const mine = atk.attacker === human;
@@ -504,6 +505,9 @@ export class UI {
         a: atk.troops,
         d: target ? target.troops : null,
         middle: target ? 'VS' : 'Expansión',
+        captions: incoming
+          ? ['te ataca con', 'tus tropas']
+          : target ? ['atacas con', 'sus tropas'] : ['expandes con', ''],
         retreat: mine ? atk.targetId : null,
       });
     }
@@ -521,6 +525,9 @@ export class UI {
         a: b.troops,
         d: target ? target.troops : null,
         middle: 'Desembarco',
+        captions: incoming
+          ? ['desembarca con', 'tus tropas']
+          : target ? ['desembarcas con', 'sus tropas'] : ['desembarcas con', ''],
       });
     }
     for (const m of game.missiles) {
@@ -539,6 +546,7 @@ export class UI {
         dText: `${Math.max(0, Math.ceil(((1 - m.progress) * m.dist) / CONFIG.missileSpeed / (1000 / TICK_MS)))} s`,
         progress: m.progress,
         middle: 'Impacto',
+        captions: [incoming ? 'misil enemigo' : 'tu misil', 'impacta en'],
       });
     }
     cards.sort((x, y) => Number(y.incoming) - Number(x.incoming));
@@ -639,17 +647,24 @@ export class UI {
     const dEl = document.createElement('strong');
     dEl.className = 'f-d';
     mid.append(aEl, vs, dEl);
-    // Barra de fuerzas en dos colores: atacante frente a defensor
+    // Qué es cada cifra («te ataca con» / «tus tropas»…)
+    const legend = document.createElement('div');
+    legend.className = 'f-fila f-leyenda';
+    for (const text of c.captions || ['', '']) {
+      const s = document.createElement('span');
+      s.textContent = text;
+      legend.append(s);
+    }
+    // Barra de fuerzas: atacante (rojo si te atacan, verde si atacas) frente a defensor
     const bar = document.createElement('div');
     bar.className = 'f-barra';
     const barA = document.createElement('span');
     barA.className = 'f-barra-a';
-    barA.style.background = c.left.color ? rgbToCss(c.left.color) : '';
     const barD = document.createElement('span');
     barD.className = 'f-barra-d';
-    barD.style.background = c.right.color ? rgbToCss(c.right.color) : 'rgba(255,255,255,0.18)';
     bar.append(barA, barD);
-    li.append(top, mid, bar);
+    li.append(top, mid, legend, bar);
+    li.setAttribute('aria-label', c.incoming ? `Te atacan: ${c.left.name}` : `Atacas: ${c.right.name}`);
     if (c.retreat !== null && c.retreat !== undefined) {
       const btn = document.createElement('button');
       btn.type = 'button';

@@ -34,7 +34,7 @@ const STEPS = [
     text: 'Construye una ciudad: pulsa Q (o el botón Ciudad) y haz clic dentro de tu territorio. Te damos el oro.',
     highlight: '#construir [data-kind="city"]',
     enter: (s) => {
-      s.human.gold = Math.max(s.human.gold, 6000);
+      s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'city'));
     },
     check: (s) => s.human.buildings.city >= 1,
   },
@@ -50,7 +50,7 @@ const STEPS = [
     text: 'Construye un puerto en tu costa con la tecla E. Sus pesqueros y mercantes te darán oro solos. Si no tienes costa, salta este paso.',
     highlight: '#construir [data-kind="port"]',
     enter: (s) => {
-      s.human.gold = Math.max(s.human.gold, 5000);
+      s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'port'));
     },
     check: (s) => s.human.buildings.port >= 1,
   },

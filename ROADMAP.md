@@ -79,11 +79,16 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Pesqueros y mercantes automáticos; los buques capturan los rivales
 - Barcos más lentos; borde rojo al ser atacado
 
+## ✅ Tarjetas de combate en rojo/verde y precios nuevos (hecho)
+
+- Tarjetas VS rojas si te atacan y verdes si atacas, con leyenda bajo cada cifra
+- Edificios mucho más caros (ciudad 125k, antimisiles 1,5M, silo 1M, misil 500k)
+  con el oro ×25 para mantener el ritmo; silos, misiles y antimisiles quedan
+  relativamente más caros que antes
+
 ## Próximo
 
 - Sonido y música propios
-- Elegir jugar como un país concreto en los mapas reales
-
 - Misiles de distintos tamaños o con efectos duraderos (zona inhabitable un tiempo)
 - Más mapas reales: Oceanía, Oriente Medio, el Mediterráneo, un continente a
   más resolución (basta con añadir regiones en `herramientas/mapas.js`)

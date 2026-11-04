@@ -80,7 +80,7 @@ export const ACHIEVEMENTS = [
   { id: 'medio_mundo', icon: '🗺️', name: 'Medio mundo', desc: 'Controla el 50 % de la tierra', check: (r) => r.maxShare >= 0.5 },
   { id: 'en_compania', icon: '👥', name: 'En compañía', desc: 'Juega una partida online', check: (r) => r.online },
   { id: 'veterano', icon: '🎖️', name: 'Veterano', desc: 'Juega 10 partidas', check: (r, p) => p.stats.partidas >= 10 },
-  { id: 'tesoro', icon: '💰', name: 'Tesoro real', desc: 'Reúne 100.000 de oro', check: (r) => r.maxGold >= 100000 },
+  { id: 'tesoro', icon: '💰', name: 'Tesoro real', desc: 'Reúne 2,5 millones de oro', check: (r) => r.maxGold >= 2500000 },
   { id: 'recluta', icon: '🎓', name: 'Recluta', desc: 'Completa el tutorial', check: () => false },
   { id: 'industrial', icon: '🏭', name: 'Revolución industrial', desc: 'Ten 5 fábricas a la vez', check: (r) => (r.maxFactories || 0) >= 5 },
   { id: 'lluvia_fuego', icon: '🚀', name: 'Lluvia de fuego', desc: 'Lanza 5 misiles en una partida', check: (r) => (r.missiles || 0) >= 5 },

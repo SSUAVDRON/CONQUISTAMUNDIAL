@@ -28,7 +28,7 @@ test('los niveles crecen con la experiencia', () => {
 
 test('una partida da experiencia, estadísticas, historial y logros', () => {
   const p = defaultProfile();
-  const out = recordGame(p, result({ won: true, seconds: 500, kills: 6, built: 12, maxShare: 0.72, maxGold: 120000 }));
+  const out = recordGame(p, result({ won: true, seconds: 500, kills: 6, built: 12, maxShare: 0.72, maxGold: 3000000 }));
   assert.ok(out.xp > 150);
   assert.equal(p.stats.partidas, 1);
   assert.equal(p.stats.victorias, 1);

@@ -660,10 +660,10 @@ export class Renderer {
       const w = ctx.measureText(text).width + 14;
       ctx.beginPath();
       ctx.roundRect(x - w / 2, y - 10, w, 20, 10);
-      ctx.fillStyle = incoming ? 'rgba(190, 40, 40, 0.92)' : 'rgba(12, 18, 30, 0.88)';
+      ctx.fillStyle = incoming ? 'rgba(190, 40, 40, 0.92)' : 'rgba(24, 140, 78, 0.92)';
       ctx.fill();
       ctx.lineWidth = 1.5;
-      ctx.strokeStyle = incoming ? '#ffb3b3' : rgbToCss(human.color);
+      ctx.strokeStyle = incoming ? '#ffb3b3' : '#a8f5c6';
       ctx.stroke();
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y + 0.5);
