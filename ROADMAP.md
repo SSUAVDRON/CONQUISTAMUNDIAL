@@ -122,6 +122,9 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Muchas más colonias (según la tierra del mapa, hasta 140) y más rivales
   (partida rápida con 45, hasta 90); expansión inicial gradual (la tierra
   libre cuesta más tropas y se avanza más despacio)
+- Fluidez: una sola imagen de mapa recortada a la vista, subida del
+  territorio por bloques visibles, brillo de conquista en el territorio,
+  resolución adaptable y clasificación más tranquila
 
 ## Próximo
 

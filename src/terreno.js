@@ -4,8 +4,7 @@
 // - la tierra en colores planos de mapa (2D) según su tipo y su clima:
 //   praderas, selva, sabana, desiertos, tundra, mesetas y montañas gris claro
 //   con cumbres nevadas, en zonas planas con bordes tramados y playa;
-// - una textura que se repite para las olas, que el renderizador mueve en
-//   cada frame.
+// Mar y tierra se juntan en una sola imagen opaca (barata de dibujar).
 // Todo esto es solo visual: no afecta a la simulación.
 import { RES, TERRAIN } from './config.js';
 import { hash2, valueNoise } from './noise.js';
@@ -23,18 +22,6 @@ function makeCanvas(w, h) {
   c.width = w;
   c.height = h;
   return c;
-}
-
-/** Generador pseudoaleatorio pequeño (solo para texturas). */
-function rand32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 /** Desenfoque de caja (radio r) en el sitio, por filas y luego por columnas. */
@@ -350,30 +337,12 @@ function paintTerrainNow(map) {
     }
   }
   wctx.putImageData(wimg, 0, 0);
-  return { water, land, scale: S };
-}
-
-/** Textura de olas (se repite): crestas cortas y claras. */
-export function makeWaveTexture(size = 256) {
-  const c = makeCanvas(size, size);
-  const ctx = c.getContext('2d');
-  const rnd = rand32(4242);
-  ctx.lineCap = 'round';
-  for (let k = 0; k < 150; k++) {
-    const x = rnd() * size;
-    const y = rnd() * size;
-    const len = 6 + rnd() * 14;
-    const a = 0.07 + rnd() * 0.16;
-    ctx.strokeStyle = `rgba(220, 240, 255, ${a})`;
-    ctx.lineWidth = 1 + rnd() * 1.2;
-    for (const ox of [-size, 0, size]) {
-      for (const oy of [-size, 0, size]) {
-        ctx.beginPath();
-        ctx.moveTo(x + ox - len / 2, y + oy);
-        ctx.quadraticCurveTo(x + ox, y + oy - len * 0.22, x + ox + len / 2, y + oy);
-        ctx.stroke();
-      }
-    }
-  }
-  return c;
+  // Mar y tierra en una sola imagen opaca: en cada fotograma se dibuja una
+  // vez (y solo la parte visible), en lugar de dos capas con transparencia
+  const base = makeCanvas(W * S, H * S);
+  const bctx = base.getContext('2d');
+  bctx.imageSmoothingEnabled = false;
+  bctx.drawImage(water, 0, 0, W * S, H * S);
+  bctx.drawImage(land, 0, 0);
+  return { base, scale: S };
 }

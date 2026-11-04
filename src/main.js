@@ -47,8 +47,46 @@ const state = {
   recorded: false,
 };
 
+/**
+ * Resolución adaptable del lienzo: en pantallas de alta densidad se dibuja a
+ * menos píxeles si el equipo no llega a ~40 fps (y se vuelve a subir si va
+ * sobrado). Los paneles (HTML) siguen nítidos; solo cambia el mapa.
+ */
+const quality = { level: 0, slowMs: 0, fastMs: 0, ema: 16.7, drops: 0 };
+function dprSteps() {
+  const native = Math.min(2, window.devicePixelRatio || 1);
+  return [...new Set([native, 1.5, 1.25, 1].filter((d) => d <= native))];
+}
+function currentDpr() {
+  const steps = dprSteps();
+  return steps[Math.min(quality.level, steps.length - 1)];
+}
+function adaptQuality(dt) {
+  if (dt > 200 || state.demo || !state.game) return; // pestaña oculta o menú
+  quality.ema += (dt - quality.ema) * 0.05;
+  const steps = dprSteps();
+  if (quality.ema > 25 && quality.level < steps.length - 1) {
+    quality.slowMs += dt;
+    if (quality.slowMs > 2500) {
+      quality.level++;
+      quality.drops++;
+      quality.slowMs = quality.fastMs = 0;
+      resize();
+    }
+  } else quality.slowMs = 0;
+  // Subir otra vez solo si va muy holgado un buen rato (y no tras dos bajadas)
+  if (quality.ema < 17.5 && quality.level > 0 && quality.drops < 2) {
+    quality.fastMs += dt;
+    if (quality.fastMs > 20000) {
+      quality.level--;
+      quality.fastMs = 0;
+      resize();
+    }
+  } else quality.fastMs = 0;
+}
+
 function resize() {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = currentDpr();
   canvas.width = Math.round(window.innerWidth * dpr);
   canvas.height = Math.round(window.innerHeight * dpr);
   camera.setView(window.innerWidth, window.innerHeight);
@@ -641,6 +679,8 @@ function frame(now) {
   const dt = Math.min(250, now - state.last);
   state.last = now;
   const game = state.game;
+  adaptQuality(now - (state.lastRaw || now));
+  state.lastRaw = now;
 
   if (game && game.phase !== 'ended') {
     if (state.net) {
@@ -648,12 +688,14 @@ function frame(now) {
     } else if (state.speed > 0) {
       state.acc += dt * state.speed;
       let steps = 0;
-      while (state.acc >= TICK_MS && steps < 8) {
+      // Como mucho 3 turnos por fotograma: si el equipo va justo, la partida
+      // va un pelín más lenta en vez de dar tirones intentando recuperar
+      while (state.acc >= TICK_MS && steps < 3) {
         game.tick();
         state.acc -= TICK_MS;
         steps++;
       }
-      if (steps === 8) state.acc = 0; // no intentamos recuperar si el equipo va justo
+      if (steps === 3) state.acc = Math.min(state.acc, TICK_MS);
     }
   }
   // En la demo, al terminar una partida empieza otra

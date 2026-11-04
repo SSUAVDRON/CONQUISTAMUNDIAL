@@ -1,5 +1,5 @@
 // Dibujo en canvas. Capas, de abajo arriba:
-//   mar (con olas que se mueven) → tierra en colores planos → territorios → destellos
+//   mapa (mar + tierra, una sola imagen) → territorios → destellos
 //   de las casillas recién conquistadas → cráteres →
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
@@ -7,7 +7,7 @@ import { CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
 import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFlag, emblemFor } from './icons.js';
-import { makeWaveTexture, paintTerrain } from './terreno.js';
+import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 
@@ -15,6 +15,17 @@ const FILL_ALPHA = 128;
 const INNER_ALPHA = 185;
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
+const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
+const CHUNK = 128; // lado de los bloques del territorio que se suben a la gráfica
+// Brillo de las casillas recién conquistadas, pintado en el propio territorio:
+// fuerte al conquistar, a medias a los GLOW_MID ms y normal a los GLOW_END ms
+const GLOW_N = 32768;
+const GLOW_MID = [140, 110]; // combate, tierra libre
+const GLOW_END = [420, 300];
+const GLOW_MIX = [
+  [[255, 232, 170, 0.7], [255, 214, 150, 0.32]], // combate: brasa
+  [[255, 255, 255, 0.5], [255, 255, 255, 0.22]], // tierra libre: luz
+];
 const FLASH_LIFE = [700, 450, 1400]; // combate, tierra libre, arrasada (ms)
 const FLASH_COLORS = [
   ['rgba(255, 240, 190, 0.9)', 'rgba(255, 160, 70, 0.6)', 'rgba(210, 70, 30, 0.32)'],
@@ -58,10 +69,8 @@ export class Renderer {
     const { width, height, size } = game.map;
 
     const terrain = paintTerrain(game.map);
-    this.waterCanvas = terrain.water;
-    this.landCanvas = terrain.land;
-    this.waveTex = makeWaveTexture();
-    this._wavePat = null;
+    this.baseCanvas = terrain.base; // mar + tierra, opaco
+    this.baseScale = terrain.scale;
     this._vignette = null;
 
     this.territoryCanvas = makeCanvas(width, height);
@@ -73,10 +82,17 @@ export class Renderer {
     game.trackDirty = true;
     game.dirty.length = 0;
     this.prevOwner = Uint16Array.from(game.owner);
+    // Subida a la tarjeta gráfica por bloques: solo los que cambiaron
+    this._cw = Math.ceil(width / CHUNK);
+    this._chunkDirty = new Uint8Array(this._cw * Math.ceil(height / CHUNK));
+    this._chunkList = [];
+    this._allySig = this._allySignature();
     this._paintAllTerritory();
 
     // Destellos de casillas que cambian de dueño (cola circular)
     this._flash = { t: new Int32Array(FLASH_N), at: new Float64Array(FLASH_N), k: new Uint8Array(FLASH_N), head: 0, n: 0 };
+    // Cola de brillos (en orden de tiempo): `mid` y `end` son los siguientes por atenuar y por apagar
+    this._glow = { t: new Int32Array(GLOW_N), o: new Uint16Array(GLOW_N), at: new Float64Array(GLOW_N), k: new Uint8Array(GLOW_N), head: 0, mid: 0, end: 0 };
     this._buckets = Array.from({ length: 9 }, () => []);
     this._battleTmp = [];
     this._wildTmp = [];
@@ -124,6 +140,7 @@ export class Renderer {
     this.border = new Uint32Array(n);
     this.patterns = new Array(n).fill(null);
     this.allied = new Uint8Array(n);
+    this.glowCol = GLOW_MIX.map(() => [new Uint32Array(n), new Uint32Array(n)]);
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
@@ -142,6 +159,9 @@ export class Renderer {
       // Frontera blanca para el humano y verde para sus aliados
       const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(p.color, 0.55);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
+      GLOW_MIX.forEach((stages, kind) => stages.forEach(([gr, gg, gb, m], st) => {
+        this.glowCol[kind][st][p.id] = pack(Math.round(lerp(r, gr, m)), Math.round(lerp(g, gg, m)), Math.round(lerp(b, gb, m)), 235);
+      }));
     }
   }
 
@@ -172,6 +192,49 @@ export class Renderer {
     this.pixels[i] = pattern && pattern(x, y) ? this.alt[o] : this.fill[o];
   }
 
+  /**
+   * Imagen del mapa (mar + tierra) adecuada para `z` píxeles por casilla: la
+   * original o una copia a 1/2 o 1/4, hecha la primera vez que hace falta.
+   * Devuelve [imagen, píxeles de la imagen por casilla].
+   */
+  _baseFor(z) {
+    const S = this.baseScale;
+    const want = z * 1.5 < S / 4 ? 4 : z * 1.5 < S / 2 ? 2 : 1;
+    if (want === 1) return [this.baseCanvas, S];
+    return [this._mip(want), S / want];
+  }
+
+  /** Copia del mapa a 1/`f` (f = 2 o 4; la de 1/4 sale de la de 1/2). */
+  _mip(f) {
+    this._mips ??= {};
+    let m = this._mips[f];
+    if (!m) {
+      const src = f === 4 ? this._mip(2) : this.baseCanvas;
+      m = makeCanvas(Math.max(1, Math.round(src.width / 2)), Math.max(1, Math.round(src.height / 2)));
+      const c = m.getContext('2d');
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = 'high';
+      c.drawImage(src, 0, 0, m.width, m.height);
+      this._mips[f] = m;
+    }
+    return m;
+  }
+
+  /** Aliados del humano en una cadena: si no cambia, el territorio tampoco. */
+  _allySignature() {
+    const h = this.game.human;
+    return h ? [...h.allies].sort((a, b) => a - b).join(',') : '';
+  }
+
+  /** Marca el bloque de la casilla (x, y) para subirlo en este fotograma. */
+  _markChunk(x, y) {
+    const c = ((y / CHUNK) | 0) * this._cw + ((x / CHUNK) | 0);
+    if (!this._chunkDirty[c]) {
+      this._chunkDirty[c] = 1;
+      this._chunkList.push(c);
+    }
+  }
+
   _paintAllTerritory() {
     for (let i = 0; i < this.pixels.length; i++) this._paintTile(i);
     this.tctx.putImageData(this.image, 0, 0);
@@ -197,20 +260,22 @@ export class Renderer {
     battles.length = 0;
     wild.length = 0;
     const watch = this.anim && this.camera.zoom * RES >= 1.2;
-    let x0 = W;
-    let y0 = map.height;
-    let x1 = -1;
-    let y1 = -1;
+    const H = map.height;
+    const glowFrom = this._glow.head;
     for (let k = 0; k < dirty.length; k++) {
       const t = dirty[k];
       this._paintTile(t);
       // Los vecinos pueden pasar a ser (o dejar de ser) la franja interior
       const x = t % W;
       const y = (t / W) | 0;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
+      this._markChunk(x, y);
+      // Una casilla en el borde de un bloque toca también el de al lado
+      const cx = x % CHUNK;
+      const cy = y % CHUNK;
+      if (cx === 0 && x > 0) this._markChunk(x - 1, y);
+      else if (cx === CHUNK - 1 && x < W - 1) this._markChunk(x + 1, y);
+      if (cy === 0 && y > 0) this._markChunk(x, y - 1);
+      else if (cy === CHUNK - 1 && y < H - 1) this._markChunk(x, y + 1);
       if (x > 0) this._paintTile(t - 1);
       if (x < W - 1) this._paintTile(t + 1);
       if (t >= W) this._paintTile(t - W);
@@ -220,16 +285,18 @@ export class Renderer {
       if (o === was) continue;
       prev[t] = o;
       const kind = was && o ? 0 : o ? 1 : 2;
-      this._pushFlash(t, now, kind);
+      if (kind < 2) {
+        if (this.anim) this._pushGlow(t, o, now, kind);
+      } else this._pushFlash(t, now, kind);
       if (watch && kind < 2 && this._inView(x, (t / W) | 0, 2)) (kind === 0 ? battles : wild).push(t);
     }
     dirty.length = 0;
-    // Solo se sube a la tarjeta gráfica el rectángulo que ha cambiado (± 1 casilla)
-    x0 = Math.max(0, x0 - 1);
-    y0 = Math.max(0, y0 - 1);
-    x1 = Math.min(W - 1, x1 + 1);
-    y1 = Math.min(map.height - 1, y1 + 1);
-    this.tctx.putImageData(this.image, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+    // El brillo se pinta al final: así no lo pisa el repintado de los vecinos
+    const g = this._glow;
+    for (let j = glowFrom; j !== g.head; j = (j + 1) % GLOW_N) {
+      const t = g.t[j];
+      if (owner[t] === g.o[j]) this.pixels[t] = this.glowCol[g.k[j]][0][g.o[j]];
+    }
     if (!watch) return;
     // Solo una muestra: suficiente para que el frente «hierva» sin saturar
     const fx = this.fx;
@@ -245,6 +312,64 @@ export class Renderer {
     }
   }
 
+  /** Añade una casilla a la cola de brillos (si está llena, apaga antes la más vieja). */
+  _pushGlow(t, o, now, kind) {
+    const g = this._glow;
+    const next = (g.head + 1) % GLOW_N;
+    if (next === g.end) this._glowStep(g.end, 2);
+    g.t[g.head] = t;
+    g.o[g.head] = o;
+    g.at[g.head] = now;
+    g.k[g.head] = kind;
+    g.head = next;
+  }
+
+  /** Pasa una casilla de la cola al brillo a medias (stage 1) o a su color normal (2). */
+  _glowStep(j, stage) {
+    const g = this._glow;
+    const t = g.t[j];
+    if (this.game.owner[t] === g.o[j]) {
+      if (stage === 1) this.pixels[t] = this.glowCol[g.k[j]][1][g.o[j]];
+      else this._paintTile(t);
+      const W = this.game.map.width;
+      this._markChunk(t % W, (t / W) | 0);
+    }
+    const after = (j + 1) % GLOW_N;
+    if (stage === 1) g.mid = after;
+    else {
+      if (g.mid === j) g.mid = after; // apagada antes de atenuarse (cola llena)
+      g.end = after;
+    }
+  }
+
+  /** Atenúa y apaga los brillos que tocan; luego sube los bloques cambiados. */
+  _updateGlowsAndUpload(now) {
+    const g = this._glow;
+    while (g.mid !== g.head && now - g.at[g.mid] >= GLOW_MID[g.k[g.mid]]) this._glowStep(g.mid, 1);
+    while (g.end !== g.mid && now - g.at[g.end] >= GLOW_END[g.k[g.end]]) this._glowStep(g.end, 2);
+    if (!this._chunkList.length) return;
+    // Solo se suben a la tarjeta gráfica los bloques que cambiaron (con países
+    // creciendo por todo el mapa, un único rectángulo acababa siendo el mapa entero)
+    // Los que están fuera de la pantalla esperan a verse
+    const W = this.game.map.width;
+    const H = this.game.map.height;
+    const v = this.view;
+    const list = this._chunkList;
+    let keep = 0;
+    for (let k = 0; k < list.length; k++) {
+      const c = list[k];
+      const bx = (c % this._cw) * CHUNK;
+      const by = ((c / this._cw) | 0) * CHUNK;
+      if (bx > v.x1 + 2 || by > v.y1 + 2 || bx + CHUNK < v.x0 - 2 || by + CHUNK < v.y0 - 2) {
+        list[keep++] = c;
+        continue;
+      }
+      this._chunkDirty[c] = 0;
+      this.tctx.putImageData(this.image, 0, 0, bx, by, Math.min(CHUNK, W - bx), Math.min(CHUNK, H - by));
+    }
+    list.length = keep;
+  }
+
   _pushFlash(t, now, kind) {
     const f = this._flash;
     f.t[f.head] = t;
@@ -258,12 +383,15 @@ export class Renderer {
   _drawFlashes(now) {
     const f = this._flash;
     if (!f.n) return;
+    // Con el mapa muy alejado una casilla mide menos de un píxel: no se verían
+    if (this.camera.zoom * this.dpr < 1) return;
     const W = this.game.map.width;
     const buckets = this._buckets;
     for (const b of buckets) b.length = 0;
     const maxLife = Math.max(...FLASH_LIFE);
     let any = false;
-    for (let j = 0; j < f.n; j++) {
+    let drawn = 0;
+    for (let j = 0; j < f.n && drawn < FLASH_DRAW_MAX; j++) {
       const idx = (f.head - 1 - j + FLASH_N) % FLASH_N;
       const age = now - f.at[idx];
       if (age > maxLife) break; // están en orden: las demás son más viejas
@@ -276,6 +404,7 @@ export class Renderer {
       if (!this._inView(x, y, 1)) continue;
       buckets[kind * 3 + Math.min(2, Math.floor((age / life) * 3))].push(t);
       any = true;
+      drawn++;
     }
     if (!any) return;
     const { ctx } = this;
@@ -335,8 +464,9 @@ export class Renderer {
    */
   _updateLabels() {
     const { owner, players, map } = this.game;
-    // Con mapas muy grandes basta una rejilla más basta (F×F casillas por celda)
-    const F = Math.max(1, Math.floor(RES / 2));
+    // Basta una rejilla basta (F×F casillas por celda): el nombre solo necesita
+    // una posición aproximada y así el cálculo no da tirones
+    const F = Math.max(1, RES);
     const MW = map.width;
     const W = Math.ceil(MW / F);
     const H = Math.ceil(map.height / F);
@@ -423,12 +553,18 @@ export class Renderer {
     v.y1 = camera.y + camera.viewH / camera.zoom;
 
     if (game.diploVersion !== this.diploVersion) {
-      // Cambió alguna alianza: recolorear fronteras y franjas de aliados
+      // Cambió alguna alianza: solo hay que repintar si cambian las tuyas
+      // (franjas y fronteras de aliados); las de los bots entre sí no se ven
       this.diploVersion = game.diploVersion;
-      this._buildPalette();
-      this._paintAllTerritory();
+      const sig = this._allySignature();
+      if (sig !== this._allySig) {
+        this._allySig = sig;
+        this._buildPalette();
+        this._paintAllTerritory();
+      }
     }
     this._flushDirty(now);
+    this._updateGlowsAndUpload(now);
     if (now - this.lastLabelTime > LABEL_INTERVAL_MS) {
       this._updateLabels();
       this.lastLabelTime = now;
@@ -447,14 +583,20 @@ export class Renderer {
     const map = game.map;
     const z = camera.zoom * dpr;
     ctx.setTransform(z, 0, 0, z, -camera.x * z + ox * dpr, -camera.y * z + oy * dpr);
-    // Mar y tierra en píxeles nítidos, igual que el territorio conquistado
+    // Mapa y territorio en píxeles nítidos; solo el trozo que se ve
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.waterCanvas, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    this._drawWaves(now);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.landCanvas, 0, 0, map.width, map.height);
-    ctx.drawImage(this.territoryCanvas, 0, 0);
+    const x0 = Math.max(0, Math.floor(v.x0) - 1);
+    const y0 = Math.max(0, Math.floor(v.y0) - 1);
+    const x1 = Math.min(map.width, Math.ceil(v.x1) + 1);
+    const y1 = Math.min(map.height, Math.ceil(v.y1) + 1);
+    if (x1 > x0 && y1 > y0) {
+      // Alejado, el mapa se dibuja desde una copia reducida (menos píxeles que mover)
+      const [img, S] = this._baseFor(z);
+      const w = x1 - x0;
+      const h = y1 - y0;
+      ctx.drawImage(img, x0 * S, y0 * S, w * S, h * S, x0, y0, w, h);
+      ctx.drawImage(this.territoryCanvas, x0, y0, w, h, x0, y0, w, h);
+    }
     this._drawFlashes(now);
 
     ctx.setTransform(dpr, 0, 0, dpr, ox * dpr, oy * dpr);
@@ -486,46 +628,30 @@ export class Renderer {
 
   // -------------------------------------------------------------- ambiente
 
-  /** Dos capas de crestas que se desplazan sobre el mar (debajo de la tierra). */
-  _drawWaves(now) {
-    const { ctx, camera } = this;
-    const a = smooth(1.2, 3.5, camera.zoom * RES);
-    if (a <= 0 || typeof DOMMatrix === 'undefined') return;
-    if (!this._wavePat) {
-      this._wavePat = ctx.createPattern(this.waveTex, 'repeat');
-      this._wavePat2 = ctx.createPattern(this.waveTex, 'repeat');
-    }
-    const t = this.anim ? now / 1000 : 0;
-    const v = this.view;
-    const layers = [
-      [this._wavePat, RES / 9, 0.55 * RES, 0.22 * RES, 0.55],
-      [this._wavePat2, RES / 6, -0.35 * RES, 0.4 * RES, 0.3],
-    ];
-    for (const [pat, k, vx, vy, alpha] of layers) {
-      if (!pat || !pat.setTransform) continue;
-      const period = 256 * k;
-      pat.setTransform(new DOMMatrix([k, 0, 0, k, (t * vx) % period, (t * vy) % period]));
-      ctx.globalAlpha = a * alpha;
-      ctx.fillStyle = pat;
-      ctx.fillRect(v.x0 - 1, v.y0 - 1, v.x1 - v.x0 + 2, v.y1 - v.y0 + 2);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  /** Bordes de la pantalla algo más oscuros: centra la mirada. */
+  /**
+   * Bordes de la pantalla algo más oscuros: centra la mirada. El degradado se
+   * pinta una vez en una imagen pequeña y se estira (calcularlo píxel a píxel
+   * en cada fotograma costaba).
+   */
   _drawVignette() {
     const { ctx, camera } = this;
     const w = camera.viewW;
     const h = camera.viewH;
     if (!this._vignette || this._vignette.w !== w || this._vignette.h !== h) {
-      const r = Math.hypot(w, h) / 2;
-      const g = ctx.createRadialGradient(w / 2, h / 2, r * 0.55, w / 2, h / 2, r);
+      const cw = 192;
+      const ch = Math.max(16, Math.round((cw * h) / Math.max(1, w)));
+      const c = makeCanvas(cw, ch);
+      const g2 = c.getContext('2d');
+      const r = Math.hypot(cw, ch) / 2;
+      const g = g2.createRadialGradient(cw / 2, ch / 2, r * 0.55, cw / 2, ch / 2, r);
       g.addColorStop(0, 'rgba(4, 10, 22, 0)');
       g.addColorStop(1, 'rgba(4, 10, 22, 0.42)');
-      this._vignette = { w, h, g };
+      g2.fillStyle = g;
+      g2.fillRect(0, 0, cw, ch);
+      this._vignette = { w, h, c };
     }
-    ctx.fillStyle = this._vignette.g;
-    ctx.fillRect(-20, -20, w + 40, h + 40);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this._vignette.c, -20, -20, w + 40, h + 40);
   }
 
   /** Anillos que marcan el punto al que ha volado la cámara. */

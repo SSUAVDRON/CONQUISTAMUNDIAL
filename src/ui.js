@@ -100,6 +100,7 @@ export class UI {
     this.handlers = {};
     this._fronts = new Map(); // clave → { li, a, d, gone }
     this._lbRows = new Map(); // id → fila de la clasificación
+    this._lbAt = -Infinity; // última vez que se actualizó
     this._lbIndex = new Map();
     this._counters = new Set();
     this._lastEvent = null;
@@ -286,6 +287,7 @@ export class UI {
     for (const f of this._fronts.values()) this._dropFront(f);
     this._fronts.clear();
     this._lbRows.clear();
+    this._lbAt = -Infinity;
     this._lbIndex.clear();
     for (const c of [this._troops, this._troopsMax, this._gold]) c.value = null;
     this.closeNation();
@@ -933,6 +935,11 @@ export class UI {
    * sube o baja de puesto, la fila se desliza hasta su nueva posición.
    */
   _updateLeaderboard(game, human, landCount) {
+    // Una vez por segundo: con muchos jugadores el orden cambia sin parar y
+    // las animaciones de las filas se pisaban (y medirlas cuesta)
+    const now = performance.now();
+    if (now - this._lbAt < 950) return;
+    this._lbAt = now;
     const list = $('lista-clasificacion');
     const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
     const rows = alive.slice(0, 10);
