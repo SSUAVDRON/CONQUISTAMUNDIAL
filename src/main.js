@@ -130,10 +130,8 @@ function enterGame(game) {
   state.demo = false;
   game.onEvent = (evt) => (evt.kind === 'request' ? ui.addRequest(game, evt) : ui.pushEvent(evt));
   for (const evt of game.eventLog) game.onEvent(evt);
-  state.speed = 1;
-  ui.setSpeed(1);
+  state.speed = 1; // la partida va siempre a velocidad normal
   ui.setRatio(state.ratio);
-  ui.setOnline(state.online);
   ui.setNetNote('');
   home.hide();
   home.hideLobby();
@@ -428,10 +426,37 @@ function setRatio(r) {
   ui.setRatio(state.ratio);
 }
 
-function setSpeed(s) {
-  if (state.online) return;
-  state.speed = s;
-  ui.setSpeed(s);
+/** Lleva la cámara al combate de una tarjeta ("a<atacante>-<objetivo>", "b<barco>", "m<misil>"). */
+function focusFront(key) {
+  const game = state.game;
+  if (!game) return;
+  const W = game.map.width;
+  let at = null;
+  let danger = false;
+  if (key[0] === 'a') {
+    const [from, to] = key.slice(1).split('-').map(Number);
+    const atk = game.players[from]?.attacks.get(to);
+    if (atk && !atk.done) {
+      at = game.attackFront(atk);
+      danger = to === state.human?.id;
+    }
+  } else if (key[0] === 'b') {
+    const boat = game.boats.find((b) => b.id === Number(key.slice(1)));
+    if (boat) {
+      const t = boat.path[boat.pos];
+      at = [(t % W) + 0.5, Math.floor(t / W) + 0.5];
+      danger = boat.targetId === state.human?.id;
+    }
+  } else if (key[0] === 'm') {
+    const m = game.missiles.find((x) => x.id === Number(key.slice(1)));
+    if (m) {
+      at = [(m.to % W) + 0.5, Math.floor(m.to / W) + 0.5];
+      danger = m.targetId === state.human?.id;
+    }
+  }
+  if (!at) return;
+  camera.flyTo(at[0], at[1], Math.max(camera.zoom, 5));
+  state.ping = { x: at[0], y: at[1], t: performance.now(), danger };
 }
 
 function centerOnHuman() {
@@ -456,8 +481,6 @@ function humanIntent(intent) {
     return;
   }
   game.queueIntent({ ...intent, playerId: human.id });
-  // En pausa, la acción se aplica al reanudar; avisamos para que no parezca rota
-  if (state.speed === 0) ui.pushEvent({ text: 'En pausa: se aplicará al reanudar', kind: 'info' });
 }
 
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
@@ -511,16 +534,12 @@ const input = new Input(canvas, camera, {
   },
   onRatio: setRatio,
   onRatioStep: (d) => setRatio(state.ratio + d),
-  onTogglePause() {
-    if (state.demo) return;
-    setSpeed(state.speed === 0 ? 1 : 0);
-  },
   onCenter: centerOnHuman,
 });
 
 ui.on({
   onRatio: setRatio,
-  onSpeed: setSpeed,
+  onFocusFront: focusFront,
   onExit(force) {
     if (!force && !state.demo && state.game.phase !== 'ended' && state.human?.alive) {
       ui.confirmExit();
@@ -574,7 +593,8 @@ function frame(now) {
 
   if (state.buildMode && (state.game.phase !== 'playing' || !state.human?.alive)) state.buildMode = null;
   input.update(dt);
-  state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile });
+  camera.update(now);
+  state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
 
   if (!state.demo && state.human && now - state.lastHud > 200) {
     state.lastHud = now;

@@ -17,10 +17,6 @@ export class UI {
 
     $('ratio').addEventListener('input', () => this.handlers.onRatio?.(Number($('ratio').value) / 100));
 
-    for (const btn of document.querySelectorAll('#velocidad button')) {
-      btn.addEventListener('click', () => this.handlers.onSpeed?.(Number(btn.dataset.vel)));
-    }
-
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
     $('fin-nueva').addEventListener('click', () => this.handlers.onExit?.(true));
@@ -99,9 +95,21 @@ export class UI {
       if (li) this.handlers.onFocusPlayer?.(Number(li.dataset.id));
     });
 
-    $('lista-ataques').addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-target]');
-      if (btn) this.handlers.onCancelAttack?.(Number(btn.dataset.target));
+    // Tarjetas de combate: ✕ = retirarse; el resto de la tarjeta lleva la cámara al frente
+    $('frentes').addEventListener('click', (e) => {
+      const retreat = e.target.closest('button[data-target]');
+      if (retreat) {
+        this.handlers.onCancelAttack?.(Number(retreat.dataset.target));
+        return;
+      }
+      const card = e.target.closest('[data-key]');
+      if (card) this.handlers.onFocusFront?.(card.dataset.key);
+    });
+    $('frentes').addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset.key) {
+        e.preventDefault();
+        this.handlers.onFocusFront?.(e.target.dataset.key);
+      }
     });
   }
 
@@ -115,11 +123,6 @@ export class UI {
     $('fin').hidden = true;
     $('confirmar').hidden = true;
     $('eventos').replaceChildren();
-  }
-
-  /** En multijugador no hay pausa ni cambio de velocidad. */
-  setOnline(online) {
-    $('velocidad').hidden = online;
   }
 
   /** Mensaje fijo de estado de la red (o vacío para quitarlo). */
@@ -139,7 +142,7 @@ export class UI {
     $('hud').hidden = false;
     $('fin').hidden = true;
     $('eventos').replaceChildren();
-    $('lista-ataques').replaceChildren();
+    $('frentes').replaceChildren();
     $('solicitudes').replaceChildren();
     this._requests.clear();
     this._attackRows.clear();
@@ -288,12 +291,6 @@ export class UI {
     $('ratio-valor').textContent = `${Math.round(r * 100)}%`;
   }
 
-  setSpeed(speed) {
-    for (const btn of document.querySelectorAll('#velocidad button')) {
-      btn.classList.toggle('activo', Number(btn.dataset.vel) === speed);
-    }
-  }
-
   pushEvent(evt) {
     const box = $('eventos');
     const el = document.createElement('div');
@@ -374,6 +371,7 @@ export class UI {
     }
 
     this._updateAttacks(game, human);
+    this._updateTopBar(game, human);
     this._updateThreat(game, human);
     this._updateLeaderboard(game, human, landCount);
     this._updateNation(game, human, ratio);
@@ -395,56 +393,166 @@ export class UI {
   }
 
   /**
-   * Chips de combate: tus ataques (con botón de retirada), los ataques que
-   * recibes y los barcos en camino, siempre con sus tropas.
+   * Tarjetas de combate a la derecha: quién ataca a quién y con cuántas tropas
+   * (ataques, desembarcos y misiles en los que participa el jugador). Las que
+   * le atacan van primero y en rojo. Clic = la cámara va a ese frente.
    */
   _updateAttacks(game, human) {
-    const list = $('lista-ataques');
+    const list = $('frentes');
     const seen = new Set();
-    const row = (key, text, incoming, cancelTarget = null) => {
-      seen.add(key);
-      let li = this._attackRows.get(key);
-      if (!li) {
-        li = document.createElement('li');
-        if (incoming) li.className = 'entrante';
-        li.append(document.createElement('span'));
-        if (cancelTarget !== null) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.dataset.target = cancelTarget;
-          btn.title = 'Retirarse (se pierde la mitad de las tropas del ataque)';
-          btn.setAttribute('aria-label', 'Retirarse');
-          btn.textContent = '✕';
-          li.append(btn);
-        }
-        // Lo que te ataca va primero: es lo urgente
-        if (incoming) list.prepend(li);
-        else list.append(li);
-        this._attackRows.set(key, li);
-      }
-      li.firstChild.textContent = text;
-    };
-    for (const atk of human.attacks.values()) {
-      const name = atk.targetId ? game.players[atk.targetId].name : 'Tierra libre';
-      row(`o${atk.targetId}`, `⚔ ${name} · ${formatNumber(atk.troops)}`, false, atk.targetId);
-    }
+    const cards = [];
+    const side = (p, fallback) => (p ? { name: p.name, flag: p.flag, color: p.color } : { name: fallback, flag: '', color: null });
     for (const atk of game.attacks) {
-      if (atk.done || atk.targetId !== human.id) continue;
-      row(`i${atk.attacker.id}`, `🛡 ${atk.attacker.name} te ataca · ${formatNumber(atk.troops)}`, true);
+      if (atk.done || atk.troops < 1) continue;
+      const mine = atk.attacker === human;
+      const incoming = atk.targetId === human.id;
+      if (!mine && !incoming) continue;
+      const target = atk.targetId ? game.players[atk.targetId] : null;
+      cards.push({
+        key: `a${atk.attacker.id}-${atk.targetId}`,
+        incoming,
+        left: side(atk.attacker),
+        right: side(target, 'Tierra libre'),
+        a: formatNumber(atk.troops),
+        d: target ? formatNumber(target.troops) : '—',
+        share: target ? atk.troops / (atk.troops + Math.max(1, target.troops)) : 1,
+        middle: target ? 'VS' : 'Expansión',
+        retreat: mine ? atk.targetId : null,
+      });
     }
     for (const b of game.boats) {
-      if (b.owner === human.id) {
-        const to = b.targetId ? game.players[b.targetId].name : 'tierra libre';
-        row(`b${b.id}`, `🚢 hacia ${to} · ${formatNumber(b.troops)}`, false);
-      } else if (b.targetId === human.id) {
-        row(`B${b.id}`, `🚢 ${game.players[b.owner].name} llega · ${formatNumber(b.troops)}`, true);
+      const mine = b.owner === human.id;
+      const incoming = b.targetId === human.id;
+      if (!mine && !incoming) continue;
+      const target = b.targetId ? game.players[b.targetId] : null;
+      cards.push({
+        key: `b${b.id}`,
+        incoming,
+        left: side(game.players[b.owner]),
+        right: side(target, 'Tierra libre'),
+        a: formatNumber(b.troops),
+        d: target ? formatNumber(target.troops) : '—',
+        share: target ? b.troops / (b.troops + Math.max(1, target.troops)) : 1,
+        middle: 'Desembarco',
+      });
+    }
+    for (const m of game.missiles) {
+      const mine = m.owner === human.id;
+      const incoming = m.targetId === human.id;
+      if (!mine && !incoming) continue;
+      const left = Math.max(0, Math.ceil(((1 - m.progress) * m.dist) / CONFIG.missileSpeed / (1000 / TICK_MS)));
+      cards.push({
+        key: `m${m.id}`,
+        incoming,
+        left: side(game.players[m.owner]),
+        right: side(game.players[m.targetId], '—'),
+        a: 'Misil',
+        d: `${left} s`,
+        share: m.progress,
+        middle: 'Impacto',
+      });
+    }
+    cards.sort((x, y) => Number(y.incoming) - Number(x.incoming));
+
+    const MAX = 5;
+    for (const c of cards.slice(0, MAX)) {
+      seen.add(c.key);
+      let li = this._attackRows.get(c.key);
+      if (!li) {
+        li = this._frontCard(c);
+        this._attackRows.set(c.key, li);
       }
+      li.querySelector('.f-a').textContent = c.a;
+      li.querySelector('.f-d').textContent = c.d;
+      li.querySelector('.f-barra span').style.width = `${Math.round(Math.max(0.04, Math.min(1, c.share)) * 100)}%`;
+      list.append(li); // también reordena
     }
     for (const [key, li] of this._attackRows) {
       if (!seen.has(key)) {
         li.remove();
         this._attackRows.delete(key);
       }
+    }
+    let more = list.querySelector('.f-mas');
+    if (cards.length > MAX) {
+      if (!more) {
+        more = document.createElement('li');
+        more.className = 'f-mas';
+      }
+      more.textContent = `y ${cards.length - MAX} combate${cards.length - MAX > 1 ? 's' : ''} más`;
+      list.append(more);
+    } else if (more) {
+      more.remove();
+    }
+  }
+
+  /** Construye la tarjeta "A · tropas  VS  tropas · B". */
+  _frontCard(c) {
+    const li = document.createElement('li');
+    li.className = `frente ${c.incoming ? 'entrante' : 'saliente'}`;
+    li.dataset.key = c.key;
+    li.tabIndex = 0;
+    li.setAttribute('role', 'button');
+    li.title = 'Ir a este frente';
+    const who = (s, align) => {
+      const box = document.createElement('span');
+      box.className = `f-lado ${align}`;
+      const mark = document.createElement('span');
+      if (hasFlag(s.flag)) {
+        mark.className = 'bandera';
+        mark.style.cssText = flagCss(s.flag, 16);
+      } else {
+        mark.className = 'muestra';
+        mark.style.background = s.color ? rgbToCss(s.color) : 'transparent';
+      }
+      const name = document.createElement('span');
+      name.className = 'f-nombre';
+      name.textContent = s.name;
+      if (align === 'der') box.append(name, mark);
+      else box.append(mark, name);
+      return box;
+    };
+    const top = document.createElement('div');
+    top.className = 'f-fila';
+    top.append(who(c.left, 'izq'), who(c.right, 'der'));
+    const mid = document.createElement('div');
+    mid.className = 'f-fila f-cifras';
+    const a = document.createElement('strong');
+    a.className = 'f-a';
+    const vs = document.createElement('span');
+    vs.className = 'f-vs';
+    vs.textContent = c.middle;
+    const d = document.createElement('strong');
+    d.className = 'f-d';
+    mid.append(a, vs, d);
+    const bar = document.createElement('div');
+    bar.className = 'f-barra';
+    bar.append(document.createElement('span'));
+    li.append(top, mid, bar);
+    if (c.retreat !== null && c.retreat !== undefined) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'f-retirar';
+      btn.dataset.target = c.retreat;
+      btn.title = 'Retirarse (se pierde la mitad de las tropas del ataque)';
+      btn.setAttribute('aria-label', 'Retirarse');
+      btn.textContent = '✕';
+      li.append(btn);
+    }
+    return li;
+  }
+
+  /** Barra superior: tu puesto y el líder frente a la meta de victoria. */
+  _updateTopBar(game, human) {
+    const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
+    const rank = alive.indexOf(human);
+    $('dato-puesto').textContent = rank >= 0 ? `${rank + 1}.º de ${alive.length}` : `${alive.length} en pie`;
+    const leader = alive[0];
+    const goal = Math.round(game.rules.winShare * 100);
+    if (leader) {
+      const share = Math.round((leader.tiles / game.map.landCount) * 100);
+      $('dato-lider').textContent = `${leader === human ? 'Tú' : leader.name} ${share} % / ${goal} %`;
+      $('dato-lider-caja').classList.toggle('cerca', share >= goal * 0.75 && leader !== human);
     }
   }
 

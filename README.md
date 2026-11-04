@@ -120,7 +120,8 @@ base de datos.
 | Buques de guerra | Se botan desde un puerto propio (máx. 3 por puerto; 6k de oro, +3k cada uno). Clic en el mar mueve el más cercano. Actúan solos a 9 casillas: disparan a buques enemigos, hunden transportes de tropas, **capturan** pesqueros y mercantes rivales (pasan a producir para ti) y bombardean puertos hasta destruirlos. |
 | Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. |
 | Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo (desactivable en Ajustes). |
-| Tropas a la vista | Cada ataque tuyo o contra ti muestra sus tropas en el frente del mapa (rojo si te atacan) y en tu panel, igual que los barcos en camino. |
+| Tropas a la vista | Cada combate tuyo tiene una tarjeta a la derecha: quién ataca a quién, tropas del atacante **VS** tropas del defensor y una barra de fuerzas (roja si te atacan, primero las que te atacan). También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas. |
+| Barra superior | Tiempo de partida, tu puesto entre las naciones en pie y el líder con su territorio frente a la meta de victoria (se pone ámbar si se acerca). |
 | Oro | Se gana solo, según tu territorio (+10 % por cada puerto). Si eliminas a una nación, te llevas su oro. |
 | Edificios | Se construyen en tu territorio con oro; cada uno del mismo tipo cuesta más que el anterior. Si te conquistan la casilla, el edificio pasa al conquistador. Deben estar a 5 casillas o más de otro edificio. |
 | Ciudad | +15.000 tropas máximas. 5k de oro, +5k por cada ciudad que ya tengas. |
@@ -144,7 +145,8 @@ base de datos.
 - **Clic en el mar**: mover tu buque de guerra más cercano
 - **Mayús + clic** al construir: colocar varios seguidos · **Esc / clic derecho**: cancelar
 - **Clic derecho / mantener pulsado** sobre otra nación: ficha de diplomacia
-- **Espacio**: pausa · **C**: centrar en tu nación · **+ / −**: zoom · **Esc**: cerrar
+- **C**: centrar en tu nación · **+ / −**: zoom · **Esc**: cerrar
+- **Clic en una tarjeta de combate** (a la derecha): la cámara vuela a ese frente
 - Clic en la clasificación: centra la cámara en esa nación y abre su ficha
 
 En el mapa, tu frontera es blanca, la de tus aliados verde y los traidores llevan ⚠.
@@ -200,8 +202,8 @@ Decisiones de diseño que conviene conservar:
   las acciones del jugador entran como *intents* que se aplican al inicio de cada
   tick. Misma semilla + mismas acciones = misma partida. Es la base para el
   multijugador (ver `ROADMAP.md`).
-- **Tick fijo de 100 ms** independiente de los FPS; la velocidad 2×/4× solo
-  ejecuta más ticks por segundo.
+- **Tick fijo de 100 ms** independiente de los FPS. Las partidas van siempre a
+  velocidad normal (no hay pausa ni aceleración en la partida).
 - **Imports simples.** El empaquetador solo entiende `import { a } from './x.js'`
   y `export function|class|const`. Si añades otra forma, falla con un mensaje
   claro en vez de generar un fichero roto.

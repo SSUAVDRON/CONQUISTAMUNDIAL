@@ -9,7 +9,7 @@
   y densidad del defensor, anulación de ataques cruzados, retirada
 - Barcos de transporte con ruta por mar
 - Bots con personalidad (agresividad, ritmo de expansión)
-- Clasificación, avisos, tooltip, velocidad 1×/2×/4× y pausa
+- Clasificación, avisos y tooltip (la pausa y la aceleración se quitaron después)
 - Partida de bots de fondo en el menú
 - Tests de simulación
 

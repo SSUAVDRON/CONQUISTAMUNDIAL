@@ -327,6 +327,62 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
 @keyframes latido { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #alerta-roja.activa { animation: none; } }
 
+/* ---------- Barra superior: datos de la partida ---------- */
+#barra-superior .dato { display: inline-flex; align-items: center; gap: 5px; color: var(--texto-suave); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#barra-superior .dato svg { width: 15px; height: 15px; flex: none; }
+#barra-superior .dato + .dato { padding-left: 10px; border-left: 1px solid var(--panel-borde); }
+#dato-puesto { color: var(--texto); font-weight: 600; }
+#dato-lider { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.dato-lider.cerca { color: var(--aviso) !important; }
+
+/* ---------- Tarjetas de combate (VS) ---------- */
+.frentes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.frentes:empty { display: none; }
+.frente {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 9px;
+  border-radius: 12px;
+  background: rgba(12, 18, 30, 0.94);
+  border: 1px solid var(--panel-borde);
+  border-left: 4px solid var(--acento);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  animation: entrarDerecha 0.25s ease-out;
+  transition: transform 0.15s, background 0.15s;
+}
+.frente:hover, .frente:focus-visible { transform: translateX(-3px); background: rgba(24, 32, 48, 0.95); outline: none; }
+.frente:focus-visible { box-shadow: 0 0 0 2px var(--acento); }
+.frente.entrante { border-left-color: var(--peligro); background: rgba(60, 14, 18, 0.95); }
+.frente.entrante:hover { background: rgba(80, 18, 22, 0.95); }
+.f-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.f-lado { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 48%; font-size: 12px; }
+.f-lado.der { justify-content: flex-end; }
+.f-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-cifras { font-variant-numeric: tabular-nums; }
+.f-a, .f-d { font-size: 18px; font-weight: 800; }
+.frente.entrante .f-a { color: #ffb3b3; }
+.frente.saliente .f-a { color: #ffe39a; }
+.f-vs {
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--texto);
+}
+.f-barra { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.f-barra span { display: block; height: 100%; background: var(--acento); transition: width 0.3s; }
+.frente.entrante .f-barra span { background: var(--peligro); }
+.f-retirar { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 11px; line-height: 20px; background: rgba(12, 18, 30, 0.95); }
+.f-mas { text-align: center; font-size: 12px; color: var(--texto-suave); }
+@keyframes entrarDerecha { from { opacity: 0; transform: translateX(14px); } }
+@media (prefers-reduced-motion: reduce) { .frente { animation: none; } }
+
 /* ---------- Tooltip ---------- */
 #tooltip {
   position: fixed;
@@ -358,10 +414,25 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   #construir button { flex: 0 0 auto; min-width: 116px; padding: 4px 6px 4px 4px; gap: 4px; }
   #construir canvas { width: 20px; height: 20px; }
   #construir .b-nombre { font-size: 12px; }
-  .cifras { gap: 4px; }
-  .cifras .valor { font-size: 14px; }
+  .cifras { gap: 4px; grid-template-columns: 1.5fr 1fr 1fr 0.8fr; }
+  .cifras .valor { font-size: 13px; }
   #tooltip { display: none !important; }
   /* En móvil, propuestas y ficha se abren como hoja inferior, sobre el panel del jugador */
+  #barra-superior { gap: 6px; }
+  #barra-superior .dato { font-size: 12px; }
+  #barra-superior .dato + .dato { padding-left: 6px; }
+  #dato-lider { max-width: 110px; }
+  .frentes {
+    position: fixed;
+    top: calc(58px + env(safe-area-inset-top, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    width: min(190px, calc(100vw - 210px));
+    gap: 6px;
+  }
+  .frente { padding: 6px 8px 7px; }
+  .f-a, .f-d { font-size: 14px; }
+  .f-lado { font-size: 11px; }
+  .frente:nth-child(n+4) { display: none; }
   #columna-derecha {
     top: auto;
     bottom: calc(8px + env(safe-area-inset-bottom, 0px));

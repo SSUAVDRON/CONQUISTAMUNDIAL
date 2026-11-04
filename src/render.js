@@ -241,6 +241,24 @@ export class Renderer {
     this._drawEmojis();
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
+    if (overlay.ping) this._drawPing(now, overlay.ping);
+  }
+
+  /** Anillos que marcan el punto al que ha volado la cámara. */
+  _drawPing(now, ping) {
+    const age = (now - ping.t) / 1000;
+    if (age > 1.6) return;
+    const { ctx, camera } = this;
+    const [x, y] = camera.worldToScreen(ping.x, ping.y);
+    for (let k = 0; k < 2; k++) {
+      const a = age - k * 0.35;
+      if (a < 0 || a > 1.2) continue;
+      ctx.beginPath();
+      ctx.arc(x, y, 10 + a * 40, 0, Math.PI * 2);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = ping.danger ? `rgba(255, 90, 90, ${1 - a / 1.2})` : `rgba(242, 179, 61, ${1 - a / 1.2})`;
+      ctx.stroke();
+    }
   }
 
   _buildingSize() {
@@ -590,7 +608,6 @@ export class Renderer {
     const { ctx, game, camera } = this;
     const human = game.human;
     if (!human || !game.attacks.length || this.options.badges === false) return;
-    const W = game.map.width;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '700 12px system-ui, sans-serif';
@@ -598,17 +615,9 @@ export class Renderer {
       if (atk.done || atk.troops < 1 || !atk.targetId) continue;
       const incoming = atk.targetId === human.id;
       if (!incoming && atk.attacker !== human) continue;
-      // Centro aproximado del frente: media de unas cuantas casillas candidatas
-      let sx = 0;
-      let sy = 0;
-      let n = 0;
-      for (const t of atk.inFrontier) {
-        sx += t % W;
-        sy += (t / W) | 0;
-        if (++n >= 48) break;
-      }
-      if (!n) continue;
-      const [x, y] = camera.worldToScreen(sx / n + 0.5, sy / n + 0.5);
+      if (!atk.inFrontier.size) continue;
+      const [fx, fy] = game.attackFront(atk);
+      const [x, y] = camera.worldToScreen(fx, fy);
       if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
       const text = `${incoming ? '🛡' : '⚔'} ${formatNumber(atk.troops)}`;
       const w = ctx.measureText(text).width + 14;

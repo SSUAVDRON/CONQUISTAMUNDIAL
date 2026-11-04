@@ -138,7 +138,7 @@
             <li><b>Oro y edificios:</b> ganas oro según tu territorio. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (más barcos y oro) y <i>fortalezas</i> (defensa ×2,5 alrededor). Si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
             <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
-            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque · M misil · clic en el mar = mover buque · Esc o clic derecho = cancelar · Espacio = pausa · C = centrar en ti.</li>
+            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque · M misil · clic en el mar = mover buque · Esc o clic derecho = cancelar · C = centrar en ti · clic en una tarjeta de combate = ir a ese frente.</li>
           </ul>
         </details>
       </section>
@@ -281,13 +281,18 @@
     </aside>
 
     <div id="barra-superior" class="panel">
-      <div id="velocidad">
-        <button type="button" data-vel="0" title="Pausa (Espacio)">⏸</button>
-        <button type="button" data-vel="1" class="activo">1×</button>
-        <button type="button" data-vel="2">2×</button>
-        <button type="button" data-vel="4">4×</button>
-      </div>
-      <span id="reloj">0:00</span>
+      <span class="dato" title="Tiempo de partida">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9V6.2M6.5 2h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span id="reloj">0:00</span>
+      </span>
+      <span class="dato" title="Tu puesto por territorio entre las naciones en pie">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7v3a3.5 3.5 0 0 1-7 0zM8 9v3M5.5 13.5h5M4.5 3.5H2.5a2 2 0 0 0 2 2.5M11.5 3.5h2a2 2 0 0 1-2 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <span id="dato-puesto">—</span>
+      </span>
+      <span class="dato dato-lider" id="dato-lider-caja" title="Nación con más territorio y meta de victoria">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span id="dato-lider">—</span>
+      </span>
       <button type="button" id="btn-salir" title="Volver al menú">Menú</button>
     </div>
 
@@ -312,12 +317,14 @@
         <input id="ratio" type="range" min="1" max="100" value="20">
       </label>
       <div id="construir" role="group" aria-label="Construir"></div>
-      <ul id="lista-ataques"></ul>
     </section>
 
     <div id="columna-derecha">
     <!-- Propuestas de alianza recibidas -->
     <div id="solicitudes"></div>
+
+    <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
+    <ul id="frentes" class="frentes" aria-label="Combates en curso"></ul>
 
     <!-- Diplomacia: ficha de otra nación -->
     <section id="panel-nacion" class="panel" hidden aria-labelledby="pn-nombre">

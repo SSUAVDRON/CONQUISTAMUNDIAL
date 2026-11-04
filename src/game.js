@@ -429,6 +429,22 @@ export class Game {
     atk.heap.push(key, t);
   }
 
+  /** Centro aproximado del frente de un ataque (casillas, con decimales). */
+  attackFront(atk) {
+    const W = this.map.width;
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (const t of atk.inFrontier) {
+      sx += t % W;
+      sy += (t / W) | 0;
+      if (++n >= 48) break;
+    }
+    if (n) return [sx / n + 0.5, sy / n + 0.5];
+    const t = atk.attacker.spawnTile;
+    return [(t % W) + 0.5, Math.floor(t / W) + 0.5];
+  }
+
   /**
    * Coste en tropas de conquistar `t`, bajas que sufre el defensor y
    * multiplicador de tiempo (terreno × fortalezas).

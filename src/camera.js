@@ -37,13 +37,44 @@ export class Camera {
     return [(wx - this.x) * this.zoom, (wy - this.y) * this.zoom];
   }
 
+  /** Vuelo suave hasta centrar (wx, wy) con el zoom indicado. */
+  flyTo(wx, wy, zoom, ms = 500) {
+    this.tween = {
+      fromZoom: this.zoom,
+      fromCx: this.x + this.viewW / this.zoom / 2,
+      fromCy: this.y + this.viewH / this.zoom / 2,
+      toZoom: Math.min(this.maxZoom, Math.max(this.minZoom, zoom)),
+      wx,
+      wy,
+      t0: performance.now(),
+      ms,
+    };
+  }
+
+  /** Avanza el vuelo en curso (llamar cada frame). */
+  update(now) {
+    const t = this.tween;
+    if (!t) return;
+    const k = Math.min(1, (now - t.t0) / t.ms);
+    const e = 1 - (1 - k) ** 3;
+    this.zoom = t.fromZoom + (t.toZoom - t.fromZoom) * e;
+    const cx = t.fromCx + (t.wx - t.fromCx) * e;
+    const cy = t.fromCy + (t.wy - t.fromCy) * e;
+    this.x = cx - this.viewW / this.zoom / 2;
+    this.y = cy - this.viewH / this.zoom / 2;
+    if (k >= 1) this.tween = null;
+    this.clamp();
+  }
+
   pan(dx, dy) {
+    this.tween = null; // el jugador toma el control
     this.x -= dx / this.zoom;
     this.y -= dy / this.zoom;
     this.clamp();
   }
 
   zoomAt(sx, sy, factor) {
+    this.tween = null;
     const [wx, wy] = this.screenToWorld(sx, sy);
     this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom * factor));
     this.x = wx - sx / this.zoom;
