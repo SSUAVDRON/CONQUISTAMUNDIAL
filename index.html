@@ -107,12 +107,17 @@
           <h3>Mapa</h3>
           <div id="galeria-mapas" class="galeria" role="radiogroup" aria-label="Mapa"></div>
           <div class="opciones">
-            <label class="campo"><span>Rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
-              <input id="in-bots" type="range" min="5" max="200" value="70">
+            <label class="campo"><span>Naciones rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
+              <input id="in-bots" type="range" min="1" max="200" value="70">
+            </label>
+            <label class="campo"><span>Colonias (bots débiles) <strong id="out-colonias">Auto</strong> <small id="nota-colonias"></small></span>
+              <input id="in-colonias" type="range" min="-1" max="300" value="-1">
             </label>
             <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
             <div class="campo"><span>Victoria al conquistar</span><div class="segmentos" id="seg-victoria" role="radiogroup" aria-label="Victoria"></div></div>
-            <div class="campo"><span>Oro inicial</span><div class="segmentos" id="seg-oro" role="radiogroup" aria-label="Oro inicial"></div></div>
+            <label class="campo"><span>Oro inicial <strong id="out-oro">Nada</strong></span>
+              <input id="in-oro" type="range" min="0" max="8" step="1" value="0">
+            </label>
             <div class="interruptores">
               <label class="interruptor"><input type="checkbox" id="in-misiles" checked><span>Misiles y antimisiles</span></label>
               <label class="interruptor"><input type="checkbox" id="in-buques" checked><span>Buques de guerra</span></label>

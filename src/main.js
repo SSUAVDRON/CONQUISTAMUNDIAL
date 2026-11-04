@@ -140,7 +140,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   game.human = localIndex >= 0 ? players[localIndex] : null;
   game.addBots(bots, difficulty, countries);
   // Colonias: muchas presas fáciles repartidas por el mapa
-  game.addColonies(colonyCount(map.landCount, bots));
+  // Las reglas pueden fijar cuántas colonias; si no, según la tierra del mapa
+  game.addColonies(game.rules.colonies ?? colonyCount(map.landCount, bots));
   game.start();
 
   state.game = game;

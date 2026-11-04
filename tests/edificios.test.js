@@ -253,3 +253,20 @@ test('colonias: débiles, sin alianzas y con oro que saquear casilla a casilla',
   assert.ok(Math.abs(a.gold - before - share) < 1e-6);
   assert.ok(Math.abs(c.gold - (1000 - share)) < 1e-6);
 });
+
+test('reglas personalizadas: cualquier oro inicial y número de colonias', async () => {
+  const { cleanRules, GOLD_STEPS, CONFIG: C } = await import('../src/config.js');
+  const r = cleanRules({ startGold: 1234567, colonies: 12 });
+  assert.equal(r.startGold, 1234567);
+  assert.equal(r.colonies, 12);
+  assert.equal(cleanRules({}).colonies, null, 'por defecto, colonias automáticas');
+  assert.equal(cleanRules({ startGold: -5 }).startGold, 0);
+  assert.equal(cleanRules({ startGold: 1e12 }).startGold, GOLD_STEPS[GOLD_STEPS.length - 1]);
+  assert.equal(cleanRules({ colonies: 9999 }).colonies, C.colonyMax);
+  // La partida usa el oro inicial elegido
+  const map = generateMap(160 * RES, 100 * RES, 3);
+  const game = new Game({ map, seed: 3, rules: { startGold: 5000000 } });
+  const p = game.addPlayer('P', [0, 0, 0], true);
+  game.start();
+  assert.equal(p.gold, 5000000);
+});

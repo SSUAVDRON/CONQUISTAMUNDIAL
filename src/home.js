@@ -1,6 +1,6 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { BUILDINGS, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
+import { BUILDINGS, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, WIN_SHARES, colonyCount, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { decodeRelief, generateMap } from './map.js';
 import { paintMapPreview } from './terreno.js';
@@ -76,6 +76,23 @@ function realPreviewData(id) {
   d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries };
   realCache.set(id, d);
   return d;
+}
+
+/** Casillas de tierra de un mapa (para calcular las colonias automáticas sin cargarlo). */
+const landCache = new Map();
+function landTilesOf(id) {
+  if (landCache.has(id)) return landCache.get(id);
+  let n;
+  if (REAL_MAP_DATA[id]) {
+    const t = realPreviewData(id).terrain;
+    n = 0;
+    for (let i = 0; i < t.length; i++) if (t[i]) n++;
+  } else {
+    const size = MAP_SIZES[id] || MAP_SIZES.mediano;
+    n = Math.round(size.w * size.h * 0.42);
+  }
+  landCache.set(id, n);
+  return n;
 }
 
 /** Miniatura de un mapa (real o aleatorio con semilla fija) con el mismo estilo que la partida. */
@@ -192,6 +209,7 @@ export function rulesSummary(r) {
   if (!r) return '';
   const parts = [`victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
+  if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
   if (!r.missiles) parts.push('sin misiles');
   if (!r.warships) parts.push('sin buques');
   return parts.join(' · ');
@@ -265,9 +283,30 @@ export class Home {
     segmented($('seg-victoria'), WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`]), this.choice.rules.winShare, (v) => {
       this.choice.rules.winShare = v;
     });
-    segmented($('seg-oro'), START_GOLDS.map((v) => [v, v ? formatNumber(v) : 'Nada']), this.choice.rules.startGold, (v) => {
+    // Oro inicial: deslizador por escalones (0, 100k, 250k… 10M)
+    const goldIdx = (g) => GOLD_STEPS.reduce((best, v, i) => (Math.abs(v - g) < Math.abs(GOLD_STEPS[best] - g) ? i : best), 0);
+    const showGold = () => {
+      const v = GOLD_STEPS[Number($('in-oro').value)];
+      $('out-oro').textContent = v ? formatNumber(v) : 'Nada';
       this.choice.rules.startGold = v;
+    };
+    $('in-oro').max = String(GOLD_STEPS.length - 1);
+    $('in-oro').value = String(goldIdx(this.choice.rules.startGold || 0));
+    $('in-oro').addEventListener('input', showGold);
+    showGold();
+    // Colonias (bots débiles): «Auto» según el mapa o un número fijo
+    $('in-colonias').value = String(this.choice.rules.colonies ?? -1);
+    $('in-colonias').addEventListener('input', () => {
+      const v = Number($('in-colonias').value);
+      this.choice.rules.colonies = v < 0 ? null : v;
+      this._syncColonies();
     });
+    this._syncColonies = () => {
+      const v = Number($('in-colonias').value);
+      const auto = colonyCount(landTilesOf(this.choice.map), Number($('in-bots').value));
+      $('out-colonias').textContent = v < 0 ? 'Auto' : String(v);
+      $('nota-colonias').textContent = v < 0 ? `(${auto} en este mapa)` : '';
+    };
     $('in-misiles').checked = this.choice.rules.missiles;
     $('in-buques').checked = this.choice.rules.warships;
     $('in-misiles').addEventListener('change', () => {
@@ -284,6 +323,7 @@ export class Home {
       const flags = REAL_MAP_DATA[this.choice.map]?.countries.length;
       $('nota-rivales').textContent = flags ? `(${flags} países reales; el resto, inventados)` : '';
       $('campo-semilla').hidden = !!REAL_MAPS[this.choice.map];
+      this._syncColonies?.();
     };
     $('in-bots').addEventListener('input', this._syncBots);
     $('form-rapida').addEventListener('submit', (e) => {

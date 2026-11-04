@@ -170,18 +170,22 @@ export const CONFIG = {
 };
 
 /** Reglas que se eligen al crear la partida (también en las salas online). */
-export const DEFAULT_RULES = { winShare: 0.7, startGold: 0, missiles: true, warships: true };
+export const DEFAULT_RULES = { winShare: 0.7, startGold: 0, missiles: true, warships: true, colonies: null };
 export const WIN_SHARES = [0.5, 0.7, 0.9];
-export const START_GOLDS = [0, 600000, 3000000];
+/** Oro inicial que se puede elegir en las partidas personalizadas (deslizador). */
+export const GOLD_STEPS = [0, 100000, 250000, 500000, 1000000, 2000000, 3000000, 5000000, 10000000];
 
 /** Normaliza reglas venidas de fuera (perfil, red). */
 export function cleanRules(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
   return {
     winShare: WIN_SHARES.includes(r.winShare) ? r.winShare : DEFAULT_RULES.winShare,
-    startGold: START_GOLDS.includes(r.startGold) ? r.startGold : DEFAULT_RULES.startGold,
+    // Cualquier cantidad entre 0 y el máximo del deslizador
+    startGold: Number.isFinite(r.startGold) ? Math.max(0, Math.min(GOLD_STEPS[GOLD_STEPS.length - 1], Math.round(r.startGold))) : DEFAULT_RULES.startGold,
     missiles: r.missiles !== false,
     warships: r.warships !== false,
+    // Colonias (bots débiles): null = automático según el mapa; si no, cuántas
+    colonies: Number.isFinite(r.colonies) ? Math.max(0, Math.min(CONFIG.colonyMax, Math.round(r.colonies))) : null,
   };
 }
 
