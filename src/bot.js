@@ -18,6 +18,9 @@ export class BotBrain {
     const max = p.maxTroops();
     const { wild, counts, coastal } = g.neighborSummary(p);
 
+    // 0. Construir si hay oro (no gasta tropas, así que sigue pensando después)
+    this._maybeBuild(counts, coastal);
+
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.troops > max * 0.1) {
       g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio));
@@ -48,6 +51,66 @@ export class BotBrain {
       const tile = this._pickBoatTarget();
       if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * 0.35));
     }
+  }
+
+  /**
+   * Prioridades: fortaleza si un vecino le supera claramente, luego ciudades
+   * (ahorra para ellas) y puertos si es costero y ya tiene alguna ciudad.
+   */
+  _maybeBuild(counts, coastal) {
+    const g = this.game;
+    const p = this.player;
+    if (p.tiles < 120) return false;
+
+    let threat = null;
+    for (const id of counts.keys()) {
+      const t = g.players[id];
+      if (t.troops > p.troops * 1.3 && (!threat || t.troops > threat.troops)) threat = t;
+    }
+
+    let want = 'city';
+    if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / 2500)) want = 'fort';
+    else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / 5000) && g.rng.chance(0.4)) want = 'port';
+
+    if (p.gold < g.buildCost(p, want)) return false;
+    const tile = this._pickBuildTile(want, threat);
+    return tile >= 0 && g.build(p, want, tile);
+  }
+
+  _pickBuildTile(kind, threat) {
+    const g = this.game;
+    const map = g.map;
+    const p = this.player;
+    const r = g.rng;
+
+    if (kind === 'fort' && threat) {
+      // Cerca del frente con el vecino peligroso, pero un poco hacia dentro
+      const front = [];
+      const nb = new Int32Array(4);
+      for (const t of p.border) {
+        const c = map.neighbors(t, nb);
+        for (let k = 0; k < c; k++) if (g.owner[nb[k]] === threat.id) front.push(t);
+        if (front.length > 200) break;
+      }
+      for (let i = 0; i < 20 && front.length; i++) {
+        const t = front[r.int(0, front.length - 1)];
+        const x = map.x(t) + r.int(-4, 4);
+        const y = map.y(t) + r.int(-4, 4);
+        if (!map.inBounds(x, y)) continue;
+        const cand = map.index(x, y);
+        if (!p.border.has(cand) && g.canBuild(p, kind, cand).ok) return cand;
+      }
+      return -1;
+    }
+
+    const pool = kind === 'port' ? map.coastTiles : map.landTiles;
+    for (let i = 0; i < 150; i++) {
+      const t = pool[r.int(0, pool.length - 1)];
+      if (g.owner[t] !== p.id) continue;
+      if (kind === 'city' && p.border.has(t)) continue;
+      if (g.canBuild(p, kind, t).ok) return t;
+    }
+    return -1;
   }
 
   /** Elige una costa ajena débil, preferiblemente cercana. */

@@ -13,15 +13,20 @@
 - Partida de bots de fondo en el menú
 - Tests de simulación
 
-## Fase 2 — Economía y construcción
+## ✅ Fase 2 — Economía y construcción (hecho)
 
-- **Oro**: ingreso pasivo según territorio y población
-- **Edificios** (se colocan en casillas propias):
-  - Ciudad: sube el máximo de tropas
-  - Puerto: permite más barcos y los hace salir desde ahí
-  - Fortaleza: multiplica la defensa en un radio
-- Menú contextual (clic derecho) para construir
-- Ajustar la IA para que construya
+- Oro pasivo según territorio; botín al eliminar a una nación
+- Ciudad (+tropas máximas), puerto (+1 barco, +10 % de oro) y fortaleza
+  (defensa ×2,5 en radio 10), con coste creciente por unidad
+- Los edificios se capturan junto con su casilla
+- Barra de construcción con vista previa válida/no válida y radio de la fortaleza
+- La IA construye: fortalezas ante vecinos fuertes, ciudades y puertos
+- Empaquetado en un solo HTML que funciona sin servidor
+
+Pendiente de esta fase, si hace falta al probar:
+- Que los barcos salgan del puerto más cercano en vez de cualquier costa
+- Gastar oro en reclutar tropas de golpe
+- Ajustar precios y efectos tras jugar varias partidas
 
 ## Fase 3 — Diplomacia
 

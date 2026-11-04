@@ -1,6 +1,6 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { CONFIG } from './config.js';
+import { BUILDINGS, CONFIG } from './config.js';
 import { Rng } from './rng.js';
 import { Player } from './player.js';
 import { Attack } from './attack.js';
@@ -26,6 +26,9 @@ export class Game {
     this.bots = [];
     this.attacks = [];
     this.boats = [];
+    this.buildings = []; // { id, kind, tile, owner }
+    this.buildingAt = new Map(); // casilla → edificio
+    this._nextBuildingId = 1;
     this.ticks = 0;
     this.phase = 'spawn'; // 'spawn' | 'playing' | 'ended'
     this.winner = null;
@@ -157,6 +160,7 @@ export class Game {
       const op = this.players[oldId];
       op.tiles--;
       op.border.delete(t);
+      if (newId) op.lastConqueredBy = newId;
     }
     let np = null;
     if (newId) {
@@ -164,6 +168,8 @@ export class Game {
       np.tiles++;
       if (np.tiles > np.maxTilesReached) np.maxTilesReached = np.tiles;
     }
+    const building = this.buildingAt.get(t);
+    if (building) this._transferBuilding(building, oldId, newId);
     if (this.trackDirty) this.dirty.push(t);
     this._updateBorder(t);
 
@@ -265,6 +271,11 @@ export class Game {
         } else if (this.phase === 'playing') {
           this._handleAttackIntent(p, it.tile, it.ratio);
         }
+      } else if (it.type === 'build') {
+        if (this.phase !== 'playing') continue;
+        const check = this.canBuild(p, it.kind, it.tile);
+        if (check.ok) this.build(p, it.kind, it.tile);
+        else this._notify(p, check.reason, 'warn');
       } else if (it.type === 'cancelAttack') {
         const atk = p.attacks.get(it.targetId);
         if (atk) this._endAttack(atk, 0.5); // retirarse cuesta la mitad de las tropas
@@ -345,15 +356,35 @@ export class Game {
     atk.heap.push(key, t);
   }
 
-  /** Coste en tropas de conquistar `t` y bajas que sufre el defensor. */
+  /**
+   * Coste en tropas de conquistar `t`, bajas que sufre el defensor y
+   * multiplicador de tiempo (terreno × fortalezas).
+   */
   tileCost(t, target) {
     const m = CONFIG.terrainCost[this.map.terrain[t]];
-    if (!target) return { cost: CONFIG.wildTileCost * m, loss: 0 };
+    if (!target) return { cost: CONFIG.wildTileCost * m, loss: 0, slow: m };
+    const fort = this.fortMultiplier(target, t);
     const density = target.troops / Math.max(1, target.tiles);
     return {
-      cost: (CONFIG.playerTileBaseCost + density * CONFIG.defenseDensityMult) * m,
+      cost: (CONFIG.playerTileBaseCost + density * CONFIG.defenseDensityMult) * m * fort,
       loss: Math.min(target.troops, density * CONFIG.defenderLossMult),
+      slow: m * fort,
     };
+  }
+
+  /** Multiplicador defensivo si `t` está en el radio de una fortaleza del defensor. */
+  fortMultiplier(defender, t) {
+    if (!defender.forts.size) return 1;
+    const map = this.map;
+    const x = map.x(t);
+    const y = map.y(t);
+    const r2 = CONFIG.fortRadius * CONFIG.fortRadius;
+    for (const f of defender.forts) {
+      const dx = map.x(f) - x;
+      const dy = map.y(f) - y;
+      if (dx * dx + dy * dy <= r2) return CONFIG.fortDefenseMult;
+    }
+    return 1;
   }
 
   _processAttack(atk) {
@@ -379,13 +410,12 @@ export class Game {
     atk.budget += Math.max(CONFIG.minAttackBudget, atk.inFrontier.size * rate);
 
     const owner = this.owner;
-    const terrain = this.map.terrain;
     const aid = A.id;
     while (atk.budget > 0 && atk.heap.size > 0) {
       const t = atk.heap.pop();
       atk.inFrontier.delete(t);
       if (owner[t] !== tid || this._countOwnedNeighbors(t, aid) === 0) continue;
-      const { cost, loss } = this.tileCost(t, target);
+      const { cost, loss, slow } = this.tileCost(t, target);
       if (atk.troops < cost) {
         // El asalto se agota contra esta casilla
         if (target) target.troops = Math.max(0, target.troops - atk.troops * 0.5);
@@ -393,7 +423,7 @@ export class Game {
         break;
       }
       atk.troops -= cost;
-      atk.budget -= CONFIG.terrainCost[terrain[t]];
+      atk.budget -= slow;
       if (target) target.troops -= loss;
       this.setOwner(t, aid);
     }
@@ -412,11 +442,78 @@ export class Game {
     atk.inFrontier.clear();
   }
 
+  // --------------------------------------------------------------- edificios
+
+  buildCost(p, kind) {
+    const def = BUILDINGS[kind];
+    return def.base + def.step * p.buildings[kind];
+  }
+
+  /** Comprueba si `p` puede construir `kind` en `tile`; si no, explica por qué. */
+  canBuild(p, kind, tile) {
+    const map = this.map;
+    const def = BUILDINGS[kind];
+    if (!def) return { ok: false, reason: 'Edificio desconocido' };
+    if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
+      return { ok: false, reason: 'Solo puedes construir en tu territorio' };
+    }
+    if (def.coastal && !map.coastal[tile]) return { ok: false, reason: 'El puerto tiene que estar en la costa' };
+    const near = this.buildingNear(tile, CONFIG.buildingMinDist);
+    if (near) return { ok: false, reason: `Demasiado cerca de otro edificio (${BUILDINGS[near.kind].name})` };
+    const cost = this.buildCost(p, kind);
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: ${def.name} cuesta ${Math.ceil(cost)}` };
+    return { ok: true, reason: '' };
+  }
+
+  build(p, kind, tile) {
+    if (!this.canBuild(p, kind, tile).ok) return false;
+    p.gold -= this.buildCost(p, kind);
+    const b = { id: this._nextBuildingId++, kind, tile, owner: 0 };
+    this.buildings.push(b);
+    this.buildingAt.set(tile, b);
+    this._transferBuilding(b, 0, p.id, true);
+    return true;
+  }
+
+  /** Primer edificio a menos de `dist` casillas de `tile` (o null). */
+  buildingNear(tile, dist) {
+    const map = this.map;
+    const x = map.x(tile);
+    const y = map.y(tile);
+    for (const b of this.buildings) {
+      const dx = map.x(b.tile) - x;
+      const dy = map.y(b.tile) - y;
+      if (dx * dx + dy * dy < dist * dist) return b;
+    }
+    return null;
+  }
+
+  /** Los edificios cambian de manos con su casilla; sin dueño, se destruyen. */
+  _transferBuilding(b, oldId, newId, built = false) {
+    const name = BUILDINGS[b.kind].name;
+    if (oldId) {
+      const op = this.players[oldId];
+      op.buildings[b.kind]--;
+      if (b.kind === 'fort') op.forts.delete(b.tile);
+      if (op.isHuman && newId) this._emit(`Has perdido una ${name} a manos de ${this.players[newId].name}`, 'danger');
+    }
+    if (!newId) {
+      this.buildings = this.buildings.filter((x) => x !== b);
+      this.buildingAt.delete(b.tile);
+      return;
+    }
+    b.owner = newId;
+    const np = this.players[newId];
+    np.buildings[b.kind]++;
+    if (b.kind === 'fort') np.forts.add(b.tile);
+    if (np.isHuman) this._emit(built ? `${name} construida` : `Has capturado una ${name}`, 'good');
+  }
+
   // ------------------------------------------------------------------ barcos
 
   launchBoat(p, tile, troops, { deduct = true } = {}) {
-    if (p.boatCount >= CONFIG.maxBoats) {
-      this._notify(p, `Ya tienes ${CONFIG.maxBoats} barcos en el mar`, 'warn');
+    if (p.boatCount >= p.maxBoats()) {
+      this._notify(p, `Ya tienes ${p.maxBoats()} barcos en el mar`, 'warn');
       return false;
     }
     if (deduct) troops = Math.min(troops, Math.floor(p.troops));
@@ -591,7 +688,9 @@ export class Game {
 
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
-      if (p.alive) p.troops += p.growthPerTick();
+      if (!p.alive) continue;
+      p.troops += p.growthPerTick();
+      p.gold += p.goldPerTick();
     }
 
     for (let i = 0; i < this.attacks.length; i++) this._processAttack(this.attacks[i]);
@@ -629,6 +728,14 @@ export class Game {
       p.alive = false;
       p.eliminatedTick = this.ticks;
       p.troops = 0;
+      // Botín: el oro del eliminado pasa a quien le quitó la última casilla
+      const killer = this.players[p.lastConqueredBy];
+      if (killer && killer.alive && p.gold > 0) {
+        const loot = p.gold * CONFIG.plunderShare;
+        killer.gold += loot;
+        if (killer.isHuman) this._emit(`Botín: +${Math.floor(loot)} de oro de ${p.name}`, 'good');
+      }
+      p.gold = 0;
       for (const atk of [...p.attacks.values()]) this._endAttack(atk);
       for (const b of this.boats) if (b.owner === p.id) b.done = true;
       this.boats = this.boats.filter((b) => !b.done);

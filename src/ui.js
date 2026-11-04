@@ -1,7 +1,8 @@
 // Interfaz HTML: menú, panel del jugador, clasificación, eventos y tooltip.
-import { CONFIG, TERRAIN_NAMES, TICK_MS } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
+import { drawBuildingIcon } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const PREFS_KEY = 'dominia.prefs';
@@ -63,6 +64,35 @@ export class UI {
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
     $('fin-nueva').addEventListener('click', () => this.handlers.onExit?.(true));
+    $('conf-no').addEventListener('click', () => {
+      $('confirmar').hidden = true;
+    });
+    $('conf-si').addEventListener('click', () => {
+      $('confirmar').hidden = true;
+      this.handlers.onExit?.(true);
+    });
+
+    this._buildButtons = new Map();
+    for (const kind of BUILDING_KINDS) {
+      const def = BUILDINGS[kind];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.kind = kind;
+      btn.title = `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`;
+      const icon = document.createElement('canvas');
+      icon.width = 48;
+      icon.height = 48;
+      drawBuildingIcon(icon.getContext('2d'), kind, 24, 24, 40, { glyph: '#f2f4f8' });
+      const text = document.createElement('span');
+      text.className = 'b-texto';
+      text.innerHTML = `<span class="b-nombre">${def.name}</span><span class="b-coste"></span>`;
+      const count = document.createElement('span');
+      count.className = 'b-num';
+      btn.append(icon, text, count);
+      btn.addEventListener('click', () => this.handlers.onBuildMode?.(kind));
+      $('construir').append(btn);
+      this._buildButtons.set(kind, btn);
+    }
 
     $('lista-clasificacion').addEventListener('click', (e) => {
       const li = e.target.closest('li[data-id]');
@@ -97,6 +127,11 @@ export class UI {
     this._leaderSig = '';
   }
 
+  confirmExit() {
+    $('confirmar').hidden = false;
+    $('conf-no').focus();
+  }
+
   showEnd(title, text) {
     $('fin-titulo').textContent = title;
     $('fin-texto').textContent = text;
@@ -129,16 +164,21 @@ export class UI {
     setTimeout(() => el.remove(), EVENT_MS + 700);
   }
 
-  update(game, human, ratio) {
+  update(game, human, ratio, buildMode) {
     const landCount = game.map.landCount;
 
-    // Aviso de fase de despliegue
+    // Aviso central: despliegue o construcción en curso
     const aviso = $('aviso');
     if (game.phase === 'spawn') {
       const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000));
       aviso.textContent = human.spawned
-        ? `Posición elegida. Puedes cambiarla — empieza en ${left}s`
-        : `Haz clic en el mapa para elegir dónde empezar — ${left}s`;
+        ? `Posición elegida. Puedes cambiarla. Empieza en ${left} s`
+        : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`;
+      aviso.hidden = false;
+    } else if (buildMode) {
+      const def = BUILDINGS[buildMode];
+      const where = def.coastal ? 'en tu costa' : 'en tu territorio';
+      aviso.textContent = `Toca ${where} para construir: ${def.name} (${formatNumber(game.buildCost(human, buildMode))} de oro). Esc para cancelar`;
       aviso.hidden = false;
     } else {
       aviso.hidden = true;
@@ -153,12 +193,25 @@ export class UI {
     const max = human.maxTroops();
     $('pj-estado').textContent = human.alive ? '' : 'Derrotado · modo espectador';
     $('pj-barra').style.width = `${Math.min(100, (human.troops / max) * 100)}%`;
+    const perSecond = 1000 / TICK_MS;
+    const playing = game.phase === 'playing';
     $('pj-tropas').textContent = `${formatNumber(human.troops)} / ${formatNumber(max)}`;
-    $('pj-crec').textContent = game.phase === 'playing' ? `+${formatNumber(human.growthPerTick() * (1000 / TICK_MS))}/s` : '—';
+    $('pj-crec').textContent = playing ? `+${formatNumber(human.growthPerTick() * perSecond)}/s` : '';
+    $('pj-oro').textContent = formatNumber(human.gold);
+    $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
     $('pj-terr').textContent = formatPercent(human.tiles / landCount);
-    $('pj-barcos').textContent = `${human.boatCount}/${CONFIG.maxBoats}`;
+    $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
     $('ratio-tropas').textContent = `(${formatNumber(human.troops * ratio)} tropas)`;
+
+    for (const [kind, btn] of this._buildButtons) {
+      const cost = game.buildCost(human, kind);
+      btn.querySelector('.b-coste').textContent = `${formatNumber(cost)} oro`;
+      btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}` : '';
+      btn.classList.toggle('caro', human.gold < cost);
+      btn.classList.toggle('activo', buildMode === kind);
+      btn.disabled = !playing || !human.alive;
+    }
 
     this._updateAttacks(game, human);
     this._updateLeaderboard(game, human, landCount);
@@ -231,9 +284,14 @@ export class UI {
     const o = game.owner[tile];
     if (o) {
       const p = game.players[o];
+      const b = game.buildingNear(tile, 2);
+      const extra = [];
+      if (b) extra.push(BUILDINGS[b.kind].name);
+      if (game.fortMultiplier(p, tile) > 1) extra.push('zona fortificada');
+      extra.push(terrain);
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${p.isHuman ? ' (tú)' : ''}<br>
         ${formatNumber(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
-        <span class="suave">${terrain}</span>`;
+        <span class="suave">${extra.join(' · ')}</span>`;
     } else {
       tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>`;
     }

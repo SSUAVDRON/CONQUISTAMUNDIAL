@@ -119,7 +119,7 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 #fin-texto { text-align: center; color: var(--texto-suave); white-space: pre-line; }
 
 /* ---------- Clasificación ---------- */
-#clasificacion { top: 12px; left: 12px; width: 250px; padding: 10px 12px; }
+#clasificacion { top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); width: 250px; padding: 10px 12px; }
 #clasificacion h2 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
 #lista-clasificacion { list-style: none; margin: 0; padding: 0; }
 #lista-clasificacion li {
@@ -141,7 +141,7 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .muestra { display: inline-block; width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4); }
 
 /* ---------- Barra superior ---------- */
-#barra-superior { top: 12px; right: 12px; display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+#barra-superior { top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
 #velocidad { display: flex; gap: 4px; }
 #velocidad button { padding: 4px 9px; min-width: 36px; }
 #velocidad button.activo { background: var(--acento); color: var(--acento-texto); }
@@ -191,17 +191,40 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 @keyframes entrar { from { opacity: 0; transform: translateY(-6px); } }
 
 /* ---------- Panel del jugador ---------- */
-#panel-jugador { left: 50%; bottom: 12px; transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); padding: 10px 14px 12px; }
+#panel-jugador { left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); padding: 10px 14px 12px; }
 #panel-jugador .cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 #pj-estado { margin-left: auto; font-size: 12px; color: var(--texto-suave); }
 .barra { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 8px; }
 #pj-barra { height: 100%; width: 0; background: linear-gradient(90deg, var(--acento), #ffe39a); transition: width 0.2s; }
 .cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
-.cifras div { display: flex; flex-direction: column; }
-.cifras span:last-child { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cifras div { display: flex; flex-direction: column; min-width: 0; }
+.cifras .valor { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cifras .sub { font-size: 11px; color: var(--bien); font-variant-numeric: tabular-nums; min-height: 15px; }
 .etq { font-size: 11px; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.05em; }
 .ratio { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--texto-suave); }
 .ratio strong { color: var(--texto); }
+
+#construir { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+#construir button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 5px;
+  text-align: left;
+  position: relative;
+  min-width: 0;
+}
+#construir canvas { width: 24px; height: 24px; flex: none; }
+#construir .b-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+#construir .b-nombre { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#construir .b-coste { font-size: 11px; color: var(--acento); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#construir .b-num { position: absolute; top: 3px; right: 6px; font-size: 11px; color: var(--texto-suave); }
+#construir button.caro .b-coste { color: var(--texto-suave); }
+#construir button.caro canvas { opacity: 0.45; }
+#construir button.activo { background: rgba(242, 179, 61, 0.22); border-color: var(--acento); }
+#construir button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.centrado { text-align: center; color: var(--texto-suave); }
 
 #lista-ataques { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 #lista-ataques:empty { display: none; }
@@ -233,16 +256,19 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 
 /* ---------- Móvil ---------- */
 @media (max-width: 720px) {
-  #barra-superior { top: 8px; left: 8px; right: 8px; justify-content: space-between; }
-  #clasificacion { top: 58px; left: 8px; width: 180px; padding: 6px 8px; }
+  #barra-superior { top: calc(8px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); justify-content: space-between; }
+  #clasificacion { top: calc(58px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); width: 180px; padding: 6px 8px; }
   #clasificacion h2 { display: none; }
   #clasificacion li:nth-child(n+4):not(.yo) { display: none; }
   #lista-clasificacion .tro { display: none; }
   #lista-clasificacion li { grid-template-columns: 16px 12px 1fr auto; font-size: 12px; }
-  #aviso { top: auto; bottom: 210px; }
-  #eventos { top: auto; bottom: 200px; flex-direction: column-reverse; }
-  #panel-jugador { bottom: 8px; padding: 8px 10px 10px; }
+  #aviso { top: auto; bottom: calc(270px + env(safe-area-inset-bottom, 0px)); }
+  #eventos { top: auto; bottom: calc(262px + env(safe-area-inset-bottom, 0px)); flex-direction: column-reverse; }
+  #panel-jugador { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px 10px; }
+  #construir button { padding: 4px 6px 4px 4px; gap: 4px; }
+  #construir canvas { width: 20px; height: 20px; }
+  #construir .b-nombre { font-size: 12px; }
   .cifras { gap: 4px; }
-  .cifras span:last-child { font-size: 14px; }
+  .cifras .valor { font-size: 14px; }
   #tooltip { display: none !important; }
 }

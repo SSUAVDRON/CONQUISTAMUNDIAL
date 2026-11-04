@@ -34,13 +34,35 @@ export const CONFIG = {
   minAttackBudget: 0.25,
 
   // Barcos de transporte
-  maxBoats: 3,
+  maxBoats: 3, // sin puertos; cada puerto suma uno
   boatSpeed: 1.5, // casillas por tick
+
+  // Oro: ingreso por tick = base + casillas^exp × mult (× bonus de puertos)
+  startGold: 0,
+  goldBase: 2,
+  goldTileMult: 0.08,
+  goldTileExp: 0.7,
+  plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla
+
+  // Edificios
+  buildingMinDist: 5, // casillas mínimas entre dos edificios
+  cityMaxTroops: 15000, // tropas máximas extra por ciudad
+  portGoldBonus: 0.1, // +10% de oro por puerto
+  fortRadius: 10,
+  fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
 
   // Bots
   botThinkMin: 6,
   botThinkMax: 20,
 };
+
+/** Tipos de edificio. El coste sube con cada edificio del mismo tipo que ya tengas. */
+export const BUILDINGS = {
+  city: { name: 'Ciudad', base: 5000, step: 5000, key: 'KeyQ', desc: '+15k tropas máximas' },
+  port: { name: 'Puerto', base: 4000, step: 4000, key: 'KeyE', coastal: true, desc: '+1 barco y +10% de oro' },
+  fort: { name: 'Fortaleza', base: 3000, step: 3000, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
+};
+export const BUILDING_KINDS = Object.keys(BUILDINGS);
 
 export const MAP_SIZES = {
   pequeno: { w: 360, h: 210, label: 'Pequeño' },

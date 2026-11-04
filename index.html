@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Dominia — Conquista el mundo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Dominia</title>
   <meta name="description" content="Juego de estrategia de conquista territorial en el navegador.">
   <link rel="stylesheet" href="css/estilo.css">
 </head>
@@ -48,8 +48,9 @@
           <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>.</li>
           <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco (máx. 3 a la vez).</li>
           <li><b>Terreno:</b> las mesetas y montañas cuestan más tropas y tiempo de conquistar.</li>
+          <li><b>Oro y edificios:</b> ganas oro según tu territorio. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (más barcos y oro) y <i>fortalezas</i> (defensa ×2,5 alrededor). Si te conquistan la casilla, el edificio cambia de dueño.</li>
           <li><b>Victoria:</b> controla el 70% de la tierra del mundo.</li>
-          <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Espacio = pausa · C = centrar en ti.</li>
+          <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q/E/R = construir ciudad/puerto/fortaleza · Esc o clic derecho = cancelar · Espacio = pausa · C = centrar en ti.</li>
         </ul>
       </details>
     </form>
@@ -84,15 +85,16 @@
       </div>
       <div class="barra" title="Tropas / máximo"><div id="pj-barra"></div></div>
       <div class="cifras">
-        <div><span class="etq">Tropas</span><span id="pj-tropas">0</span></div>
-        <div><span class="etq">Crecimiento</span><span id="pj-crec">0</span></div>
-        <div><span class="etq">Territorio</span><span id="pj-terr">0%</span></div>
-        <div><span class="etq">Barcos</span><span id="pj-barcos">0</span></div>
+        <div><span class="etq">Tropas</span><span class="valor" id="pj-tropas">0</span><small class="sub" id="pj-crec"></small></div>
+        <div><span class="etq">Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
+        <div><span class="etq">Territorio</span><span class="valor" id="pj-terr">0%</span></div>
+        <div><span class="etq">Barcos</span><span class="valor" id="pj-barcos">0</span></div>
       </div>
       <label class="ratio">
         <span>Fuerza de ataque <strong id="ratio-valor">20%</strong> <span id="ratio-tropas"></span></span>
         <input id="ratio" type="range" min="1" max="100" value="20">
       </label>
+      <div id="construir" role="group" aria-label="Construir"></div>
       <ul id="lista-ataques"></ul>
     </section>
 
@@ -107,6 +109,18 @@
       <div class="botones">
         <button type="button" id="fin-seguir">Seguir mirando</button>
         <button type="button" id="fin-nueva" class="principal">Nueva partida</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmación para salir (los diálogos del navegador no funcionan en todas partes) -->
+  <div id="confirmar" class="pantalla" hidden>
+    <div class="tarjeta">
+      <h2>¿Abandonar la partida?</h2>
+      <p class="centrado">Volverás al menú y se perderá esta partida.</p>
+      <div class="botones">
+        <button type="button" id="conf-no">Seguir jugando</button>
+        <button type="button" id="conf-si" class="principal">Abandonar</button>
       </div>
     </div>
   </div>

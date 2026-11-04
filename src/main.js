@@ -1,5 +1,5 @@
 // Punto de entrada: une simulación, render, entrada e interfaz, y lleva el bucle.
-import { CONFIG, MAP_SIZES, TICK_MS } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_SIZES, TICK_MS } from './config.js';
 import { generateMap } from './map.js';
 import { Game } from './game.js';
 import { Renderer } from './render.js';
@@ -25,6 +25,7 @@ const state = {
   last: performance.now(),
   lastHud: 0,
   hover: { tile: -1, x: 0, y: 0 },
+  buildMode: null, // tipo de edificio que se está colocando
   endShown: false,
   defeatShown: false,
 };
@@ -56,6 +57,7 @@ function newGame({ seed, mapSize, bots, human }) {
   state.human = player;
   state.renderer = new Renderer(canvas, game, camera);
   state.acc = 0;
+  state.buildMode = null;
   state.endShown = false;
   state.defeatShown = false;
   camera.fit(map.width, map.height);
@@ -112,13 +114,36 @@ function centerOnHuman() {
   else camera.centerOn(game.map.x(t), game.map.y(t));
 }
 
+/** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
+function setBuildMode(kind) {
+  const { game, human } = state;
+  if (state.demo || !human || !human.alive || game.phase !== 'playing') return;
+  state.buildMode = state.buildMode === kind ? null : kind;
+  ui.update(game, human, state.ratio, state.buildMode);
+}
+
+const buildKeys = Object.fromEntries(BUILDING_KINDS.map((k) => [BUILDINGS[k].key, k]));
+
 const input = new Input(canvas, camera, {
-  onClick(sx, sy) {
+  onClick(sx, sy, shift) {
     if (state.demo || !state.human || !state.human.alive) return;
     const tile = tileAt(sx, sy);
     if (tile < 0) return;
+    if (state.buildMode) {
+      state.game.queueIntent({ type: 'build', playerId: state.human.id, tile, kind: state.buildMode });
+      if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
+      return;
+    }
     state.game.queueIntent({ type: 'action', playerId: state.human.id, tile, ratio: state.ratio });
   },
+  onRightClick() {
+    state.buildMode = null;
+  },
+  onEscape() {
+    state.buildMode = null;
+  },
+  buildKeys,
+  onBuildKey: setBuildMode,
   onHover(sx, sy) {
     state.hover = { tile: sx < 0 ? -1 : tileAt(sx, sy), x: sx, y: sy };
     if (!state.demo && state.game) ui.updateTooltip(state.game, state.hover.tile, sx, sy);
@@ -137,10 +162,12 @@ ui.on({
   onSpeed: setSpeed,
   onExit(force) {
     if (!force && !state.demo && state.game.phase !== 'ended' && state.human?.alive) {
-      if (!window.confirm('¿Abandonar la partida?')) return;
+      ui.confirmExit();
+      return;
     }
     startDemo();
   },
+  onBuildMode: setBuildMode,
   onFocusPlayer(id) {
     const label = state.renderer?.labels.find((l) => l.player.id === id);
     if (label) camera.centerOn(label.x, label.y);
@@ -188,11 +215,12 @@ function frame(now) {
   if (state.demo && game && game.phase === 'ended') startDemo();
 
   input.update(dt);
-  state.renderer?.draw(now);
+  if (state.buildMode && (state.game.phase !== 'playing' || !state.human?.alive)) state.buildMode = null;
+  state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile });
 
   if (!state.demo && state.human && now - state.lastHud > 200) {
     state.lastHud = now;
-    ui.update(state.game, state.human, state.ratio);
+    ui.update(state.game, state.human, state.ratio, state.buildMode);
     if (state.hover.tile >= 0) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
     checkEnd();
   }

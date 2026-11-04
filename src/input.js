@@ -32,7 +32,7 @@ export class Input {
   _down(e) {
     const [x, y] = this._pos(e);
     this.canvas.setPointerCapture(e.pointerId);
-    this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button });
+    this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button, shift: e.shiftKey });
     if (this.pointers.size === 1) this.dragging = false;
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
@@ -69,7 +69,7 @@ export class Input {
     if (!ptr) return;
     this.pointers.delete(e.pointerId);
     if (!cancelled && !this.dragging && this.pointers.size === 0) {
-      if (ptr.button === 0) this.h.onClick?.(ptr.x, ptr.y);
+      if (ptr.button === 0) this.h.onClick?.(ptr.x, ptr.y, ptr.shift);
       else if (ptr.button === 2) this.h.onRightClick?.(ptr.x, ptr.y);
     }
     if (this.pointers.size === 0) this.dragging = false;
@@ -99,6 +99,10 @@ export class Input {
       this.h.onTogglePause?.();
     } else if (e.code === 'KeyC') {
       this.h.onCenter?.();
+    } else if (e.code === 'Escape') {
+      this.h.onEscape?.();
+    } else if (this.h.buildKeys && this.h.buildKeys[e.code]) {
+      this.h.onBuildKey?.(this.h.buildKeys[e.code]);
     } else if (e.code === 'Equal' || e.code === 'NumpadAdd') {
       this.camera.zoomAt(this.camera.viewW / 2, this.camera.viewH / 2, 1.25);
     } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {

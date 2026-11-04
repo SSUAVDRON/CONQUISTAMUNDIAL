@@ -1,8 +1,9 @@
 // Dibujo en canvas: terreno (una vez), capa de territorios (incremental),
 // barcos y nombres de las naciones.
-import { TERRAIN } from './config.js';
+import { CONFIG, TERRAIN } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
+import { drawBuildingIcon } from './icons.js';
 
 const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 const FILL_ALPHA = 150;
@@ -184,7 +185,10 @@ export class Renderer {
     }
   }
 
-  draw(now) {
+  /**
+   * `overlay`: { buildMode, hoverTile } para la vista previa de construcción.
+   */
+  draw(now, overlay = {}) {
     const { ctx, camera, dpr, game } = this;
     this._flushDirty();
     if (now - this.lastLabelTime > LABEL_INTERVAL_MS) {
@@ -205,8 +209,53 @@ export class Renderer {
     this._drawBoats();
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this._drawBuildings();
     this._drawLabels();
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
+    if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
+  }
+
+  _buildingSize() {
+    return Math.min(30, Math.max(10, this.camera.zoom * 3));
+  }
+
+  _drawBuildings() {
+    const { ctx, game, camera } = this;
+    if (camera.zoom < 1.1 || !game.buildings.length) return;
+    const map = game.map;
+    const size = this._buildingSize();
+    for (const b of game.buildings) {
+      const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size) continue;
+      const p = game.players[b.owner];
+      drawBuildingIcon(ctx, b.kind, sx, sy, size, {
+        disc: rgbToCss(shadeRgb(p.color, 0.7)),
+        ring: p.isHuman ? '#ffffff' : 'rgba(0,0,0,0.7)',
+      });
+    }
+  }
+
+  _drawBuildPreview(kind, tile) {
+    const { ctx, game, camera } = this;
+    const human = game.human;
+    if (!human) return;
+    const map = game.map;
+    const ok = game.canBuild(human, kind, tile).ok;
+    const [sx, sy] = camera.worldToScreen(map.x(tile) + 0.5, map.y(tile) + 0.5);
+    const color = ok ? '#5fd38d' : '#ff6b6b';
+    if (kind === 'fort') {
+      ctx.beginPath();
+      ctx.arc(sx, sy, CONFIG.fortRadius * camera.zoom, 0, Math.PI * 2);
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    const size = Math.max(18, this._buildingSize());
+    ctx.globalAlpha = 0.9;
+    drawBuildingIcon(ctx, kind, sx, sy, size, { disc: rgbToCss(human.color), ring: color });
+    ctx.globalAlpha = 1;
   }
 
   _drawBoats() {

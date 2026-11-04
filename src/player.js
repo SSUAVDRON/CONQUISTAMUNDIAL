@@ -9,6 +9,7 @@ export class Player {
     this.isHuman = isHuman;
 
     this.troops = 0;
+    this.gold = CONFIG.startGold;
     this.tiles = 0;
     this.alive = true;
     this.spawned = false;
@@ -19,13 +20,18 @@ export class Player {
     /** Ataques activos, por id de objetivo (0 = tierra libre). */
     this.attacks = new Map();
     this.boatCount = 0;
+    /** Edificios por tipo (se actualiza al construir, capturar o perder). */
+    this.buildings = { city: 0, port: 0, fort: 0 };
+    /** Fortalezas propias (casillas), para calcular la defensa. */
+    this.forts = new Set();
 
     this.maxTilesReached = 0;
     this.eliminatedTick = -1;
+    this.lastConqueredBy = 0;
   }
 
   maxTroops() {
-    return CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile;
+    return CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.buildings.city * CONFIG.cityMaxTroops;
   }
 
   /** Crecimiento por tick: rápido con pocas tropas, se frena al acercarse al máximo. */
@@ -34,6 +40,16 @@ export class Player {
     if (this.troops >= max) return 0;
     const raw = CONFIG.growthBase + Math.pow(this.tiles, CONFIG.growthTileExp) * CONFIG.growthTileMult;
     return raw * (1 - this.troops / max);
+  }
+
+  goldPerTick() {
+    if (!this.tiles) return 0;
+    const base = CONFIG.goldBase + Math.pow(this.tiles, CONFIG.goldTileExp) * CONFIG.goldTileMult;
+    return base * (1 + this.buildings.port * CONFIG.portGoldBonus);
+  }
+
+  maxBoats() {
+    return CONFIG.maxBoats + this.buildings.port;
   }
 
   troopsInAttacks() {
