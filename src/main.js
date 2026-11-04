@@ -1,6 +1,6 @@
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_SIZES, REAL_MAPS, TICK_MS } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, TICK_MS, mapLabel } from './config.js';
 import { generateMap, loadRealMap } from './map.js';
 import { Game } from './game.js';
 import { Renderer } from './render.js';
@@ -9,9 +9,12 @@ import { Input } from './input.js';
 import { UI } from './ui.js';
 import { Home } from './home.js';
 import { hexToRgb } from './colors.js';
+import { installFlagSprite } from './icons.js';
 import { hashString } from './rng.js';
 import { formatPercent, formatTime } from './format.js';
-import { levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName } from './profile.js';
+import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName } from './profile.js';
+import { withLoading } from './loading.js';
+import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
 import { NetSync, Sala, newRoomCode, normalizeCode, openRooms } from './multiplayer.js';
@@ -76,16 +79,15 @@ function myIdentity() {
  * Crea una partida. `humans`: identidades en orden (ids 1..n); `localIndex`:
  * cuál es este navegador (-1 = nadie, como en la demo del inicio).
  */
-function newGame({ seed, mapSize, bots, difficulty, humans, localIndex }) {
-  let map;
-  let countries = null;
-  if (REAL_MAPS[mapSize]) {
-    ({ map, countries } = loadRealMap(mapSize)); // los bots serán países reales
-  } else {
-    const size = MAP_SIZES[mapSize] || MAP_SIZES.mediano;
-    map = generateMap(size.w, size.h, seed);
-  }
-  const game = new Game({ map, seed });
+function loadMap(mapSize, seed) {
+  if (REAL_MAPS[mapSize]) return loadRealMap(mapSize); // los bots serán países reales
+  const size = MAP_SIZES[mapSize] || MAP_SIZES.mediano;
+  return { map: generateMap(size.w, size.h, seed), countries: null };
+}
+
+function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = DEFAULT_RULES, loaded = null }) {
+  const { map, countries } = loaded || loadMap(mapSize, seed);
+  const game = new Game({ map, seed, rules });
   const used = new Set();
   const players = humans.map((h) => {
     let name = h.name;
@@ -104,6 +106,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex }) {
   state.human = game.human;
   state.mapSize = mapSize;
   state.renderer = new Renderer(canvas, game, camera);
+  applySettings();
   state.acc = 0;
   state.buildMode = null;
   state.endShown = false;
@@ -137,12 +140,49 @@ function enterGame(game) {
   ui.showHud();
 }
 
-/** Partida contra la IA. */
-function startGame(opts) {
+/** Partida contra la IA, con su pantalla de carga. */
+async function startGame(opts) {
+  if (state.loading) return;
+  state.loading = true;
   leaveOnline();
+  tutorial.stop();
   const seed = opts.seed ? hashString(opts.seed) : randomSeed();
-  const game = newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficulty, humans: [myIdentity()], localIndex: 0 });
-  enterGame(game);
+  try {
+    const game = await withLoading(opts.title || mapLabel(opts.mapSize), [
+      { label: 'Levantando el relieve…', run: () => loadMap(opts.mapSize, seed) },
+      {
+        label: 'Desplegando naciones…',
+        run: (loaded) =>
+          newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficulty, rules: opts.rules, humans: [myIdentity()], localIndex: 0, loaded }),
+      },
+      { label: 'Cavando trincheras…', run: (game) => game },
+    ]);
+    enterGame(game);
+    if (opts.tutorial) tutorial.start(tutorialState());
+  } finally {
+    state.loading = false;
+  }
+}
+
+function tutorialState() {
+  return { game: state.game, human: state.human, ratio: state.ratio };
+}
+
+const tutorial = new Tutorial({
+  onFinish() {
+    profile.tutorial = true;
+    const ach = grantAchievement(profile, 'recluta');
+    if (ach) ui.pushEvent({ text: `${ach.icon} Logro: ${ach.name}`, kind: 'good' });
+    scheduleCloudSync();
+  },
+});
+
+/** Ajustes del jugador que afectan a la partida (render e interfaz). */
+function applySettings() {
+  const a = profile.ajustes;
+  if (state.renderer) state.renderer.options = { badges: a.marcadores !== false, emojis: a.emojis !== false };
+  ui.redAlert = a.alerta !== false;
+  document.body.classList.toggle('sin-animaciones', a.animaciones === false);
 }
 
 // --------------------------------------------------------- multijugador
@@ -162,6 +202,7 @@ async function openSala(code, isHost) {
     bots: Math.min(50, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
+    rules: { ...DEFAULT_RULES, ...profile.ajustes.reglas },
   };
   const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings });
   state.sala = sala;
@@ -197,7 +238,7 @@ async function openSala(code, isHost) {
   }
 }
 
-function beginOnlineGame(sala, payload, hostPeer) {
+async function beginOnlineGame(sala, payload, hostPeer) {
   if (state.sala !== sala) return;
   const myPeer = sala.myPeer();
   const index = payload.players.findIndex((p) => p.peer === myPeer);
@@ -206,14 +247,28 @@ function beginOnlineGame(sala, payload, hostPeer) {
     return;
   }
   state.online = true;
-  const game = newGame({
-    seed: payload.seed,
-    mapSize: payload.settings.mapSize,
-    bots: payload.settings.bots,
-    difficulty: payload.settings.difficulty,
-    humans: payload.players,
-    localIndex: index,
-  });
+  const game = await withLoading(
+    `${mapLabel(payload.settings.mapSize)} · online`,
+    [
+      { label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
+      {
+        label: 'Desplegando naciones…',
+        run: (loaded) =>
+          newGame({
+            seed: payload.seed,
+            mapSize: payload.settings.mapSize,
+            bots: payload.settings.bots,
+            difficulty: payload.settings.difficulty,
+            rules: payload.settings.rules,
+            humans: payload.players,
+            localIndex: index,
+            loaded,
+          }),
+      },
+    ],
+    { minMs: 500 }, // online no hay que hacer esperar al resto
+  );
+  if (state.sala !== sala) return;
   // Los humanos se añaden primero: el jugador i tiene id i + 1
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, i + 1]));
   state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: index + 1, peerToPlayer });
@@ -311,6 +366,10 @@ const home = new Home(profile, {
     if (identity) scheduleCloudSync();
   },
   onQuickPlay: startGame,
+  onTutorial() {
+    startGame({ tutorial: true, title: 'Tutorial', mapSize: 'pequeno', bots: 5, difficulty: 'facil', seed: 'trinchera-tutorial', rules: DEFAULT_RULES });
+  },
+  onSettings: applySettings,
   onCreateRoom() {
     if (transport) openSala(newRoomCode(), true);
   },
@@ -468,6 +527,7 @@ ui.on({
       return;
     }
     finishGame();
+    tutorial.stop();
     startDemo();
   },
   onBuildMode: setBuildMode,
@@ -521,6 +581,7 @@ function frame(now) {
     ui.update(state.game, state.human, state.ratio, state.buildMode);
     if (state.hover.tile >= 0) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
     if (state.net) ui.setNetNote(state.net.status);
+    if (tutorial.active) tutorial.update(tutorialState());
     checkEnd();
   }
   requestAnimationFrame(frame);
@@ -528,8 +589,12 @@ function frame(now) {
 
 // ------------------------------------------------------------ arranque
 
+installFlagSprite(document.documentElement);
+applySettings();
+
 // Acceso desde la consola del navegador para depurar: __dominia.game, __dominia.human…
 window.__dominia = state;
+window.__trinchera = state;
 state.profile = profile;
 
 startDemo();

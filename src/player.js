@@ -42,6 +42,7 @@ export class Player {
 
     // Aspecto (perfil): emblema y patrón del territorio
     this.emblem = null; // { shape, symbol, bg, fg }
+    this.flag = ''; // mapas reales: código ISO de su bandera
     this.pattern = 'liso';
 
     /** Contadores de la partida, para logros y estadísticas. */

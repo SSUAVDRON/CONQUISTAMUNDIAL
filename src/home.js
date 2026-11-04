@@ -1,7 +1,8 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { MAP_SIZES, REAL_MAPS, mapLabel } from './config.js';
+import { DEFAULT_RULES, MAP_SIZES, REAL_MAPS, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
+import { generateMap } from './map.js';
 import { hexToRgb } from './colors.js';
 import { PATTERN_FNS, drawEmblem } from './icons.js';
 import { formatPercent, formatTime } from './format.js';
@@ -32,6 +33,72 @@ function fillMapSelect(select) {
   const random = el('optgroup', { label: 'Aleatorio' },
     ...Object.entries(MAP_SIZES).map(([id, m]) => el('option', { value: id, text: m.label })));
   select.replaceChildren(real, random);
+}
+
+// Colores de las miniaturas: agua, llanura, meseta, montaña
+const THUMB_COLORS = [[23, 58, 104], [104, 150, 82], [160, 148, 100], [150, 140, 130]];
+
+/** Miniatura de un mapa: real (desde sus datos) o aleatorio (con una semilla fija). */
+function mapThumb(id, width = 168) {
+  let w;
+  let h;
+  let terrain;
+  if (REAL_MAP_DATA[id]) {
+    ({ w, h } = REAL_MAP_DATA[id]);
+    terrain = new Uint8Array(w * h);
+    const bin = atob(REAL_MAP_DATA[id].rle);
+    for (let k = 0, i = 0; k < bin.length; k++) {
+      const b = bin.charCodeAt(k);
+      terrain.fill(b >> 6, i, i + (b & 63) + 1);
+      i += (b & 63) + 1;
+    }
+  } else {
+    const size = MAP_SIZES[id];
+    const map = generateMap(Math.round(size.w / 3), Math.round(size.h / 3), 7 + Object.keys(MAP_SIZES).indexOf(id));
+    ({ width: w, height: h, terrain } = map);
+  }
+  const height = Math.round((width * h) / w);
+  const c = el('canvas', { width, height, 'aria-hidden': 'true' });
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(width, height);
+  for (let y = 0; y < height; y++) {
+    const sy = Math.min(h - 1, Math.floor((y * h) / height));
+    for (let x = 0; x < width; x++) {
+      const t = terrain[sy * w + Math.min(w - 1, Math.floor((x * w) / width))];
+      const [r, g, b] = THUMB_COLORS[t];
+      const o = (y * width + x) * 4;
+      img.data[o] = r;
+      img.data[o + 1] = g;
+      img.data[o + 2] = b;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+/** Control segmentado (botones excluyentes). */
+function segmented(box, options, current, onChange) {
+  box.replaceChildren(
+    ...options.map(([value, label]) => {
+      const btn = el('button', { type: 'button', role: 'radio', 'aria-checked': String(value === current), text: label });
+      btn.addEventListener('click', () => {
+        for (const b of box.children) b.setAttribute('aria-checked', String(b === btn));
+        onChange(value);
+      });
+      return btn;
+    }),
+  );
+}
+
+/** Resumen de las reglas para la sala: "Victoria 70 % · sin misiles…". */
+export function rulesSummary(r) {
+  if (!r) return '';
+  const parts = [`victoria al ${Math.round(r.winShare * 100)} %`];
+  if (r.startGold) parts.push(`${r.startGold / 1000}k de oro inicial`);
+  if (!r.missiles) parts.push('sin misiles');
+  if (!r.warships) parts.push('sin buques');
+  return parts.join(' · ');
 }
 
 /** Máximo de bots en un mapa real: uno por país disponible. */
@@ -81,30 +148,67 @@ export class Home {
     }
     $('chip-perfil').addEventListener('click', () => this.setView('perfil'));
 
+    // Tarjetas de modo
+    for (const card of document.querySelectorAll('.modo[data-modo]')) {
+      card.addEventListener('click', () => this._mode(card.dataset.modo));
+    }
+    for (const btn of document.querySelectorAll('.cerrar-panel')) btn.addEventListener('click', () => this._openPanel(null));
+
     // Partida contra la IA
-    fillMapSelect($('in-mapa'));
-    const syncBots = () => {
-      const max = Math.min(60, maxBotsFor($('in-mapa').value));
+    const a = this.profile.ajustes;
+    this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...a.reglas } };
+    this._buildGallery();
+    segmented($('seg-dificultad'), [['facil', 'Fácil'], ['normal', 'Normal'], ['dificil', 'Difícil']], this.choice.difficulty, (v) => {
+      this.choice.difficulty = v;
+    });
+    segmented($('seg-victoria'), WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`]), this.choice.rules.winShare, (v) => {
+      this.choice.rules.winShare = v;
+    });
+    segmented($('seg-oro'), START_GOLDS.map((v) => [v, v ? `${v / 1000}k` : 'Nada']), this.choice.rules.startGold, (v) => {
+      this.choice.rules.startGold = v;
+    });
+    $('in-misiles').checked = this.choice.rules.missiles;
+    $('in-buques').checked = this.choice.rules.warships;
+    $('in-misiles').addEventListener('change', () => {
+      this.choice.rules.missiles = $('in-misiles').checked;
+    });
+    $('in-buques').addEventListener('change', () => {
+      this.choice.rules.warships = $('in-buques').checked;
+    });
+    this._syncBots = () => {
+      const max = Math.min(60, maxBotsFor(this.choice.map));
       $('in-bots').max = String(max);
       if (Number($('in-bots').value) > max) $('in-bots').value = String(max);
       $('out-bots').textContent = $('in-bots').value;
-      $('nota-rivales').textContent = REAL_MAPS[$('in-mapa').value] ? `(hasta ${max} países)` : '';
+      $('nota-rivales').textContent = REAL_MAPS[this.choice.map] ? `(hasta ${max} países)` : '';
+      $('campo-semilla').hidden = !!REAL_MAPS[this.choice.map];
     };
-    this._syncBots = syncBots;
-    $('in-bots').addEventListener('input', syncBots);
-    $('in-mapa').addEventListener('change', syncBots);
+    $('in-bots').addEventListener('input', this._syncBots);
     $('form-rapida').addEventListener('submit', (e) => {
       e.preventDefault();
       const opts = {
         bots: Number($('in-bots').value),
-        mapSize: $('in-mapa').value,
-        difficulty: $('in-dificultad').value,
-        seed: $('in-semilla').value.trim(),
+        mapSize: this.choice.map,
+        difficulty: this.choice.difficulty,
+        seed: REAL_MAPS[this.choice.map] ? '' : $('in-semilla').value.trim(),
+        rules: { ...this.choice.rules },
       };
-      this.profile.ajustes = { bots: opts.bots, mapa: opts.mapSize, dificultad: opts.difficulty };
+      Object.assign(this.profile.ajustes, { bots: opts.bots, mapa: opts.mapSize, dificultad: opts.difficulty, reglas: opts.rules });
       this.h.onProfileChange?.(false);
       this.h.onQuickPlay?.(opts);
     });
+
+    // Ajustes
+    const toggles = { 'aj-alerta': 'alerta', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones' };
+    for (const [id, key] of Object.entries(toggles)) {
+      $(id).checked = this.profile.ajustes[key] !== false;
+      $(id).addEventListener('change', () => {
+        this.profile.ajustes[key] = $(id).checked;
+        this.h.onProfileChange?.(false);
+        this.h.onSettings?.();
+      });
+    }
+    $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
 
     // Multijugador
     $('btn-crear-sala').addEventListener('click', () => this.h.onCreateRoom?.());
@@ -152,12 +256,64 @@ export class Home {
     $('btn-empezar').addEventListener('click', () => this.h.onStartRoom?.());
     $('btn-copiar-codigo').addEventListener('click', () => this.h.onCopyCode?.());
 
-    const a = this.profile.ajustes;
-    $('in-mapa').value = a.mapa;
-    if (!$('in-mapa').value) $('in-mapa').value = 'mundo';
     $('in-bots').value = a.bots;
-    $('in-dificultad').value = a.dificultad;
-    syncBots();
+    this._syncBots();
+  }
+
+  /** Clic en una tarjeta de modo. */
+  _mode(mode) {
+    if (mode === 'rapida') {
+      this.h.onQuickPlay?.({ bots: 30, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES } });
+    } else if (mode === 'tutorial') {
+      this.h.onTutorial?.();
+    } else {
+      this._openPanel(this.panel === mode ? null : mode);
+    }
+  }
+
+  _openPanel(name) {
+    this.panel = name;
+    for (const p of document.querySelectorAll('.panel-modo')) p.hidden = p.dataset.panel !== name;
+    for (const card of document.querySelectorAll('.modo[data-modo]')) {
+      if (card.dataset.modo === 'ia' || card.dataset.modo === 'online') card.setAttribute('aria-expanded', String(card.dataset.modo === name));
+    }
+    const panel = name && document.querySelector(`.panel-modo[data-panel="${name}"]`);
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  _buildGallery() {
+    const entries = [
+      ...Object.entries(REAL_MAPS).map(([id, name]) => [id, name, `${REAL_MAP_DATA[id].countries.length} países`]),
+      ...Object.entries(MAP_SIZES).map(([id, m]) => [id, `Aleatorio ${m.label.toLowerCase()}`, 'Nuevo mundo cada vez']),
+    ];
+    $('galeria-mapas').replaceChildren(
+      ...entries.map(([id, name, sub]) =>
+        el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            class: 'mapa-tarjeta',
+            'aria-checked': String(id === this.choice.map),
+            'data-map': id,
+            onclick: () => {
+              this.choice.map = id;
+              for (const b of $('galeria-mapas').children) b.setAttribute('aria-checked', String(b.dataset.map === id));
+              this._syncBots();
+            },
+          },
+          mapThumb(id),
+          el('strong', { text: name }),
+          el('small', { text: sub }),
+        ),
+      ),
+    );
+  }
+
+  /** Abre directamente un panel (por ejemplo, el multijugador al volver de una sala). */
+  openPanel(name) {
+    this.setView('jugar');
+    this._openPanel(name);
   }
 
   _profileChanged() {
@@ -551,12 +707,12 @@ export class Home {
     } else {
       delete box.dataset.host;
       box.replaceChildren(
-        el('p', { class: 'nota', text: s ? `Mapa ${mapLabel(s.mapSize)} · ${s.bots} bots · dificultad ${DIFFICULTY[s.difficulty] || 'normal'}` : 'Esperando al anfitrión…' }),
+        el('p', { class: 'nota', text: s ? `Mapa ${mapLabel(s.mapSize)} · ${s.bots} bots · dificultad ${DIFFICULTY[s.difficulty] || 'normal'} · ${rulesSummary(s.rules)}` : 'Esperando al anfitrión…' }),
       );
     }
 
     $('btn-empezar').hidden = !sala.isHost;
-    const where = kind === 'local' ? 'Modo local: solo pueden entrar otras pestañas de este navegador.' : 'Comparte el código: entran quienes tengan este enlace.';
+    const where = `${kind === 'local' ? 'Modo local: solo pueden entrar otras pestañas de este navegador.' : 'Comparte el código: entran quienes tengan este enlace.'} Reglas: ${rulesSummary(s && s.rules)}.`;
     $('sala-estado').textContent = status || (sala.isHost ? `${where} Puedes empezar cuando quieras; el resto de naciones las lleva la IA.` : 'El anfitrión empezará la partida.');
   }
 
@@ -569,6 +725,7 @@ export class Home {
       bots: Number($('sala-bots').value),
       mapSize: $('sala-mapa').value,
       difficulty: $('sala-dificultad').value,
+      rules: { ...this.choice.rules },
     });
   }
 }

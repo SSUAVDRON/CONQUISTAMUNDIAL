@@ -1,4 +1,6 @@
-# Dominia
+# Trinchera
+
+> La carpeta del proyecto se sigue llamando `dominia/` (primer nombre provisional).
 
 Juego de estrategia de conquista territorial en el navegador. Empiezas con un
 pequeño territorio en un mundo generado al azar y compites contra naciones
@@ -8,13 +10,20 @@ Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 
 ## Pantallas
 
+El inicio tiene cuatro modos en tarjetas animadas: **Partida rápida** (mundo
+real contra 30 países, un clic), **Contra la IA** (galería de mapas con
+miniaturas y opciones), **Multijugador** y **Tutorial** (partida guiada paso a
+paso que avanza con lo que haces). Antes de cada partida hay una pantalla de
+carga con los pasos reales y un consejo.
+
 | Pestaña | Qué hay |
 |---|---|
-| Jugar | Partida contra la IA (rivales, mapa, dificultad, semilla) y multijugador: crear sala, unirse con código o desde la lista de salas abiertas. |
+| Jugar | Los cuatro modos. En «Contra la IA»: mapa, rivales, dificultad, victoria al 50/70/90 %, oro inicial, misiles y buques activables, semilla. |
 | Perfil | Nombre, color, emblema (forma, símbolo y colores), título, nivel y estadísticas. |
 | Apariencia | Patrón del territorio (lo ven también los demás en partidas online). |
 | Logros | 16 logros; desbloquean símbolos, patrones y títulos. |
 | Clasificación | Global (todos los jugadores del enlace), tus récords y tu historial. |
+| Ajustes | Borde rojo al ser atacado, tropas de los ataques sobre el mapa, emojis, animaciones del menú, repetir el tutorial y créditos. |
 
 Cada partida da experiencia (territorio, eliminaciones, edificios, victoria…);
 los niveles desbloquean formas de emblema y patrones. El perfil se guarda en el
@@ -23,8 +32,8 @@ navegador y, en el enlace de Claude, también en tu cuenta.
 ## Mapas
 
 - **Mundo real:** Mundo, Europa, Norteamérica, Sudamérica, África y Asia. Los
-  bots son países reales (los más grandes del mapa, hasta uno por país) y
-  aparecen en su ubicación. Cordilleras y mesetas reales hacen más lento y
+  bots son países reales con su bandera (los más grandes del mapa, hasta uno
+  por país) y aparecen en su ubicación. Cordilleras y mesetas reales hacen más lento y
   caro avanzar.
 - **Aleatorios:** pequeño, mediano y grande, generados con la semilla.
 
@@ -41,6 +50,15 @@ node herramientas/mapas.js <carpeta con los .geojson de Natural Earth>
 Necesita `ne_50m_admin_0_countries`, `ne_50m_geography_regions_polys` y
 `ne_50m_lakes` (GeoJSON, en github.com/nvkelso/natural-earth-vector). Escribe
 `src/mapas-reales.js`.
+
+Las banderas son de [flag-icons](https://github.com/lipis/flag-icons) (MIT).
+Para regenerar el sprite (`src/banderas.js`) con los SVG `4x3` de esa colección:
+
+```bash
+node herramientas/banderas.cjs <carpeta con los .svg>
+```
+
+Créditos y licencias de terceros: `herramientas/LICENCIAS.md`.
 
 ## Multijugador
 
@@ -99,12 +117,14 @@ base de datos.
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 + 1 por puerto). |
-| Buques de guerra | Se botan desde un puerto propio (máx. 3 por puerto; 6k de oro, +3k cada uno). Clic en el mar mueve el más cercano. Disparan solos a lo que tengan a 9 casillas: primero buques enemigos, luego transportes (los hunden con sus tropas) y luego puertos, que acaban destruidos si no se retiran. |
+| Buques de guerra | Se botan desde un puerto propio (máx. 3 por puerto; 6k de oro, +3k cada uno). Clic en el mar mueve el más cercano. Actúan solos a 9 casillas: disparan a buques enemigos, hunden transportes de tropas, **capturan** pesqueros y mercantes rivales (pasan a producir para ti) y bombardean puertos hasta destruirlos. |
+| Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. |
+| Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo (desactivable en Ajustes). |
 | Tropas a la vista | Cada ataque tuyo o contra ti muestra sus tropas en el frente del mapa (rojo si te atacan) y en tu panel, igual que los barcos en camino. |
 | Oro | Se gana solo, según tu territorio (+10 % por cada puerto). Si eliminas a una nación, te llevas su oro. |
 | Edificios | Se construyen en tu territorio con oro; cada uno del mismo tipo cuesta más que el anterior. Si te conquistan la casilla, el edificio pasa al conquistador. Deben estar a 5 casillas o más de otro edificio. |
 | Ciudad | +15.000 tropas máximas. 5k de oro, +5k por cada ciudad que ya tengas. |
-| Puerto | En la costa. +1 barco simultáneo y +10 % de oro. 4k, +4k. |
+| Puerto | En la costa. +1 barco simultáneo y +10 % de oro. Saca 2 pesqueros que faenan cerca y dan oro mientras naveguen, y cada 20-40 s un mercante hacia el puerto de otra nación con la que no estés en guerra: al llegar cobráis los dos (tú más). 4k, +4k. |
 | Fortaleza | En un radio de 10 casillas, conquistarte cuesta ×2,5 tropas y tiempo. 3k, +3k. |
 | Fábrica | +25 % de oro por cada una. 6k, +6k. |
 | Silo | Permite lanzar misiles; cada silo recarga en 15 s. 10k, +10k. |
@@ -159,14 +179,17 @@ dominia/
 │   ├── camera.js       Zoom y desplazamiento
 │   ├── input.js        Ratón, táctil y teclado
 │   ├── ui.js           Interfaz de la partida: panel, construcción, diplomacia, avisos
-│   ├── home.js         Pantallas de inicio y sala de espera
+│   ├── home.js         Pantallas de inicio (modos, galería, opciones, ajustes) y sala
+│   ├── loading.js      Pantalla de carga
+│   ├── tutorial.js     Tutorial guiado
+│   ├── banderas.js     GENERADO: sprite de banderas (herramientas/banderas.cjs)
 │   ├── profile.js      Perfil, niveles, logros y desbloqueos
 │   ├── multiplayer.js  Salas y sincronización lockstep
 │   ├── net.js          Transporte: room de Claude o pestañas del navegador
 │   ├── cloud.js        Perfil en la nube y clasificación global (db + user)
 │   ├── icons.js        Iconos de edificios, emblemas y patrones
 │   └── rng.js, noise.js, heap.js, colors.js, names.js, format.js
-└── tests/              simulación, edificios, buques, misiles, diplomacia, mapas, perfil y multijugador
+└── tests/              simulación, edificios, buques, misiles, comercio, diplomacia, mapas, perfil y multijugador
 ```
 
 Decisiones de diseño que conviene conservar:

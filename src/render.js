@@ -3,7 +3,7 @@
 import { CONFIG, TERRAIN } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
-import { PATTERN_FNS, drawBuildingIcon, drawEmblem, emblemFor } from './icons.js';
+import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFlag, emblemFor } from './icons.js';
 
 const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 const FILL_ALPHA = 150;
@@ -48,6 +48,7 @@ export class Renderer {
     this.labels = [];
     this.lastLabelTime = -Infinity;
     this.highlightTile = -1;
+    this.options = { badges: true, emojis: true };
   }
 
   setDpr(dpr) {
@@ -231,6 +232,7 @@ export class Renderer {
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this._drawBuildings();
+    this._drawMerchants();
     this._drawWarships();
     this._drawEffects();
     this._drawMissiles(now);
@@ -259,6 +261,60 @@ export class Renderer {
         ring: p === game.human ? '#ffffff' : 'rgba(0,0,0,0.7)',
       });
       if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
+    }
+  }
+
+  /** Pesqueros y mercantes: barquitos con el color de su dueño. */
+  _drawMerchants() {
+    const { ctx, game, camera } = this;
+    if (!game.merchants.length) return;
+    const W = game.map.width;
+    const small = camera.zoom < 1.6;
+    for (const m of game.merchants) {
+      let wx = (m.tile % W) + 0.5;
+      let wy = Math.floor(m.tile / W) + 0.5;
+      if (m.path && m.pos < m.path.length - 1) {
+        const n = m.path[m.pos + 1];
+        const t = Math.min(1, m.progress);
+        wx = lerp(wx, (n % W) + 0.5, t);
+        wy = lerp(wy, Math.floor(n / W) + 0.5, t);
+      }
+      const [sx, sy] = camera.worldToScreen(wx, wy);
+      if (sx < -10 || sy < -10 || sx > camera.viewW + 10 || sy > camera.viewH + 10) continue;
+      const color = rgbToCss(game.players[m.owner].color);
+      if (small) {
+        ctx.fillStyle = color;
+        ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3);
+        continue;
+      }
+      const s = Math.min(1.6, camera.zoom / 3) * (m.kind === 'trade' ? 1.25 : 1);
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.scale(s, s);
+      ctx.beginPath();
+      ctx.moveTo(-5, 0);
+      ctx.lineTo(5, 0);
+      ctx.lineTo(3, 3);
+      ctx.lineTo(-3, 3);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.stroke();
+      if (m.kind === 'trade') {
+        ctx.fillStyle = '#e9d8a6';
+        ctx.fillRect(-2.5, -3, 5, 3);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -5);
+        ctx.lineTo(3, -1);
+        ctx.closePath();
+        ctx.fillStyle = '#f2f4f8';
+        ctx.fill();
+      }
+      ctx.restore();
     }
   }
 
@@ -511,9 +567,11 @@ export class Renderer {
       ctx.strokeText(name, sx, sy - size * 0.35);
       ctx.fillText(name, sx, sy - size * 0.35);
       if (size >= 11) {
-        // Emblema a la izquierda del nombre
+        // Bandera (países reales) o emblema a la izquierda del nombre
         const w = ctx.measureText(name).width;
-        drawEmblem(ctx, emblemFor(p), sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.15);
+        if (!drawFlag(ctx, p.flag, sx - w / 2 - size * 0.85, sy - size * 0.35, size * 0.8)) {
+          drawEmblem(ctx, emblemFor(p), sx - w / 2 - size * 0.75, sy - size * 0.35, size * 1.15);
+        }
       }
       const s2 = size * 0.78;
       ctx.font = `500 ${s2}px system-ui, sans-serif`;
@@ -531,7 +589,7 @@ export class Renderer {
   _drawAttackBadges() {
     const { ctx, game, camera } = this;
     const human = game.human;
-    if (!human || !game.attacks.length) return;
+    if (!human || !game.attacks.length || this.options.badges === false) return;
     const W = game.map.width;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -569,7 +627,7 @@ export class Renderer {
   /** Burbujas de emoji sobre quien lo envía (solo las que implican al humano). */
   _drawEmojis() {
     const { ctx, game, camera } = this;
-    if (!game.emojis.length) return;
+    if (!game.emojis.length || this.options.emojis === false) return;
     const human = game.human;
     const map = game.map;
     for (const e of game.emojis) {

@@ -226,7 +226,7 @@ function markEdge(id, arr) {
 
 /**
  * Carga un mapa del mundo real. Devuelve { map, countries } donde countries =
- * [{ name, tile, area }] de mayor a menor (la casilla es la más interior).
+ * [{ name, tile, area, iso }] de mayor a menor (la casilla es la más interior).
  */
 export function loadRealMap(id) {
   const data = REAL_MAP_DATA[id];
@@ -244,7 +244,7 @@ export function loadRealMap(id) {
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
-  return { map, countries: data.countries.map(([name, tile, area]) => ({ name, tile, area })) };
+  return { map, countries: data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' })) };
 }
 
 /** Tonos: profundidad del mar por distancia a la costa; textura y cumbres en tierra. */

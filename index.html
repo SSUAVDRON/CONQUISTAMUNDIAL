@@ -3,20 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Dominia</title>
+  <title>Trinchera</title>
   <meta name="description" content="Juego de estrategia de conquista territorial en el navegador.">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap">
   <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
   <canvas id="lienzo"></canvas>
 
+  <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="lg-oro" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffe39a"/>
+        <stop offset="1" stop-color="#d99a2b"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">
     <div class="ini-marco">
       <header class="ini-cabecera">
-        <div class="ini-marca">
-          <h1>Dominia</h1>
-          <p class="lema">Conquista el mundo, casilla a casilla.</p>
+        <div class="logo" role="img" aria-label="Trinchera">
+          <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
+            <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
+            <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
+            <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
+            <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <div class="logo-textos">
+            <span class="logo-texto">TRINCHERA</span>
+            <span class="lema">Conquista el mundo, casilla a casilla.</span>
+          </div>
         </div>
         <button type="button" id="chip-perfil" class="chip-perfil" data-ir="perfil" aria-label="Abrir tu perfil">
           <canvas id="chip-emblema" width="80" height="80"></canvas>
@@ -34,48 +54,76 @@
         <button type="button" role="tab" id="tab-apariencia" data-vista="apariencia" aria-selected="false">Apariencia</button>
         <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false">Logros <span id="cuenta-logros" class="cuenta"></span></button>
         <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false">Clasificación</button>
+        <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false">Ajustes</button>
       </nav>
 
       <!-- Jugar -->
       <section class="vista" data-vista="jugar" role="tabpanel" aria-labelledby="tab-jugar">
-        <div class="jugar-rejilla">
-          <form id="form-rapida" class="bloque" autocomplete="off">
-            <h2>Contra la IA</h2>
+        <div class="modos">
+          <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
+            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M7 24h34M24 7c-6 6-6 28 0 34M24 7c6 6 6 28 0 34" fill="none" stroke="currentColor" stroke-width="2"/><path class="icono-rayo" d="M27 3 L19 26 H25 L21 45 L33 19 H27 Z" fill="#f2b33d" stroke="#1b1405" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <span class="modo-titulo">Partida rápida</span>
+            <span class="modo-texto">El mundo real contra 30 países. Un clic y a la trinchera.</span>
+          </button>
+          <button type="button" class="modo" data-modo="ia" style="--i:1">
+            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 L34 14 M14 42 L38 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M38 38 L14 14 M34 42 L10 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M31 9 L40 8 L39 17 M17 9 L8 8 L9 17" fill="none" stroke="#f2b33d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="modo-titulo">Contra la IA</span>
+            <span class="modo-texto">Elige mapa, número de rivales, dificultad y reglas.</span>
+          </button>
+          <button type="button" class="modo" data-modo="online" style="--i:2">
+            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="17" r="6" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="33" cy="17" r="6" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M5 38c1-7 6-11 11-11s10 4 11 11M22 38c1-7 6-11 11-11s10 4 11 11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle class="icono-pulso" cx="24.5" cy="9" r="3" fill="#5fd38d"/></svg>
+            <span class="modo-titulo">Multijugador</span>
+            <span class="modo-texto">Crea una sala o únete con un código.</span>
+          </button>
+          <button type="button" class="modo" data-modo="tutorial" style="--i:3">
+            <svg class="modo-icono" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 11c6-2 12-2 18 2 6-4 12-4 18-2v26c-6-2-12-2-18 2-6-4-12-4-18-2z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 13v26" stroke="currentColor" stroke-width="2"/><path class="icono-marca" d="M30 6 h6 v12 l-3-2 -3 2z" fill="#e0483f"/></svg>
+            <span class="modo-titulo">Tutorial</span>
+            <span class="modo-texto">Aprende lo básico jugando, paso a paso.</span>
+          </button>
+        </div>
+
+        <form id="form-rapida" class="bloque panel-modo" data-panel="ia" autocomplete="off" hidden>
+          <div class="panel-cabecera">
+            <h2>Partida contra la IA</h2>
+            <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
+          </div>
+          <h3>Mapa</h3>
+          <div id="galeria-mapas" class="galeria" role="radiogroup" aria-label="Mapa"></div>
+          <div class="opciones">
             <label class="campo"><span>Rivales <strong id="out-bots">25</strong> <small id="nota-rivales"></small></span>
               <input id="in-bots" type="range" min="5" max="60" value="25">
             </label>
-            <div class="fila-2">
-              <label class="campo"><span>Mapa</span>
-                <select id="in-mapa"></select>
-              </label>
-              <label class="campo"><span>Dificultad</span>
-                <select id="in-dificultad">
-                  <option value="facil">Fácil</option>
-                  <option value="normal" selected>Normal</option>
-                  <option value="dificil">Difícil</option>
-                </select>
-              </label>
+            <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
+            <div class="campo"><span>Victoria al conquistar</span><div class="segmentos" id="seg-victoria" role="radiogroup" aria-label="Victoria"></div></div>
+            <div class="campo"><span>Oro inicial</span><div class="segmentos" id="seg-oro" role="radiogroup" aria-label="Oro inicial"></div></div>
+            <div class="interruptores">
+              <label class="interruptor"><input type="checkbox" id="in-misiles" checked><span>Misiles y antimisiles</span></label>
+              <label class="interruptor"><input type="checkbox" id="in-buques" checked><span>Buques de guerra</span></label>
             </div>
-            <label class="campo"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
+            <label class="campo" id="campo-semilla"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
               <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
             </label>
-            <button type="submit" class="principal grande">Jugar</button>
-          </form>
-
-          <div id="bloque-online" class="bloque">
-            <h2>Multijugador <span id="estado-red" class="chip">Conectando…</span></h2>
-            <div class="online-acciones">
-              <button type="button" id="btn-crear-sala" class="principal" disabled>Crear sala</button>
-              <form id="form-unirse" class="unirse" autocomplete="off">
-                <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false">
-                <button type="submit" disabled>Unirse</button>
-              </form>
-            </div>
-            <h3>Salas abiertas</h3>
-            <ul id="lista-salas" class="lista-salas"></ul>
-            <p id="nota-red" class="nota"></p>
           </div>
+          <button type="submit" class="principal grande">Empezar partida</button>
+        </form>
+
+        <div id="bloque-online" class="bloque panel-modo" data-panel="online" hidden>
+          <div class="panel-cabecera">
+            <h2>Multijugador <span id="estado-red" class="chip">Conectando…</span></h2>
+            <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
+          </div>
+          <div class="online-acciones">
+            <button type="button" id="btn-crear-sala" class="principal" disabled>Crear sala</button>
+            <form id="form-unirse" class="unirse" autocomplete="off">
+              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false">
+              <button type="submit" disabled>Unirse</button>
+            </form>
+          </div>
+          <h3>Salas abiertas</h3>
+          <ul id="lista-salas" class="lista-salas"></ul>
+          <p id="nota-red" class="nota"></p>
         </div>
+
         <details class="ayuda">
           <summary>Cómo se juega</summary>
           <ul>
@@ -164,7 +212,47 @@
           <div id="tabla-clasificacion" class="tabla-envoltura"></div>
         </div>
       </section>
+
+      <!-- Ajustes -->
+      <section class="vista" data-vista="ajustes" role="tabpanel" aria-labelledby="tab-ajustes" hidden>
+        <div class="bloque">
+          <h2>Ajustes</h2>
+          <div class="interruptores columna">
+            <label class="interruptor"><input type="checkbox" id="aj-alerta"><span>Borde rojo en la pantalla cuando te atacan</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones del menú</span></label>
+          </div>
+          <div class="botones-izq">
+            <button type="button" id="aj-tutorial">Repetir el tutorial</button>
+          </div>
+          <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
+        </div>
+      </section>
     </div>
+  </div>
+
+  <!-- Pantalla de carga -->
+  <div id="carga" class="carga" hidden aria-live="polite">
+    <div class="carga-centro">
+      <div class="logo logo-grande" role="img" aria-label="Trinchera">
+        <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
+            <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
+            <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
+            <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
+            <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        <span class="logo-texto">TRINCHERA</span>
+      </div>
+      <p id="carga-mapa" class="carga-mapa"></p>
+      <div class="carga-barra"><span id="carga-progreso"></span></div>
+      <p id="carga-paso" class="carga-paso"></p>
+      <p id="carga-consejo" class="carga-consejo"></p>
+    </div>
+    <svg class="carga-frente" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 40 L40 22 L80 40 L120 22 L160 40 L200 22 L240 40 L280 22 L320 40 L360 22 L400 40 L440 22 L480 40 L520 22 L560 40 L600 22 L640 40 L680 22 L720 40 L760 22 L800 40 L840 22 L880 40 L920 22 L960 40 L1000 22 L1040 40 L1080 22 L1120 40 L1160 22 L1200 40" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linejoin="round"/>
+    </svg>
   </div>
 
   <!-- Sala multijugador -->
@@ -186,6 +274,7 @@
 
   <!-- Interfaz de partida -->
   <div id="hud" hidden>
+    <div id="alerta-roja" aria-hidden="true"></div>
     <aside id="clasificacion" class="panel">
       <h2>Clasificación</h2>
       <ol id="lista-clasificacion"></ol>
@@ -254,6 +343,20 @@
     </div>
 
     <div id="tooltip" hidden></div>
+
+    <!-- Tutorial guiado -->
+    <div id="tutorial" class="tutorial" hidden role="dialog" aria-live="polite" aria-labelledby="tut-paso">
+      <div class="tut-cabecera">
+        <span id="tut-paso" class="tut-paso"></span>
+        <button type="button" id="tut-saltar" class="tut-saltar">Saltar tutorial</button>
+      </div>
+      <p id="tut-texto" class="tut-texto"></p>
+      <div class="tut-pie">
+        <div id="tut-puntos" class="tut-puntos" aria-hidden="true"></div>
+        <button type="button" id="tut-paso-saltar" class="tut-saltar">Saltar paso</button>
+        <button type="button" id="tut-siguiente" class="principal" hidden>Siguiente</button>
+      </div>
+    </div>
   </div>
 
   <!-- Fin de partida -->

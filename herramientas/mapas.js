@@ -283,7 +283,8 @@ function buildMap(def, countries, regions, lakes) {
     .map(([o, s]) => {
       const p = countries[o - 1].properties;
       const name = p.NAME_ES || p.NAME;
-      return [shortName(name), s.best, s.area];
+      const iso = /^[A-Z]{2}$/.test(p.ISO_A2_EH || '') ? p.ISO_A2_EH.toLowerCase() : '';
+      return [shortName(name), s.best, s.area, iso];
     });
 
   let land = 0;
@@ -309,7 +310,7 @@ async function main() {
   const out = `// GENERADO por herramientas/mapas.js — no editar a mano.
 // Datos: Natural Earth (dominio público), https://www.naturalearthdata.com
 // Por mapa: ancho, alto, terreno codificado por tramos (base64) y países
-// [nombre, casilla más interior, casillas] ordenados de mayor a menor.
+// [nombre, casilla más interior, casillas, código ISO] de mayor a menor.
 export const REAL_MAP_DATA = ${JSON.stringify(maps)};
 `;
   await writeFile(join(ROOT, 'src', 'mapas-reales.js'), out);

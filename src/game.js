@@ -1,6 +1,6 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { BUILDINGS, CONFIG, EMOJIS } from './config.js';
+import { BUILDINGS, CONFIG, EMOJIS, cleanRules } from './config.js';
 import { formatNumber } from './format.js';
 import { Rng } from './rng.js';
 import { Player } from './player.js';
@@ -20,8 +20,9 @@ const NB_MISC = new Int32Array(4);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export class Game {
-  constructor({ map, seed = 1 }) {
+  constructor({ map, seed = 1, rules = null }) {
     this.map = map;
+    this.rules = cleanRules(rules);
     this.rng = new Rng((seed ^ 0x5bd1e995) >>> 0);
     this.owner = new Uint16Array(map.size); // 0 = nadie
     this.players = [null]; // el índice coincide con el id; 0 está reservado
@@ -32,6 +33,9 @@ export class Game {
     this._nextWarshipId = 1;
     this.missiles = []; // { id, owner, from, to, dist, progress, targetId }
     this._nextMissileId = 1;
+    /** Barcos automáticos de los puertos: { id, owner, kind: 'fish'|'trade', port, dest, tile, path, pos, progress, value } */
+    this.merchants = [];
+    this._nextMerchantId = 1;
     /** Efectos visuales recientes: explosiones e intercepciones (no afectan a la simulación). */
     this.effects = [];
     this.buildings = []; // { id, kind, tile, owner }
@@ -85,7 +89,10 @@ export class Game {
     count = Math.min(count, names.length);
     for (let i = 0; i < count; i++) {
       const p = this.addPlayer(names[i], botColor(this.players.length, this.rng), false);
-      if (countries) p.homeTile = countries[i].tile;
+      if (countries) {
+        p.homeTile = countries[i].tile;
+        p.flag = countries[i].iso || '';
+      }
       const brain = new BotBrain(this, p, difficulty);
       this.bots.push(brain);
       this.brains.set(p.id, brain);
@@ -100,6 +107,7 @@ export class Game {
   start() {
     this.ticks = 0;
     this.phase = 'spawn';
+    for (const p of this.players) if (p) p.gold = this.rules.startGold;
     for (const bot of this.bots) {
       const home = bot.player.homeTile;
       const near = home >= 0 ? this._freeTileNear(home, 10, 30) : -1;
@@ -510,6 +518,13 @@ export class Game {
 
   // --------------------------------------------------------------- edificios
 
+  /** ¿Permiten las reglas de esta partida este edificio o unidad? */
+  isAllowed(kind) {
+    if (!this.rules.missiles && (kind === 'silo' || kind === 'sam' || kind === 'missile')) return false;
+    if (!this.rules.warships && kind === 'warship') return false;
+    return true;
+  }
+
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
     return def.base + def.step * (p.buildings[kind] || 0);
@@ -520,6 +535,7 @@ export class Game {
     const map = this.map;
     const def = BUILDINGS[kind];
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
+    if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
     if (def.unit === 'ship') return this._canBuildWarship(p, tile);
     if (def.unit === 'missile') return this._canLaunchMissile(p, tile);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
@@ -544,6 +560,9 @@ export class Game {
     if (kind === 'port') {
       b.hp = CONFIG.portHp;
       b.hitTick = -Infinity;
+      b.water = this._waterNextTo(tile);
+      b.nextFish = this.ticks + 30;
+      b.nextTrade = this.ticks + this.rng.int(CONFIG.tradeEveryMin, CONFIG.tradeEveryMax);
     }
     if (kind === 'silo' || kind === 'sam') b.readyAt = this.ticks; // listo desde ya
     this.buildings.push(b);
@@ -588,6 +607,140 @@ export class Game {
     if (np.buildings.factory > np.stats.maxFactories) np.stats.maxFactories = np.buildings.factory;
     if (b.kind === 'fort') np.forts.add(b.tile);
     if (np === this.human) this._emit(built ? `${name} ${def.fem ? 'construida' : 'construido'}` : `Has capturado ${some}`, 'good');
+  }
+
+  // ------------------------------------------------------- economía naval
+
+  _waterNextTo(tile) {
+    const nb = NB_MISC;
+    const c = this.map.neighbors(tile, nb);
+    for (let k = 0; k < c; k++) if (this.map.terrain[nb[k]] === 0) return nb[k];
+    return -1;
+  }
+
+  /** Lanza pesqueros y mercantes desde los puertos y los mueve. */
+  _updateMerchants() {
+    const map = this.map;
+    // Nuevos barcos (cada 10 ticks basta)
+    if (this.ticks % 10 === 0) {
+      const ports = this.buildings.filter((b) => b.kind === 'port' && b.water >= 0);
+      for (const b of ports) {
+        if (this.ticks >= b.nextFish) {
+          b.nextFish = this.ticks + 100;
+          const fleet = this.merchants.filter((m) => m.kind === 'fish' && m.port === b.id).length;
+          if (fleet < CONFIG.fishPerPort) this._spawnMerchant(b, 'fish', null, 0);
+        }
+        if (this.ticks >= b.nextTrade) {
+          b.nextTrade = this.ticks + this.rng.int(CONFIG.tradeEveryMin, CONFIG.tradeEveryMax);
+          const owner = this.players[b.owner];
+          // Destino: un puerto de otra nación del mismo mar con la que no esté en guerra
+          const options = ports.filter((o) => {
+            if (o.owner === b.owner || map.waterBody[o.water] !== map.waterBody[b.water]) return false;
+            const other = this.players[o.owner];
+            return !owner.attacks.has(o.owner) && !other.attacks.has(b.owner);
+          });
+          if (options.length) {
+            const dest = options[this.rng.int(0, options.length - 1)];
+            const path = this._waterPath(b.water, dest.water);
+            if (path) this._spawnMerchant(b, 'trade', dest, path.length * CONFIG.tradeGoldPerTile, path);
+          }
+        }
+      }
+    }
+    for (const m of this.merchants) {
+      const owner = this.players[m.owner];
+      if (!owner.alive) {
+        m.done = true;
+        continue;
+      }
+      if (m.kind === 'fish') owner.gold += CONFIG.fishGold;
+      if (m.path) {
+        m.progress += m.kind === 'fish' ? CONFIG.fishSpeed : CONFIG.tradeSpeed;
+        while (m.progress >= 1 && m.pos < m.path.length - 1) {
+          m.pos++;
+          m.progress -= 1;
+        }
+        m.tile = m.path[m.pos];
+        if (m.pos < m.path.length - 1) continue;
+        m.path = null;
+      }
+      if (m.kind === 'trade') this._arriveTrade(m);
+      else this._nextFishingSpot(m);
+    }
+    if (this.merchants.some((m) => m.done)) this.merchants = this.merchants.filter((m) => !m.done);
+  }
+
+  _spawnMerchant(port, kind, dest, value, path = null) {
+    this.merchants.push({
+      id: this._nextMerchantId++,
+      owner: port.owner,
+      kind,
+      port: port.id,
+      dest: dest ? dest.id : 0,
+      tile: port.water,
+      path,
+      pos: 0,
+      progress: 0,
+      value,
+      done: false,
+    });
+  }
+
+  /** El pesquero busca otro caladero cerca de su puerto (o de un puerto de su dueño). */
+  _nextFishingSpot(m) {
+    const map = this.map;
+    let home = this.buildings.find((b) => b.id === m.port && b.owner === m.owner);
+    if (!home) {
+      // Su puerto ya no es de su dueño: se busca otro del mismo mar
+      home = this.buildings.find((b) => b.kind === 'port' && b.owner === m.owner && b.water >= 0 &&
+        map.waterBody[b.water] === map.waterBody[m.tile]);
+      if (home) m.port = home.id;
+    }
+    const cx = map.x(home ? home.water : m.tile);
+    const cy = map.y(home ? home.water : m.tile);
+    const R = CONFIG.fishRange;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const x = cx + this.rng.int(-R, R);
+      const y = cy + this.rng.int(-R, R);
+      if (!map.inBounds(x, y)) continue;
+      const t = map.index(x, y);
+      if (map.terrain[t] !== 0 || map.waterBody[t] !== map.waterBody[m.tile]) continue;
+      const path = this._waterPath(m.tile, t);
+      if (path) {
+        m.path = path;
+        m.pos = 0;
+        m.progress = 0;
+        return;
+      }
+    }
+  }
+
+  _arriveTrade(m) {
+    m.done = true;
+    const dest = this.buildings.find((b) => b.id === m.dest);
+    if (!dest) return; // el puerto de destino ya no existe
+    const owner = this.players[m.owner];
+    owner.gold += m.value;
+    const partner = this.players[dest.owner];
+    if (partner && partner.alive && partner !== owner) partner.gold += m.value * CONFIG.tradeReceiverShare;
+    if (owner === this.human) this._emit(`⚓ Un mercante vuelve con ${formatNumber(m.value)} de oro`, 'good');
+  }
+
+  /** Un buque se queda con un barco automático enemigo: ahora produce para su nuevo dueño. */
+  _captureMerchant(ws, m) {
+    const victim = this.players[m.owner];
+    const thief = this.players[ws.owner];
+    m.owner = ws.owner;
+    if (m.kind === 'fish') {
+      const port = this.buildings.find((b) => b.kind === 'port' && b.owner === thief.id && b.water >= 0 &&
+        this.map.waterBody[b.water] === this.map.waterBody[m.tile]);
+      m.port = port ? port.id : 0;
+      m.path = null;
+    }
+    thief.stats.captured = (thief.stats.captured || 0) + 1;
+    const what = m.kind === 'fish' ? 'un pesquero' : 'un mercante';
+    if (thief === this.human) this._emit(`🏴 Has capturado ${what} de ${victim.name}`, 'good');
+    else if (victim === this.human) this._emit(`🏴 ${thief.name} te ha robado ${what}`, 'danger');
   }
 
   // ---------------------------------------------------- misiles y antimisiles
@@ -918,6 +1071,14 @@ export class Game {
         }
       }
       if (!target) {
+        // Barcos automáticos: se capturan, no se hunden
+        for (const m of this.merchants) {
+          if (m.done || !this._isEnemy(ws.owner, m.owner)) continue;
+          const d = dist2(m.tile);
+          if (d < best) [best, target, kind] = [d, m, 'merchant'];
+        }
+      }
+      if (!target) {
         for (const b of this.buildings) {
           if (b.kind !== 'port' || !this._isEnemy(ws.owner, b.owner)) continue;
           const d = dist2(b.tile);
@@ -925,6 +1086,10 @@ export class Game {
         }
       }
       if (!target) continue;
+      if (kind === 'merchant') {
+        this._captureMerchant(ws, target);
+        continue;
+      }
       ws.fireTick = this.ticks;
       ws.fireAt = kind === 'boat' ? target.path[target.pos] : target.tile;
       const me = this.players[ws.owner];
@@ -1162,6 +1327,7 @@ export class Game {
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateBoats();
+    this._updateMerchants();
     this._updateWarships();
     this._updateMissiles();
     if (this.effects.length && this.effects[0].tick < this.ticks - 30) {
@@ -1224,7 +1390,7 @@ export class Game {
   }
 
   _checkVictory() {
-    const need = this.map.landCount * CONFIG.winLandShare;
+    const need = this.map.landCount * this.rules.winShare;
     let alive = 0;
     let last = null;
     let winner = null;

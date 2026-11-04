@@ -34,7 +34,7 @@ export const CONFIG = {
 
   // Barcos de transporte
   maxBoats: 3, // sin puertos; cada puerto suma uno
-  boatSpeed: 1.5, // casillas por tick
+  boatSpeed: 0.8, // casillas por tick
 
   // Oro: ingreso por tick = base + casillas^0,75 × mult (× bonus de puertos)
   startGold: 0,
@@ -54,10 +54,21 @@ export const CONFIG = {
   warshipHp: 100,
   warshipDamage: 1.5, // vida que quitan por tick a otro buque o a un puerto
   warshipRange: 9, // casillas
-  warshipSpeed: 1.2, // casillas por tick
+  warshipSpeed: 0.7, // casillas por tick
   warshipsPerPort: 3,
   portHp: 80,
   portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
+
+  // Economía naval: barcos automáticos de los puertos
+  fishPerPort: 2, // pesqueros por puerto
+  fishGold: 1.5, // oro por tick de cada pesquero
+  fishRange: 14, // casillas alrededor del puerto donde faenan
+  fishSpeed: 0.4,
+  tradeEveryMin: 200, // ticks entre mercantes de un mismo puerto
+  tradeEveryMax: 400,
+  tradeGoldPerTile: 18, // oro por casilla de ruta, al llegar
+  tradeReceiverShare: 0.5, // parte para el dueño del puerto de destino
+  tradeSpeed: 0.6,
 
   // Misiles y antimisiles
   missileRadius: 8, // casillas arrasadas alrededor del impacto
@@ -83,6 +94,22 @@ export const CONFIG = {
   botThinkMax: 20,
   botDiplomacyStartTicks: 600, // empiezan a negociar al minuto de juego
 };
+
+/** Reglas que se eligen al crear la partida (también en las salas online). */
+export const DEFAULT_RULES = { winShare: 0.7, startGold: 0, missiles: true, warships: true };
+export const WIN_SHARES = [0.5, 0.7, 0.9];
+export const START_GOLDS = [0, 10000, 50000];
+
+/** Normaliza reglas venidas de fuera (perfil, red). */
+export function cleanRules(raw) {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  return {
+    winShare: WIN_SHARES.includes(r.winShare) ? r.winShare : DEFAULT_RULES.winShare,
+    startGold: START_GOLDS.includes(r.startGold) ? r.startGold : DEFAULT_RULES.startGold,
+    missiles: r.missiles !== false,
+    warships: r.warships !== false,
+  };
+}
 
 export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '⚔️', '🏳️', '❤️'];
 

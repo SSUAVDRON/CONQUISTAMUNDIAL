@@ -2,6 +2,9 @@
 // experiencia y nivel, estadísticas, historial y logros. Se guarda en este
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
+import { DEFAULT_RULES } from './config.js';
+
+// (Las claves conservan el nombre de la primera versión para no perder perfiles.)
 const KEY = 'dominia.perfil.v1';
 const OLD_PREFS = 'dominia.prefs';
 const HISTORY_MAX = 20;
@@ -78,6 +81,7 @@ export const ACHIEVEMENTS = [
   { id: 'en_compania', icon: '👥', name: 'En compañía', desc: 'Juega una partida online', check: (r) => r.online },
   { id: 'veterano', icon: '🎖️', name: 'Veterano', desc: 'Juega 10 partidas', check: (r, p) => p.stats.partidas >= 10 },
   { id: 'tesoro', icon: '💰', name: 'Tesoro real', desc: 'Reúne 100.000 de oro', check: (r) => r.maxGold >= 100000 },
+  { id: 'recluta', icon: '🎓', name: 'Recluta', desc: 'Completa el tutorial', check: () => false },
   { id: 'industrial', icon: '🏭', name: 'Revolución industrial', desc: 'Ten 5 fábricas a la vez', check: (r) => (r.maxFactories || 0) >= 5 },
   { id: 'lluvia_fuego', icon: '🚀', name: 'Lluvia de fuego', desc: 'Lanza 5 misiles en una partida', check: (r) => (r.missiles || 0) >= 5 },
 ];
@@ -136,7 +140,17 @@ export function defaultProfile() {
     },
     logros: {}, // id → fecha (ms)
     historial: [], // { fecha, resultado, pct, duracion, mapa, rivales, online }
-    ajustes: { bots: 25, mapa: 'mundo', dificultad: 'normal' },
+    ajustes: {
+      bots: 25,
+      mapa: 'mundo',
+      dificultad: 'normal',
+      reglas: { ...DEFAULT_RULES },
+      alerta: true, // borde rojo al ser atacado
+      marcadores: true, // tropas de los ataques sobre el mapa
+      emojis: true,
+      animaciones: true,
+    },
+    tutorial: false,
     actualizado: 0,
   };
 }
@@ -152,7 +166,7 @@ export function normalizeProfile(p) {
     stats: { ...d.stats, ...(p.stats || {}) },
     logros: Object.fromEntries(Object.entries(p.logros || {}).filter(([k, v]) => ACHIEVEMENTS.some((a) => a.id === k) && Number.isFinite(v))),
     historial: Array.isArray(p.historial) ? p.historial.slice(0, HISTORY_MAX) : [],
-    ajustes: { ...d.ajustes, ...(p.ajustes || {}) },
+    ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...((p.ajustes && p.ajustes.reglas) || {}) } },
   };
 }
 
@@ -212,6 +226,16 @@ export function mergeProfiles(a, b) {
 /** ¿Tiene el logro? (Object.hasOwn: un id como "constructor" no debe colarse por el prototipo.) */
 export function hasAchievement(profile, id) {
   return Object.hasOwn(profile.logros, id);
+}
+
+/** Concede un logro fuera de una partida (p. ej. el tutorial). Devuelve el logro si es nuevo. */
+export function grantAchievement(profile, id) {
+  if (hasAchievement(profile, id)) return null;
+  const ach = ACHIEVEMENTS.find((a) => a.id === id);
+  if (!ach) return null;
+  profile.logros[id] = Date.now();
+  saveProfile(profile);
+  return ach;
 }
 
 export function isUnlocked(profile, item) {

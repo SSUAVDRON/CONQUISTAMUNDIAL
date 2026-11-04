@@ -70,7 +70,19 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Antimisiles con probabilidad de acierto y recarga; la IA los usa todos
 - Mapas sin islas ni lagos diminutos
 
+## ✅ Trinchera: inicio, tutorial y comercio naval (hecho)
+
+- Nombre, logotipo propio y pantallas de carga con pasos reales y consejos
+- Inicio con modos animados, galería de mapas, reglas de partida y ajustes
+- Tutorial interactivo de 9 pasos (logro «Recluta»)
+- Banderas reales en los países (flag-icons, MIT)
+- Pesqueros y mercantes automáticos; los buques capturan los rivales
+- Barcos más lentos; borde rojo al ser atacado
+
 ## Próximo
+
+- Sonido y música propios
+- Elegir jugar como un país concreto en los mapas reales
 
 - Misiles de distintos tamaños o con efectos duraderos (zona inhabitable un tiempo)
 - Más mapas reales: Oceanía, Oriente Medio, el Mediterráneo, un continente a

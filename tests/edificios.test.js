@@ -131,3 +131,23 @@ test('los bots construyen durante la partida', () => {
   for (const b of game.buildings) real[b.kind]++;
   assert.deepEqual(counted, real, 'los recuentos por jugador cuadran con la lista de edificios');
 });
+
+test('las reglas de la partida: oro inicial, victoria y armas desactivadas', () => {
+  const map = generateMap(220, 130, 21);
+  const game = new Game({ map, seed: 21, rules: { startGold: 10000, winShare: 0.5, missiles: false, warships: false } });
+  const p = game.addPlayer('P', [0, 0, 0], true);
+  game.addBots(3);
+  game.start();
+  assert.equal(p.gold, 10000);
+  assert.equal(game.isAllowed('silo'), false);
+  assert.equal(game.isAllowed('warship'), false);
+  assert.equal(game.isAllowed('city'), true);
+  p.gold = 1e6;
+  game.spawnPlayer(p, game.findSpawnTile());
+  while (game.phase === 'spawn') game.tick();
+  assert.equal(game.canBuild(p, 'silo', p.spawnTile).ok, false);
+  // Victoria al 50 %
+  p.tiles = Math.ceil(map.landCount * 0.5);
+  game._checkVictory();
+  assert.equal(game.winner, p);
+});

@@ -6,7 +6,7 @@
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-import { MAP_IDS, TICK_MS } from './config.js';
+import { MAP_IDS, TICK_MS, cleanRules } from './config.js';
 import { selfPeer } from './net.js';
 
 export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash'];
@@ -173,6 +173,7 @@ export class Sala {
         mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
         bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
         difficulty: ['facil', 'normal', 'dificil'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
+        rules: cleanRules(d.settings.rules),
       },
       players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
     };

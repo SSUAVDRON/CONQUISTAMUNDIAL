@@ -1,5 +1,6 @@
 // Iconos de edificios dibujados con primitivas de canvas. Se usan igual en el
 // mapa y en los botones de construcción, así siempre coinciden.
+import { FLAG_COLS, FLAG_H, FLAG_INDEX, FLAG_SPRITE, FLAG_W } from './banderas.js';
 
 const TAU = Math.PI * 2;
 
@@ -393,3 +394,46 @@ export const PATTERN_FNS = {
   espiga: (x, y) => ((x % 8 < 4 ? x + y : x - y) % 8 + 8) % 8 < 2,
   mosaico: (x, y) => ((x * 7 + y * 13) ^ (x * y)) % 5 === 0,
 };
+
+// -------------------------------------------------------------- banderas
+
+let flagImage = null;
+function flagSprite() {
+  if (!flagImage && typeof Image !== 'undefined') {
+    flagImage = new Image();
+    flagImage.src = FLAG_SPRITE;
+  }
+  return flagImage && flagImage.complete && flagImage.naturalWidth ? flagImage : null;
+}
+
+export function hasFlag(iso) {
+  return !!iso && Object.hasOwn(FLAG_INDEX, iso);
+}
+
+/** Dibuja la bandera `iso` centrada en (cx, cy) con alto `h`. Devuelve false si no hay. */
+export function drawFlag(ctx, iso, cx, cy, h) {
+  if (!hasFlag(iso)) return false;
+  const img = flagSprite();
+  if (!img) return false;
+  const i = FLAG_INDEX[iso];
+  const w = (h * FLAG_W) / FLAG_H;
+  ctx.drawImage(img, (i % FLAG_COLS) * FLAG_W, Math.floor(i / FLAG_COLS) * FLAG_H, FLAG_W, FLAG_H, cx - w / 2, cy - h / 2, w, h);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+  return true;
+}
+
+/** Estilo CSS para mostrar una bandera del sprite en un elemento de `w` px de ancho. */
+export function flagCss(iso, w = 16) {
+  if (!hasFlag(iso)) return '';
+  const i = FLAG_INDEX[iso];
+  const h = (w * FLAG_H) / FLAG_W;
+  return `background-size:${FLAG_COLS * w}px auto;background-position:-${(i % FLAG_COLS) * w}px -${Math.floor(i / FLAG_COLS) * h}px`;
+}
+
+/** Para las hojas de estilo: el sprite como variable CSS (se llama una vez). */
+export function installFlagSprite(root) {
+  root.style.setProperty('--banderas', `url("${FLAG_SPRITE}")`);
+  flagSprite();
+}

@@ -75,8 +75,10 @@ async function main() {
     .replace(/\s*<script type="module" src="src\/main\.js"><\/script>\s*/, '\n')
     .trim();
   const viewport = /<meta name="viewport"[^>]*>/.exec(html)[0];
+  // Hojas externas permitidas (la fuente del logotipo en Google Fonts)
+  const fonts = (html.match(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/g) || []).join('\n');
 
-  const head = `<title>${title}</title>\n<style>\n${css}\n</style>`;
+  const head = `<title>${title}</title>\n${fonts}\n<style>\n${css}\n</style>`;
   const content = `${body}\n<script>\n${js}\n</script>`;
   const fragment = `${head}\n${content}\n`;
   const full = `<!doctype html>

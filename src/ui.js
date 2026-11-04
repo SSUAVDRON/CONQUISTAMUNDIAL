@@ -3,7 +3,7 @@
 import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
-import { drawBuildingIcon } from './icons.js';
+import { drawBuildingIcon, flagCss, hasFlag } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -168,7 +168,14 @@ export class UI {
       return;
     }
     const allied = human.allies.has(p.id);
-    $('pn-color').style.background = rgbToCss(p.color);
+    const swatch = $('pn-color');
+    if (hasFlag(p.flag)) {
+      swatch.className = 'bandera grande';
+      swatch.style.cssText = flagCss(p.flag, 24);
+    } else {
+      swatch.className = 'muestra';
+      swatch.style.cssText = `background:${rgbToCss(p.color)}`;
+    }
     $('pn-nombre').textContent = p.name;
     $('pn-tropas').textContent = formatNumber(p.troops);
     $('pn-terr').textContent = formatPercent(p.tiles / game.map.landCount);
@@ -361,14 +368,30 @@ export class UI {
         btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}` : '';
       }
       btn.classList.toggle('caro', unavailable);
+      btn.hidden = !game.isAllowed(kind);
       btn.classList.toggle('activo', buildMode === kind);
       btn.disabled = !playing || !human.alive;
     }
 
     this._updateAttacks(game, human);
+    this._updateThreat(game, human);
     this._updateLeaderboard(game, human, landCount);
     this._updateNation(game, human, ratio);
     this._updateRequests(game, human);
+  }
+
+  /** Borde rojo mientras te atacan por tierra, mar o aire (desactivable en Ajustes). */
+  _updateThreat(game, human) {
+    const box = $('alerta-roja');
+    const on =
+      this.redAlert !== false &&
+      human.alive &&
+      (game.attacks.some((a) => !a.done && a.targetId === human.id && a.troops >= 1) ||
+        game.boats.some((b) => b.targetId === human.id) ||
+        game.missiles.some((m) => m.targetId === human.id));
+    box.classList.toggle('activa', on);
+    // Más intenso si hay un misil en camino
+    box.classList.toggle('fuerte', on && game.missiles.some((m) => m.targetId === human.id));
   }
 
   /**
@@ -437,7 +460,7 @@ export class UI {
           (game.isTraitor(p) ? ' <span class="marca traidor" title="Traidor">⚠</span>' : '');
         return `<li data-id="${p.id}" class="${p === human ? 'yo' : ''}">
           <span class="pos">${rank}</span>
-          <span class="muestra" style="background:${rgbToCss(p.color)}"></span>
+          ${hasFlag(p.flag) ? `<span class="bandera" style="${flagCss(p.flag, 16)}"></span>` : `<span class="muestra" style="background:${rgbToCss(p.color)}"></span>`}
           <span class="nom">${escapeHtml(p.name)}${marks}</span>
           <span class="pct">${formatPercent(p.tiles / landCount)}</span>
           <span class="tro">${formatNumber(p.troops)}</span>
