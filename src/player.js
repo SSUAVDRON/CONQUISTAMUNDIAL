@@ -10,6 +10,11 @@ export function pow34(x) {
   return s * Math.sqrt(s);
 }
 
+/** Bonus de oro de `levels` niveles de puerto o fábrica, con rendimiento decreciente. */
+export function goldBonus(levels, per) {
+  return (per * levels) / (1 + CONFIG.bonusFalloff * levels);
+}
+
 export class Player {
   constructor(id, name, color, isHuman) {
     this.id = id;
@@ -79,8 +84,8 @@ export class Player {
 
   goldPerTick() {
     if (!this.tiles) return 0;
-    const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
-    return base * (1 + this.levels.port * CONFIG.portGoldBonus + this.levels.factory * CONFIG.factoryGoldBonus);
+    const base = CONFIG.goldBase + Math.sqrt(this.tiles) * CONFIG.goldSqrtMult;
+    return base * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus));
   }
 
   maxBoats() {

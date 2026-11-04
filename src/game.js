@@ -576,12 +576,14 @@ export class Game {
 
     let rate;
     if (!target) {
-      rate = CONFIG.attackRateWild;
+      // Tierra libre: con muchas tropas por casilla de frente, mucho más rápido
+      const per = atk.troops / Math.max(1, atk.inFrontier.size);
+      rate = CONFIG.attackRateWild * clamp(Math.sqrt(per / CONFIG.wildTroopsRef), 1, CONFIG.attackSpeedMax);
     } else {
-      // Cuanto mayor la superioridad local, más rápido avanza el frente
+      // Cuanto mayor la superioridad local (más tropas), más rápido avanza el frente
       const density = target.troops / Math.max(1, target.tiles);
       const ratio = atk.troops / (density * atk.inFrontier.size * RES + 1);
-      rate = CONFIG.attackRatePlayer * clamp(Math.sqrt(ratio), 0.2, 1.5);
+      rate = CONFIG.attackRatePlayer * clamp(Math.sqrt(ratio), 0.2, CONFIG.attackSpeedMax);
     }
     atk.budget += Math.max(CONFIG.minAttackBudget, atk.inFrontier.size * rate);
 
@@ -1060,6 +1062,7 @@ export class Game {
   _launchMissile(p, silo, tile) {
     const map = this.map;
     silo.readyAt = this.ticks + Math.round(CONFIG.siloReload * (1 - CONFIG.siloReloadPerLevel * (silo.level - 1)));
+    silo.reloadFrom = this.ticks;
     const dx = map.x(tile) - map.x(silo.tile);
     const dy = map.y(tile) - map.y(silo.tile);
     const targetId = this.owner[tile];
@@ -1103,7 +1106,8 @@ export class Game {
         const range = this.samRange(b.level);
         if (dx * dx + dy * dy > range * range) continue;
         // La batería dispara (y recarga) acierte o no
-        b.readyAt = this.ticks + CONFIG.samReload;
+        b.readyAt = this.ticks + Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (b.level - 1)));
+        b.reloadFrom = this.ticks;
         const hit = this.rng.float() < Math.min(0.92, CONFIG.samHitChance + CONFIG.samHitPerLevel * (b.level - 1));
         this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
         if (!hit) continue;

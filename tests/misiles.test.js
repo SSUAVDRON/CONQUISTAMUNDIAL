@@ -3,13 +3,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
+import { goldBonus } from '../src/player.js';
 import { buildNow, terminarObras } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
 /** Tres naciones en la masa de tierra mayor, ya en juego y con oro de sobra. */
 function setup(seed = 11) {
   const map = generateMap(240 * RES, 140 * RES, seed);
-  const game = new Game({ map, seed });
+  // Victoria al 90 %: B crece mucho (para tener qué arrasar) y no debe ganar la partida
+  const game = new Game({ map, seed, rules: { winShare: 0.9 } });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 0, 255], false);
   const c = game.addPlayer('C', [0, 255, 0], false);
@@ -28,22 +30,25 @@ function setup(seed = 11) {
   // B crece para tener algo que arrasar
   for (let i = 0; i < 20; i++) {
     b.troops = 1e5;
-    game.launchAttack(b, 0, 40000);
+    game.launchAttack(b, 0, 8000);
     for (let k = 0; k < 10; k++) game.tick();
   }
+  for (const atk of [...b.attacks.values()]) game._endAttack(atk);
   a.gold = b.gold = 1e7;
   return { map, game, a, b, c, ta, tb };
 }
 
-test('la fábrica sube el oro un 25 %', () => {
+test('la fábrica sube el oro (cada nivel algo menos)', () => {
   const { game, a, ta } = setup();
   const before = a.goldPerTick();
   assert.ok(buildNow(game, a, 'factory', ta));
-  assert.ok(Math.abs(a.goldPerTick() - before * (1 + CONFIG.factoryGoldBonus)) < 1e-9);
+  assert.ok(Math.abs(a.goldPerTick() - before * (1 + goldBonus(1, CONFIG.factoryGoldBonus))) < 1e-9);
   assert.equal(game.buildCost(a, 'factory'), Math.round(BUILDINGS.factory.base * (1 + CONFIG.inflation)));
   // Nivel 2: otro 25 %
   assert.ok(buildNow(game, a, 'factory', ta), 'clic sobre la fábrica = mejorarla');
-  assert.ok(Math.abs(a.goldPerTick() - before * (1 + 2 * CONFIG.factoryGoldBonus)) < 1e-9);
+  assert.ok(Math.abs(a.goldPerTick() - before * (1 + goldBonus(2, CONFIG.factoryGoldBonus))) < 1e-9);
+  // Rendimiento decreciente: el segundo nivel suma menos que el primero
+  assert.ok(goldBonus(2, CONFIG.factoryGoldBonus) < 2 * goldBonus(1, CONFIG.factoryGoldBonus));
   assert.equal(a.buildings.factory, 1, 'sigue siendo una fábrica');
 });
 

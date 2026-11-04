@@ -468,44 +468,120 @@ export class Fx {
   }
 
   /**
+   * Rótulo flotante sobre el mapa («¡DERRIBADO!»): tamaño fijo en pantalla,
+   * sube un poco y se apaga. Va aparte de las partículas para que nunca se pierda.
+   */
+  label(x, y, text, color, px = 14, life = 1.8) {
+    let age = 0;
+    this.scripts.push({
+      update(dt) {
+        age += dt;
+        return age < life;
+      },
+      draw(ctx, cam) {
+        const t = age / life;
+        const z = cam.zoom;
+        const sx = (x - cam.x) * z;
+        const sy = (y - cam.y) * z - 14 - t * 22;
+        const pop = t < 0.1 ? 0.6 + 4 * t : 1;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, (1 - t) * 2.2);
+        ctx.font = `900 ${Math.round(px * pop)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = Math.max(3, px / 3.5);
+        ctx.strokeStyle = 'rgba(6, 12, 24, 0.85)';
+        ctx.strokeText(text, sx, sy);
+        ctx.fillStyle = color;
+        ctx.fillText(text, sx, sy);
+        ctx.restore();
+      },
+    });
+  }
+
+  /**
    * Interceptor desde la batería (sx, sy) hasta un misil que va por (mx, my, mz)
    * con velocidad (vx, vy, vz). `hit`: si lo derriba (el misil se sigue
-   * dibujando hasta el choque).
+   * dibujando hasta el choque). Deja una estela continua que se desvanece
+   * y un rótulo «¡DERRIBADO!» / «FALLO» donde se cruzan.
    */
   intercept(sx, sy, mx, my, mz, vx, vy, vz, hit, missileColor) {
-    const T = 0.38;
+    const T = 0.8; // lo bastante lento para verlo subir
+    const FADE = 1.4; // la estela sigue a la vista un rato tras el choque
     const ex = mx + vx * T + (hit ? 0 : rnd(-2, 2) * RES);
     const ey = my + vy * T + (hit ? 0 : rnd(-2, 2) * RES);
     const ez = Math.max(0.5 * RES, mz + vz * T);
     let t = 0;
+    let done = false;
     const fx = this;
     let puff = 0;
-    this.add({ x: sx, y: sy, life: 0.5, s0: 0.6, s1: 2, min: 4, sprite: 'steam', a0: 0.7, vz: 0.5 });
-    this.add({ x: sx, y: sy, life: 0.15, s0: 0.8, min: 6, sprite: 'blue' });
+    // Posición (en el plano de pantalla) del interceptor en la fracción k del vuelo
+    const at = (k) => [sx + (ex - sx) * k, sy + (ey - sy) * k - ez * k * k];
+    // Fogonazo y humo de lanzamiento en la batería
+    this.add({ x: sx, y: sy, life: 0.9, s0: 0.8, s1: 3, min: 8, sprite: 'steam', a0: 0.8, vz: 0.6 });
+    this.add({ x: sx, y: sy, life: 0.3, s0: 1.4, s1: 0.6, min: 16, sprite: 'blue' });
+    this.add({ x: sx, y: sy, life: 0.5, s0: 0.3, s1: 2.5, min: 6, ring: true, glowRing: true, color: 'rgba(170, 220, 255, 0.9)', lw: 0.25 });
     this.scripts.push({
       update(dt) {
+        const k0 = Math.min(1, t / T);
         t += dt;
-        const k = Math.min(1, t / T);
-        // Rastro del interceptor
-        puff += dt;
-        while (puff > 0.016) {
-          puff -= 0.016;
-          fx.add({ x: sx + (ex - sx) * k, y: sy + (ey - sy) * k, z: ez * k * k, zAbs: true, drag: 0.5, life: rnd(0.6, 1.1), s0: 0.18, s1: 0.7, min: 1.5, sprite: 'steam', a0: 0.5 });
+        const k1 = Math.min(1, t / T);
+        // Humo del motor repartido por el tramo recorrido en este fotograma
+        if (!done) {
+          puff += dt;
+          const n = Math.floor(puff / 0.015);
+          puff -= n * 0.015;
+          for (let i = 1; i <= n; i++) {
+            const k = k0 + ((k1 - k0) * i) / n;
+            fx.add({ x: sx + (ex - sx) * k, y: sy + (ey - sy) * k, z: ez * k * k, zAbs: true, drag: 0.5, life: rnd(1.1, 1.7), s0: 0.45, s1: 1.6, min: 4, sprite: 'steam', a0: 0.6 });
+          }
         }
-        if (t < T) return true;
-        if (hit) fx.airburst(ex, ey, ez);
-        else fx.pop(ex, ey, ez);
-        return false;
+        if (!done && t >= T) {
+          done = true;
+          if (hit) fx.airburst(ex, ey, ez);
+          else fx.pop(ex, ey, ez);
+          fx.label(ex, ey - ez, hit ? '¡DERRIBADO!' : 'FALLO', hit ? '#bfe6ff' : '#d4d8e0', hit ? 18 : 14);
+        }
+        return t < T + FADE;
       },
       draw(ctx, cam) {
         const k = Math.min(1, t / T);
         const z = cam.zoom;
+        const fade = done ? Math.max(0, 1 - (t - T) / FADE) : 1;
+        // Estela: línea fina y continua de la batería a la cabeza
+        const N = 18;
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let i = 0; i <= N; i++) {
+          const [px, py] = at((k * i) / N);
+          const X = (px - cam.x) * z;
+          const Y = (py - cam.y) * z;
+          if (i) ctx.lineTo(X, Y);
+          else ctx.moveTo(X, Y);
+        }
+        ctx.globalAlpha = 0.22 * fade;
+        ctx.strokeStyle = '#7cc8ff';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.globalAlpha = 0.85 * fade;
+        ctx.strokeStyle = '#e6f4ff';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+        ctx.restore();
+        if (done) return;
         // Cabeza del interceptor
-        const px = sx + (ex - sx) * k;
-        const py = sy + (ey - sy) * k - ez * k * k;
+        const [px, py] = at(k);
+        const hx = (px - cam.x) * z;
+        const hy = (py - cam.y) * z;
         ctx.globalCompositeOperation = 'lighter';
-        ctx.drawImage(sprites().blue, (px - cam.x) * z - 6, (py - cam.y) * z - 6, 12, 12);
+        ctx.drawImage(sprites().blue, hx - 16, hy - 16, 32, 32);
         ctx.globalCompositeOperation = 'source-over';
+        // Interceptor: un misil pequeño, blanco y azul, apuntando hacia donde va
+        const ang = Math.atan2(ey - sy - 2 * ez * k, ex - sx);
+        drawMissileSprite(ctx, hx, hy, ang, Math.min(22, Math.max(13, z * RES * 2.2)), '#5ab8ff', t);
         // El misil condenado sigue su vuelo hasta el choque
         if (hit) {
           const qx = mx + vx * t;

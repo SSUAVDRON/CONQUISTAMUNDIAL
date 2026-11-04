@@ -594,7 +594,10 @@ export class Renderer {
       });
       ctx.globalAlpha = 1;
       if (building) this._drawConstruction(sx, sy, size, game.buildProgress(b), now);
-      else if (b.level > 1) this._drawLevel(sx, sy, size, b.level);
+      else {
+        if ((b.kind === 'sam' || b.kind === 'silo') && b.level > 0) this._drawReload(sx, sy, size, b);
+        if (b.level > 1) this._drawLevel(sx, sy, size, b.level);
+      }
       if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
     }
   }
@@ -619,6 +622,49 @@ export class Renderer {
     ctx.beginPath();
     ctx.arc(sx + Math.cos(a) * r, sy + Math.sin(a) * r, Math.max(1.5, size * 0.09), 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  /**
+   * Recarga de antimisiles y silos: anillo que se va llenando mientras
+   * recargan (con los segundos que faltan) y punto verde cuando están listos.
+   */
+  _drawReload(sx, sy, size, b) {
+    const { ctx, game } = this;
+    const r = size * 0.66;
+    const left = (b.readyAt ?? 0) - game.ticks;
+    if (left > 0 && b.reloadFrom !== undefined) {
+      const total = Math.max(1, b.readyAt - b.reloadFrom);
+      const frac = 1 - left / total;
+      ctx.lineWidth = Math.max(2.5, size * 0.13);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = b.kind === 'sam' ? '#6cc4ff' : '#ff9b4a';
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+      ctx.stroke();
+      if (size >= 14) {
+        const secs = Math.ceil((left * TICK_MS) / 1000);
+        ctx.font = '800 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.strokeText(`${secs}s`, sx, sy + size * 0.78);
+        ctx.fillStyle = b.kind === 'sam' ? '#bfe6ff' : '#ffd2a8';
+        ctx.fillText(`${secs}s`, sx, sy + size * 0.78);
+      }
+    } else {
+      // Lista: punto verde
+      ctx.beginPath();
+      ctx.arc(sx + size * 0.42, sy + size * 0.38, Math.max(2.5, size * 0.12), 0, Math.PI * 2);
+      ctx.fillStyle = '#5fd38d';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.stroke();
+    }
   }
 
   /** Nivel del edificio (2 o más): el número en una chapa dorada encima del icono. */

@@ -107,6 +107,13 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Inicio con portada ilustrada, modos ilustrados, arsenal, botones nuevos
 - Personalización: estandartes, marcos, color del nombre, más símbolos y
   formas, colores rápidos y tarjeta de perfil
+- Buques de guerra autónomos que patrullan una zona; barcos más lentos;
+  número de nivel sobre los edificios
+- Oro proporcional (√ del territorio; puertos y fábricas con rendimiento
+  decreciente); conquista más rápida cuantas más tropas mandas
+- Antimisiles con recarga de 20 s visible (anillo con segundos) e
+  interceptación con estela y rótulo «¡DERRIBADO!»; resumen del panel más
+  compacto con el máximo de tropas grande
 
 ## Próximo
 

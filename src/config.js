@@ -41,16 +41,23 @@ export const CONFIG = {
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
   attackRateWild: 0.1 * RES, // casillas por tick por casilla de frente (tierra libre)
   attackRatePlayer: 0.04 * RES, // ídem contra jugadores (se escala con la superioridad)
+  // Cuantas más tropas por casilla de frente, más rápido avanza (hasta ×3,5)
+  attackSpeedMax: 3.5,
+  wildTroopsRef: 10, // tropas por casilla de frente a partir de las que la expansión acelera
   minAttackBudget: 0.25 * RES,
 
   // Barcos de transporte
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
   boatSpeed: 0.55 * RES, // casillas por tick
 
-  // Oro: ingreso por tick = base + casillas^0,75 × mult (× bonus de puertos)
+  // Oro: ingreso por tick = (base + √casillas × mult) × (1 + bonus de puertos y fábricas)
   startGold: 0,
   goldBase: 50,
-  goldTileMult: 1.4 / RES15,
+  // Ingreso por territorio ∝ √casillas: crece con el país pero cada vez menos
+  // (con casillas^0,75 los imperios grandes construían sin parar)
+  goldSqrtMult: 9.2 / RES,
+  // Rendimiento decreciente de puertos y fábricas: bonus = % × n / (1 + 0,12 × n)
+  bonusFalloff: 0.12,
   plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla
   tileLootShare: 1, // al conquistar una casilla te llevas su parte del oro del país (oro ÷ casillas)
 
@@ -110,7 +117,8 @@ export const CONFIG = {
   siloReload: 150, // ticks entre lanzamientos de un mismo silo
   missileTroopLoss: 1.2, // × densidad del defensor por casilla arrasada
   samRange: 22 * RES, // radio de intercepción de una batería
-  samReload: 80, // ticks entre disparos de una batería
+  samReload: 200, // ticks (20 s) que tarda una batería en recargar tras disparar
+  samReloadPerLevel: 0.12, // cada nivel recarga un 12 % más rápido
   samHitChance: 0.6, // probabilidad de derribar el misil al disparar
 
   // Diplomacia
@@ -156,7 +164,7 @@ export const BUILDINGS = {
   fort: { name: 'Fortaleza', fem: true, base: 75000, build: 40, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
   factory: { name: 'Fábrica', fem: true, base: 150000, build: 60, key: 'KeyF', desc: '+25% de oro por nivel' },
   silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar misiles' },
-  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos' },
+  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos; recarga 20 s tras cada disparo' },
   // No son edificios: el buque se bota desde un puerto y el misil sale de un silo
   warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Patrulla su zona: hunde buques y transportes y captura barcos civiles' },
   missile: { name: 'Misil', fem: false, base: 500000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
