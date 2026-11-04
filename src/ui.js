@@ -181,7 +181,11 @@ export class UI {
       text.innerHTML = '<span class="b-coste"></span>';
       const count = document.createElement('span');
       count.className = 'b-num';
-      btn.append(icon, text, count);
+      // La tecla, arriba a la izquierda
+      const key = document.createElement('span');
+      key.className = 'b-tecla';
+      key.textContent = def.key.slice(3);
+      btn.append(key, icon, text, count);
       btn.addEventListener('click', () => this.handlers.onBuildMode?.(kind));
       $('construir').append(btn);
       this._buildButtons.set(kind, btn);

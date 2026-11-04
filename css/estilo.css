@@ -1753,3 +1753,8 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .volumenes { margin-top: 12px; gap: 14px; }
 .volumenes input[type="range"] { width: 100%; }
 #barra-superior .btn-sonido { padding: 5px; width: 34px; }
+/* Panel de edificios: pictograma blanco y la tecla arriba a la izquierda */
+#construir canvas { background: none; width: 26px; height: 26px; margin-left: 6px; }
+#construir .b-tecla { position: absolute; top: 2px; left: 5px; font-size: 9.5px; font-weight: 700; color: var(--texto-suave); line-height: 1; pointer-events: none; }
+#construir .b-coste { color: #e9eef6; font-weight: 600; }
+#construir button:not(.caro) .b-coste { color: var(--acento); }
