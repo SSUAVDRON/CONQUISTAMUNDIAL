@@ -97,22 +97,23 @@ function paintTerrainNow(map) {
     }
     return lats;
   })();
-  // Paleta (r, g, b) de cada clima
+  // Paleta (r, g, b) de cada clima: tonos apagados y cercanos entre sí, para
+  // que el terreno acompañe sin competir con los colores de las naciones
   const C = {
-    selva: [62, 122, 58],
-    pradera: [111, 160, 78],
-    seca: [150, 166, 92],
-    bosque: [76, 128, 64],
-    sabana: [170, 168, 98],
-    desierto: [214, 194, 138],
-    estepa: [140, 160, 104],
-    tundra: [178, 186, 162],
-    nieve: [230, 236, 240],
-    meseta: [176, 156, 108],
-    mesetaSeca: [198, 168, 116],
-    mesetaFria: [168, 164, 148],
-    roca: [140, 127, 115],
-    rocaOscura: [104, 94, 86],
+    selva: [104, 128, 86],
+    pradera: [122, 140, 96],
+    seca: [138, 146, 104],
+    bosque: [110, 128, 90],
+    sabana: [154, 152, 116],
+    desierto: [182, 170, 136],
+    estepa: [138, 146, 112],
+    tundra: [156, 160, 146],
+    nieve: [206, 210, 212],
+    meseta: [152, 142, 114],
+    mesetaSeca: [166, 152, 120],
+    mesetaFria: [148, 148, 138],
+    roca: [124, 118, 110],
+    rocaOscura: [106, 100, 94],
   };
   const R = new Float32Array(size);
   const G = new Float32Array(size);
@@ -153,9 +154,9 @@ function paintTerrainNow(map) {
       const dry = lat >= 0 ? clamp(sub * (1.25 - moist * 0.9), 0, 1) : smooth(0.32, 0.18, moist);
       if (t === PLAINS) {
         set(C.pradera);
-        mix(C.seca, smooth(0.35, 0.75, moist) * 0.6);
-        mix(C.selva, tropical * 0.85);
-        const fk = (1 - dry) * (1 - rowCold) * 0.85;
+        mix(C.seca, smooth(0.35, 0.75, moist) * 0.4);
+        mix(C.selva, tropical * 0.8);
+        const fk = (1 - dry) * (1 - rowCold) * 0.6;
         if (fk > 0.01) mix(C.bosque, smooth(0.6, 0.7, valueNoise(x, y, 9 * RES, seed + 11)) * fk);
         mix(dry > 0.55 ? C.desierto : C.sabana, smooth(0.25, 0.75, dry));
         mix(C.estepa, steppe);
@@ -185,9 +186,11 @@ function paintTerrainNow(map) {
           b *= k;
         }
       }
-      R[i] = r;
-      G[i] = g;
-      B[i] = b;
+      // Grano de píxel: cada casilla un pelín distinta, como un mapa de píxeles
+      const px = (hash2(x, y, seed + 17) - 0.5) * 9;
+      R[i] = r + px;
+      G[i] = g + px;
+      B[i] = b + px * 0.9;
     }
   }
 
@@ -277,10 +280,10 @@ function paintTerrainNow(map) {
           g += (66 - g) * k;
           b += (64 - b) * k;
         } else {
-          const k = smooth(0.46, 0.12, d) * 0.85;
-          r += (220 - r) * k;
-          g += (202 - g) * k;
-          b += (150 - b) * k;
+          const k = smooth(0.46, 0.12, d) * 0.6;
+          r += (190 - r) * k;
+          g += (180 - g) * k;
+          b += (148 - b) * k;
         }
       }
       r = clamp(r, 0, 255) | 0;
@@ -333,7 +336,8 @@ function paintTerrainNow(map) {
       r += (12 - r) * k2;
       g += (34 - g) * k2;
       b += (70 - b) * k2;
-      const n = (valueNoise(x, y, 18 * RES, seed + 7) - 0.5) * 7 * k2;
+      // Variación muy suave y un grano de píxel apenas visible
+      const n = (valueNoise(x, y, 18 * RES, seed + 7) - 0.5) * 5 * k2 + (hash2(x, y, seed + 29) - 0.5) * 3;
       wd[o] = clamp(r + n * 0.5, 0, 255);
       wd[o + 1] = clamp(g + n * 0.8, 0, 255);
       wd[o + 2] = clamp(b + n, 0, 255);

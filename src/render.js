@@ -89,6 +89,7 @@ export class Renderer {
     for (const e of game.effects) this._seenFx.add(e);
     this._boats = new Map();
     this._ships = new Map();
+    this._attackFronts = new WeakMap();
     this._merch = new Map();
     this._missiles = new Map();
     this._gen = 0;
@@ -448,11 +449,13 @@ export class Renderer {
     const map = game.map;
     const z = camera.zoom * dpr;
     ctx.setTransform(z, 0, 0, z, -camera.x * z + ox * dpr, -camera.y * z + oy * dpr);
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(this.waterCanvas, 0, 0);
-    this._drawWaves(now);
-    ctx.drawImage(this.landCanvas, 0, 0, map.width, map.height);
+    // Mar y tierra en píxeles nítidos, igual que el territorio conquistado
     ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.waterCanvas, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    this._drawWaves(now);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.landCanvas, 0, 0, map.width, map.height);
     ctx.drawImage(this.territoryCanvas, 0, 0);
     this._drawFlashes(now);
     this._drawClouds(now);
@@ -1164,6 +1167,59 @@ export class Renderer {
   }
 
   /**
+   * Punto del frente de un ataque, estable: se recalcula una vez por tick con
+   * una muestra repartida por todo el frente y el marcador se desliza hacia él
+   * con suavidad (antes saltaba de un sitio a otro). También suaviza la
+   * dirección del avance. Devuelve { x, y, ang } o null.
+   */
+  _front(atk) {
+    if (!atk.inFrontier.size) return null;
+    const tick = this.game.ticks;
+    let f = this._attackFronts.get(atk);
+    if (!f || f.tick !== tick) {
+      const W = this.game.map.width;
+      const n = atk.inFrontier.size;
+      const stride = Math.max(1, Math.ceil(n / 160));
+      let sx = 0;
+      let sy = 0;
+      let c = 0;
+      let i = 0;
+      for (const t of atk.inFrontier) {
+        if (i++ % stride) continue;
+        sx += t % W;
+        sy += (t / W) | 0;
+        c++;
+      }
+      const tx = sx / c + 0.5;
+      const ty = sy / c + 0.5;
+      if (!f) {
+        f = { x: tx, y: ty, tx, ty, ang: null, tick, frame: -1 };
+        this._attackFronts.set(atk, f);
+      }
+      f.tx = tx;
+      f.ty = ty;
+      f.tick = tick;
+    }
+    if (f.frame !== this._gen) {
+      f.frame = this._gen;
+      // Si el frente salta muy lejos (otro sector), se recoloca de golpe
+      if (Math.abs(f.tx - f.x) + Math.abs(f.ty - f.y) > 60 * RES) {
+        f.x = f.tx;
+        f.y = f.ty;
+      }
+      const k = Math.min(1, this._dt * 2.2);
+      f.x += (f.tx - f.x) * k;
+      f.y += (f.ty - f.y) * k;
+      const L = this.labelById.get(atk.attacker.id);
+      if (L) {
+        const a = Math.atan2(f.y - L.y, f.x - L.x);
+        f.ang = f.ang === null ? a : turn(f.ang, a, Math.min(1, this._dt * 1.5));
+      }
+    }
+    return f;
+  }
+
+  /**
    * Flechas animadas en cada frente: avanzan hacia el territorio atacado.
    * Las tuyas en verde, las que te atacan en rojo; las demás (con zoom) con
    * el color del atacante.
@@ -1180,17 +1236,12 @@ export class Renderer {
       const incoming = human && atk.targetId === human.id;
       const mine = human && atk.attacker === human;
       if (!incoming && !mine && camera.zoom * RES < 2.5) continue;
-      const L = this.labelById.get(atk.attacker.id);
-      if (!L) continue;
-      const [fx, fy] = game.attackFront(atk);
-      const [sx, sy] = camera.worldToScreen(fx, fy);
+      const f = this._front(atk);
+      if (!f || f.ang === null) continue;
+      const [sx, sy] = camera.worldToScreen(f.x, f.y);
       if (!this._onScreen(sx, sy, 80)) continue;
-      let dx = fx - L.x;
-      let dy = fy - L.y;
-      const d = Math.hypot(dx, dy);
-      if (d < 0.5) continue;
-      dx /= d;
-      dy /= d;
+      const dx = Math.cos(f.ang);
+      const dy = Math.sin(f.ang);
       const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : atk.attacker.color.join(', ');
       const s = incoming || mine ? 8 : 5.5;
       const lw = incoming || mine ? 3.2 : 2.4;
@@ -1229,12 +1280,13 @@ export class Renderer {
       if (atk.done || atk.troops < 1 || !atk.targetId) continue;
       const incoming = atk.targetId === human.id;
       if (!incoming && atk.attacker !== human) continue;
-      if (!atk.inFrontier.size) continue;
-      const [fx, fy] = game.attackFront(atk);
-      const [x, y] = camera.worldToScreen(fx, fy);
+      const f = this._front(atk);
+      if (!f) continue;
+      const [x, y] = camera.worldToScreen(f.x, f.y);
       if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
       const text = `${incoming ? '🛡' : '⚔'} ${formatNumber(atk.troops)}`;
-      const w = ctx.measureText(text).width + 14;
+      // Ancho por escalones: no «baila» cada vez que cambia una cifra
+      const w = Math.max(64, Math.ceil((ctx.measureText(text).width + 14) / 10) * 10);
       ctx.beginPath();
       ctx.roundRect(x - w / 2, y - 10, w, 20, 10);
       ctx.fillStyle = incoming ? 'rgba(190, 40, 40, 0.92)' : 'rgba(24, 140, 78, 0.92)';

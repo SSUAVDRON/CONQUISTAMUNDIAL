@@ -1344,7 +1344,7 @@ body.con-tutorial #eventos { top: auto; }
   animation: barrido 0.9s ease-out forwards;
 }
 #combates .frente:not(.saliendo) .f-vs { animation: vsPulso 1.8s ease-in-out infinite; }
-#combates .frente.entrante:not(.saliendo) .f-vs { animation-duration: 0.9s; }
+#combates .frente.entrante:not(.saliendo) .f-vs { animation-duration: 1.4s; }
 #combates .f-barra-a { position: relative; overflow: hidden; }
 #combates .frente:not(.saliendo) .f-barra-a::after {
   content: "";
@@ -1358,9 +1358,9 @@ body.con-tutorial #eventos { top: auto; }
 .golpe { animation: golpe 0.45s ease-out; }
 @keyframes entrarIzq { from { opacity: 0; transform: translateX(-26px) scale(0.95); } }
 @keyframes barrido { from { background-position: 120% 0; } to { background-position: -60% 0; opacity: 0; } }
-@keyframes vsPulso { 50% { transform: scale(1.12); } }
+@keyframes vsPulso { 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 10px rgba(255, 255, 255, 0.18); } }
 @keyframes avance { to { background-position: 11.3px 0; } }
-@keyframes golpe { 30% { transform: scale(1.22); color: #fff; text-shadow: 0 0 10px rgba(255, 90, 90, 0.95); } }
+@keyframes golpe { 35% { color: #fff; text-shadow: 0 0 8px rgba(255, 90, 90, 0.8); } }
 
 /* Avisos: el recuadro es #avisos (con cabecera plegable); #eventos es solo la lista */
 #avisos {
@@ -1703,3 +1703,28 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   .portada-botones .principal.grande { flex: 1; justify-content: center; }
 }
 .portada-botones button { white-space: nowrap; }
+
+/* Pista: respuesta breve a tus acciones, encima del panel de abajo */
+.pista {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--pj-alto, 110px) + 22px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 8px);
+  max-width: calc(100vw - 32px);
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+  background: rgba(12, 18, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.pista.visible { opacity: 1; transform: translate(-50%, 0); }
+.pista.warn { border-color: rgba(255, 200, 87, 0.5); color: #ffe2a6; }
+.pista.danger { border-color: rgba(255, 107, 107, 0.55); color: #ffc4c4; }
+.pista.good { border-color: rgba(95, 211, 141, 0.5); color: #c9f9dc; }

@@ -2036,8 +2036,8 @@ export class Game {
     if (this.onEvent) this.onEvent(evt);
   }
 
-  /** Mensajes solo relevantes para el jugador humano. */
+  /** Respuesta a una acción del jugador humano («Te falta oro», «Buque botado»…). */
   _notify(p, text, kind) {
-    if (p === this.human) this._emit(text, kind);
+    if (p === this.human) this._emit(text, kind, { feedback: true });
   }
 }

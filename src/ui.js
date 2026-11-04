@@ -23,6 +23,24 @@ const EVENT_ICONS = {
   info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2 V11.2 M8 4.8 V5"/>',
 };
 
+/**
+ * Solo los avisos importantes llegan al recuadro: paces y roturas, países
+ * derrotados, barcos y misiles contra ti, tu puerto destruido, logros e
+ * inicio. El resto (obras, saqueos, tus propios ataques…) ya se ve en el
+ * mapa o en las tarjetas de combate.
+ */
+const IMPORTANT = [
+  /alianza|traiciona|traidor/i,
+  /eliminad|derrotad/i,
+  /contra ti|casillas tuyas|iba hacia ti|tu antimisiles/i,
+  /uno de tus puertos/i,
+  /logro|comienza la conquista/i,
+];
+const NOT_IMPORTANT = [/propuesta de alianza enviada/i];
+function isImportant(text) {
+  return IMPORTANT.some((r) => r.test(text)) && !NOT_IMPORTANT.some((r) => r.test(text));
+}
+
 /** Tipo de aviso según su texto (para el icono). */
 function eventCategory(text) {
   const t = text.toLowerCase();
@@ -415,6 +433,12 @@ export class UI {
   }
 
   pushEvent(evt) {
+    // Respuestas a tus acciones: una pista breve encima del panel
+    if (evt.feedback) {
+      this._hint(stripLeadingEmoji(evt.text), evt.kind);
+      return;
+    }
+    if (!isImportant(evt.text)) return;
     const box = $('eventos');
     const now = performance.now();
     // El mismo aviso varias veces seguidas: un solo aviso con contador
@@ -457,6 +481,23 @@ export class UI {
       cab.classList.add(evt.kind === 'danger' ? 'aviso-peligro' : 'aviso-nuevo');
     }
     this._syncAvisos();
+  }
+
+  /** Pista breve (2,5 s) encima del panel de abajo. */
+  _hint(text, kind = 'info') {
+    const el = $('pista');
+    el.textContent = text;
+    el.className = `pista ${kind}`;
+    el.hidden = false;
+    void el.offsetWidth;
+    el.classList.add('visible');
+    clearTimeout(this._hintTimer);
+    this._hintTimer = setTimeout(() => {
+      el.classList.remove('visible');
+      this._hintTimer = setTimeout(() => {
+        el.hidden = true;
+      }, 300);
+    }, 2500);
   }
 
   /** Sale deslizándose a la derecha y se pliega para que los demás bajen sin saltos. */
@@ -786,9 +827,9 @@ export class UI {
     }
   }
 
-  /** Reinicia una animación CSS en `el` (como mucho cada 600 ms). */
+  /** Reinicia una animación CSS en `el` (como mucho cada 1,5 s: sin agobiar). */
   _pulse(el, cls, now) {
-    if (now - (el._pulseAt || 0) < 600) return;
+    if (now - (el._pulseAt || 0) < 1500) return;
     el._pulseAt = now;
     el.classList.remove(cls);
     void el.offsetWidth;
