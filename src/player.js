@@ -1,5 +1,6 @@
 // Estado de una nación (humana o bot).
 import { CONFIG } from './config.js';
+import { emptyMods } from './tecnologias.js';
 
 /**
  * x^0,75 solo con raíces cuadradas: a diferencia de Math.pow, da el mismo
@@ -31,6 +32,23 @@ export class Player {
     this._nbSummary = null;
     /** Última casilla que perdió (donde sale el botín al ser eliminado). */
     this.lastTile = -1;
+
+    // Desarrollo: tecnologías, especialización, postura y órdenes
+    this.techs = new Set();
+    this.research = null; // { id, end, start }
+    this.spec = '';
+    this.mods = emptyMods();
+    this.fortified = false;
+    this.stanceAt = -Infinity;
+    this.attackMode = 'normal';
+    this.capitalTile = -1;
+    this.passes = 0; // pasos de montaña que controla
+    this.helpAt = -Infinity; // última vez que pidió ayuda a sus aliados
+    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). */
+    this.income = { workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
+    this.spent = { buildings: 0, research: 0 };
+    /** Total ingresado cada 10 s (último minuto), para el ritmo de oro y la victoria económica. */
+    this.incomeHist = [];
 
     /** Soldados: atacan y defienden (es la cifra de «tropas» de todo el juego). */
     this.troops = 0;
@@ -89,7 +107,7 @@ export class Player {
 
   /** Capacidad máxima de población: base + territorio + ciudades. */
   maxTroops() {
-    return (CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.levels.city * CONFIG.cityMaxTroops) * this.strength;
+    return (CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.levels.city * CONFIG.cityMaxTroops) * this.strength * (1 + this.mods.cap);
   }
 
   /**
@@ -101,17 +119,21 @@ export class Player {
     const max = this.maxTroops();
     const P = Math.max(0, this.troops + this.workers);
     const raw = CONFIG.popGrowthBase + pow34(P) / CONFIG.popGrowthDiv;
-    return CONFIG.popGrowthScale * raw * (1 - P / max) * this.strength * this.troopMult;
+    const free = 1 - P / max;
+    // Las mejoras de crecimiento solo aceleran (no la pérdida por encima del máximo)
+    const boost = free > 0 ? Math.max(0.1, 1 + this.mods.growth) : 1;
+    return CONFIG.popGrowthScale * raw * free * this.strength * this.troopMult * boost;
   }
 
   /** Oro por turno: lo producen los trabajadores (más con puertos y fábricas). */
   goldPerTick() {
     if (!this.tiles) return 0;
-    return (CONFIG.goldBase + pow34(Math.max(0, this.workers)) * CONFIG.goldPerWorker) * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus)) * this.goldMult;
+    const bonus = goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus) * (1 + this.mods.factoryBonus);
+    return (CONFIG.goldBase + pow34(Math.max(0, this.workers)) * CONFIG.goldPerWorker) * (1 + bonus) * (1 + this.mods.gold) * this.goldMult;
   }
 
   maxBoats() {
-    return CONFIG.maxBoats;
+    return CONFIG.maxBoats + this.mods.boats;
   }
 
   troopsInAttacks() {

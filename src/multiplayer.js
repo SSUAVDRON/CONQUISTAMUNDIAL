@@ -193,7 +193,8 @@ export class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share', 'research', 'spec', 'stance', 'mode', 'auto', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
+const SAFE_ID = /^[a-z]{2,16}$/;
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
 function cleanIntent(raw) {
@@ -205,11 +206,22 @@ function cleanIntent(raw) {
   if (int(raw.fromId) !== undefined) out.fromId = raw.fromId;
   if (typeof raw.ratio === 'number' && raw.ratio >= 0 && raw.ratio <= 1) out.ratio = raw.ratio;
   if (typeof raw.share === 'number' && raw.share >= 0 && raw.share <= 1) out.share = raw.share;
+  if (typeof raw.tech === 'string' && SAFE_ID.test(raw.tech)) out.tech = raw.tech;
+  if (typeof raw.spec === 'string' && SAFE_ID.test(raw.spec)) out.spec = raw.spec;
+  if (typeof raw.mode === 'string' && SAFE_ID.test(raw.mode)) out.mode = raw.mode;
+  if (typeof raw.on === 'boolean') out.on = raw.on;
+  if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
   if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile'].includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;
+}
+
+/** Puesto en la sala de quien envió una acción (va al principio de su clave «puesto.n»). */
+function slotOf(u) {
+  const n = typeof u === 'string' ? Number(u.split('.')[0]) : NaN;
+  return Number.isInteger(n) ? n : undefined;
 }
 
 /** Huella del estado para detectar desincronizaciones. */
@@ -225,14 +237,17 @@ export class NetSync {
   /**
    * @param room     canal de la sala
    * @param game     simulación ya creada (misma semilla en todos)
-   * @param opts { isHost, hostPeer, myPlayerId, peerToPlayer: Map<peer, playerId> }
+   * @param opts { isHost, hostPeer, myPlayerId, peerToPlayer: Map<peer, playerId>, mySlot }
+   * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
+   * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId }) {
     this.room = room;
     this.game = game;
     this.isHost = isHost;
     this.hostPeer = hostPeer;
     this.myPlayerId = myPlayerId;
+    this.mySlot = mySlot;
     this.peerToPlayer = peerToPlayer;
     this.counter = 0;
     this.unsubs = [];
@@ -277,7 +292,7 @@ export class NetSync {
   localIntent(intent) {
     const clean = cleanIntent(intent);
     if (!clean) return;
-    const u = `${this.myPlayerId}.${++this.counter}`;
+    const u = `${this.mySlot}.${++this.counter}`;
     if (this.isHost) {
       this.queue.push({ ...clean, playerId: this.myPlayerId, u });
     } else {
@@ -327,7 +342,7 @@ export class NetSync {
 
   _hostStep() {
     const intents = this.queue.splice(0, 30);
-    for (const it of intents) this.game.queueIntent(it);
+    for (const it of intents) this.game.queueIntent({ ...it, by: slotOf(it.u) });
     this.game.tick();
     const t = this.game.ticks;
     this.history.set(t, intents);
@@ -362,7 +377,7 @@ export class NetSync {
   _guestStep(intents) {
     for (const raw of intents) {
       const clean = cleanIntent(raw);
-      if (clean && Number.isInteger(raw.playerId)) this.game.queueIntent({ ...clean, playerId: raw.playerId });
+      if (clean && Number.isInteger(raw.playerId)) this.game.queueIntent({ ...clean, playerId: raw.playerId, by: slotOf(raw.u) });
       if (raw && typeof raw.u === 'string') this.outbox.delete(raw.u);
     }
     this.game.tick();

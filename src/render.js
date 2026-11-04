@@ -3,10 +3,10 @@
 //   de las casillas recién conquistadas → cráteres →
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
-import { CONFIG, RES, TICK_MS } from './config.js';
+import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
-import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, emblemFor, flagReady, hasFlag } from './icons.js';
+import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
@@ -637,6 +637,7 @@ export class Renderer {
     this.fx.drawDecals(ctx, camera);
     this._drawRails();
     this._drawBuildings(now);
+    this._drawPoints(now);
     this._gen++;
     this._trackEffects();
     this._drawMerchants();
@@ -741,6 +742,69 @@ export class Renderer {
       }
       if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
     }
+  }
+
+  /**
+   * Puntos estratégicos: siempre visibles (también alejado), en rombo con el
+   * borde del color de su dueño (dorado si no es de nadie). De cerca, con su
+   * nombre debajo. Los tuyos laten suavemente.
+   */
+  _drawPoints(now) {
+    const { ctx, game, camera } = this;
+    if (!game.points.length) return;
+    const big = Math.max(13, Math.min(30, camera.zoom * RES * 3.2));
+    const named = camera.zoom * RES >= 2.4;
+    const human = game.human;
+    // Capitales: más pequeñas y, de lejos, solo las que importan (la tuya, las
+    // de tus aliados, las conquistadas) salvo en la victoria por capitales
+    const allCaps = game.rules.victory === 'capitales' || camera.zoom * RES >= 1.2;
+    for (const pt of game.points) {
+      const o = game.owner[pt.tile];
+      const p = o ? game.players[o] : null;
+      const capital = pt.kind === 'capital';
+      if (capital && !allCaps && !(human && (pt.nation === human.id || o === human.id || human.allies.has(pt.nation))) && o === pt.nation) continue;
+      const size = capital ? Math.max(10, big * 0.75) : big;
+      const [sx, sy] = camera.worldToScreen(pt.x + 0.5, pt.y + 0.5);
+      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size * 2) continue;
+      const spr = this._pointSprite(pt.kind, p, size);
+      const w = spr.width / this.dpr;
+      const mine = human && p === human;
+      if (mine && this.anim) {
+        const k = 0.5 + 0.5 * Math.sin(now / 420);
+        ctx.fillStyle = `rgba(255, 220, 120, ${0.18 + 0.14 * k})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, size * (0.75 + 0.12 * k), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      if (named) {
+        ctx.font = '700 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(10, 14, 24, 0.8)';
+        ctx.fillStyle = p ? '#ffffff' : '#f6d27a';
+        const label = pt.kind === 'capital' ? pt.name : pt.name.replace(/ de .*/, '');
+        ctx.strokeText(label, sx, sy + size * 0.62);
+        ctx.fillText(label, sx, sy + size * 0.62);
+      }
+    }
+  }
+
+  _pointSprite(kind, p, size) {
+    const px = Math.max(10, Math.round((size * this.dpr) / 2) * 2);
+    const key = `poi|${kind}|${p ? p.id : 0}|${px}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil(px * 1.35);
+      c = makeCanvas(S, S);
+      drawPointIcon(c.getContext('2d'), kind, S / 2, S / 2, px, { ring: p ? rgbToCss(p.color) : null });
+      this._sprites.set(key, c);
+    }
+    return c;
   }
 
   /**
@@ -1172,6 +1236,16 @@ export class Renderer {
         if (!mine && e.other !== h.id) continue;
         const amount = mine ? e.gold : Math.round(e.gold * CONFIG.trainReceiverShare);
         fx.label(e.x, e.y - 1.5 * RES, `+${formatNumber(amount)}`, '#ffd76a', 12, 1.3);
+        continue;
+      }
+      if (e.kind === 'order') {
+        // Cooperativo: lo que ordena tu compañero, con su nombre
+        const h = game.human;
+        const co = this.coop;
+        if (!h || !co || e.owner !== h.id || e.by === co.mySlot || !visible) continue;
+        const who = co.names?.[e.by] || co.partnerName;
+        const what = e.what === 'action' ? 'ataque' : (BUILDINGS[e.what]?.name || '').toLowerCase();
+        fx.label(e.x, e.y - RES, `${who}: ${what}`, '#9fd4ff', 12, 2);
         continue;
       }
       if (e.kind === 'loot') {

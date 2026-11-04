@@ -831,3 +831,82 @@ export function installFlagSprite(root) {
   root.style.setProperty('--banderas', `url("${FLAG_SPRITE}")`);
   flagSprite();
 }
+
+/**
+ * Icono de un punto estratégico: rombo con borde (dorado si no tiene dueño,
+ * del color del dueño si lo tiene) y un símbolo blanco: corona (capital),
+ * engranaje (núcleo industrial), timón (puerto clave) o montañas (paso).
+ */
+export function drawPointIcon(ctx, kind, cx, cy, size, { ring = null } = {}) {
+  const r = size / 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  // Rombo con las esquinas redondeadas
+  ctx.beginPath();
+  const k = r * 1.08;
+  const c = r * 0.22;
+  ctx.moveTo(0, -k + c);
+  ctx.quadraticCurveTo(0, -k, c, -k + c);
+  ctx.lineTo(k - c, -c);
+  ctx.quadraticCurveTo(k, 0, k - c, c);
+  ctx.lineTo(c, k - c);
+  ctx.quadraticCurveTo(0, k, -c, k - c);
+  ctx.lineTo(-k + c, c);
+  ctx.quadraticCurveTo(-k, 0, -k + c, -c);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(16, 22, 36, 0.92)';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, size * 0.11);
+  ctx.strokeStyle = ring || '#f2c14e';
+  ctx.stroke();
+  // Símbolo
+  const s = r * 0.62;
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (kind === 'capital') {
+    ctx.moveTo(-s, s * 0.55);
+    ctx.lineTo(-s, -s * 0.45);
+    ctx.lineTo(-s * 0.5, s * 0.05);
+    ctx.lineTo(0, -s * 0.7);
+    ctx.lineTo(s * 0.5, s * 0.05);
+    ctx.lineTo(s, -s * 0.45);
+    ctx.lineTo(s, s * 0.55);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === 'industria') {
+    const teeth = 8;
+    for (let i = 0; i < teeth * 2; i++) {
+      const a = (i / (teeth * 2)) * Math.PI * 2;
+      const rr = i % 2 ? s * 0.72 : s;
+      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(16, 22, 36, 0.92)';
+    ctx.fill();
+  } else if (kind === 'puerto') {
+    ctx.lineWidth = Math.max(1.2, s * 0.22);
+    ctx.arc(0, 0, s * 0.62, 0, Math.PI * 2);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      ctx.moveTo(Math.cos(a) * s * 0.2, Math.sin(a) * s * 0.2);
+      ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
+    }
+    ctx.stroke();
+  } else {
+    // Paso de montaña: dos picos
+    ctx.moveTo(-s, s * 0.6);
+    ctx.lineTo(-s * 0.35, -s * 0.55);
+    ctx.lineTo(0, s * 0.05);
+    ctx.lineTo(s * 0.35, -s * 0.75);
+    ctx.lineTo(s, s * 0.6);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}

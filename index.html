@@ -156,8 +156,12 @@
             <li><b>Oro y edificios:</b> el oro lo producen tus trabajadores (expandirte no da oro); además, cada casilla que le quitas a otro trae parte de su oro, y al eliminar a una nación o colonia te quedas con todo el suyo más una recompensa. Trenes, mercantes y aliados también traen oro. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (pesqueros, mercantes y oro; basta con hacer clic cerca de la costa) y <i>fortalezas</i> (defensa ×3 alrededor). Los edificios son caros: elige bien. Las obras tardan unos segundos (los antimisiles, los que más). Si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Niveles e inflación:</b> con un edificio seleccionado, haz clic sobre uno tuyo del mismo tipo para subirlo de nivel (hasta 5). Cada compra encarece un 25 % todo lo demás, salvo silos, misiles y antimisiles.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
-            <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
-            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M misil · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido.</li>
+            <li><b>Puntos estratégicos:</b> rombos en el mapa. Capitales (corona: conquistar una da botín y su dueño crece menos hasta recuperarla), núcleos industriales (engranaje: +15 % de oro), puertos clave (timón: +1 barco y más comercio) y pasos de montaña (picos: defensa ×1,6 alrededor). Pasa el ratón cerca para ver qué dan.</li>
+            <li><b>Órdenes:</b> sobre la fuerza de ataque eliges el tipo de ataque —⚡ rápido (más veloz, más bajas), ● normal o ⏳ preparado (espera 3 s y luego cuesta menos)— y 🛡 defensa fortificada (conquistarte cuesta más, pero tus ataques rinden menos). En la tarjeta de un ataque, ↻ activa el avance continuo: se refuerza solo cada 3 s.</li>
+            <li><b>Desarrollo (tecla I):</b> ingresos por fuente y oro por minuto, lo que rendiría construir una ciudad, fábrica o puerto, tu especialización (industria, infraestructura o desarrollo urbano) y 12 tecnologías en tres ramas; cada una encarece la siguiente, así que hay que elegir.</li>
+            <li><b>Pactos y paz:</b> en la ficha de otra nación puedes proponer un pacto de no agresión de 5 min, ofrecer la paz si estáis en guerra (con un tributo en oro si quieres) y pedir ayuda a tus aliados. Romper un pacto te marca como traidor.</li>
+            <li><b>Victoria:</b> según el modo de la partida: dominación (el 70 % de la tierra), capitales (controlar el 40 % de todas durante 60 s), economía (900.000 de oro por minuto durante 2 min) o supervivencia (al acabar el tiempo, la mejor puntuación). También ganas si quedas en pie solo con tus aliados.</li>
+            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M misil · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido · I = desarrollo · Z = cambiar orden de ataque · B = defensa fortificada · L = avance continuo en tu último ataque.</li>
           </ul>
         </details>
       </section>
@@ -268,6 +272,7 @@
             <label class="interruptor"><input type="checkbox" id="aj-puntero"><span>Puntero hacia tu nación (marca «TÚ» y flecha en el borde)</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-consejos"><span>Consejos durante la partida (💡 población al máximo, oro sin usar, vecinos peligrosos…)</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones del menú</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-musica"><span>Música de fondo</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-efectos"><span>Efectos de sonido</span></label>
@@ -363,6 +368,10 @@
       <button type="button" id="btn-sonido" class="btn-sonido" title="Silenciar o activar el sonido (tecla N)" aria-pressed="false">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3H2.5z" fill="currentColor"/><path class="ondas" d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="tachado" d="M10.5 5.5l4 5M14.5 5.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
+      <button type="button" id="btn-desarrollo" class="btn-desarrollo" title="Desarrollo: economía, especialización y tecnologías (tecla I)" aria-label="Desarrollo">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M3.5 14V9M7 14V5.5M10.5 14V8M14 14V3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span class="punto-aviso" hidden></span>
+      </button>
       <button type="button" id="btn-mi-nacion" class="btn-mi-nacion" title="Ir a tu nación (tecla C)">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span>Mi nación</span>
@@ -405,6 +414,12 @@
       </div>
       </div>
       <div class="pj-col pj-ataque">
+      <div id="ordenes" class="ordenes" role="group" aria-label="Órdenes militares">
+        <button type="button" data-modo="rapido" title="Ataque rápido: avanza un 40 % más deprisa pero con un 25 % más de bajas (tecla Z cambia de orden)">⚡<span>Rápido</span></button>
+        <button type="button" data-modo="normal" title="Ataque normal (tecla Z cambia de orden)">●<span>Normal</span></button>
+        <button type="button" data-modo="preparado" title="Ataque preparado: espera 3 s en la frontera y luego cuesta un 20 % menos de tropas (tecla Z cambia de orden)">⏳<span>Preparado</span></button>
+        <button type="button" id="btn-fortificar" class="fortificar" title="Defensa fortificada: conquistarte cuesta un 40 % más, pero tus ataques cuestan más y avanzan menos. 10 s entre cambios (tecla B)">🛡<span>Fortificar</span></button>
+      </div>
       <label class="ratio">
         <span class="ratio-titulo">Fuerza de ataque</span>
         <span class="ratio-cifra"><strong id="ratio-valor">20%</strong> <span id="ratio-tropas"></span></span>
@@ -443,12 +458,39 @@
         <button type="button" id="pn-env-tropas"></button>
         <button type="button" id="pn-env-oro"></button>
       </div>
+      <div class="pn-acciones pn-diplo">
+        <button type="button" id="pn-pacto"></button>
+        <span class="pn-paz">
+          <button type="button" id="pn-paz">Ofrecer paz</button>
+          <select id="pn-tributo" aria-label="Tributo de la paz" title="Oro que ofreces a cambio de la paz">
+            <option value="0">sin tributo</option>
+            <option value="0.1">+10 % de tu oro</option>
+            <option value="0.25">+25 % de tu oro</option>
+          </select>
+        </span>
+        <button type="button" id="pn-ayuda" title="Pide a tus aliados que ataquen a quien más fuerte te ataca (o te manden tropas)">🆘 Pedir ayuda a tus aliados</button>
+      </div>
       <p id="pn-nota" class="nota"></p>
       <div id="pn-emojis" class="emojis" role="group" aria-label="Enviar emoji"></div>
     </section>
     </div>
 
     <div id="tooltip" hidden></div>
+
+    <!-- Desarrollo: economía (ingresos por fuente, retorno de inversiones),
+         especialización y tecnologías -->
+    <section id="panel-desarrollo" class="panel" hidden aria-labelledby="pd-titulo">
+      <div class="pd-cabecera">
+        <strong id="pd-titulo">Desarrollo</strong>
+        <div class="pd-pestanas" role="tablist">
+          <button type="button" role="tab" data-pd="economia" aria-selected="true">Economía</button>
+          <button type="button" role="tab" data-pd="tecnologias" aria-selected="false">Tecnologías</button>
+        </div>
+        <button type="button" id="pd-cerrar" class="cerrar" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="pd-economia" class="pd-cuerpo"></div>
+      <div id="pd-tecnologias" class="pd-cuerpo" hidden></div>
+    </section>
 
     <!-- Tutorial guiado -->
     <div id="tutorial" class="tutorial" hidden role="dialog" aria-live="polite" aria-labelledby="tut-paso">

@@ -2,6 +2,9 @@
 // "personalidad" (agresividad, ritmo de expansión, diplomacia, lealtad) y
 // piensa cada pocos ticks.
 import { AREA, CONFIG, RES } from './config.js';
+import { TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
+
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 const FRIENDLY = ['👍', '🤝', '❤️', '😂'];
 const HOSTILE = ['😠', '⚔️', '👎', '🔥'];
@@ -43,7 +46,9 @@ export class BotBrain {
       this._diplomacyTurn(summary.counts);
     }
     this._chooseShare(wild, counts, max);
+    this._stance(counts);
     if (this._helpAllies(max)) return;
+    this._develop();
     this._maybeBuild(counts, coastal);
     if (p.active.silo && r.chance(0.2 + this.aggression * 0.25)) this._fireMissile(counts);
 
@@ -53,7 +58,9 @@ export class BotBrain {
 
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.population() > max * 0.15) {
-      g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio));
+      // Si hay un punto estratégico libre cerca, se expande hacia él
+      p.attackMode = 'normal';
+      g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio), { focus: this._freePointNear() });
       // Los agresivos no esperan a acabar: atacan a la vez a un vecino débil
       if (!(counts.size && r.chance(this.aggression - 0.35))) return;
     }
@@ -63,9 +70,12 @@ export class BotBrain {
     if (this._attackTurn(counts, max)) return;
 
     // 3. Sin tierra libre a mano: probar suerte por mar
-    if (wild === 0 && coastal && p.boatCount === 0 && p.troops > max * 0.4 && r.chance(0.25)) {
-      const tile = this._pickBoatTarget();
-      if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * 0.35));
+    // (sin vecinos por tierra, más a menudo y más lejos: si no, un líder
+    // rodeado de mar se queda atascado sin poder cruzar el océano)
+    const landlocked = counts.size === 0;
+    if (wild === 0 && coastal && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
+      const tile = this._pickBoatTarget(landlocked);
+      if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)));
     }
   }
 
@@ -94,6 +104,113 @@ export class BotBrain {
     else share = 0.6;
     // Los más agresivos tiran algo más a soldados
     g.setSoldierShare(p, share + (this.aggression - 0.6) * 0.1);
+  }
+
+  /** Valor de los puntos estratégicos de `t` como objetivo (capitales sobre todo). */
+  _pointValue(t) {
+    const g = this.game;
+    let v = 0;
+    for (const pt of g.points) {
+      if (g.owner[pt.tile] !== t.id) continue;
+      v += pt.kind === 'capital' ? 0.3 : 0.15;
+    }
+    return Math.min(0.9, v);
+  }
+
+  /** Punto estratégico sin dueño a menos de ~60 casillas de su capital: hacia él se expande. */
+  _freePointNear() {
+    const g = this.game;
+    const p = this.player;
+    const home = p.capitalTile >= 0 ? p.capitalTile : p.spawnTile;
+    if (home < 0) return -1;
+    const hx = g.map.x(home);
+    const hy = g.map.y(home);
+    let best = -1;
+    let bd = (60 * RES) ** 2;
+    for (const pt of g.points) {
+      if (g.owner[pt.tile] !== 0) continue;
+      const d = (pt.x - hx) ** 2 + (pt.y - hy) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = pt.tile;
+      }
+    }
+    return best;
+  }
+
+  /** Defensa fortificada si un vecino le supera claramente y no está atacando. */
+  _stance(counts) {
+    const g = this.game;
+    const p = this.player;
+    if (g.ticks - p.stanceAt < CONFIG.stanceCooldownTicks) return;
+    let threat = false;
+    for (const id of counts.keys()) if (g.players[id].troops > p.troops * 1.6) threat = true;
+    let attacking = false;
+    for (const [id, atk] of p.attacks) if (id && !atk.done) attacking = true;
+    const want = threat && !attacking && g.rng.chance(0.6 - this.aggression * 0.3);
+    if (want !== p.fortified) g.setStance(p, want);
+  }
+
+  /**
+   * Tecnologías y especialización según su carácter: los agresivos van a
+   * ejército, los diplomáticos a infraestructura y el resto a economía o
+   * defensa. Solo investiga con oro de sobra (no le quita los edificios).
+   */
+  _develop() {
+    const g = this.game;
+    const p = this.player;
+    const r = g.rng;
+    if (!p.spec && g.ticks > CONFIG.spawnTicks + 1200) {
+      g.setSpec(p, this.aggression > 0.7 ? 'industria' : this.diplomacy > 0.6 ? 'infra' : 'urbano');
+    }
+    if (p.research || p.tiles < 120 * AREA || !r.chance(0.3)) return;
+    const cost = g.techCost(p);
+    if (p.gold < cost * 1.3) return;
+    const order = this.aggression > 0.65 ? ['mil', 'def', 'eco'] : this.diplomacy > 0.5 ? ['eco', 'def', 'mil'] : ['def', 'eco', 'mil'];
+    const options = TECH_IDS.filter((id) => techAvailable(p, id).ok);
+    options.sort((a, b) => order.indexOf(TECHS[a].branch) - order.indexOf(TECHS[b].branch) || TECHS[a].tier - TECHS[b].tier);
+    if (options.length) g.startResearch(p, options[r.chance(0.7) ? 0 : r.int(0, options.length - 1)]);
+  }
+
+  /** ¿Acepta un pacto de no agresión? Sí si le teme; no si `from` es su presa. */
+  wantsPact(from) {
+    const g = this.game;
+    const p = this.player;
+    if (this.grudges.has(from.id) || g.isTraitor(from)) return false;
+    let score = 0.25 + this.diplomacy * 0.4 - this.aggression * 0.3;
+    if (from.troops > p.troops * 1.2) score += 0.35;
+    if (g.neighborSummary(p).counts.has(from.id) && from.troops < p.troops * 0.6) score -= 0.5;
+    const leader = g.leader();
+    if (from === leader && from.tiles / g.map.landCount > 0.3) score -= 0.5;
+    return g.rng.float() < clamp(score, 0.05, 0.9);
+  }
+
+  /** ¿Acepta la paz? Sí si va perdiendo o el tributo compensa; no si va ganando. */
+  wantsPeace(from, tribute = 0) {
+    const g = this.game;
+    const p = this.player;
+    const mine = p.attacks.get(from.id);
+    const theirs = from.attacks.get(p.id);
+    const winning = mine && !mine.done && mine.troops > from.troops * 0.8;
+    const losing = theirs && !theirs.done && theirs.troops > p.troops * 0.5;
+    let score = 0.2 + this.diplomacy * 0.3 - this.aggression * 0.3 + tribute * 2;
+    if (losing) score += 0.5;
+    if (winning) score -= 0.5;
+    if (this.grudges.has(from.id)) score -= 0.4;
+    return g.rng.float() < clamp(score, 0.03, 0.95);
+  }
+
+  /** Un aliado pide ayuda contra `enemy`: le ataca si es vecino; si no, le manda tropas. */
+  onHelpRequest(ally, enemy) {
+    const g = this.game;
+    const p = this.player;
+    if (!g.rng.chance(0.4 + this.loyalty * 0.5)) return false;
+    if (enemy && enemy.alive && !p.allies.has(enemy.id) && !g.pactBetween(p.id, enemy.id) && g.hasLandBorder(p, enemy.id) && p.troops > 200) {
+      p.attackMode = 'normal';
+      return g.launchAttack(p, enemy.id, Math.floor(p.troops * (0.25 + this.aggression * 0.2)));
+    }
+    if (p.population() < p.maxTroops() * 0.3) return false;
+    return g.donate(p, ally, 'troops', 0.12);
   }
 
   /**
@@ -160,6 +277,7 @@ export class BotBrain {
       if (this.grudges.has(id)) score += 0.5;
       if (g.isTraitor(t)) score += 0.3;
       if (t === leader && leaderShare > 0.3) score += 0.8; // todos contra el que se escapa
+      score += this._pointValue(t); // puntos estratégicos (capitales, industria…)
       if (ongoing) score += mine.troops < t.troops * 0.6 ? 0.5 : -0.6; // rematar, no amontonar
       score += r.float() * 0.25;
       // Solo si hay opciones: los agresivos se atreven con menos ventaja
@@ -171,6 +289,9 @@ export class BotBrain {
     }
     if (!best) return false;
     const send = Math.floor(Math.min(spare, Math.max(spare * (0.55 + this.aggression * 0.4), best.troops * 1.4)));
+    // Orden: rápido contra colonias o rivales mucho más débiles; preparado
+    // contra los fuertes (espera unos segundos pero le cuesta menos); si no, normal
+    p.attackMode = best.weak || best.troops < send * 0.3 ? 'rapido' : best.troops > send * 0.6 && !p.attacks.has(best.id) ? 'preparado' : 'normal';
     return send >= 1 && g.launchAttack(p, best.id, send);
   }
 
@@ -311,6 +432,25 @@ export class BotBrain {
       }
     }
 
+    // Paz si va perdiendo una guerra (a veces con tributo) y ayuda de sus aliados
+    for (const atk of g.attacks) {
+      if (atk.done || atk.targetId !== p.id || atk.attacker.weak) continue;
+      if (atk.troops > p.troops * 0.6 && r.chance(0.35 + this.diplomacy * 0.3)) {
+        if (p.allies.size && r.chance(0.5)) g.askHelp(p);
+        else g.makeOffer(p, atk.attacker, 'peace', r.pick([0, 0.1, 0.25]));
+        return;
+      }
+    }
+    // Pacto de no agresión con un vecino mucho más fuerte
+    for (const id of counts.keys()) {
+      const t = g.players[id];
+      if (t.weak || p.allies.has(id) || g.pactBetween(p.id, id)) continue;
+      if (t.troops > p.troops * 1.6 && r.chance(0.2 + this.diplomacy * 0.4) && g.canOffer(p, t, 'pact').ok) {
+        g.makeOffer(p, t, 'pact');
+        return;
+      }
+    }
+
     if (p.allies.size >= CONFIG.maxAllies || !r.chance(0.2 + this.diplomacy * 0.6)) return;
     let best = null;
     let bestScore = -Infinity;
@@ -446,7 +586,7 @@ export class BotBrain {
   }
 
   /** Elige una costa ajena débil, preferiblemente cercana. */
-  _pickBoatTarget() {
+  _pickBoatTarget(far = false) {
     const g = this.game;
     const map = g.map;
     const coast = map.coastTiles;
@@ -456,7 +596,8 @@ export class BotBrain {
     const oy = map.y(p.spawnTile);
     let best = -1;
     let bestScore = Infinity;
-    for (let i = 0; i < 16; i++) {
+    const reach = (far ? 900 : 110) * RES;
+    for (let i = 0; i < (far ? 40 : 16); i++) {
       const t = coast[g.rng.int(0, coast.length - 1)];
       const o = g.owner[t];
       if (o === p.id || p.allies.has(o)) continue;
@@ -465,7 +606,7 @@ export class BotBrain {
       const dx = map.x(t) - ox;
       const dy = map.y(t) - oy;
       // Solo costas al alcance de un desembarco (las lejanas casi nunca tienen ruta)
-      if (dx * dx + dy * dy > (110 * RES) ** 2) continue;
+      if (dx * dx + dy * dy > reach * reach) continue;
       const dist = Math.sqrt(dx * dx + dy * dy) / map.width;
       const score = strength + dist;
       if (score < bestScore) {
@@ -500,6 +641,18 @@ export class ColonyBrain {
   }
 
   wantsAlliance() {
+    return false;
+  }
+
+  wantsPact() {
+    return false;
+  }
+
+  wantsPeace() {
+    return false;
+  }
+
+  onHelpRequest() {
     return false;
   }
 

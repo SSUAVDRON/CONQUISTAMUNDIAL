@@ -28,7 +28,7 @@ export function generateNames(rng, count, exclude = []) {
 }
 
 const COLONY_KINDS = ['Colonia de', 'Aldea de', 'Asentamiento de', 'Misión de', 'Feudo de', 'Puesto de', 'Caserío de', 'Factoría de'];
-const PLACES = [
+export const PLACES = [
   'Valdeoro', 'Robledal', 'la Ribera', 'Santa Clara', 'Arenales', 'los Pinos', 'Brezal', 'Altamira', 'Encinar',
   'Piedrahita', 'Villaverde', 'Riscal', 'Matorral', 'Salinas', 'Olmedo', 'Torrecilla', 'Valmayor', 'Cañaveral',
   'Hondonada', 'Mirasol', 'Lagunilla', 'Pedregal', 'Rocafría', 'Sotobosque', 'Peñasco', 'Puerto Viejo', 'San Telmo',

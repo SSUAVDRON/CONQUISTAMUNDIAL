@@ -11,7 +11,14 @@ import { Home } from './home.js';
 import { hexToRgb } from './colors.js';
 import { installFlagSprite } from './icons.js';
 import { hashString } from './rng.js';
-import { formatPercent, formatTime } from './format.js';
+import { formatNumber, formatPercent, formatTime } from './format.js';
+
+/** Qué hace cada orden de ataque (pista al elegirla). */
+const ORDER_HINT = {
+  rapido: '⚡ Ataque rápido: avanza un 40 % más deprisa, con un 25 % más de bajas',
+  normal: '● Ataque normal',
+  preparado: '⏳ Ataque preparado: espera 3 s en la frontera y luego cuesta un 20 % menos',
+};
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { withLoading } from './loading.js';
 import { Tutorial } from './tutorial.js';
@@ -132,16 +139,34 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   const { map, countries } = loaded || loadMap(mapSize, seed);
   const game = new Game({ map, seed, rules });
   const used = new Set();
-  const players = humans.map((h) => {
-    let name = h.name;
-    for (let n = 2; used.has(name.toLowerCase()); n++) name = `${h.name} ${n}`;
+  // Cooperativo: cada dos jugadores (en el orden de la sala) llevan una nación
+  const groups = coopGroups(humans.length, game.rules.coop);
+  const players = groups.map((members) => {
+    const h = humans[members[0]];
+    const base = members.map((i) => humans[i].name).join(' y ');
+    let name = base;
+    for (let n = 2; used.has(name.toLowerCase()); n++) name = `${base} ${n}`;
     used.add(name.toLowerCase());
     const p = game.addPlayer(name, hexToRgb(h.color), true);
     p.emblem = h.emblem;
     p.pattern = h.pattern;
     return p;
   });
-  game.human = localIndex >= 0 ? players[localIndex] : null;
+  const myGroup = localIndex >= 0 ? groups.findIndex((g) => g.includes(localIndex)) : -1;
+  game.human = myGroup >= 0 ? players[myGroup] : null;
+  // Compañero y rol (si la sala reparte roles: el primero, mando militar)
+  state.coop = null;
+  if (myGroup >= 0 && groups[myGroup].length > 1) {
+    const members = groups[myGroup];
+    const partner = members.find((i) => i !== localIndex);
+    state.coop = {
+      mySlot: localIndex,
+      partnerSlot: partner,
+      partnerName: humans[partner].name,
+      names: Object.fromEntries(members.map((i) => [i, humans[i].name])),
+      role: game.rules.coopRoles ? (members[0] === localIndex ? 'militar' : 'economia') : null,
+    };
+  }
   game.addBots(bots, difficulty, countries);
   // Colonias: muchas presas fáciles repartidas por el mapa
   // Las reglas pueden fijar cuántas colonias; si no, según la tierra del mapa
@@ -274,6 +299,7 @@ function applySettings() {
   if (state.renderer) {
     // Modo ligero en pantallas táctiles: sin viñeta y nombres recolocados con menos frecuencia
     state.renderer.lite = TOUCH;
+    state.renderer.coop = state.coop;
     state.renderer.options = {
       badges: a.marcadores !== false,
       emojis: a.emojis !== false,
@@ -284,6 +310,8 @@ function applySettings() {
   }
   document.documentElement.style.setProperty('--color-nombre', nameColorOf(profile));
   ui.redAlert = a.alerta !== false;
+  ui.tips = a.consejos !== false;
+  ui.coop = state.coop;
   document.body.classList.toggle('sin-animaciones', a.animaciones === false);
 }
 
@@ -371,9 +399,12 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     { minMs: 500 }, // online no hay que hacer esperar al resto
   );
   if (state.sala !== sala) return;
-  // Los humanos se añaden primero: el jugador i tiene id i + 1
-  const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, i + 1]));
-  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: index + 1, peerToPlayer });
+  // Los humanos se añaden primero: el jugador i tiene id i + 1 (en cooperativo,
+  // cada pareja comparte el id de su nación)
+  const groups = coopGroups(payload.players.length, game.rules.coop);
+  const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
+  const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
+  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index });
   state.net.onHostLeft = () => {
     if (game.phase === 'ended') return;
     const progress = finishGame();
@@ -632,10 +663,40 @@ function openNation(id) {
   ui.update(state.game, state.human, state.ratio, state.buildMode);
 }
 
+/**
+ * Cooperativo: reparte `n` jugadores en parejas (el último, solo si son
+ * impares). Sin cooperativo, cada uno su nación.
+ */
+function coopGroups(n, coop) {
+  const groups = [];
+  for (let i = 0; i < n; i += coop ? 2 : 1) groups.push(coop && i + 1 < n ? [i, i + 1] : [i]);
+  return groups;
+}
+
+/** Con roles en el cooperativo: qué decide cada uno (para evitar compras o ataques por accidente). */
+const ROLE_TYPES = {
+  militar: new Set(['action', 'cancelAttack', 'mode', 'stance', 'auto', 'moveWarship']),
+  economia: new Set(['share', 'research', 'spec', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']),
+};
+const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'silo', 'sam']);
+const ROLE_NAMES = { militar: 'mando militar', economia: 'economía y diplomacia' };
+
+function roleAllows(role, intent) {
+  if (!role) return true;
+  if (intent.type === 'build') return (role === 'militar') === MILITARY_BUILDS.has(intent.kind);
+  return ROLE_TYPES[role].has(intent.type);
+}
+
 /** Toda acción del jugador pasa por aquí: local o por la red. */
 function humanIntent(intent) {
   const { game, human } = state;
   if (state.demo || !human) return;
+  const role = state.coop?.role;
+  if (!roleAllows(role, intent)) {
+    const other = role === 'militar' ? 'economia' : 'militar';
+    ui.hint(`Eso lo decide ${state.coop.partnerName} (${ROLE_NAMES[other]})`, 'warn');
+    return;
+  }
   if (state.net) {
     state.net.localIntent(intent);
     return;
@@ -665,6 +726,18 @@ const input = new Input(canvas, camera, {
     }
     if (!state.game.map.isLand(tile)) return; // los buques no se mueven: su zona se elige al botarlos
     humanIntent({ type: 'action', tile, ratio: state.ratio });
+    // Información útil: lo que se espera de este ataque (aproximado)
+    const g = state.game;
+    const h = state.human;
+    const o = g.owner[tile];
+    if (g.phase === 'playing' && o !== h.id && !(o && h.allies.has(o))) {
+      const troops = Math.floor(h.troops * state.ratio);
+      if (troops >= 1) {
+        const e = g.estimateAttack(h, o, troops);
+        const who = o ? g.players[o].name : 'tierra libre';
+        ui.hint(`${who}: ~${formatNumber(e.tiles)} casillas con ${formatNumber(troops)} soldados${o ? ` · riesgo ${e.risk}` : ''}${e.uncertain ? ' (incierto)' : ''}`, o && e.risk === 'alto' ? 'warn' : 'info');
+      }
+    }
   },
   onRightClick(sx, sy) {
     if (state.buildMode) {
@@ -696,6 +769,42 @@ const input = new Input(canvas, camera, {
 ui.on({
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
+  // Desarrollo, órdenes y diplomacia ampliada
+  onSpec: (spec) => humanIntent({ type: 'spec', spec }),
+  onResearch: (tech) => humanIntent({ type: 'research', tech }),
+  onMode: (mode) => {
+    humanIntent({ type: 'mode', mode });
+    ui.hint(ORDER_HINT[mode] || '', 'info');
+  },
+  onCycleMode: () => {
+    const order = ['rapido', 'normal', 'preparado'];
+    const cur = state.human?.attackMode || 'normal';
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    humanIntent({ type: 'mode', mode: next });
+    ui.hint(ORDER_HINT[next], 'info');
+  },
+  onStance: () => {
+    if (state.human) humanIntent({ type: 'stance', on: !state.human.fortified });
+  },
+  onAuto: (targetId) => {
+    const h = state.human;
+    if (!h) return;
+    // -1 (tecla L): el último ataque a una nación
+    let id = targetId;
+    if (id < 0) for (const [t, atk] of h.attacks) if (t && !atk.done) id = t;
+    const atk = h.attacks.get(id);
+    if (!atk || atk.done) {
+      ui.hint('No tienes ningún ataque en marcha contra una nación', 'warn');
+      return;
+    }
+    const on = !(atk.auto > 0);
+    humanIntent({ type: 'auto', targetId: id, on, ratio: state.ratio });
+    ui.hint(on ? `↻ Avance continuo: cada 3 s se refuerza con el ${Math.round(state.ratio * 100)} % de tus soldados` : 'Avance continuo desactivado', 'info');
+  },
+  onPact: (id, on) => humanIntent({ type: 'proposePact', targetId: id, on }),
+  onPeace: (id, tribute) => humanIntent({ type: 'offerPeace', targetId: id, tribute }),
+  onAskHelp: () => humanIntent({ type: 'askHelp' }),
+  onRespondOffer: (fromId, kind, accept) => humanIntent({ type: kind === 'pact' ? 'respondPact' : 'respondPeace', fromId, accept }),
   onFocusFront: focusFront,
   onExit(force) {
     if (!force && !state.demo && state.game.phase !== 'ended' && state.human?.alive) {

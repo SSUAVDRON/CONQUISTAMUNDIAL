@@ -1953,3 +1953,111 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 /* Columnas del resumen: población (con su máximo), soldados, oro y territorio */
 #panel-jugador .cifras { grid-template-columns: 1.6fr 1fr 0.95fr 0.95fr; }
+
+/* Tooltip: punto estratégico cercano y estimación del ataque */
+#tooltip .tip-punto { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 260px; }
+#tooltip .tip-estim { margin-top: 4px; color: #ffd98a; font-size: 12px; }
+
+/* ===================================================== Mejoras estratégicas */
+/* Botón de desarrollo en la barra superior, con un punto si puedes investigar */
+.btn-desarrollo { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 34px; padding: 5px; }
+.btn-desarrollo svg { width: 16px; height: 16px; }
+.btn-desarrollo[aria-pressed="true"] { background: rgba(242, 179, 61, 0.22); border-color: var(--acento); }
+.btn-desarrollo .punto-aviso { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--acento); box-shadow: 0 0 6px var(--acento); }
+
+/* Órdenes militares: cuatro botones pequeños sobre la fuerza de ataque */
+.ordenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 3px; }
+.ordenes button { min-height: 0; height: 22px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; font-size: 10.5px; font-weight: 700; border-radius: 6px; white-space: nowrap; overflow: hidden; }
+.ordenes button span { overflow: hidden; text-overflow: ellipsis; }
+.ordenes button[aria-pressed="true"] { background: rgba(242, 179, 61, 0.25); border-color: var(--acento); color: #fff; }
+.ordenes .fortificar[aria-pressed="true"] { background: rgba(95, 160, 255, 0.28); border-color: #6fa8ff; }
+.ordenes .fortificar.espera { opacity: 0.6; }
+
+/* Ficha de nación: pacto, paz y ayuda */
+.pn-diplo { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.pn-diplo > * { flex: 1 1 auto; }
+.pn-paz { display: flex; gap: 4px; }
+.pn-paz select { padding: 4px 26px 4px 8px; font-size: 12px; background-position: right 8px center; }
+.solicitud.sol-pact { border-color: rgba(120, 180, 255, 0.45); }
+.solicitud.sol-peace { border-color: rgba(255, 255, 255, 0.35); }
+
+/* Tarjeta de combate: avance continuo */
+.f-auto { position: absolute; top: 4px; right: 30px; width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 50%; font-size: 13px; line-height: 1; opacity: 0.75; }
+.f-auto.activo { opacity: 1; background: rgba(95, 211, 141, 0.3); border-color: var(--bien); color: #fff; animation: girar 2.4s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* Panel de desarrollo */
+#panel-desarrollo {
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(760px, calc(100vw - 24px));
+  max-height: calc(100vh - var(--pj-alto, 120px) - 100px);
+  overflow: auto;
+  padding: 10px 14px 14px;
+  z-index: 8;
+  background: linear-gradient(180deg, rgba(18, 26, 42, 0.97), rgba(9, 13, 22, 0.98));
+}
+.pd-cabecera { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pd-cabecera strong { font-size: 15px; }
+.pd-pestanas { display: flex; gap: 4px; margin-right: auto; }
+.pd-pestanas button { padding: 4px 10px; font-size: 12.5px; min-height: 0; }
+.pd-pestanas button[aria-selected="true"] { background: rgba(242, 179, 61, 0.2); border-color: var(--acento); color: #fff; }
+.pd-total { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.pd-total strong { font-size: 24px; color: var(--acento); font-variant-numeric: tabular-nums; }
+.pd-total small { color: var(--texto-suave); }
+.pd-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pd-tabla td { padding: 3px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.pd-tabla td:nth-child(2) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pd-tabla td:nth-child(3) { width: 34%; }
+.pd-tabla tr.gasto td { color: var(--texto-suave); }
+.pd-barra { display: block; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.pd-barra span { display: block; height: 100%; background: linear-gradient(90deg, #d99a2b, var(--acento)); }
+#panel-desarrollo h4 { margin: 12px 0 6px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-suave); }
+#panel-desarrollo h4 small { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.pd-roi { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; }
+.pd-specs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pd-spec, .pd-tec { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 8px 9px; text-align: left; border-radius: 10px; min-height: 0; height: auto; }
+.pd-spec strong, .pd-tec strong { font-size: 13px; }
+.pd-spec span, .pd-tec span { font-size: 11.5px; color: var(--texto-suave); font-weight: 500; line-height: 1.3; }
+.pd-spec.activa { border-color: var(--acento); background: rgba(242, 179, 61, 0.14); opacity: 1; }
+.pd-invest { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; margin-bottom: 8px; }
+.pd-invest .pd-barra { flex: 1 1 120px; }
+.pd-ramas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pd-rama { display: flex; flex-direction: column; gap: 5px; }
+.pd-rama h4 { margin: 2px 0 2px !important; }
+.pd-tec em { font-style: normal; font-size: 11.5px; color: var(--acento); font-weight: 700; }
+.pd-tec em.ok { color: var(--bien); }
+.pd-tec em.no { color: var(--texto-suave); font-weight: 500; }
+.pd-tec.hecha { border-color: rgba(95, 211, 141, 0.5); background: rgba(95, 211, 141, 0.08); opacity: 1; }
+.pd-tec.marcha { border-color: var(--acento); opacity: 1; }
+.pd-nivel { font-size: 9.5px !important; font-weight: 800 !important; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (max-width: 720px), (max-height: 500px) and (orientation: landscape) {
+  #panel-desarrollo { top: calc(52px + env(safe-area-inset-top, 0px)); width: calc(100vw - 12px); max-height: calc(100vh - var(--pj-alto, 160px) - 70px); padding: 8px 10px 10px; }
+  .pd-specs, .pd-ramas { grid-template-columns: 1fr; }
+  .ordenes button { height: 26px; font-size: 10px; }
+}
+@media (max-width: 420px) {
+  .ordenes button span { display: none; }
+  .ordenes button { font-size: 13px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .ordenes button span { display: none; }
+  .ordenes button { height: 20px; font-size: 11px; }
+  .ordenes { margin-bottom: 1px; }
+}
+/* Órdenes: solo el icono (el nombre de la orden activa va en el título de la fuerza de ataque) */
+.ordenes button span { display: none; }
+.ordenes button { font-size: 13px; }
+/* Barra superior en móviles estrechos: cabe también el botón de desarrollo */
+@media (max-width: 480px) {
+  #barra-superior { gap: 4px; padding: 4px 5px; }
+  #barra-superior .dato { font-size: 11.5px; }
+  #barra-superior .dato + .dato { padding-left: 4px; }
+  #dato-lider { max-width: 62px; overflow: hidden; text-overflow: ellipsis; }
+  #barra-superior button { padding: 4px 6px; }
+  .btn-sonido, .btn-desarrollo { width: 30px; }
+}
+/* Reglas: el modo de victoria (cuatro opciones) ocupa todo el ancho */
+.reglas-rejilla .campo:has(> .segmentos[aria-label="Modo de victoria"]) { grid-column: 1 / -1; }
+.reglas-rejilla .segmentos { flex-wrap: wrap; }

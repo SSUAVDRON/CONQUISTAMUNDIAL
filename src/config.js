@@ -85,6 +85,35 @@ export const CONFIG = {
   // principio y con rendimiento decreciente en los imperios enormes
   goldPerWorker: 0.12,
   // Recompensa por eliminar a una nación o a una colonia (además de su oro)
+  // Órdenes militares: ataque rápido (más veloz, más bajas), normal o
+  // preparado (espera unos segundos y luego cuesta menos); defensa
+  // fortificada (cuesta más conquistarte, pero tus ataques rinden menos)
+  attackModes: {
+    rapido: { speed: 1.4, cost: 1.25, wait: 0 },
+    normal: { speed: 1, cost: 1, wait: 0 },
+    preparado: { speed: 1, cost: 0.8, wait: 30 },
+  },
+  fortifiedMods: { defense: 0.4, attackCost: 0.35, attackSpeed: -0.2 },
+  stanceCooldownTicks: 100, // 10 s entre cambios de postura
+  autoEveryTicks: 30, // avance continuo: refuerzo cada 3 s
+  // Tecnologías: cada una encarece la siguiente (×techGrowth) y tarda más
+  techBase: 150000,
+  techGrowth: 1.6,
+  techTicks: 300,
+  techTicksPer: 100,
+  specChangeCost: 300000, // cambiar de especialización (la primera es gratis)
+  // Diplomacia ampliada
+  pactTicks: 3000, // pacto de no agresión: 5 min
+  peaceTicks: 1200, // paz firmada: 2 min sin ataques entre ambos
+  offerTicks: 150, // las ofertas caducan a los 15 s
+  offerCooldownTicks: 600, // tras un rechazo, 1 min para volver a ofrecer lo mismo
+  helpCooldownTicks: 300, // pedir ayuda: cada 30 s como mucho
+  // Victorias alternativas
+  capitalShare: 0.4,
+  capitalHoldTicks: 600,
+  economyGoalPerMin: 900000,
+  economyHoldTicks: 1200,
+  survivalDefaultMin: 20,
   killGoldNation: 40000,
   killGoldColony: 12000,
   // Rendimiento decreciente de puertos y fábricas: bonus = % × n / (1 + 0,12 × n)
@@ -198,7 +227,17 @@ export const DEFAULT_RULES = {
   alliances: true,
   boats: true, // desembarcos
   factories: true, // fábricas y trenes
+  victory: 'dominio', // dominio | capitales | economia | supervivencia
+  coop: false, // multijugador: cada dos jugadores llevan una misma nación
+  coopRoles: false, // con roles: uno el mando militar y otro la economía y la diplomacia
 };
+/**
+ * Modos de victoria. Dominio: el territorio de winShare. Capitales: controlar
+ * el 40 % de todas las capitales durante 60 s. Economía: ingresar
+ * economyGoalPerMin de oro por minuto durante 2 min. Supervivencia: al acabar
+ * el tiempo (20 min si no hay límite) gana la mejor puntuación entre los vivos.
+ */
+export const VICTORY_MODES = ['dominio', 'capitales', 'economia', 'supervivencia'];
 /** Valores permitidos de las reglas con opciones fijas. */
 export const RULE_MULTS = [0.5, 1, 2];
 export const TRUCE_MINS = [0, 1, 3, 5];
@@ -226,6 +265,9 @@ export function cleanRules(raw) {
     alliances: r.alliances !== false,
     boats: r.boats !== false,
     factories: r.factories !== false,
+    victory: VICTORY_MODES.includes(r.victory) ? r.victory : 'dominio',
+    coop: r.coop === true,
+    coopRoles: r.coop === true && r.coopRoles === true,
   };
 }
 

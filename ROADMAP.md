@@ -162,6 +162,13 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   que crece más rápido hacia el 43 %, reparto soldados/trabajadores con
   deslizador (el ataque es un % de los soldados), oro de los trabajadores
   y la IA cambia de reparto según la fase
+- Mejoras estratégicas: puntos estratégicos (capitales, núcleos industriales,
+  puertos clave, pasos), órdenes militares (rápido, preparado, defensa
+  fortificada, avance continuo), 12 tecnologías y especialización
+  económica, panel de desarrollo con ingresos por fuente y retorno de
+  inversiones, pactos de no agresión, paz con tributo y petición de ayuda,
+  victorias por capitales, economía y supervivencia, estimaciones y
+  consejos, y cooperativo de dos jugadores por nación con roles opcionales
 
 ## Próximo
 

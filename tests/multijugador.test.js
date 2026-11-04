@@ -125,3 +125,45 @@ test('el anfitrión ignora acciones que dicen ser de otro jugador', () => {
   assert.equal(host.queue.length, 0);
   host.stop();
 });
+
+test('cooperativo: dos jugadores comparten nación y las acciones de ambos llegan (sin pisarse)', () => {
+  const net = fakeNetwork(0);
+  const hostCh = net.channel('h');
+  const guestCh = net.channel('g');
+  // Una sola nación humana para los dos (id 1)
+  const mk = () => {
+    const map = generateMap(200 * RES, 120 * RES, 77);
+    const game = new Game({ map, seed: 77, rules: { coop: true } });
+    game.addPlayer('Ana y Bea', [255, 0, 0], true);
+    game.addBots(4);
+    game.start();
+    return game;
+  };
+  const hostGame = mk();
+  const guestGame = mk();
+  const peerToPlayer = new Map([['h', 1], ['g', 1]]);
+  const host = new NetSync(hostCh, hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, mySlot: 0 });
+  const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 1, peerToPlayer, mySlot: 1 });
+  clearInterval(host._timer);
+  // Las dos primeras acciones de cada uno tendrían la misma clave sin el puesto
+  host.localIntent({ type: 'share', share: 0.4 });
+  guest.localIntent({ type: 'action', tile: freeTile(guestGame, 0.5), ratio: 0.2 });
+  for (let i = 0; i < 5; i++) {
+    host._hostStep();
+    guest.update();
+  }
+  host._flush();
+  for (let k = 0; k < 20 && guestGame.ticks < hostGame.ticks; k++) {
+    guest.lastAdvance = -1e9;
+    guest.update();
+  }
+  const p = hostGame.players[1];
+  assert.equal(p.soldierShare, 0.4, 'llega la acción de la anfitriona');
+  assert.ok(p.spawned, 'llega la del invitado (despliegue)');
+  // Cada orden queda marcada con el puesto de quien la dio (para verla en el mapa)
+  const marks = hostGame.effects.filter((e) => e.kind === 'order');
+  assert.ok(marks.some((e) => e.by === 1), 'la marca de la orden del invitado');
+  assert.equal(stateHash(guestGame), stateHash(hostGame));
+  host.stop();
+  guest.stop();
+});

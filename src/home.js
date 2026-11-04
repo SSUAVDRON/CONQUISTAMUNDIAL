@@ -252,7 +252,8 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   const box = el('div', { class: 'reglas-rejilla' },
     el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
     el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
-    seg('Victoria al conquistar', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
+    seg('Modo de victoria', 'victory', [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]),
+    seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
     seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
     seg('Ingresos de oro', 'goldMult', MULT_OPTS),
     seg('Precios de edificios', 'priceMult', MULT_OPTS),
@@ -266,6 +267,27 @@ function rulesEditor(prefix, rules, onChange, ctx) {
       toggle('Fábricas y trenes', 'factories'),
     ),
   );
+  // Sala multijugador: nación compartida por parejas (y roles opcionales)
+  if (prefix === 'sala') {
+    const optIn = (label, key, title) => {
+      const input = el('input', { type: 'checkbox', id: id(key) });
+      input.checked = rules[key] === true;
+      input.addEventListener('change', () => {
+        rules[key] = input.checked;
+        if (key === 'coop' && !input.checked) {
+          rules.coopRoles = false;
+          const roles = document.getElementById(id('coopRoles'));
+          if (roles) roles.checked = false;
+        }
+        change();
+      });
+      return el('label', { class: 'interruptor', title }, input, el('span', { text: label }));
+    };
+    box.append(el('div', { class: 'interruptores coop' },
+      optIn('Cooperativo: cada dos jugadores llevan una misma nación', 'coop', 'Por orden de llegada a la sala: 1.º y 2.º juntos, 3.º y 4.º juntos…'),
+      optIn('Con roles: uno el mando militar y otro la economía y la diplomacia', 'coopRoles', 'Evita compras o ataques por accidente: cada uno solo puede hacer lo suyo'),
+    ));
+  }
   box.refresh = syncCol;
   syncCol();
   return box;
@@ -288,7 +310,8 @@ function segmented(box, options, current, onChange) {
 /** Resumen de las reglas para la sala: "Victoria 70 % · sin misiles…". */
 export function rulesSummary(r) {
   if (!r) return '';
-  const parts = [`victoria al ${Math.round(r.winShare * 100)} %`];
+  const modes = { capitales: 'victoria por capitales', economia: 'victoria económica', supervivencia: 'supervivencia' };
+  const parts = [modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
   const mult = (v) => (v === 0.5 ? '×0,5' : `×${v}`);
@@ -298,6 +321,7 @@ export function rulesSummary(r) {
   if (r.truceMin) parts.push(`tregua de ${r.truceMin} min`);
   if (r.timeLimitMin) parts.push(`límite de ${r.timeLimitMin} min`);
   if (r.alliances === false) parts.push('sin alianzas');
+  if (r.coop) parts.push(r.coopRoles ? 'cooperativo por parejas con roles' : 'cooperativo por parejas');
   if (r.boats === false) parts.push('sin desembarcos');
   if (r.factories === false) parts.push('sin fábricas');
   if (!r.missiles) parts.push('sin misiles');
@@ -401,7 +425,7 @@ export class Home {
     });
 
     // Ajustes
-    const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones' };
+    const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos' };
     for (const [id, key] of Object.entries(toggles)) {
       $(id).checked = this.profile.ajustes[key] !== false;
       $(id).addEventListener('change', () => {

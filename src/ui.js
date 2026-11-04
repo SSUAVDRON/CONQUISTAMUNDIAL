@@ -4,6 +4,9 @@ import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS 
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
+import { POI_TYPES } from './estrategia.js';
+import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
+import { goldBonus, pow34 } from './player.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -32,6 +35,7 @@ const EVENT_ICONS = {
 const IMPORTANT = [
   /alianza|traiciona|traidor/i,
   /eliminad|derrotad|has conquistado/i,
+  /^💡|pacto|paz firmada|te ofrece la paz|🆘|^⭐|investigada|capitales|supremacía/i,
   /contra ti|casillas tuyas|iba hacia ti|tu antimisiles/i,
   /uno de tus puertos/i,
   /logro|comienza la conquista/i,
@@ -98,6 +102,7 @@ class Counter {
 export class UI {
   constructor() {
     this.handlers = {};
+    this._ratio = 0.2;
     this._fronts = new Map(); // clave → { li, a, d, gone }
     this._lbRows = new Map(); // id → fila de la clasificación
     this._lbAt = -Infinity; // última vez que se actualizó
@@ -166,13 +171,58 @@ export class UI {
       $('pn-emojis').append(b);
     }
 
-    // Propuestas recibidas
-    this._requests = new Map(); // fromId → tarjeta
+    // Diplomacia ampliada: pacto (romperlo pide confirmación), paz y ayuda
+    this._pactArmedUntil = 0;
+    $('pn-pacto').addEventListener('click', () => {
+      const id = this.nationId;
+      if (!id) return;
+      if ($('pn-pacto').dataset.action === 'break') {
+        if (performance.now() < this._pactArmedUntil) {
+          this._pactArmedUntil = 0;
+          this.handlers.onPact?.(id, false);
+        } else {
+          this._pactArmedUntil = performance.now() + 4000;
+          $('pn-pacto').textContent = '¿Romper el pacto? Pulsa otra vez';
+        }
+      } else this.handlers.onPact?.(id, true);
+    });
+    $('pn-paz').addEventListener('click', () => this.handlers.onPeace?.(this.nationId, Number($('pn-tributo').value)));
+    $('pn-ayuda').addEventListener('click', () => this.handlers.onAskHelp?.());
+
+    // Órdenes militares y defensa fortificada
+    $('ordenes').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.modo) this.handlers.onMode?.(b.dataset.modo);
+      else if (b.id === 'btn-fortificar') this.handlers.onStance?.();
+    });
+
+    // Panel de desarrollo
+    $('btn-desarrollo').addEventListener('click', () => this.toggleDev());
+    $('pd-cerrar').addEventListener('click', () => this.toggleDev(false));
+    for (const tab of document.querySelectorAll('[data-pd]')) {
+      tab.addEventListener('click', () => this._devTab(tab.dataset.pd));
+    }
+    $('pd-economia').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-spec]');
+      if (b && !b.disabled) this.handlers.onSpec?.(b.dataset.spec);
+    });
+    $('pd-tecnologias').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-tech]');
+      if (b && !b.disabled) this.handlers.onResearch?.(b.dataset.tech);
+    });
+
+    // Propuestas recibidas (alianza, pacto o paz)
+    this._requests = new Map(); // clave → tarjeta
     $('solicitudes').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-from]');
       if (!btn) return;
-      this.handlers.onRespondAlliance?.(Number(btn.dataset.from), btn.dataset.accept === '1');
-      this._removeRequest(Number(btn.dataset.from));
+      const from = Number(btn.dataset.from);
+      const accept = btn.dataset.accept === '1';
+      const kind = btn.dataset.offer || '';
+      if (kind) this.handlers.onRespondOffer?.(from, kind, accept);
+      else this.handlers.onRespondAlliance?.(from, accept);
+      this._removeRequest(kind ? `${kind}:${from}` : from);
     });
 
     this._buildButtons = new Map();
@@ -234,9 +284,14 @@ export class UI {
     setFolded(folded);
     $('pj-plegar').addEventListener('click', () => setFolded(!panel.classList.contains('plegado')));
     document.addEventListener('keydown', (e) => {
-      if (e.code !== 'KeyV' || e.ctrlKey || e.metaKey || e.altKey || $('hud').hidden) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || $('hud').hidden) return;
       if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
-      setFolded(!panel.classList.contains('plegado'));
+      // Atajos: V panel, I desarrollo, Z orden de ataque, B defensa fortificada, L avance continuo
+      if (e.code === 'KeyV') setFolded(!panel.classList.contains('plegado'));
+      else if (e.code === 'KeyI') this.toggleDev();
+      else if (e.code === 'KeyZ') this.handlers.onCycleMode?.();
+      else if (e.code === 'KeyB') this.handlers.onStance?.();
+      else if (e.code === 'KeyL') this.handlers.onAuto?.(-1);
     });
     // Su altura real, para que los avisos se coloquen encima cuando no caben al lado
     if (typeof ResizeObserver !== 'undefined') {
@@ -255,6 +310,11 @@ export class UI {
       const retreat = e.target.closest('button[data-target]');
       if (retreat) {
         this.handlers.onCancelAttack?.(Number(retreat.dataset.target));
+        return;
+      }
+      const auto = e.target.closest('button[data-auto]');
+      if (auto) {
+        this.handlers.onAuto?.(Number(auto.dataset.auto));
         return;
       }
       const card = e.target.closest('[data-key]');
@@ -383,38 +443,78 @@ export class UI {
     $('pn-env-tropas').disabled = $('pn-env-oro').disabled = !allied || !playing;
     if (!allied && !note) note = 'Solo puedes enviar tropas y oro a tus aliados. La cantidad sigue la fuerza de ataque.';
     $('pn-nota').textContent = note;
+
+    // Pacto de no agresión, paz y ayuda
+    const diplo = document.querySelector('.pn-diplo');
+    diplo.hidden = p.weak;
+    const pact = game.pactBetween(human.id, p.id);
+    if (pact) {
+      const left = formatTime(Math.max(0, (pact.until - game.ticks) / 10));
+      chip.textContent = `${pact.kind === 'peace' ? 'Paz' : 'Pacto'} · ${left}`;
+      chip.className = 'chip bien';
+    }
+    const pb = $('pn-pacto');
+    if (pact) {
+      pb.dataset.action = 'break';
+      if (performance.now() >= this._pactArmedUntil) pb.textContent = `Romper ${pact.kind === 'peace' ? 'la paz' : 'el pacto'}`;
+      pb.className = 'peligro';
+      pb.disabled = !playing;
+    } else {
+      pb.dataset.action = 'propose';
+      pb.className = '';
+      const check = game.canOffer(human, p, 'pact');
+      const incoming = game.pendingOffer(p.id, human.id, 'pact');
+      pb.textContent = incoming ? 'Aceptar su pacto' : check.ok ? `Pacto de no agresión (${CONFIG.pactTicks / 600} min)` : check.reason;
+      pb.disabled = !playing || (!check.ok && !incoming) || allied;
+      if (allied) pb.textContent = 'Pacto: ya sois aliados';
+    }
+    const war = game.atWar(human, p);
+    document.querySelector('.pn-paz').hidden = !war || !!pact;
+    const peace = game.canOffer(human, p, 'peace');
+    $('pn-paz').disabled = !playing || !peace.ok;
+    $('pn-paz').textContent = peace.ok ? 'Ofrecer paz' : peace.reason;
+    $('pn-ayuda').hidden = !allied;
+    const helpWait = Math.ceil(((human.helpAt ?? -Infinity) + CONFIG.helpCooldownTicks - game.ticks) / 10);
+    $('pn-ayuda').disabled = !playing || helpWait > 0;
+    $('pn-ayuda').textContent = helpWait > 0 ? `🆘 Ayuda pedida (${helpWait} s)` : '🆘 Pedir ayuda a tus aliados';
   }
 
   addRequest(game, evt) {
-    if (this._requests.has(evt.fromId)) return;
+    const kind = evt.offer || '';
+    const key = kind ? `${kind}:${evt.fromId}` : evt.fromId;
+    if (this._requests.has(key)) return;
     const p = game.players[evt.fromId];
     const card = document.createElement('div');
-    card.className = 'solicitud';
+    card.className = `solicitud ${kind ? `sol-${kind}` : ''}`;
+    const offer = kind ? game.pendingOffer(p.id, game.human?.id, kind) : null;
+    const gold = offer && offer.tribute ? ` y <b>${formatNumber(Math.floor(p.gold * offer.tribute))}</b> de oro` : '';
+    const what = kind === 'pact' ? `te propone un pacto de no agresión (${CONFIG.pactTicks / 600} min)` : kind === 'peace' ? `te ofrece la paz${gold}` : 'te propone una alianza';
     card.innerHTML = `
       <div class="sol-texto"><span class="muestra" style="background:${rgbToCss(p.color)}"></span>
-        <span><b>${escapeHtml(p.name)}</b> te propone una alianza</span></div>
+        <span><b>${escapeHtml(p.name)}</b> ${what}</span></div>
       <div class="sol-botones">
-        <button type="button" data-from="${p.id}" data-accept="0">Rechazar</button>
-        <button type="button" class="principal" data-from="${p.id}" data-accept="1">Aceptar</button>
+        <button type="button" data-from="${p.id}" data-offer="${kind}" data-accept="0">Rechazar</button>
+        <button type="button" class="principal" data-from="${p.id}" data-offer="${kind}" data-accept="1">Aceptar</button>
       </div>
       <div class="sol-tiempo"><div></div></div>`;
     $('solicitudes').prepend(card);
-    this._requests.set(evt.fromId, card);
+    this._requests.set(key, card);
   }
 
-  _removeRequest(fromId) {
-    this._requests.get(fromId)?.remove();
-    this._requests.delete(fromId);
+  _removeRequest(key) {
+    this._requests.get(key)?.remove();
+    this._requests.delete(key);
   }
 
   _updateRequests(game, human) {
-    for (const [fromId, card] of this._requests) {
-      const req = game.pendingRequest(fromId, human.id);
+    for (const [key, card] of this._requests) {
+      const offer = typeof key === 'string' ? key.split(':') : null;
+      const req = offer ? game.pendingOffer(Number(offer[1]), human.id, offer[0]) : game.pendingRequest(key, human.id);
       if (!req) {
-        this._removeRequest(fromId);
+        this._removeRequest(key);
         continue;
       }
-      const left = Math.max(0, (req.expires - game.ticks) / CONFIG.allianceRequestTicks);
+      const left = Math.max(0, (req.expires - game.ticks) / (offer ? CONFIG.offerTicks : CONFIG.allianceRequestTicks));
       card.querySelector('.sol-tiempo div').style.width = `${left * 100}%`;
     }
   }
@@ -458,6 +558,7 @@ export class UI {
   }
 
   setRatio(r) {
+    this._ratio = r;
     $('ratio').value = Math.round(r * 100);
     $('ratio-valor').textContent = `${Math.round(r * 100)}%`;
   }
@@ -514,6 +615,11 @@ export class UI {
   }
 
   /** Pista breve (2,5 s) encima del panel de abajo. */
+  /** Pista breve encima del panel (pública). */
+  hint(text, kind = 'info') {
+    if (text) this._hint(text, kind);
+  }
+
   _hint(text, kind = 'info') {
     const el = $('pista');
     el.textContent = text;
@@ -631,6 +737,7 @@ export class UI {
   }
 
   update(game, human, ratio, buildMode) {
+    this._ratio = ratio;
     const landCount = game.map.landCount;
 
     // Aviso central: despliegue o construcción en curso
@@ -666,7 +773,7 @@ export class UI {
     }
 
     const playingTicks = Math.max(0, game.ticks - CONFIG.spawnTicks);
-    const limit = game.rules?.timeLimitMin || 0;
+    const limit = game._timeLimitMin ? game._timeLimitMin() : game.rules?.timeLimitMin || 0;
     // Con límite de tiempo, el reloj muestra cuánto queda
     $('reloj').textContent = limit
       ? `${formatTime(Math.max(0, limit * 60 - (playingTicks * TICK_MS) / 1000))} restantes`
@@ -677,7 +784,9 @@ export class UI {
     $('panel-jugador').style.setProperty('--pj-color', rgbToCss(human.color));
     $('pj-nombre').textContent = human.name;
     const max = human.maxTroops();
-    $('pj-estado').textContent = human.alive ? '' : 'Derrotado · modo espectador';
+    const coop = this.coop;
+    const roleName = coop?.role === 'militar' ? 'Mando militar' : coop?.role === 'economia' ? 'Economía y diplomacia' : '';
+    $('pj-estado').textContent = !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '';
     const pop = human.population();
     const fill = Math.min(1, pop / max);
     $('pj-barra').style.width = `${fill * 100}%`;
@@ -740,6 +849,202 @@ export class UI {
     this._updateLeaderboard(game, human, landCount);
     this._updateNation(game, human, ratio);
     this._updateRequests(game, human);
+    this._updateOrders(game, human);
+    this._sampleEconomy(game, human);
+    if (!$('panel-desarrollo').hidden) this._renderDev(game, human);
+    this._advise(game, human);
+    if (buildMode !== this._lastBuildMode) {
+      this._lastBuildMode = buildMode;
+      const roi = buildMode && this._roi(game, human)[buildMode];
+      if (roi) this._hint(roi, 'info');
+    }
+  }
+
+  // ---------------------------------------------------- órdenes y desarrollo
+
+  _updateOrders(game, human) {
+    for (const b of document.querySelectorAll('#ordenes [data-modo]')) b.setAttribute('aria-pressed', String(human.attackMode === b.dataset.modo));
+    const names = { rapido: 'rápido', normal: 'normal', preparado: 'preparado' };
+    const title = `Ataque ${names[human.attackMode] || 'normal'}${human.fortified ? ' · fortificado' : ''}`;
+    const t = document.querySelector('.pj-ataque .ratio:not(.reparto) .ratio-titulo');
+    if (t && t.textContent !== title) t.textContent = title;
+    const f = $('btn-fortificar');
+    f.setAttribute('aria-pressed', String(human.fortified));
+    const wait = Math.ceil((human.stanceAt + CONFIG.stanceCooldownTicks - game.ticks) / 10);
+    f.classList.toggle('espera', wait > 0);
+    // Aviso en el botón de desarrollo: hay oro para investigar y nada en marcha
+    const can = game.phase === 'playing' && human.alive && !human.research && human.gold >= game.techCost(human);
+    $('btn-desarrollo').querySelector('.punto-aviso').hidden = !can;
+  }
+
+  toggleDev(force) {
+    const panel = $('panel-desarrollo');
+    const open = force ?? panel.hidden;
+    panel.hidden = !open;
+    $('btn-desarrollo').setAttribute('aria-pressed', String(open));
+    if (open) {
+      this._devAt = 0;
+      this.closeNation();
+    }
+  }
+
+  _devTab(tab) {
+    for (const b of document.querySelectorAll('[data-pd]')) b.setAttribute('aria-selected', String(b.dataset.pd === tab));
+    $('pd-economia').hidden = tab !== 'economia';
+    $('pd-tecnologias').hidden = tab !== 'tecnologias';
+    this._devAt = 0;
+  }
+
+  /** Guarda cada segundo lo ganado y gastado por fuente (para el ritmo por minuto). */
+  _sampleEconomy(game, human) {
+    const snaps = (this._ecoSnaps ??= []);
+    const last = snaps[snaps.length - 1];
+    if (last && (last.game !== game || game.ticks < last.t)) snaps.length = 0;
+    else if (last && game.ticks - last.t < 10) return;
+    snaps.push({ game, t: game.ticks, income: { ...human.income }, spent: { ...human.spent } });
+    while (snaps.length > 61) snaps.shift();
+  }
+
+  /** Ritmo por minuto de cada fuente (último minuto). */
+  _rates() {
+    const snaps = this._ecoSnaps || [];
+    if (snaps.length < 2) return null;
+    const a = snaps[0];
+    const b = snaps[snaps.length - 1];
+    const k = 600 / Math.max(1, b.t - a.t);
+    const out = { income: {}, spent: {} };
+    for (const key in b.income) out.income[key] = (b.income[key] - a.income[key]) * k;
+    for (const key in b.spent) out.spent[key] = (b.spent[key] - a.spent[key]) * k;
+    return out;
+  }
+
+  /**
+   * Retorno estimado de comprar una ciudad, fábrica o puerto ahora mismo:
+   * oro por minuto extra (solo lo que producen los trabajadores; trenes y
+   * mercantes, aparte) y minutos para recuperar lo invertido.
+   */
+  _roi(game, h) {
+    const perMin = 600;
+    const m = h.mods;
+    const bonusNow = 1 + goldBonus(h.levels.port, CONFIG.portGoldBonus) + goldBonus(h.levels.factory, CONFIG.factoryGoldBonus) * (1 + m.factoryBonus);
+    const k = CONFIG.goldPerWorker * (1 + m.gold) * h.goldMult;
+    const base = pow34(Math.max(0, h.workers)) * k;
+    const dw = CONFIG.cityMaxTroops * h.strength * (1 + m.cap) * 0.43 * (1 - h.soldierShare);
+    const gains = {
+      city: (pow34(h.workers + dw) - pow34(Math.max(0, h.workers))) * k * bonusNow * perMin,
+      factory: base * (goldBonus(h.levels.factory + 1, CONFIG.factoryGoldBonus) - goldBonus(h.levels.factory, CONFIG.factoryGoldBonus)) * (1 + m.factoryBonus) * perMin,
+      port: base * (goldBonus(h.levels.port + 1, CONFIG.portGoldBonus) - goldBonus(h.levels.port, CONFIG.portGoldBonus)) * perMin,
+    };
+    const what = { city: '+25k de población máxima', factory: '+35 % de oro (y trenes)', port: '+15 % de oro (y mercantes)' };
+    const out = {};
+    for (const kind of ['city', 'factory', 'port']) {
+      const cost = game.buildCost(h, kind);
+      const g = gains[kind];
+      const mins = g > 1 ? cost / g : Infinity;
+      out[kind] = `${BUILDINGS[kind].name}: ${what[kind]} → ~+${formatNumber(g)} oro/min${Number.isFinite(mins) && mins < 600 ? ` · se paga en ~${Math.max(1, Math.round(mins))} min` : ''} (estimación)`;
+    }
+    return out;
+  }
+
+  /** Contenido del panel de desarrollo (4 veces por segundo como mucho). */
+  _renderDev(game, h) {
+    const now = performance.now();
+    if (now - (this._devAt || 0) < 250) return;
+    this._devAt = now;
+    if (!$('pd-economia').hidden) {
+      const r = this._rates();
+      const inc = r ? r.income : {};
+      const sp = r ? r.spent : {};
+      const total = Object.values(inc).reduce((a, b) => a + b, 0);
+      const rows = [
+        ['Trabajadores (con puertos y fábricas)', inc.workers],
+        ['Trenes, mercantes y pesca', inc.trade],
+        ['Conquistas (oro de cada casilla)', inc.conquest],
+        ['Botín (eliminaciones y capitales)', inc.loot],
+        ['Regalos de aliados', inc.gifts],
+      ];
+      const bar = (v) => `<span class="pd-barra"><span style="width:${total > 0 ? Math.round((100 * (v || 0)) / total) : 0}%"></span></span>`;
+      const roi = this._roi(game, h);
+      const specCost = h.spec ? formatNumber(CONFIG.specChangeCost * game.rules.priceMult) : 'gratis';
+      $('pd-economia').innerHTML = `
+        <div class="pd-total"><span>Oro por minuto</span><strong>${formatNumber(total)}</strong><small>último minuto · ahora tienes ${formatNumber(h.gold)}</small></div>
+        <table class="pd-tabla"><tbody>
+          ${rows.map(([n, v]) => `<tr><td>${n}</td><td>${formatNumber(v || 0)}</td><td>${bar(v)}</td></tr>`).join('')}
+          <tr class="gasto"><td>Gastado en edificios</td><td>${formatNumber(sp.buildings || 0)}</td><td></td></tr>
+          <tr class="gasto"><td>Gastado en investigación</td><td>${formatNumber(sp.research || 0)}</td><td></td></tr>
+        </tbody></table>
+        <h4>Si construyes ahora</h4>
+        <ul class="pd-roi">${['city', 'factory', 'port'].map((k) => `<li>${roi[k]}</li>`).join('')}</ul>
+        <h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
+        <div class="pd-specs">${SPEC_IDS.map((id) => `
+          <button type="button" class="pd-spec${h.spec === id ? ' activa' : ''}" data-spec="${id}" ${h.spec === id || game.phase !== 'playing' ? 'disabled' : ''}>
+            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>`;
+    } else {
+      const cost = game.techCost(h);
+      const time = Math.round(game.techTime(h) / 10);
+      const res = h.research;
+      const head = res
+        ? `<div class="pd-invest">Investigando <b>${TECHS[res.id].name}</b><span class="pd-barra"><span style="width:${Math.round((100 * (game.ticks - res.start)) / Math.max(1, res.end - res.start))}%"></span></span>${Math.ceil((res.end - game.ticks) / 10)} s</div>`
+        : `<div class="pd-invest"><span>Siguiente investigación: <b>${formatNumber(cost)}</b> de oro · ${time} s. Cada una encarece la siguiente: no podrás tenerlas todas.</span></div>`;
+      const col = (branch) => TECH_IDS.filter((id) => TECHS[id].branch === branch).map((id) => {
+        const t = TECHS[id];
+        const done = h.techs.has(id);
+        const doing = res && res.id === id;
+        const av = techAvailable(h, id);
+        const state = done ? '<em class="ok">✓ Investigada</em>' : doing ? '<em>En marcha…</em>' : av.ok ? `<em>${formatNumber(cost)} · ${time} s</em>` : `<em class="no">${av.reason}</em>`;
+        const dis = done || doing || !av.ok || h.gold < cost || game.phase !== 'playing';
+        return `<button type="button" class="pd-tec${done ? ' hecha' : ''}${doing ? ' marcha' : ''}" data-tech="${id}" ${dis ? 'disabled' : ''}>
+          <span class="pd-nivel">Nv ${t.tier}</span><strong>${t.name}</strong><span>${t.desc}</span>${state}</button>`;
+      }).join('');
+      $('pd-tecnologias').innerHTML = `${head}<div class="pd-ramas">${Object.keys(BRANCHES).map((b) => `<div class="pd-rama"><h4>${BRANCHES[b]}</h4>${col(b)}</div>`).join('')}</div>`;
+    }
+  }
+
+  /**
+   * Consejos (💡): población al máximo, oro sin usar, un vecino mucho más
+   * fuerte en tu frontera, soldados ociosos o un punto estratégico libre
+   * cerca. Cada uno, como mucho cada minuto o dos.
+   */
+  _advise(game, h) {
+    if (this.tips === false || game.phase !== 'playing' || !h.alive) return;
+    const now = performance.now();
+    if (now - (this._adviceAt || 0) < 1000) return;
+    this._adviceAt = now;
+    const last = (this._tipLast ??= {});
+    const say = (key, text, every) => {
+      if (now - (last[key] || -Infinity) < every) return false;
+      last[key] = now;
+      this.pushEvent({ text: `💡 ${text}`, kind: 'warn', tick: game.ticks });
+      return true;
+    };
+    const max = h.maxTroops();
+    const pop = h.population();
+    this._fullSince = pop >= max * 0.97 ? this._fullSince || now : 0;
+    if (this._fullSince && now - this._fullSince > 10000 && say('lleno', 'Tu población está al máximo y ya no crece: amplía territorio, construye ciudades o ataca', 90000)) return;
+    const cheapest = Math.min(game.buildCost(h, 'city'), game.buildCost(h, 'fort'));
+    if (h.gold > Math.max(600000, cheapest * 2) && !h.research && say('oro', `Tienes ${formatNumber(h.gold)} de oro sin usar: construye o investiga (tecla I)`, 120000)) return;
+    const nbs = game.neighborSummary(h).counts;
+    for (const id of nbs.keys()) {
+      const t = game.players[id];
+      if (!t || t.weak || h.allies.has(id) || game.pactBetween(h.id, id)) continue;
+      if (t.troops > Math.max(500, h.troops * 2.5) && say(`fuerte${id}`, `${t.name} tiene ${Math.round(t.troops / Math.max(1, h.troops))} veces tus soldados en tu frontera: fortifícate (B), propón un pacto o pide ayuda`, 120000)) return;
+    }
+    let attacking = false;
+    for (const [id, atk] of h.attacks) if (id && !atk.done) attacking = true;
+    this._idleSince = !attacking && h.soldierShare >= 0.7 && pop >= max * 0.8 ? this._idleSince || now : 0;
+    if (this._idleSince && now - this._idleSince > 60000 && say('ociosos', 'Muchos soldados sin usar: pasa parte a trabajadores (Reparto) para ganar más oro', 150000)) return;
+    const home = h.capitalTile >= 0 ? h.capitalTile : h.spawnTile;
+    if (home >= 0) {
+      for (const pt of game.points) {
+        if (game.owner[pt.tile] !== 0 || last[`p${pt.id}`]) continue;
+        const d2 = (pt.x - game.map.x(home)) ** 2 + (pt.y - game.map.y(home)) ** 2;
+        if (d2 < (40 * RES) ** 2) {
+          last[`p${pt.id}`] = now;
+          say(`punto${pt.id}`, `Hay un ${POI_TYPES[pt.kind].name.toLowerCase()} libre cerca: haz clic en él para conquistarlo (${POI_TYPES[pt.kind].desc.toLowerCase()})`, 0);
+          return;
+        }
+      }
+    }
   }
 
   /**
@@ -812,6 +1117,8 @@ export class UI {
           ? ['te ataca con', 'tus tropas']
           : target ? ['atacas con', 'sus tropas'] : ['expandes con', ''],
         retreat: mine ? atk.targetId : null,
+        auto: mine && target ? atk.auto > 0 : null,
+        prep: atk.readyAt > game.ticks,
       });
     }
     for (const b of game.boats) {
@@ -866,8 +1173,10 @@ export class UI {
       if (f.gone) {
         f.gone = 0;
         f.li.classList.remove('saliendo');
-        f.vs.textContent = c.middle;
       }
+      const mid = c.prep ? 'Preparando' : c.middle;
+      if (f.vs.textContent !== mid) f.vs.textContent = mid;
+      f.li._auto?.classList.toggle('activo', !!c.auto);
       // Cifras (animadas) y barra de fuerzas
       if (c.a === null) f.aEl.textContent = c.aText;
       else f.a.set(c.a);
@@ -989,6 +1298,18 @@ export class UI {
     bar.append(barA, barD);
     li.append(top, mid, legend, bar);
     li.setAttribute('aria-label', c.incoming ? `Te atacan: ${c.left.name}` : `Atacas: ${c.right.name}`);
+    if (c.auto !== null && c.auto !== undefined) {
+      // Avance continuo: refuerza el ataque cada pocos segundos (tecla L)
+      const auto = document.createElement('button');
+      auto.type = 'button';
+      auto.className = 'f-auto';
+      auto.dataset.auto = c.retreat;
+      auto.title = 'Avance continuo: refuerza este ataque cada 3 s con tu fuerza de ataque (tecla L)';
+      auto.setAttribute('aria-label', 'Avance continuo');
+      auto.textContent = '↻';
+      li.append(auto);
+      li._auto = auto;
+    }
     if (c.retreat !== null && c.retreat !== undefined) {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1008,12 +1329,36 @@ export class UI {
     const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
     const rank = alive.indexOf(human);
     $('dato-puesto').textContent = rank >= 0 ? `${rank + 1}.º de ${alive.length}` : `${alive.length} en pie`;
-    const leader = alive[0];
-    const goal = Math.round(game.rules.winShare * 100);
+    // Objetivo de la partida según el modo de victoria
+    const st = game.victoryStatus ? game.victoryStatus() : null;
+    const leader = st ? st.leader : alive[0];
     if (leader) {
-      const share = Math.round((leader.tiles / game.map.landCount) * 100);
-      $('dato-lider').textContent = `${leader === human ? 'Tú' : leader.name} ${share} % / ${goal} %`;
-      $('dato-lider-caja').classList.toggle('cerca', share >= goal * 0.75 && leader !== human);
+      const name = leader === human ? 'Tú' : leader.name;
+      let text;
+      let near;
+      if (!st || st.mode === 'dominio') {
+        const goal = Math.round(game.rules.winShare * 100);
+        const share = Math.round((leader.tiles / game.map.landCount) * 100);
+        text = `${name} ${share} % / ${goal} %`;
+        near = share >= goal * 0.75;
+      } else if (st.mode === 'capitales') {
+        text = `${name} ${st.value}/${st.goal} capitales`;
+        near = st.value >= st.goal * 0.75;
+      } else if (st.mode === 'economia') {
+        text = `${name} ${formatNumber(st.value)}/${formatNumber(st.goal)} oro/min`;
+        near = st.value >= st.goal * 0.75;
+      } else {
+        text = `${name} ${formatNumber(st.value)} puntos`;
+        near = false;
+      }
+      const hold = game.goalHolder && game.goalHolder.id === leader.id ? game.goalHolder : null;
+      if (hold && st && (st.mode === 'capitales' || st.mode === 'economia')) {
+        const need = st.mode === 'capitales' ? CONFIG.capitalHoldTicks : CONFIG.economyHoldTicks;
+        text += ` · gana en ${Math.max(0, Math.ceil((hold.since + need - game.ticks) / 10))} s`;
+        near = true;
+      }
+      $('dato-lider').textContent = text;
+      $('dato-lider-caja').classList.toggle('cerca', near && leader !== human);
     }
   }
 
@@ -1102,6 +1447,26 @@ export class UI {
     }
   }
 
+  /** Línea del tooltip con el punto estratégico cercano y su efecto. */
+  _pointTip(game, tile) {
+    const pt = game.pointNear(tile);
+    if (!pt) return '';
+    const o = game.owner[pt.tile];
+    const who = o ? ` · de ${escapeHtml(game.players[o].name)}` : ' · sin dueño';
+    return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}<br><span class="suave">${POI_TYPES[pt.kind].desc}</span></div>`;
+  }
+
+  /** Estimación de lo que daría un ataque con la fuerza de ataque actual. */
+  _attackTip(game, targetId) {
+    const h = game.human;
+    if (!h || !h.alive || game.phase !== 'playing' || targetId === h.id || (targetId && h.allies.has(targetId))) return '';
+    const troops = Math.floor(h.troops * this._ratio);
+    if (troops < 1) return '';
+    const e = game.estimateAttack(h, targetId, troops);
+    const risk = targetId ? ` · riesgo ${e.risk}` : '';
+    return `<div class="tip-estim">Con ${formatNumber(troops)} soldados: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
+  }
+
   updateTooltip(game, tile, sx, sy) {
     const tip = $('tooltip');
     if (tile < 0) {
@@ -1130,9 +1495,9 @@ export class UI {
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
         ${formatNumber(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
-        <span class="suave">${extra.join(' · ')}</span>`;
+        <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
     } else {
-      tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>`;
+      tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
     }
     tip.hidden = false;
     const w = tip.offsetWidth;
