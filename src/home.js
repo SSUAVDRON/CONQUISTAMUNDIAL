@@ -1,6 +1,6 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { BUILDINGS, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, WIN_SHARES, colonyCount, mapLabel } from './config.js';
+import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { decodeRelief, generateMap } from './map.js';
 import { paintMapPreview } from './terreno.js';
@@ -190,6 +190,87 @@ function hslRgb(h, s, l) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
+const MULT_OPTS = [[0.5, '×0,5'], [1, '×1'], [2, '×2']];
+
+/**
+ * Editor de reglas de la partida, igual en «Contra la IA» y en la sala
+ * multijugador: colonias, oro inicial, victoria, ritmos de tropas y oro,
+ * precios, tregua, límite de tiempo y qué está permitido. Modifica `rules` en
+ * el sitio y llama a `onChange()` tras cada cambio. `ctx.autoColonies()`:
+ * cuántas colonias saldrían en automático. `refresh()` actualiza esa nota.
+ */
+function rulesEditor(prefix, rules, onChange, ctx) {
+  const id = (s) => `${prefix}-${s}`;
+  const change = () => onChange();
+  // Colonias (bots débiles): «Auto» o un número fijo
+  const colOut = el('strong');
+  const colNote = el('small');
+  const col = el('input', { id: id('colonias'), type: 'range', min: '-1', max: String(CONFIG.colonyMax), value: String(rules.colonies ?? -1) });
+  const syncCol = () => {
+    const v = Number(col.value);
+    colOut.textContent = v < 0 ? 'Auto' : String(v);
+    colNote.textContent = v < 0 ? `(${ctx.autoColonies()} en este mapa)` : '';
+  };
+  col.addEventListener('input', () => {
+    const v = Number(col.value);
+    rules.colonies = v < 0 ? null : v;
+    syncCol();
+    change();
+  });
+  // Oro inicial por escalones
+  const goldOut = el('strong');
+  const gold = el('input', { id: id('oro'), type: 'range', min: '0', max: String(GOLD_STEPS.length - 1), step: '1' });
+  const goldIdx = (g) => GOLD_STEPS.reduce((best, v, i) => (Math.abs(v - g) < Math.abs(GOLD_STEPS[best] - g) ? i : best), 0);
+  gold.value = String(goldIdx(rules.startGold || 0));
+  const syncGold = () => {
+    const v = GOLD_STEPS[Number(gold.value)];
+    goldOut.textContent = v ? formatNumber(v) : 'Nada';
+    rules.startGold = v;
+  };
+  gold.addEventListener('input', () => {
+    syncGold();
+    change();
+  });
+  syncGold();
+  const seg = (label, key, options) => {
+    const box = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': label });
+    segmented(box, options, rules[key], (v) => {
+      rules[key] = v;
+      change();
+    });
+    return el('div', { class: 'campo' }, el('span', { text: label }), box);
+  };
+  const toggle = (label, key) => {
+    const input = el('input', { type: 'checkbox', id: id(key) });
+    input.checked = rules[key] !== false;
+    input.addEventListener('change', () => {
+      rules[key] = input.checked;
+      change();
+    });
+    return el('label', { class: 'interruptor' }, input, el('span', { text: label }));
+  };
+  const box = el('div', { class: 'reglas-rejilla' },
+    el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
+    el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
+    seg('Victoria al conquistar', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
+    seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
+    seg('Ingresos de oro', 'goldMult', MULT_OPTS),
+    seg('Precios de edificios', 'priceMult', MULT_OPTS),
+    seg('Tregua inicial (sin ataques entre naciones)', 'truceMin', TRUCE_MINS.map((v) => [v, v ? `${v} min` : 'No'])),
+    seg('Límite de tiempo (gana quien tenga más)', 'timeLimitMin', TIME_LIMITS.map((v) => [v, v ? `${v} min` : 'Sin límite'])),
+    el('div', { class: 'interruptores' },
+      toggle('Misiles y antimisiles', 'missiles'),
+      toggle('Buques de guerra', 'warships'),
+      toggle('Alianzas', 'alliances'),
+      toggle('Desembarcos', 'boats'),
+      toggle('Fábricas y trenes', 'factories'),
+    ),
+  );
+  box.refresh = syncCol;
+  syncCol();
+  return box;
+}
+
 /** Control segmentado (botones excluyentes). */
 function segmented(box, options, current, onChange) {
   box.replaceChildren(
@@ -210,6 +291,15 @@ export function rulesSummary(r) {
   const parts = [`victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
+  const mult = (v) => (v === 0.5 ? '×0,5' : `×${v}`);
+  if (r.troopMult && r.troopMult !== 1) parts.push(`tropas ${mult(r.troopMult)}`);
+  if (r.goldMult && r.goldMult !== 1) parts.push(`oro ${mult(r.goldMult)}`);
+  if (r.priceMult && r.priceMult !== 1) parts.push(`precios ${mult(r.priceMult)}`);
+  if (r.truceMin) parts.push(`tregua de ${r.truceMin} min`);
+  if (r.timeLimitMin) parts.push(`límite de ${r.timeLimitMin} min`);
+  if (r.alliances === false) parts.push('sin alianzas');
+  if (r.boats === false) parts.push('sin desembarcos');
+  if (r.factories === false) parts.push('sin fábricas');
   if (!r.missiles) parts.push('sin misiles');
   if (!r.warships) parts.push('sin buques');
   return parts.join(' · ');
@@ -280,41 +370,11 @@ export class Home {
     segmented($('seg-dificultad'), [['facil', 'Fácil'], ['normal', 'Normal'], ['dificil', 'Difícil']], this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
     });
-    segmented($('seg-victoria'), WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`]), this.choice.rules.winShare, (v) => {
-      this.choice.rules.winShare = v;
+    // Reglas (las mismas que en la sala multijugador)
+    this._rulesIA = rulesEditor('ia', this.choice.rules, () => {}, {
+      autoColonies: () => colonyCount(landTilesOf(this.choice.map), Number($('in-bots').value)),
     });
-    // Oro inicial: deslizador por escalones (0, 100k, 250k… 10M)
-    const goldIdx = (g) => GOLD_STEPS.reduce((best, v, i) => (Math.abs(v - g) < Math.abs(GOLD_STEPS[best] - g) ? i : best), 0);
-    const showGold = () => {
-      const v = GOLD_STEPS[Number($('in-oro').value)];
-      $('out-oro').textContent = v ? formatNumber(v) : 'Nada';
-      this.choice.rules.startGold = v;
-    };
-    $('in-oro').max = String(GOLD_STEPS.length - 1);
-    $('in-oro').value = String(goldIdx(this.choice.rules.startGold || 0));
-    $('in-oro').addEventListener('input', showGold);
-    showGold();
-    // Colonias (bots débiles): «Auto» según el mapa o un número fijo
-    $('in-colonias').value = String(this.choice.rules.colonies ?? -1);
-    $('in-colonias').addEventListener('input', () => {
-      const v = Number($('in-colonias').value);
-      this.choice.rules.colonies = v < 0 ? null : v;
-      this._syncColonies();
-    });
-    this._syncColonies = () => {
-      const v = Number($('in-colonias').value);
-      const auto = colonyCount(landTilesOf(this.choice.map), Number($('in-bots').value));
-      $('out-colonias').textContent = v < 0 ? 'Auto' : String(v);
-      $('nota-colonias').textContent = v < 0 ? `(${auto} en este mapa)` : '';
-    };
-    $('in-misiles').checked = this.choice.rules.missiles;
-    $('in-buques').checked = this.choice.rules.warships;
-    $('in-misiles').addEventListener('change', () => {
-      this.choice.rules.missiles = $('in-misiles').checked;
-    });
-    $('in-buques').addEventListener('change', () => {
-      this.choice.rules.warships = $('in-buques').checked;
-    });
+    $('reglas-ia').replaceChildren(this._rulesIA);
     this._syncBots = () => {
       const max = maxBotsFor(this.choice.map);
       $('in-bots').max = String(max);
@@ -323,7 +383,7 @@ export class Home {
       const flags = REAL_MAP_DATA[this.choice.map]?.countries.length;
       $('nota-rivales').textContent = flags ? `(${flags} países reales; el resto, inventados)` : '';
       $('campo-semilla').hidden = !!REAL_MAPS[this.choice.map];
-      this._syncColonies?.();
+      this._rulesIA?.refresh();
     };
     $('in-bots').addEventListener('input', this._syncBots);
     $('form-rapida').addEventListener('submit', (e) => {
@@ -1030,17 +1090,22 @@ export class Home {
       if (!box.dataset.host) {
         box.dataset.host = '1';
         box.replaceChildren(
-          el('label', { class: 'campo' }, el('span', {}, 'Bots ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
+          el('label', { class: 'campo' }, el('span', {}, 'Naciones rivales ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
             el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(MAX_BOTS), value: String(s.bots), oninput: () => this._lobbyChanged() })),
           el('div', { class: 'fila-2' },
             el('label', { class: 'campo' }, el('span', { text: 'Mapa' }),
               el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
             el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
               el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
+          // Las mismas reglas que contra la IA: colonias, oro, ritmos, tregua…
+          (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
+            autoColonies: () => colonyCount(landTilesOf($('sala-mapa')?.value || 'mundo'), Number($('sala-bots')?.value || 0)),
+          })),
         );
         fillMapSelect($('sala-mapa'));
         $('sala-mapa').value = s.mapSize;
         $('sala-dificultad').value = s.difficulty;
+        this._rulesSala.refresh(); // ya existen el mapa y las naciones elegidos
       }
     } else {
       delete box.dataset.host;
@@ -1059,6 +1124,10 @@ export class Home {
     $('sala-bots').max = String(max);
     if (Number($('sala-bots').value) > max) $('sala-bots').value = String(max);
     $('sala-out-bots').textContent = $('sala-bots').value;
+    this._rulesSala?.refresh();
+    // Se guardan como las reglas por defecto del jugador
+    this.profile.ajustes.reglas = { ...this.choice.rules };
+    this.h.onProfileChange?.(false);
     this.h.onRoomSettings?.({
       bots: Number($('sala-bots').value),
       mapSize: $('sala-mapa').value,

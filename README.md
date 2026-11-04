@@ -18,7 +18,7 @@ carga con los pasos reales y un consejo.
 
 | Pestaña | Qué hay |
 |---|---|
-| Jugar | Portada con nuestro mapa del mundo (Europa, el Mediterráneo y Oriente Próximo con las naciones repartidas, en el mismo estilo que la partida) y «Jugar ahora», los cuatro modos (tarjetas de texto, sin ilustraciones) y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA»: mapa, número de naciones rivales (1-200), número de colonias o bots débiles (automático según el mapa, o de 0 a 300), dificultad, victoria al 50/70/90 %, oro inicial (de 0 a 10M), misiles y buques activables, semilla. |
+| Jugar | Portada con nuestro mapa del mundo (Europa, el Mediterráneo y Oriente Próximo con las naciones repartidas, en el mismo estilo que la partida) y «Jugar ahora», los cuatro modos (tarjetas de texto, sin ilustraciones) y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA» y en las salas multijugador (las ajusta el anfitrión) se elige: mapa, naciones rivales (1-200), dificultad y las reglas de la partida (ver «Reglas personalizables»). |
 | Perfil | Tarjeta de perfil (estandarte, emblema con marco, nombre, título y nivel), nombre, color (con 16 colores rápidos), emblema (7 formas, 20 símbolos y colores), título, nivel y estadísticas. |
 | Apariencia | Estandarte (8), marco del emblema (bronce, plata, oro, laurel), color de tu nombre en el mapa (8) y patrón del territorio (lo ven también los demás online). Muchos se desbloquean con nivel o logros. |
 | Logros | 16 logros; desbloquean símbolos, patrones y títulos. |
@@ -114,6 +114,7 @@ base de datos.
 
 | Concepto | Cómo funciona |
 |---|---|
+| Reglas personalizables | Colonias o bots débiles (automático según el mapa, o de 0 a 300), oro inicial (0 a 10M), victoria al 50/70/90 %, crecimiento de tropas, ingresos de oro y precios de los edificios (×0,5, ×1 o ×2), tregua inicial (sin, 1, 3 o 5 min: nadie puede atacar a otras naciones ni lanzar misiles, pero sí expandirse y conquistar colonias; se ve una cuenta atrás), límite de tiempo (sin, 10, 20 o 30 min: al acabar gana quien tenga más territorio; el reloj marca lo que queda) y qué está permitido: misiles y antimisiles, buques de guerra, alianzas, desembarcos y fábricas con sus trenes. Las mismas en «Contra la IA» y en la sala multijugador, donde las ve todo el mundo en el resumen. |
 | Despliegue | Los primeros 15 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. Cada nación empieza con una mancha pequeña e irregular (unas 250 casillas; las colonias, menos). |
 | Expansión | Al hacer clic en tierra libre (o en un vecino), avanza sobre todo **hacia donde has hecho clic**: crece sobre todo el lado de tu país que mira hacia allí, con bordes irregulares (no un frente perfecto) y algo hacia los lados, y lo de detrás apenas se mueve; otro clic en otra dirección reorienta el avance. Los bots crecen con formas irregulares (lóbulos de ruido, terreno y azar), sin dirección fija.|
 | Mapa | Casillas muy pequeñas: los mapas tienen 4 veces la resolución del principio en cada eje (16 veces más casillas; el mundo, 3520×1597). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. Las rutas por mar se buscan primero en una rejilla gruesa y luego solo por ese pasillo, así que siguen siendo rápidas. |

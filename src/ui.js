@@ -599,12 +599,21 @@ export class UI {
         aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`;
       }
       aviso.hidden = false;
+    } else if (game.inTruce?.()) {
+      // Regla de tregua: recordatorio con la cuenta atrás
+      const left = Math.ceil(((game.truceUntil() - game.ticks) * TICK_MS) / 1000);
+      aviso.textContent = `Tregua: nadie puede atacar a otras naciones durante ${formatTime(left)}. Expándete y conquista colonias`;
+      aviso.hidden = false;
     } else {
       aviso.hidden = true;
     }
 
     const playingTicks = Math.max(0, game.ticks - CONFIG.spawnTicks);
-    $('reloj').textContent = formatTime((playingTicks * TICK_MS) / 1000);
+    const limit = game.rules?.timeLimitMin || 0;
+    // Con límite de tiempo, el reloj muestra cuánto queda
+    $('reloj').textContent = limit
+      ? `${formatTime(Math.max(0, limit * 60 - (playingTicks * TICK_MS) / 1000))} restantes`
+      : formatTime((playingTicks * TICK_MS) / 1000);
 
     // Panel del jugador
     $('pj-color').style.background = rgbToCss(human.color);

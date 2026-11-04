@@ -96,6 +96,8 @@ export class Game {
     const id = this.players.length;
     if (id > 65000) throw new Error('Demasiados jugadores');
     const p = new Player(id, name, color, isHuman);
+    p.troopMult = this.rules.troopMult;
+    p.goldMult = this.rules.goldMult;
     this.players.push(p);
     // El primer humano es el jugador local por defecto; en multijugador se fija aparte
     if (isHuman && !this.human) this.human = p;
@@ -477,6 +479,7 @@ export class Game {
     if (!p.alive || targetId === p.id) return false;
     const target = targetId ? this.players[targetId] : null;
     if (target && (!target.alive || this.isAllied(p.id, targetId))) return false;
+    if (this._truceBlocks(p, target)) return false;
     if (deduct) troops = Math.min(troops, Math.floor(p.troops));
     if (troops < 1) return false;
 
@@ -732,7 +735,7 @@ export class Game {
     const value = Math.round((CONFIG.trainGoldBase + CONFIG.trainGoldPerTile * r.len) * (1 + CONFIG.trainLevelBonus * (f.level - 1)));
     const owner = this.players[f.owner];
     if (!owner || !owner.alive) return;
-    owner.gold += value;
+    owner.gold += value * owner.goldMult;
     owner.stats.trainGold = (owner.stats.trainGold || 0) + value;
     const so = this.players[s.owner];
     if (s.owner !== f.owner && so && so.alive) so.gold += Math.round(value * CONFIG.trainReceiverShare);
@@ -787,8 +790,8 @@ export class Game {
       if (target) target.troops -= loss;
       else {
         // Expandirse también da oro: cada casilla libre, al momento
-        A.gold += CONFIG.wildTileGold;
-        A.stats.expansionGold = (A.stats.expansionGold || 0) + CONFIG.wildTileGold;
+        A.gold += CONFIG.wildTileGold * A.goldMult;
+        A.stats.expansionGold = (A.stats.expansionGold || 0) + CONFIG.wildTileGold * A.goldMult;
       }
       this.setOwner(t, aid);
     }
@@ -813,6 +816,24 @@ export class Game {
   isAllowed(kind) {
     if (!this.rules.missiles && (kind === 'silo' || kind === 'sam' || kind === 'missile')) return false;
     if (!this.rules.warships && kind === 'warship') return false;
+    if (!this.rules.factories && kind === 'factory') return false;
+    return true;
+  }
+
+  /** Tregua inicial (regla): hasta este tick no se puede atacar a otras naciones. */
+  truceUntil() {
+    return CONFIG.spawnTicks + this.rules.truceMin * 600;
+  }
+
+  inTruce() {
+    return this.rules.truceMin > 0 && this.ticks < this.truceUntil();
+  }
+
+  /** ¿La tregua impide que `p` ataque a `target`? (las colonias y la tierra libre, siempre se pueden) */
+  _truceBlocks(p, target) {
+    if (!target || target.weak || p.weak || !this.inTruce()) return false;
+    const s = Math.ceil((this.truceUntil() - this.ticks) / 10);
+    this._notify(p, `Tregua: aún no puedes atacar a otras naciones (quedan ${s} s)`, 'warn');
     return true;
   }
 
@@ -822,8 +843,9 @@ export class Game {
    */
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
-    if (def.fixed) return def.base;
-    return Math.round(def.base * (1 + CONFIG.inflation * p.purchases));
+    const base = def.base * this.rules.priceMult;
+    if (def.fixed) return Math.round(base);
+    return Math.round(base * (1 + CONFIG.inflation * p.purchases));
   }
 
   /** Precio de subir `b` un nivel. */
@@ -1234,6 +1256,7 @@ export class Game {
 
   _canLaunchMissile(p, tile) {
     const map = this.map;
+    if (this.inTruce()) return { ok: false, reason: `Tregua: aún no se pueden lanzar misiles (quedan ${Math.ceil((this.truceUntil() - this.ticks) / 10)} s)` };
     if (!p.active.silo) return { ok: false, reason: p.buildings.silo ? 'Tu silo aún está en obras' : 'Necesitas un silo para lanzar misiles' };
     if (tile < 0 || tile >= map.size || !map.isLand(tile)) return { ok: false, reason: 'Apunta a territorio enemigo' };
     const o = this.owner[tile];
@@ -1843,6 +1866,11 @@ export class Game {
   // ------------------------------------------------------------------ barcos
 
   launchBoat(p, tile, troops, { deduct = true } = {}) {
+    if (!this.rules.boats) {
+      this._notify(p, 'Los desembarcos están desactivados en esta partida', 'warn');
+      return false;
+    }
+    if (tile >= 0 && tile < this.map.size && this._truceBlocks(p, this.players[this.owner[tile]])) return false;
     if (p.boatCount >= p.maxBoats()) {
       this._notify(p, `Ya tienes ${p.maxBoats()} barcos en el mar`, 'warn');
       return false;
@@ -2120,6 +2148,16 @@ export class Game {
   }
 
   _checkVictory() {
+    // Límite de tiempo (regla): al acabar, gana quien tenga más territorio
+    if (this.rules.timeLimitMin > 0 && this.ticks >= CONFIG.spawnTicks + this.rules.timeLimitMin * 600) {
+      const best = this.alivePlayers().sort((a, b) => b.tiles - a.tiles || a.id - b.id)[0];
+      if (best) {
+        this.winner = best;
+        this.phase = 'ended';
+        this._emit(best === this.human ? '¡Se acabó el tiempo y tienes más territorio que nadie: victoria!' : `Se acabó el tiempo: ${best.name} tiene más territorio`, best === this.human ? 'good' : 'danger');
+        return;
+      }
+    }
     const need = this.map.landCount * this.rules.winShare;
     let alive = 0;
     let last = null;
@@ -2184,6 +2222,7 @@ export class Game {
 
   /** ¿Puede `p` proponer alianza a `target` ahora mismo? Si no, explica por qué. */
   canPropose(p, target) {
+    if (!this.rules.alliances) return { ok: false, reason: 'Las alianzas están desactivadas en esta partida' };
     if (!target || target === p || !target.alive) return { ok: false, reason: 'No disponible' };
     if (target.weak || p.weak) return { ok: false, reason: 'Las colonias no firman alianzas' };
     if (p.allies.has(target.id)) return { ok: false, reason: 'Ya sois aliados' };

@@ -174,7 +174,25 @@ export const CONFIG = {
 };
 
 /** Reglas que se eligen al crear la partida (también en las salas online). */
-export const DEFAULT_RULES = { winShare: 0.7, startGold: 0, missiles: true, warships: true, colonies: null };
+export const DEFAULT_RULES = {
+  winShare: 0.7,
+  startGold: 0,
+  missiles: true,
+  warships: true,
+  colonies: null,
+  troopMult: 1, // crecimiento de tropas
+  goldMult: 1, // ingresos de oro
+  priceMult: 1, // precios de edificios, buques y misiles
+  truceMin: 0, // minutos de tregua inicial (sin ataques entre naciones)
+  timeLimitMin: 0, // minutos de partida (0 = sin límite); al acabar gana quien tenga más territorio
+  alliances: true,
+  boats: true, // desembarcos
+  factories: true, // fábricas y trenes
+};
+/** Valores permitidos de las reglas con opciones fijas. */
+export const RULE_MULTS = [0.5, 1, 2];
+export const TRUCE_MINS = [0, 1, 3, 5];
+export const TIME_LIMITS = [0, 10, 20, 30];
 export const WIN_SHARES = [0.5, 0.7, 0.9];
 /** Oro inicial que se puede elegir en las partidas personalizadas (deslizador). */
 export const GOLD_STEPS = [0, 100000, 250000, 500000, 1000000, 2000000, 3000000, 5000000, 10000000];
@@ -190,6 +208,14 @@ export function cleanRules(raw) {
     warships: r.warships !== false,
     // Colonias (bots débiles): null = automático según el mapa; si no, cuántas
     colonies: Number.isFinite(r.colonies) ? Math.max(0, Math.min(CONFIG.colonyMax, Math.round(r.colonies))) : null,
+    troopMult: RULE_MULTS.includes(r.troopMult) ? r.troopMult : 1,
+    goldMult: RULE_MULTS.includes(r.goldMult) ? r.goldMult : 1,
+    priceMult: RULE_MULTS.includes(r.priceMult) ? r.priceMult : 1,
+    truceMin: TRUCE_MINS.includes(r.truceMin) ? r.truceMin : 0,
+    timeLimitMin: TIME_LIMITS.includes(r.timeLimitMin) ? r.timeLimitMin : 0,
+    alliances: r.alliances !== false,
+    boats: r.boats !== false,
+    factories: r.factories !== false,
   };
 }
 

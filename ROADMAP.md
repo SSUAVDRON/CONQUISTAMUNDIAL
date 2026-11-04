@@ -142,6 +142,9 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   de los mapas, en el mismo estilo que la partida
 - Partidas personalizadas: naciones (1-200), colonias (auto o 0-300) y oro
   inicial libre (0-10M)
+- Reglas personalizables también en multijugador; nuevas: ritmos de tropas y
+  oro, precios, tregua inicial, límite de tiempo, alianzas, desembarcos y
+  fábricas activables
 
 ## Próximo
 

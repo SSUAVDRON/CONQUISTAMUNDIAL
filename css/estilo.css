@@ -1759,3 +1759,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   border-right: 1px solid rgba(255, 255, 255, 0.55);
   pointer-events: none;
 }
+/* Editor de reglas (contra la IA y sala multijugador) */
+.reglas { grid-column: 1 / -1; }
+.reglas-rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.reglas-rejilla .interruptores { grid-column: 1 / -1; flex-wrap: wrap; }
+#sala-ajustes .reglas-rejilla { margin-top: 12px; }
+@media (max-width: 720px) { .reglas-rejilla { grid-template-columns: 1fr; } }

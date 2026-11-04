@@ -24,6 +24,9 @@ export class Player {
     /** Colonia: bot débil que no es una nación (ni construye ni firma alianzas). */
     this.weak = false;
     this.strength = 1;
+    // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
+    this.troopMult = 1;
+    this.goldMult = 1;
 
     this.troops = 0;
     this.gold = CONFIG.startGold;
@@ -86,13 +89,13 @@ export class Player {
     const bell = 4 * x * (1 - x);
     const f = x < 0.5 ? CONFIG.growthFloor + (1 - CONFIG.growthFloor) * bell : bell;
     const raw = CONFIG.growthBase + pow34(this.tiles) * CONFIG.growthTileMult;
-    return raw * this.strength * f;
+    return raw * this.strength * f * this.troopMult;
   }
 
   goldPerTick() {
     if (!this.tiles) return 0;
     const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
-    return base * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus));
+    return base * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus)) * this.goldMult;
   }
 
   maxBoats() {
