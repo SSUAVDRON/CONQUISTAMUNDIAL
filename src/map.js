@@ -228,7 +228,11 @@ function markEdge(id, arr) {
  * Carga un mapa del mundo real. Devuelve { map, countries } donde countries =
  * [{ name, tile, area, iso }] de mayor a menor (la casilla es la más interior).
  */
+/** El último mapa real cargado: el terreno no cambia y así no se recalcula (el del menú y la partida rápida son el mismo). */
+let lastReal = null;
+
 export function loadRealMap(id) {
+  if (lastReal && lastReal.id === id) return { map: lastReal.map, countries: lastReal.countries.map((c) => ({ ...c })) };
   const data = REAL_MAP_DATA[id];
   if (!data) throw new Error(`Mapa desconocido: ${id}`);
   const { w, h } = data;
@@ -245,7 +249,9 @@ export function loadRealMap(id) {
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
-  return { map, countries: data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' })) };
+  const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' }));
+  lastReal = { id, map, countries };
+  return { map, countries: countries.map((c) => ({ ...c })) };
 }
 
 /** Tonos: profundidad del mar por distancia a la costa; textura y cumbres en tierra. */
@@ -282,13 +288,13 @@ function realShade(id, w, h, terrain) {
     }
   }
   for (let t = 0; t < size; t++) {
-    const x = t % w;
-    const y = (t / w) | 0;
-    const grain = fbm(rough, x / (6 * RES), y / (6 * RES), 3);
     const d = dist[t] / RES;
     if (terrain[t] === WATER) shade[t] = Math.min(255, d * 14);
-    else if (terrain[t] === MOUNTAIN) shade[t] = clampByte(Math.min(d, 8) * 26 + (grain - 0.5) * 60);
-    else shade[t] = clampByte(grain * 255);
+    else if (terrain[t] === MOUNTAIN) {
+      // El ruido solo hace falta en las montañas (cumbres irregulares); el resto es plano
+      const grain = fbm(rough, (t % w) / (6 * RES), ((t / w) | 0) / (6 * RES), 3);
+      shade[t] = clampByte(Math.min(d, 8) * 26 + (grain - 0.5) * 60);
+    } else shade[t] = 128;
   }
   return shade;
 }

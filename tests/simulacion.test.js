@@ -129,7 +129,7 @@ test('un ataque contra un vecino conquista casillas y el defensor pierde tropas'
   for (const t of tiles) {
     const dx = map.x(t) - map.x(ta);
     const dy = map.y(t) - map.y(ta);
-    if (game.owner[t] === 0 && dx * dx + dy * dy > 81 && dx * dx + dy * dy < 120) {
+    if (game.owner[t] === 0 && dx * dx + dy * dy > (9 * RES) ** 2 && dx * dx + dy * dy < (11 * RES) ** 2) {
       tb = t;
       break;
     }

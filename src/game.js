@@ -1283,7 +1283,14 @@ export class Game {
     }
     // Con tope de casillas exploradas: una ruta que da media vuelta al mundo
     // no merece congelar la partida (se da por imposible)
-    const path = this._astarWater(from, to, maxNodes);
+    // Primero la ruta gruesa (rejilla original) y luego la fina solo por su pasillo
+    // (si la gruesa no llega, la fina tampoco: el agua gruesa incluye toda la fina)
+    let path = null;
+    if (this._coarseCorridor([from], (cell) => cell === this._cellOf(to), maxNodes / AREA)) {
+      path = this._astarWater(from, to, maxNodes, true);
+      // Raro: el pasillo es demasiado estrecho; búsqueda fina acotada
+      if (!path) path = this._astarWater(from, to, Math.min(maxNodes, 150000));
+    }
     if (cache) {
       if (this._pathCache.size >= 3000) this._pathCache.clear();
       this._pathCache.set(key, path);
@@ -1291,7 +1298,10 @@ export class Game {
     return path;
   }
 
-  _astarWater(from, to, maxNodes) {
+  _astarWater(from, to, maxNodes, corridor = false) {
+    const cg = this._cg;
+    const W0 = this.map.width;
+    const inCorridor = (t) => cg.mark[(((t / W0) | 0) / cg.k | 0) * cg.cw + (((t % W0) / cg.k) | 0)] === cg.markStamp;
     const map = this.map;
     const W = map.width;
     const terrain = map.terrain;
@@ -1327,6 +1337,7 @@ export class Game {
       for (let k = 0; k < c; k++) {
         const n = nb[k];
         if (terrain[n] !== 0 || closed[n] === stamp) continue;
+        if (corridor && !inCorridor(n)) continue;
         if (seen[n] === stamp && g[n] <= ng) continue;
         seen[n] = stamp;
         g[n] = ng;
@@ -1338,6 +1349,91 @@ export class Game {
     const path = [];
     for (let t = from; t !== -1; t = parent[t]) path.push(t);
     return Int32Array.from(path);
+  }
+
+  /**
+   * Rejilla gruesa del agua (una celda = RES×RES casillas, como la rejilla
+   * original): con ella se buscan las rutas largas muy deprisa.
+   */
+  _coarse() {
+    if (this._cg) return this._cg;
+    const map = this.map;
+    const W = map.width;
+    const H = map.height;
+    const k = RES;
+    const cw = Math.ceil(W / k);
+    const ch = Math.ceil(H / k);
+    const n = cw * ch;
+    const water = new Uint8Array(n);
+    for (let y = 0; y < H; y++) {
+      const row = ((y / k) | 0) * cw;
+      for (let x = 0; x < W; x++) if (map.terrain[y * W + x] === 0) water[row + ((x / k) | 0)] = 1;
+    }
+    this._cg = {
+      k, cw, ch, water,
+      seen: new Uint32Array(n), parent: new Int32Array(n), queue: new Int32Array(n), stamp: 0,
+      mark: new Uint32Array(n), markStamp: 0, goal: new Uint32Array(n), goalStamp: 0,
+    };
+    return this._cg;
+  }
+
+  _cellOf(t) {
+    const cg = this._coarse();
+    const W = this.map.width;
+    return (((t / W) | 0) / cg.k | 0) * cg.cw + (((t % W) / cg.k) | 0);
+  }
+
+  /**
+   * Busca en la rejilla gruesa desde las casillas `starts` hasta una celda que
+   * cumpla `isGoal`, y marca como pasillo esa ruta y su contorno. Devuelve si
+   * la encontró (si no, o se pasó del tope o el mar no conecta).
+   */
+  _coarseCorridor(starts, isGoal, maxCells) {
+    const cg = this._coarse();
+    const { cw, ch, water, seen, parent, queue } = cg;
+    cg.stamp = cg.stamp >= 0xfffffff0 ? (seen.fill(0), 1) : cg.stamp + 1;
+    const st = cg.stamp;
+    let head = 0;
+    let tail = 0;
+    for (const t of starts) {
+      const c = this._cellOf(t);
+      if (seen[c] === st) continue;
+      seen[c] = st;
+      parent[c] = -1;
+      queue[tail++] = c;
+    }
+    let found = -1;
+    while (head < tail) {
+      if (tail > maxCells) return false;
+      const c = queue[head++];
+      if (isGoal(c)) {
+        found = c;
+        break;
+      }
+      const x = c % cw;
+      const y = (c / cw) | 0;
+      if (x > 0 && water[c - 1] && seen[c - 1] !== st) { seen[c - 1] = st; parent[c - 1] = c; queue[tail++] = c - 1; }
+      if (x < cw - 1 && water[c + 1] && seen[c + 1] !== st) { seen[c + 1] = st; parent[c + 1] = c; queue[tail++] = c + 1; }
+      if (y > 0 && water[c - cw] && seen[c - cw] !== st) { seen[c - cw] = st; parent[c - cw] = c; queue[tail++] = c - cw; }
+      if (y < ch - 1 && water[c + cw] && seen[c + cw] !== st) { seen[c + cw] = st; parent[c + cw] = c; queue[tail++] = c + cw; }
+    }
+    if (found < 0) return false;
+    // Pasillo: la ruta y sus 8 vecinas
+    cg.markStamp = cg.markStamp >= 0xfffffff0 ? (cg.mark.fill(0), 1) : cg.markStamp + 1;
+    const ms = cg.markStamp;
+    for (let c = found; c !== -1; c = parent[c]) {
+      const x = c % cw;
+      const y = (c / cw) | 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= ch) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx >= 0 && xx < cw) cg.mark[yy * cw + xx] = ms;
+        }
+      }
+    }
+    return true;
   }
 
   _isEnemy(a, b) {
@@ -1536,6 +1632,24 @@ export class Game {
   _findSeaPath(pid, dest) {
     const map = this.map;
     const terrain = map.terrain;
+    // Celdas gruesas con agua junto a la costa propia = meta de la ruta gruesa
+    const cg = this._coarse();
+    cg.goalStamp = cg.goalStamp >= 0xfffffff0 ? (cg.goal.fill(0), 1) : cg.goalStamp + 1;
+    const gs = cg.goalStamp;
+    const p = this.players[pid];
+    const nb0 = NB_MISC;
+    for (const t of p.border) {
+      if (!map.coastal[t]) continue;
+      const c0 = map.neighbors(t, nb0);
+      for (let k = 0; k < c0; k++) if (terrain[nb0[k]] === 0) cg.goal[this._cellOf(nb0[k])] = gs;
+    }
+    const starts = [];
+    const c1 = map.neighbors(dest, nb0);
+    for (let k = 0; k < c1; k++) if (terrain[nb0[k]] === 0) starts.push(nb0[k]);
+    if (!starts.length) return null;
+    if (!this._coarseCorridor(starts, (cell) => cg.goal[cell] === gs, SEARCH.landing / AREA)) return null;
+    const W0 = map.width;
+    const inCorridor = (t) => cg.mark[(((t / W0) | 0) / cg.k | 0) * cg.cw + (((t % W0) / cg.k) | 0)] === cg.markStamp;
     const stamp = this._nextStamp();
     const seen = this._stampArr;
     const parent = this._parent;
@@ -1569,7 +1683,7 @@ export class Game {
       if (found >= 0) break;
       for (let k = 0; k < c; k++) {
         const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        if (terrain[n] !== 0 || seen[n] === stamp || !inCorridor(n)) continue;
         seen[n] = stamp;
         parent[n] = w;
         queue[tail++] = n;

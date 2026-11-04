@@ -100,7 +100,7 @@ export class Renderer {
     this._trailAcc = 0;
     this.view = { x0: 0, y0: 0, x1: width, y1: height };
 
-    this.distField = new Uint16Array(size);
+    this.distField = null;
     this.labels = [];
     this.labelById = new Map();
     this.lastLabelTime = -Infinity;
@@ -336,19 +336,33 @@ export class Renderer {
    */
   _updateLabels() {
     const { owner, players, map } = this.game;
-    const W = map.width;
-    const H = map.height;
+    // Con mapas muy grandes basta una rejilla más basta (F×F casillas por celda)
+    const F = Math.max(1, Math.floor(RES / 2));
+    const MW = map.width;
+    const W = Math.ceil(MW / F);
+    const H = Math.ceil(map.height / F);
+    const n = W * H;
+    if (!this._lbOwner || this._lbOwner.length !== n) {
+      this._lbOwner = new Uint16Array(n);
+      this.distField = new Uint16Array(n);
+    }
+    const own = this._lbOwner;
+    const half = F >> 1;
+    for (let y = 0; y < H; y++) {
+      const sy = Math.min(map.height - 1, y * F + half) * MW;
+      for (let x = 0; x < W; x++) own[y * W + x] = owner[sy + Math.min(MW - 1, x * F + half)];
+    }
     const d = this.distField;
-    for (let i = 0; i < d.length; i++) {
-      const o = owner[i];
+    for (let i = 0; i < n; i++) {
+      const o = own[i];
       if (!o) {
         d[i] = 0;
         continue;
       }
       const x = i % W;
       const edge =
-        x === 0 || x === W - 1 || i < W || i >= d.length - W ||
-        owner[i - 1] !== o || owner[i + 1] !== o || owner[i - W] !== o || owner[i + W] !== o;
+        x === 0 || x === W - 1 || i < W || i >= n - W ||
+        own[i - 1] !== o || own[i + 1] !== o || own[i - W] !== o || own[i + W] !== o;
       d[i] = edge ? 1 : 65535;
     }
     for (let y = 0; y < H; y++) {
@@ -373,8 +387,8 @@ export class Renderer {
     }
     const best = new Uint16Array(players.length);
     const at = new Int32Array(players.length).fill(-1);
-    for (let i = 0; i < d.length; i++) {
-      const o = owner[i];
+    for (let i = 0; i < n; i++) {
+      const o = own[i];
       if (o && d[i] > best[o]) {
         best[o] = d[i];
         at[o] = i;
@@ -384,7 +398,7 @@ export class Renderer {
     this.labelById.clear();
     for (const p of players) {
       if (!p || !p.alive || at[p.id] < 0) continue;
-      const L = { player: p, x: (at[p.id] % W) + 0.5, y: Math.floor(at[p.id] / W) + 0.5, r: best[p.id] };
+      const L = { player: p, x: (at[p.id] % W) * F + F / 2, y: Math.floor(at[p.id] / W) * F + F / 2, r: best[p.id] * F };
       this.labels.push(L);
       this.labelById.set(p.id, L);
     }

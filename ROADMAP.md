@@ -99,8 +99,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 
 ## ✅ Casillas pequeñas, HUD plegable e inicio renovado (hecho)
 
-- Mapas al doble de resolución (factor `RES`), con todo reescalado y
-  búsquedas por el mar más rápidas (A*, caché y topes)
+- Mapas a 4× resolución (factor `RES`, 16 veces más casillas), con todo
+  reescalado; rutas por mar en dos pasos (rejilla gruesa y pasillo fino)
 - Tropas más lentas y conquista más barata; alerta roja proporcional
 - Combates bajo la clasificación; paneles plegables; aliados en verde
 - Buque de guerra circular con barra de vida; rastro de los desembarcos

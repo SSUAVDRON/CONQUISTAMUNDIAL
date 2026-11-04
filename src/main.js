@@ -688,7 +688,11 @@ window.__trinchera = state;
 state.camera = camera; // para pruebas automáticas
 state.profile = profile;
 
-startDemo();
+// El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
+state.demo = true;
+requestAnimationFrame(() => setTimeout(() => {
+  if (!state.game) startDemo();
+}, 30));
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador

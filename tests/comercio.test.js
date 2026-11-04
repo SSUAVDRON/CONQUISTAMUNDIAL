@@ -58,9 +58,10 @@ test('los mercantes viajan a otro puerto y pagan a los dos dueños', () => {
   let paid = false;
   for (let i = 0; i < 4000 && !paid; i++) {
     const before = [a.gold, b.gold];
-    const trade = game.merchants.find((m) => m.kind === 'trade' && m.owner === a.id && m.path && m.pos === m.path.length - 2);
+    const trades = game.merchants.filter((m) => m.kind === 'trade' && m.owner === a.id && m.path);
     game.tick();
-    if (trade && trade.done) {
+    const trade = trades.find((m) => m.done);
+    if (trade) {
       assert.ok(a.gold - before[0] >= trade.value, 'el dueño cobra el viaje');
       assert.ok(b.gold - before[1] >= trade.value * CONFIG.tradeReceiverShare, 'el puerto de destino cobra su parte');
       paid = true;

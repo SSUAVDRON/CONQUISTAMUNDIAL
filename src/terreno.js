@@ -67,7 +67,16 @@ export function terrainScale(map) {
  * Devuelve { water, land, scale }: `water` mide lo mismo que el mapa y `land`
  * es `scale` veces mayor (transparente sobre el agua salvo la espuma).
  */
+let lastPaint = null; // el terreno pintado del último mapa (mismo mapa = mismo dibujo)
+
 export function paintTerrain(map) {
+  if (lastPaint && lastPaint.map === map) return lastPaint.result;
+  const result = paintTerrainNow(map);
+  lastPaint = { map, result };
+  return result;
+}
+
+function paintTerrainNow(map) {
   const { width: W, height: H, size, terrain, shade } = map;
   const S = terrainScale(map);
   const seed = (W * 73856093) ^ (H * 19349663);
@@ -88,7 +97,7 @@ export function paintTerrain(map) {
     }
     return lats;
   })();
-  const mixc = (c, d, k) => [c[0] + (d[0] - c[0]) * k, c[1] + (d[1] - c[1]) * k, c[2] + (d[2] - c[2]) * k];
+  // Paleta (r, g, b) de cada clima
   const C = {
     selva: [62, 122, 58],
     pradera: [111, 160, 78],
@@ -108,75 +117,102 @@ export function paintTerrain(map) {
   const R = new Float32Array(size);
   const G = new Float32Array(size);
   const B = new Float32Array(size);
+  // Sin crear arreglos por casilla (son millones): mezcla sobre r, g, b
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  const set = (c) => {
+    r = c[0];
+    g = c[1];
+    b = c[2];
+  };
+  const mix = (c, k) => {
+    if (k <= 0) return;
+    r += (c[0] - r) * k;
+    g += (c[1] - g) * k;
+    b += (c[2] - b) * k;
+  };
   for (let y = 0; y < H; y++) {
-    const lat = latOf ? Math.abs(latOf[y]) : null;
+    const lat = latOf ? Math.abs(latOf[y]) : -1;
+    // Lo que depende solo de la fila (latitud)
+    const sub = lat >= 0 ? smooth(10, 17, lat) * (1 - smooth(31, 38, lat)) : 0; // franja de desiertos
+    const rowCold = lat >= 0 ? smooth(52, 68, lat) : 0;
+    const tropical = lat >= 0 ? 1 - smooth(8, 16, lat) : 0;
+    const tropic = lat >= 0 ? 1 - smooth(30, 45, lat) : 0.5;
+    const steppe = smooth(0, 0.5, rowCold) * (1 - smooth(0.5, 1, rowCold));
+    const tundra = smooth(0.45, 0.85, rowCold);
+    const polar = smooth(0.9, 1, rowCold);
+    const snowA = 0.66 + tropic * 0.22 - rowCold * 0.35;
+    const snowB = 0.8 + tropic * 0.18 - rowCold * 0.35;
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       const t = terrain[i];
       if (t === WATER) continue;
-      const s = shade[i] / 255;
       const moist = valueNoise(x, y, 30 * RES, seed);
-      const forest = valueNoise(x, y, 9 * RES, seed + 11);
       // Aridez (0 húmedo, 1 desierto) y frío (0 templado, 1 helado)
-      let dry;
-      let cold;
-      if (lat !== null) {
-        const sub = smooth(10, 17, lat) * (1 - smooth(31, 38, lat)); // franja de desiertos
-        dry = clamp(sub * (1.25 - moist * 0.9), 0, 1);
-        cold = smooth(52, 68, lat);
-      } else {
-        dry = smooth(0.32, 0.18, moist);
-        cold = 0;
-      }
-      const tropical = lat !== null ? 1 - smooth(8, 16, lat) : 0;
-      let c;
+      const dry = lat >= 0 ? clamp(sub * (1.25 - moist * 0.9), 0, 1) : smooth(0.32, 0.18, moist);
       if (t === PLAINS) {
-        c = mixc(C.pradera, C.seca, smooth(0.35, 0.75, moist) * 0.6);
-        c = mixc(c, C.selva, tropical * 0.85);
-        c = mixc(c, C.bosque, smooth(0.6, 0.7, forest) * (1 - dry) * (1 - cold) * 0.85);
-        c = mixc(c, dry > 0.55 ? C.desierto : C.sabana, smooth(0.25, 0.75, dry));
-        c = mixc(c, C.estepa, smooth(0, 0.5, cold) * (1 - smooth(0.5, 1, cold)));
-        c = mixc(c, C.tundra, smooth(0.45, 0.85, cold));
-        c = mixc(c, C.nieve, smooth(0.9, 1, cold) * smooth(0.3, 0.6, moist));
+        set(C.pradera);
+        mix(C.seca, smooth(0.35, 0.75, moist) * 0.6);
+        mix(C.selva, tropical * 0.85);
+        const fk = (1 - dry) * (1 - rowCold) * 0.85;
+        if (fk > 0.01) mix(C.bosque, smooth(0.6, 0.7, valueNoise(x, y, 9 * RES, seed + 11)) * fk);
+        mix(dry > 0.55 ? C.desierto : C.sabana, smooth(0.25, 0.75, dry));
+        mix(C.estepa, steppe);
+        mix(C.tundra, tundra);
+        mix(C.nieve, polar * smooth(0.3, 0.6, moist));
       } else if (t === HIGHLAND) {
-        c = mixc(C.meseta, C.mesetaSeca, dry);
-        c = mixc(c, C.mesetaFria, cold);
+        set(C.meseta);
+        mix(C.mesetaSeca, dry);
+        mix(C.mesetaFria, rowCold);
       } else {
-        // Montaña: roca con las cumbres nevadas (más nieve cuanto más al norte)
-        c = mixc(C.roca, C.rocaOscura, smooth(0.2, 0.6, s) * 0.5);
-        // Nieve solo en las cumbres más altas; en el norte, también más abajo
-        const tropic = lat !== null ? 1 - smooth(30, 45, lat) : 0.5;
-        c = mixc(c, C.nieve, smooth(0.66 + tropic * 0.22 - cold * 0.35, 0.8 + tropic * 0.18 - cold * 0.35, s));
+        // Montaña: roca con nieve solo en las cumbres altas (más abajo en el norte)
+        const sh = shade[i] / 255;
+        set(C.roca);
+        mix(C.rocaOscura, smooth(0.2, 0.6, sh) * 0.5);
+        mix(C.nieve, smooth(snowA, snowB, sh));
       }
       // Contorno suave entre tipos de terreno: más «mapa dibujado»
-      const differs = (n) => terrain[n] !== WATER && terrain[n] !== t;
-      if ((x > 0 && differs(i - 1)) || (x < W - 1 && differs(i + 1)) || (y > 0 && differs(i - W)) || (y < H - 1 && differs(i + W))) {
-        const k = t === MOUNTAIN ? 0.82 : t === HIGHLAND ? 0.92 : 1;
-        c = [c[0] * k, c[1] * k, c[2] * k];
+      if (t !== PLAINS) {
+        const l = x > 0 ? terrain[i - 1] : t;
+        const rr = x < W - 1 ? terrain[i + 1] : t;
+        const u = y > 0 ? terrain[i - W] : t;
+        const dd = y < H - 1 ? terrain[i + W] : t;
+        if ((l !== WATER && l !== t) || (rr !== WATER && rr !== t) || (u !== WATER && u !== t) || (dd !== WATER && dd !== t)) {
+          const k = t === MOUNTAIN ? 0.82 : 0.92;
+          r *= k;
+          g *= k;
+          b *= k;
+        }
       }
-      R[i] = c[0];
-      G[i] = c[1];
-      B[i] = c[2];
+      R[i] = r;
+      G[i] = g;
+      B[i] = b;
     }
   }
 
   // ---- Qué vecinos son de otro tipo (agua/tierra), para playas y espuma
   //  bits: 1 O, 2 E, 4 N, 8 S, 16 NO, 32 NE, 64 SO, 128 SE
   const edge = new Uint8Array(size);
+  const isW = new Uint8Array(size);
+  for (let i = 0; i < size; i++) isW[i] = terrain[i] === WATER ? 1 : 0;
   for (let y = 0; y < H; y++) {
+    const up = y > 0;
+    const down = y < H - 1;
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
-      const water = terrain[i] === WATER;
-      const other = (xx, yy) => xx >= 0 && yy >= 0 && xx < W && yy < H && (terrain[yy * W + xx] === WATER) !== water;
+      const w = isW[i];
+      const left = x > 0;
+      const right = x < W - 1;
       let m = 0;
-      if (other(x - 1, y)) m |= 1;
-      if (other(x + 1, y)) m |= 2;
-      if (other(x, y - 1)) m |= 4;
-      if (other(x, y + 1)) m |= 8;
-      if (other(x - 1, y - 1)) m |= 16;
-      if (other(x + 1, y - 1)) m |= 32;
-      if (other(x - 1, y + 1)) m |= 64;
-      if (other(x + 1, y + 1)) m |= 128;
+      if (left && isW[i - 1] !== w) m |= 1;
+      if (right && isW[i + 1] !== w) m |= 2;
+      if (up && isW[i - W] !== w) m |= 4;
+      if (down && isW[i + W] !== w) m |= 8;
+      if (up && left && isW[i - W - 1] !== w) m |= 16;
+      if (up && right && isW[i - W + 1] !== w) m |= 32;
+      if (down && left && isW[i + W - 1] !== w) m |= 64;
+      if (down && right && isW[i + W + 1] !== w) m |= 128;
       edge[i] = m;
     }
   }

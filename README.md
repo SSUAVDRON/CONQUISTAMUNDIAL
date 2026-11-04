@@ -111,7 +111,7 @@ base de datos.
 | Concepto | Cómo funciona |
 |---|---|
 | Despliegue | Los primeros 10 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. |
-| Mapa | Casillas pequeñas: los mapas tienen el doble de resolución que al principio (el mundo, 1760×798). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. |
+| Mapa | Casillas muy pequeñas: los mapas tienen 4 veces la resolución del principio en cada eje (16 veces más casillas; el mundo, 3520×1597). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. Las rutas por mar se buscan primero en una rejilla gruesa y luego solo por ese pasillo, así que siguen siendo rápidas. |
 | Tropas | Crecen solas (más despacio que al principio y con un máximo menor). El máximo y la velocidad dependen de tu territorio; cerca del máximo el crecimiento se frena. |
 | Atacar | Clic en tierra libre o en una nación vecina: se envía el % de tus tropas que marque **Fuerza de ataque**. Repetir el clic refuerza el ataque. |
 | Coste | Tierra libre: 0,5 tropas por casilla. Naciones: depende de su densidad (tropas ÷ casillas). Mesetas ×1,4 y montañas ×2 en coste y tiempo. |
