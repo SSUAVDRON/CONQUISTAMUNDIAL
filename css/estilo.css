@@ -1445,3 +1445,45 @@ body.con-tutorial #eventos { top: auto; }
 @media (min-width: 721px) and (max-width: 1499px) {
   #avisos { bottom: calc(var(--pj-alto, 120px) + 22px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Clasificación: aliados en verde, colonias apagadas */
+#lista-clasificacion li.aliado { background: linear-gradient(90deg, rgba(70, 200, 120, 0.26), rgba(70, 200, 120, 0.08)); box-shadow: inset 2px 0 0 #5fd38d; }
+#lista-clasificacion li.aliado .nom-txt { color: #b8f5cf; font-weight: 700; }
+#lista-clasificacion li.aliado .lb-barra span { background: #5fd38d; }
+#lista-clasificacion li.colonia .nom-txt { color: var(--texto-suave); font-style: italic; }
+
+/* Edificios que no puedes pagar: grises de un vistazo */
+#construir button.caro { filter: grayscale(1) brightness(0.85); opacity: 0.62; }
+#construir button.caro:hover { filter: grayscale(0.6); opacity: 0.85; }
+
+/* Panel central más estrecho y compacto (mismos textos e iconos) */
+#panel-jugador { gap: 10px; padding: 7px 36px 7px 12px; }
+.pj-resumen { flex: 1.1 1 0; }
+.pj-ataque { flex: 0.55 1 0; padding: 0 10px; }
+.pj-obras { flex: 1.6 1 0; }
+#panel-jugador .cabecera { margin-bottom: 3px; }
+#panel-jugador .barra { margin-bottom: 5px; }
+#construir { gap: 4px; }
+#construir button { height: 34px; padding: 3px 6px 3px 4px; gap: 5px; }
+#construir canvas { padding: 1px; }
+.pj-plegar { top: 5px; right: 5px; width: 24px; height: 24px; }
+@media (min-width: 1100px) {
+  /* Centrado y con anchura justa: no ocupa toda la pantalla */
+  #panel-jugador { left: 0; right: 0; margin: 0 auto; width: min(940px, calc(100vw - 24px)); max-width: none; }
+}
+@media (min-width: 1500px) {
+  #panel-jugador { width: min(940px, calc(100vw - 660px)); }
+}
+#panel-jugador .pj-resumen { flex: 1.35 1 0; }
+#panel-jugador .pj-obras { flex: 1.45 1 0; }
+#panel-jugador .cifras { grid-template-columns: 1.55fr 1.05fr 0.9fr 0.7fr; }
+#panel-jugador .cifras .valor { overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 1100px) {
+  #panel-jugador { width: min(1010px, calc(100vw - 24px)); }
+  #panel-jugador .pj-obras { flex: 1.65 1 0; }
+  #panel-jugador .pj-ataque { flex: 0.5 1 0; }
+}
+@media (min-width: 1500px) {
+  #panel-jugador { width: min(1010px, calc(100vw - 600px)); }
+}
+#construir button { padding: 3px 5px 3px 4px; gap: 4px; }

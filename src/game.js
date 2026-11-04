@@ -1,8 +1,9 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { BUILDINGS, CONFIG, EMOJIS, STRUCTURE_KINDS, cleanRules } from './config.js';
+import { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, cleanRules } from './config.js';
 import { formatNumber } from './format.js';
 import { Rng } from './rng.js';
+import { MinHeap } from './heap.js';
 import { Player } from './player.js';
 import { Attack } from './attack.js';
 import { BotBrain, ColonyBrain } from './bot.js';
@@ -14,6 +15,14 @@ const NB_SET = new Int32Array(4);
 const NB_BORDER = new Int32Array(4);
 const NB_COUNT = new Int32Array(4);
 const NB_SCAN = new Int32Array(4);
+/** Casillas que puede explorar como mucho cada búsqueda por el mar. */
+const SEARCH = {
+  trade: 15000 * AREA, // el comercio es regional
+  fish: 5000 * AREA, // los pesqueros faenan cerca
+  warship: 40000 * AREA,
+  landing: 75000 * AREA, // alcance de un desembarco, como antes de subir la resolución
+};
+
 const NB_BFS = new Int32Array(4);
 const NB_MISC = new Int32Array(4);
 
@@ -65,6 +74,12 @@ export class Game {
     this._stamp = 0;
     this._parent = new Int32Array(map.size);
     this._queue = new Int32Array(map.size);
+    // Para A* por el mar
+    this._closed = new Uint32Array(map.size);
+    this._gcost = new Int32Array(map.size);
+    this._pathHeap = new MinHeap(4096);
+    /** Rutas marítimas ya calculadas (el terreno no cambia): from·size+to → camino. */
+    this._pathCache = new Map();
     this._nextBoatId = 1;
   }
 
@@ -129,8 +144,8 @@ export class Game {
     for (const p of this.players) if (p) p.gold = this.rules.startGold;
     for (const bot of this.bots) {
       const home = bot.player.homeTile;
-      const near = home >= 0 ? this._freeTileNear(home, 10, 30) : -1;
-      if (near >= 0 && this.spawnPlayer(bot.player, near, 30)) continue;
+      const near = home >= 0 ? this._freeTileNear(home, 10 * RES, 30 * AREA) : -1;
+      if (near >= 0 && this.spawnPlayer(bot.player, near, 30 * AREA)) continue;
       const t = this.findSpawnTile();
       if (t >= 0) this.spawnPlayer(bot.player, t);
     }
@@ -565,7 +580,7 @@ export class Game {
     } else {
       // Cuanto mayor la superioridad local, más rápido avanza el frente
       const density = target.troops / Math.max(1, target.tiles);
-      const ratio = atk.troops / (density * atk.inFrontier.size + 1);
+      const ratio = atk.troops / (density * atk.inFrontier.size * RES + 1);
       rate = CONFIG.attackRatePlayer * clamp(Math.sqrt(ratio), 0.2, 1.5);
     }
     atk.budget += Math.max(CONFIG.minAttackBudget, atk.inFrontier.size * rate);
@@ -630,7 +645,7 @@ export class Game {
   /** Edificio propio del tipo `kind` en el clic (o a 2 casillas): se mejoraría. */
   upgradeTarget(p, kind, tile) {
     if (tile < 0 || tile >= this.map.size) return null;
-    const b = this.buildingAt.get(tile) || this.buildingNear(tile, 3);
+    const b = this.buildingAt.get(tile) || this.buildingNear(tile, 3 * RES);
     return b && b.owner === p.id && b.kind === kind ? b : null;
   }
 
@@ -860,7 +875,7 @@ export class Game {
           });
           if (options.length) {
             const dest = options[this.rng.int(0, options.length - 1)];
-            const path = this._waterPath(b.water, dest.water);
+            const path = this._waterPath(b.water, dest.water, SEARCH.trade);
             if (path) this._spawnMerchant(b, 'trade', dest, path.length * CONFIG.tradeGoldPerTile, path);
           }
         }
@@ -884,7 +899,7 @@ export class Game {
         m.path = null;
       }
       if (m.kind === 'trade') this._arriveTrade(m);
-      else this._nextFishingSpot(m);
+      else if (this.ticks >= (m.retryAt || 0)) this._nextFishingSpot(m);
     }
     if (this.merchants.some((m) => m.done)) this.merchants = this.merchants.filter((m) => !m.done);
   }
@@ -905,9 +920,14 @@ export class Game {
     });
   }
 
-  /** El pesquero busca otro caladero cerca de su puerto (o de un puerto de su dueño). */
+  /**
+   * El pesquero busca otro caladero: una búsqueda corta por el agua desde
+   * donde está (nunca falla y cuesta poco). Elige un punto al azar cerca de su
+   * puerto; si se ha alejado, el que más le acerque a él.
+   */
   _nextFishingSpot(m) {
     const map = this.map;
+    const W = map.width;
     let home = this.buildings.find((b) => b.id === m.port && b.owner === m.owner);
     if (!home) {
       // Su puerto ya no es de su dueño: se busca otro del mismo mar
@@ -915,23 +935,60 @@ export class Game {
         map.waterBody[b.water] === map.waterBody[m.tile]);
       if (home) m.port = home.id;
     }
-    const cx = map.x(home ? home.water : m.tile);
-    const cy = map.y(home ? home.water : m.tile);
+    const hx = map.x(home ? home.water : m.tile);
+    const hy = map.y(home ? home.water : m.tile);
     const R = CONFIG.fishRange;
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const x = cx + this.rng.int(-R, R);
-      const y = cy + this.rng.int(-R, R);
-      if (!map.inBounds(x, y)) continue;
-      const t = map.index(x, y);
-      if (map.terrain[t] !== 0 || map.waterBody[t] !== map.waterBody[m.tile]) continue;
-      const path = this._waterPath(m.tile, t);
-      if (path) {
-        m.path = path;
-        m.pos = 0;
-        m.progress = 0;
-        return;
+    m.retryAt = this.ticks + 25;
+    // Anchura limitada a R pasos desde el barco
+    const terrain = map.terrain;
+    const stamp = this._nextStamp();
+    const seen = this._stampArr;
+    const parent = this._parent;
+    const depth = this._gcost;
+    const queue = this._queue;
+    const nb = NB_BFS;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = m.tile;
+    seen[m.tile] = stamp;
+    parent[m.tile] = -1;
+    depth[m.tile] = 0;
+    const near = [];
+    let closest = -1;
+    let closestD = Infinity;
+    while (head < tail) {
+      const t = queue[head++];
+      const d = depth[t];
+      if (d >= R / 3) {
+        const dx = (t % W) - hx;
+        const dy = ((t / W) | 0) - hy;
+        const dh = dx * dx + dy * dy;
+        if (dh <= R * R) near.push(t);
+        if (dh < closestD) {
+          closestD = dh;
+          closest = t;
+        }
+      }
+      if (d >= R) continue;
+      const c = map.neighbors(t, nb);
+      for (let k = 0; k < c; k++) {
+        const n = nb[k];
+        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        seen[n] = stamp;
+        parent[n] = t;
+        depth[n] = d + 1;
+        queue[tail++] = n;
       }
     }
+    const goal = near.length ? near[this.rng.int(0, near.length - 1)] : closest;
+    if (goal < 0) return;
+    const back = [];
+    for (let t = goal; t !== -1; t = parent[t]) back.push(t);
+    back.reverse();
+    if (back.length < 2) return;
+    m.path = Int32Array.from(back);
+    m.pos = 0;
+    m.progress = 0;
   }
 
   _arriveTrade(m) {
@@ -1209,35 +1266,75 @@ export class Game {
   }
 
   /** Ruta por el agua de `from` a `to` (búsqueda en anchura desde el destino). */
-  _waterPath(from, to) {
+  /**
+   * Camino por el agua de `from` a `to` (o null). A* con distancia Manhattan
+   * algo inflada (×1,25): casi óptimo y explora muy pocas casillas. Las rutas
+   * se guardan porque las de comercio entre puertos se repiten mucho.
+   */
+  _waterPath(from, to, maxNodes = SEARCH.warship, cache = true) {
     if (from === to) return null;
     const map = this.map;
     // Mares distintos: no hace falta buscar
     if (map.waterBody[from] !== map.waterBody[to]) return null;
+    const key = from * map.size + to;
+    if (cache) {
+      const cached = this._pathCache.get(key);
+      if (cached !== undefined) return cached;
+    }
+    // Con tope de casillas exploradas: una ruta que da media vuelta al mundo
+    // no merece congelar la partida (se da por imposible)
+    const path = this._astarWater(from, to, maxNodes);
+    if (cache) {
+      if (this._pathCache.size >= 3000) this._pathCache.clear();
+      this._pathCache.set(key, path);
+    }
+    return path;
+  }
+
+  _astarWater(from, to, maxNodes) {
+    const map = this.map;
+    const W = map.width;
     const terrain = map.terrain;
     const stamp = this._nextStamp();
     const seen = this._stampArr;
+    const closed = this._closed;
     const parent = this._parent;
-    const queue = this._queue;
+    const g = this._gcost;
+    const heap = this._pathHeap;
     const nb = NB_BFS;
-    let head = 0;
-    let tail = 0;
-    queue[tail++] = to;
+    const fx = from % W;
+    const fy = (from / W) | 0;
+    const h = (t) => (Math.abs((t % W) - fx) + Math.abs(((t / W) | 0) - fy)) * 1.25;
+    // Se busca de `to` hacia `from` para que el camino salga ya en orden from → to
+    heap.clear();
     seen[to] = stamp;
     parent[to] = -1;
-    while (head < tail) {
-      const t = queue[head++];
-      if (t === from) break;
+    g[to] = 0;
+    heap.push(h(to), to);
+    let found = false;
+    let expanded = 0;
+    while (heap.size > 0 && expanded < maxNodes) {
+      const t = heap.pop();
+      if (closed[t] === stamp) continue;
+      closed[t] = stamp;
+      expanded++;
+      if (t === from) {
+        found = true;
+        break;
+      }
+      const ng = g[t] + 1;
       const c = map.neighbors(t, nb);
       for (let k = 0; k < c; k++) {
         const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        if (terrain[n] !== 0 || closed[n] === stamp) continue;
+        if (seen[n] === stamp && g[n] <= ng) continue;
         seen[n] = stamp;
+        g[n] = ng;
         parent[n] = t;
-        queue[tail++] = n;
+        heap.push(ng + h(n), n);
       }
     }
-    if (seen[from] !== stamp) return null;
+    if (!found) return null;
     const path = [];
     for (let t = from; t !== -1; t = parent[t]) path.push(t);
     return Int32Array.from(path);
@@ -1398,6 +1495,7 @@ export class Game {
   _nextStamp() {
     if (this._stamp >= 0xfffffff0) {
       this._stampArr.fill(0);
+      this._closed.fill(0);
       this._stamp = 0;
     }
     return ++this._stamp;
@@ -1416,7 +1514,7 @@ export class Game {
     let tail = 0;
     queue[tail++] = tile;
     seen[tile] = stamp;
-    while (head < tail && head < 20000) {
+    while (head < tail && head < 20000 * AREA) {
       const t = queue[head++];
       if (map.coastal[t]) return t;
       const c = map.neighbors(t, nb);
@@ -1456,7 +1554,9 @@ export class Game {
     }
 
     let found = -1;
-    while (head < tail) {
+    // Tope de búsqueda: un desembarco no cruza medio planeta (y no congela la partida)
+    const cap = SEARCH.landing;
+    while (head < tail && tail < cap) {
       const w = queue[head++];
       c = map.neighbors(w, nb);
       for (let k = 0; k < c; k++) {

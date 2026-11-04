@@ -1,6 +1,6 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { DEFAULT_RULES, MAP_SIZES, REAL_MAPS, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
+import { DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, START_GOLDS, WIN_SHARES, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { generateMap } from './map.js';
 import { hexToRgb } from './colors.js';
@@ -54,7 +54,7 @@ function mapThumb(id, width = 168) {
     }
   } else {
     const size = MAP_SIZES[id];
-    const map = generateMap(Math.round(size.w / 3), Math.round(size.h / 3), 7 + Object.keys(MAP_SIZES).indexOf(id));
+    const map = generateMap(Math.round(size.w / (3 * RES)), Math.round(size.h / (3 * RES)), 7 + Object.keys(MAP_SIZES).indexOf(id));
     ({ width: w, height: h, terrain } = map);
   }
   const height = Math.round((width * h) / w);

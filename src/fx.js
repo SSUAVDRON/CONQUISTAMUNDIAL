@@ -6,6 +6,8 @@
 // Las posiciones van en casillas del mapa; `z` es la altura (en casillas) y se
 // dibuja desplazando hacia arriba, con lo que chispas y escombros hacen arcos.
 
+import { RES } from './config.js';
+
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -124,6 +126,16 @@ export class Fx {
    */
   add(p) {
     if (this.parts.length >= this.max) return;
+    // Las recetas usan medidas de la rejilla original: se pasan a casillas actuales
+    if (!p.raw) {
+      if (p.vx) p.vx *= RES;
+      if (p.vy) p.vy *= RES;
+      if (p.vz) p.vz *= RES;
+      if (p.g) p.g *= RES;
+      if (p.s0) p.s0 *= RES;
+      if (p.s1) p.s1 *= RES;
+      if (p.z && !p.zAbs) p.z *= RES;
+    }
     p.age = 0;
     p.z ??= 0;
     p.vx ??= 0;
@@ -321,38 +333,38 @@ export class Fx {
       const d = rnd(0, R * 0.9);
       this.add({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, life: rnd(1.5, 3), s0: rnd(0.25, 0.5), min: 2, sprite: 'fire', a0: 0.7, fadeIn: 0.3 });
     }
-    this.decals.push({ x, y, r: R * 1.25, age: 0, life: 14, a: 0.9, sprite: 'scorch' });
+    this.decals.push({ x, y, r: R * 1.25 * RES, age: 0, life: 14, a: 0.9, sprite: 'scorch' });
   }
 
   /** Estallido en el aire (misil derribado) a altura z. */
   airburst(x, y, z) {
     this.flash = Math.max(this.flash, 0.2);
-    this.add({ x, y, z, life: 0.35, s0: 4, s1: 5.5, min: 44, sprite: 'core' });
-    this.add({ x, y, z, life: 0.6, s0: 2.6, s1: 4.2, min: 30, sprite: 'blue', a0: 0.95 });
-    this.add({ x, y, z, life: 0.65, s0: 2, s1: 3.6, min: 24, sprite: 'fire', a0: 0.9 });
-    this.add({ x, y, z, life: 0.6, s0: 0.4, s1: 7, min: 8, ring: true, glowRing: true, color: 'rgba(190, 230, 255, 0.95)', lw: 0.6 });
+    this.add({ zAbs: true, x, y, z, life: 0.35, s0: 4, s1: 5.5, min: 44, sprite: 'core' });
+    this.add({ zAbs: true, x, y, z, life: 0.6, s0: 2.6, s1: 4.2, min: 30, sprite: 'blue', a0: 0.95 });
+    this.add({ zAbs: true, x, y, z, life: 0.65, s0: 2, s1: 3.6, min: 24, sprite: 'fire', a0: 0.9 });
+    this.add({ zAbs: true, x, y, z, life: 0.6, s0: 0.4, s1: 7, min: 8, ring: true, glowRing: true, color: 'rgba(190, 230, 255, 0.95)', lw: 0.6 });
     for (let k = 0; k < 6; k++) {
-      this.add({ x: x + rnd(-1, 1), y: y + rnd(-1, 1), z: z + rnd(-0.5, 0.5), vx: rnd(-1, 1), vy: rnd(-1, 1), vz: rnd(-0.5, 1), drag: 1.2, life: rnd(0.5, 0.9), s0: 1, s1: 1.8, min: 6, sprite: 'fire', a0: 0.85 });
+      this.add({ zAbs: true, x: x + rnd(-1, 1), y: y + rnd(-1, 1), z: z + rnd(-0.5, 0.5), vx: rnd(-1, 1), vy: rnd(-1, 1), vz: rnd(-0.5, 1), drag: 1.2, life: rnd(0.5, 0.9), s0: 1, s1: 1.8, min: 6, sprite: 'fire', a0: 0.85 });
     }
     // Fragmentos que caen ardiendo
     for (let k = 0; k < 40; k++) {
       const a = rnd(0, TAU);
       const v = rnd(2, 8);
-      this.add({
+      this.add({ zAbs: true,
         x, y, z, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rnd(-1, 5), g: 12, drag: 0.6,
         life: rnd(0.9, 1.8), s0: 0.2, min: 1.2, spark: true, color: Math.random() < 0.6 ? '#fff1c9' : '#ffa552',
       });
     }
     for (let k = 0; k < 5; k++) {
-      this.add({ x: x + rnd(-1, 1), y: y + rnd(-1, 1), z, vx: rnd(-0.5, 0.5), vy: rnd(-0.5, 0.5), vz: rnd(-0.3, 0.3), drag: 0.5, life: rnd(1.8, 3), s0: 0.8, s1: 2.6, min: 4, sprite: 'smoke', a0: 0.55, fadeIn: 0.1 });
+      this.add({ zAbs: true, x: x + rnd(-1, 1), y: y + rnd(-1, 1), z, vx: rnd(-0.5, 0.5), vy: rnd(-0.5, 0.5), vz: rnd(-0.3, 0.3), drag: 0.5, life: rnd(1.8, 3), s0: 0.8, s1: 2.6, min: 4, sprite: 'smoke', a0: 0.55, fadeIn: 0.1 });
     }
     this.shake = Math.max(this.shake, 2);
   }
 
   /** Petardazo pequeño (interceptor que falla). */
   pop(x, y, z) {
-    this.add({ x, y, z, life: 0.25, s0: 1.2, s1: 2, min: 10, sprite: 'fire' });
-    this.add({ x, y, z, life: 1.6, s0: 0.5, s1: 1.8, min: 4, sprite: 'smoke', a0: 0.5, vz: 0.4, fadeIn: 0.1 });
+    this.add({ zAbs: true, x, y, z, life: 0.25, s0: 1.2, s1: 2, min: 10, sprite: 'fire' });
+    this.add({ zAbs: true, x, y, z, life: 1.6, s0: 0.5, s1: 1.8, min: 4, sprite: 'smoke', a0: 0.5, vz: 0.4, fadeIn: 0.1 });
   }
 
   /** Salpicadura en el agua (proyectil, barco hundido). */
@@ -383,7 +395,7 @@ export class Fx {
     for (let i = 0; i < 5 * k; i++) {
       this.add({ x: x + rnd(-0.6, 0.6), y: y + rnd(-0.6, 0.6), vx: 0.4, vz: rnd(0.4, 1.2), drag: 0.4, life: rnd(2, 3.5), s0: 0.5 * k, s1: 2.2 * k, min: 4, sprite: 'dark', a0: 0.6, fadeIn: 0.1 });
     }
-    this.decals.push({ x, y, r: 1.8 * k, age: 0, life: 9, a: 0.55, sprite: 'dark' });
+    this.decals.push({ x, y, r: 1.8 * k * RES, age: 0, life: 9, a: 0.55, sprite: 'dark' });
     if (big) this.shake = Math.max(this.shake, 3);
   }
 
@@ -416,7 +428,7 @@ export class Fx {
 
   /** Humo del motor de un misil. */
   trail(x, y, z) {
-    this.add({ x: x + rnd(-0.15, 0.15), y: y + rnd(-0.15, 0.15), z, vz: rnd(-0.1, 0.2), drag: 0.5, life: rnd(1, 1.8), s0: 0.35, s1: rnd(1, 1.6), min: 2, sprite: 'steam', a0: 0.45 });
+    this.add({ zAbs: true, x: x + rnd(-0.15, 0.15), y: y + rnd(-0.15, 0.15), z, vz: rnd(-0.1, 0.2), drag: 0.5, life: rnd(1, 1.8), s0: 0.35, s1: rnd(1, 1.6), min: 2, sprite: 'steam', a0: 0.45 });
   }
 
   /** Fogonazo del cañón. */
@@ -427,7 +439,7 @@ export class Fx {
 
   /** Proyectil de buque hasta (tx, ty); al llegar, salpica o estalla. */
   shell(x, y, tx, ty, onWater) {
-    const T = 0.22 + Math.hypot(tx - x, ty - y) * 0.02;
+    const T = 0.22 + (Math.hypot(tx - x, ty - y) / RES) * 0.02;
     let t = 0;
     const fx = this;
     this.scripts.push({
@@ -442,13 +454,13 @@ export class Fx {
       draw(ctx, cam) {
         const k = t / T;
         const px = x + (tx - x) * k;
-        const py = y + (ty - y) * k - Math.sin(Math.PI * k) * 1.2;
+        const py = y + (ty - y) * k - Math.sin(Math.PI * k) * 1.2 * RES;
         const sx = (px - cam.x) * cam.zoom;
         const sy = (py - cam.y) * cam.zoom;
         ctx.globalCompositeOperation = 'lighter';
         ctx.fillStyle = '#ffe7b0';
         ctx.beginPath();
-        ctx.arc(sx, sy, Math.max(1.5, cam.zoom * 0.18), 0, TAU);
+        ctx.arc(sx, sy, Math.max(1.5, cam.zoom * RES * 0.18), 0, TAU);
         ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
       },
@@ -462,9 +474,9 @@ export class Fx {
    */
   intercept(sx, sy, mx, my, mz, vx, vy, vz, hit, missileColor) {
     const T = 0.38;
-    const ex = mx + vx * T + (hit ? 0 : rnd(-2, 2));
-    const ey = my + vy * T + (hit ? 0 : rnd(-2, 2));
-    const ez = Math.max(0.5, mz + vz * T);
+    const ex = mx + vx * T + (hit ? 0 : rnd(-2, 2) * RES);
+    const ey = my + vy * T + (hit ? 0 : rnd(-2, 2) * RES);
+    const ez = Math.max(0.5 * RES, mz + vz * T);
     let t = 0;
     const fx = this;
     let puff = 0;
@@ -478,7 +490,7 @@ export class Fx {
         puff += dt;
         while (puff > 0.016) {
           puff -= 0.016;
-          fx.add({ x: sx + (ex - sx) * k, y: sy + (ey - sy) * k, z: ez * k * k, drag: 0.5, life: rnd(0.6, 1.1), s0: 0.18, s1: 0.7, min: 1.5, sprite: 'steam', a0: 0.5 });
+          fx.add({ x: sx + (ex - sx) * k, y: sy + (ey - sy) * k, z: ez * k * k, zAbs: true, drag: 0.5, life: rnd(0.6, 1.1), s0: 0.18, s1: 0.7, min: 1.5, sprite: 'steam', a0: 0.5 });
         }
         if (t < T) return true;
         if (hit) fx.airburst(ex, ey, ez);
@@ -499,7 +511,7 @@ export class Fx {
           const qx = mx + vx * t;
           const qy = my + vy * t;
           const qz = mz + vz * t;
-          drawMissileSprite(ctx, (qx - cam.x) * z, (qy - qz - cam.y) * z, Math.atan2(vy - vz, vx), Math.min(22, Math.max(9, z * 2.2)), missileColor, t);
+          drawMissileSprite(ctx, (qx - cam.x) * z, (qy - qz - cam.y) * z, Math.atan2(vy - vz, vx), Math.min(30, Math.max(16, z * RES * 3)), missileColor, t);
         }
       },
     });

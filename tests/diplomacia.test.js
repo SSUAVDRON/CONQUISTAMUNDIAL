@@ -3,11 +3,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { CONFIG } from '../src/config.js';
+import { CONFIG, RES } from '../src/config.js';
 
 /** Dos naciones humanas pegadas (A y B) en la mayor masa de tierra, ya en juego. */
 function twoNeighbors(seed = 11) {
-  const map = generateMap(220, 130, seed);
+  const map = generateMap(220 * RES, 130 * RES, seed);
   const game = new Game({ map, seed });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 255, 0], false);
@@ -145,7 +145,7 @@ test('si solo quedan aliados entre sí, gana la alianza', () => {
 });
 
 test('bots: hacen diplomacia y nunca se atacan entre aliados', () => {
-  const map = generateMap(260, 150, 77);
+  const map = generateMap(260 * RES, 150 * RES, 77);
   const game = new Game({ map, seed: 77 });
   game.addBots(14);
   game.start();

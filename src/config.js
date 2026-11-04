@@ -3,15 +3,25 @@
 
 export const TICK_MS = 100; // 10 ticks por segundo de simulación
 
+/**
+ * Resolución del mapa: casillas por cada casilla de la rejilla original, en
+ * cada eje. Los valores de abajo están pensados para la rejilla original y se
+ * adaptan con estos factores: distancias y velocidades × RES, valores por
+ * casilla ÷ AREA (así una misma superficie vale lo mismo en tropas y oro).
+ */
+export const RES = 2;
+export const AREA = RES * RES;
+const RES15 = RES * Math.sqrt(RES); // (AREA)^0,75: para fórmulas con casillas^0,75
+
 export const TERRAIN = { WATER: 0, PLAINS: 1, HIGHLAND: 2, MOUNTAIN: 3 };
 export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
   spawnTicks: 100, // 10 s
-  spawnRadius: 4,
+  spawnRadius: 4 * RES,
   startTroops: 1500,
-  minSpawnBodySize: 150, // no se puede empezar en islotes minúsculos
+  minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
 
   // Victoria: controlar esta fracción de toda la tierra
   winLandShare: 0.7,
@@ -19,43 +29,43 @@ export const CONFIG = {
   // Tropas: máximo y crecimiento por tick (un 40 % menos que al principio:
   // menos tropas en el mapa y crecen más despacio)
   maxTroopsBase: 1200,
-  maxTroopsPerTile: 36,
+  maxTroopsPerTile: 36 / AREA,
   growthBase: 6,
-  growthTileMult: 0.3, // × casillas^0,75
+  growthTileMult: 0.3 / RES15, // × casillas^0,75
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
-  wildTileCost: 2, // tropas por casilla de tierra libre (llanura)
-  playerTileBaseCost: 1, // coste fijo por casilla enemiga
+  wildTileCost: 2 / AREA, // tropas por casilla de tierra libre (llanura)
+  playerTileBaseCost: 1 / AREA, // coste fijo por casilla enemiga
   defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
-  attackRateWild: 0.1, // casillas por tick por casilla de frente (tierra libre)
-  attackRatePlayer: 0.04, // ídem contra jugadores (se escala con la superioridad)
-  minAttackBudget: 0.25,
+  attackRateWild: 0.1 * RES, // casillas por tick por casilla de frente (tierra libre)
+  attackRatePlayer: 0.04 * RES, // ídem contra jugadores (se escala con la superioridad)
+  minAttackBudget: 0.25 * RES,
 
   // Barcos de transporte
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
-  boatSpeed: 0.8, // casillas por tick
+  boatSpeed: 0.8 * RES, // casillas por tick
 
   // Oro: ingreso por tick = base + casillas^0,75 × mult (× bonus de puertos)
   startGold: 0,
   goldBase: 50,
-  goldTileMult: 1.4,
+  goldTileMult: 1.4 / RES15,
   plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla
   tileLootShare: 1, // al conquistar una casilla te llevas su parte del oro del país (oro ÷ casillas)
 
   // Colonias: bots débiles que no son naciones (presa fácil con oro que saquear)
   colonyStrength: 0.45, // tropas máximas y crecimiento respecto a una nación
   colonyDefenseMult: 0.55, // conquistarlas cuesta menos
-  colonySpawnRadius: 2,
+  colonySpawnRadius: 2 * RES,
 
   // Edificios
-  buildingMinDist: 5, // casillas mínimas entre dos edificios
-  portSnap: 6, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
+  buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
+  portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   cityMaxTroops: 9000, // tropas máximas extra por nivel de ciudad
   portGoldBonus: 0.1, // +10% de oro por puerto
   factoryGoldBonus: 0.25, // +25% de oro por fábrica
-  fortRadius: 10,
+  fortRadius: 10 * RES,
   fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
   // Precios, niveles y obras
   inflation: 0.12, // cada compra (edificio, mejora o buque) encarece un 12 % todo lo demás; no afecta a misiles, silos ni antimisiles
@@ -65,17 +75,17 @@ export const CONFIG = {
   // Efecto de cada nivel por encima del 1: ciudad +15k tropas, puerto +10 % de
   // oro y un pesquero más, fábrica +25 % de oro, fortaleza +2 de radio y +0,4 de
   // defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto
-  fortRadiusPerLevel: 2,
+  fortRadiusPerLevel: 2 * RES,
   fortMultPerLevel: 0.4,
   siloReloadPerLevel: 0.15,
-  samRangePerLevel: 3,
+  samRangePerLevel: 3 * RES,
   samHitPerLevel: 0.07,
 
   // Buques de guerra
   warshipHp: 100,
   warshipDamage: 1.5, // vida que quitan por tick a otro buque o a un puerto
-  warshipRange: 9, // casillas
-  warshipSpeed: 0.7, // casillas por tick
+  warshipRange: 9 * RES, // casillas
+  warshipSpeed: 0.7 * RES, // casillas por tick
   warshipsPerPort: 3,
   portHp: 80,
   portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
@@ -83,21 +93,21 @@ export const CONFIG = {
   // Economía naval: barcos automáticos de los puertos
   fishPerPort: 2, // pesqueros por puerto
   fishGold: 37.5, // oro por tick de cada pesquero
-  fishRange: 14, // casillas alrededor del puerto donde faenan
-  fishSpeed: 0.4,
+  fishRange: 14 * RES, // casillas alrededor del puerto donde faenan
+  fishSpeed: 0.4 * RES,
   tradeEveryMin: 200, // ticks entre mercantes de un mismo puerto
   tradeEveryMax: 400,
-  tradeGoldPerTile: 450, // oro por casilla de ruta, al llegar
+  tradeGoldPerTile: 450 / RES, // oro por casilla de ruta, al llegar
   tradeReceiverShare: 0.5, // parte para el dueño del puerto de destino
-  tradeSpeed: 0.6,
+  tradeSpeed: 0.6 * RES,
 
   // Misiles y antimisiles
-  missileRadius: 8, // casillas arrasadas alrededor del impacto
-  missileSpeed: 3, // casillas por tick
-  missileRange: 220, // distancia máxima desde el silo
+  missileRadius: 8 * RES, // casillas arrasadas alrededor del impacto
+  missileSpeed: 3 * RES, // casillas por tick
+  missileRange: 220 * RES, // distancia máxima desde el silo
   siloReload: 150, // ticks entre lanzamientos de un mismo silo
   missileTroopLoss: 1.2, // × densidad del defensor por casilla arrasada
-  samRange: 22, // radio de intercepción de una batería
+  samRange: 22 * RES, // radio de intercepción de una batería
   samReload: 80, // ticks entre disparos de una batería
   samHitChance: 0.6, // probabilidad de derribar el misil al disparar
 
@@ -155,9 +165,9 @@ export const BUILDING_KINDS = Object.keys(BUILDINGS);
 
 /** Mapas aleatorios (generados con la semilla). */
 export const MAP_SIZES = {
-  pequeno: { w: 360, h: 210, label: 'Pequeño' },
-  mediano: { w: 520, h: 300, label: 'Mediano' },
-  grande: { w: 720, h: 420, label: 'Grande' },
+  pequeno: { w: 360 * RES, h: 210 * RES, label: 'Pequeño' },
+  mediano: { w: 520 * RES, h: 300 * RES, label: 'Mediano' },
+  grande: { w: 720 * RES, h: 420 * RES, label: 'Grande' },
 };
 
 /** Mapas del mundo real (datos en mapas-reales.js); los bots son países. */

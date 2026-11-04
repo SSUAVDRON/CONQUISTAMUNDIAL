@@ -1,6 +1,8 @@
 // Tutorial guiado: una partida pequeña con pasos que avanzan solos cuando el
 // jugador hace lo que se le pide. Cada paso puede resaltar un control.
 
+import { AREA } from './config.js';
+
 const $ = (id) => document.getElementById(id);
 
 /**
@@ -23,7 +25,7 @@ const STEPS = [
     enter: (s, step) => {
       step.startTiles = s.human.tiles;
     },
-    check: (s, step) => s.human.tiles >= step.startTiles + 40,
+    check: (s, step) => s.human.tiles >= step.startTiles + 40 * AREA,
   },
   {
     text: 'La fuerza de ataque decide qué parte de tus tropas envías en cada clic. Pulsa la tecla 5 o mueve el control al 50 %.',

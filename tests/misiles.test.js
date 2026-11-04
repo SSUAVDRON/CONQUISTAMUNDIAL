@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras } from './ayuda.js';
-import { BUILDINGS, CONFIG } from '../src/config.js';
+import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
 /** Tres naciones en la masa de tierra mayor, ya en juego y con oro de sobra. */
 function setup(seed = 11) {
-  const map = generateMap(240, 140, seed);
+  const map = generateMap(240 * RES, 140 * RES, seed);
   const game = new Game({ map, seed });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 0, 255], false);
@@ -19,7 +19,7 @@ function setup(seed = 11) {
   const ta = inland[Math.floor(inland.length * 0.2)];
   const tb = inland.find((t) => {
     const d = Math.hypot(map.x(t) - map.x(ta), map.y(t) - map.y(ta));
-    return d > 40 && d < 80 && game.owner[t] === 0;
+    return d > 40 * RES && d < 80 * RES && game.owner[t] === 0;
   });
   assert.ok(game.spawnPlayer(a, ta) && game.spawnPlayer(b, tb));
   game.spawnPlayer(c, game.findSpawnTile());

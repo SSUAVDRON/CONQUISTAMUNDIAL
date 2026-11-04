@@ -3,7 +3,7 @@
 //   de las casillas recién conquistadas → sombras de nubes → cráteres →
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
-import { CONFIG, TICK_MS } from './config.js';
+import { CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
 import { formatNumber } from './format.js';
 import { PATTERN_FNS, drawBuildingIcon, drawEmblem, drawFlag, emblemFor } from './icons.js';
@@ -13,7 +13,7 @@ import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js'
 
 const FILL_ALPHA = 128;
 const INNER_ALPHA = 185;
-const LABEL_INTERVAL_MS = 400;
+const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_LIFE = [700, 450, 1400]; // combate, tierra libre, arrasada (ms)
 const FLASH_COLORS = [
@@ -197,12 +197,21 @@ export class Renderer {
     const wild = this._wildTmp;
     battles.length = 0;
     wild.length = 0;
-    const watch = this.anim && this.camera.zoom >= 1.2;
+    const watch = this.anim && this.camera.zoom * RES >= 1.2;
+    let x0 = W;
+    let y0 = map.height;
+    let x1 = -1;
+    let y1 = -1;
     for (let k = 0; k < dirty.length; k++) {
       const t = dirty[k];
       this._paintTile(t);
       // Los vecinos pueden pasar a ser (o dejar de ser) la franja interior
       const x = t % W;
+      const y = (t / W) | 0;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
       if (x > 0) this._paintTile(t - 1);
       if (x < W - 1) this._paintTile(t + 1);
       if (t >= W) this._paintTile(t - W);
@@ -216,7 +225,12 @@ export class Renderer {
       if (watch && kind < 2 && this._inView(x, (t / W) | 0, 2)) (kind === 0 ? battles : wild).push(t);
     }
     dirty.length = 0;
-    this.tctx.putImageData(this.image, 0, 0);
+    // Solo se sube a la tarjeta gráfica el rectángulo que ha cambiado (± 1 casilla)
+    x0 = Math.max(0, x0 - 1);
+    y0 = Math.max(0, y0 - 1);
+    x1 = Math.min(W - 1, x1 + 1);
+    y1 = Math.min(map.height - 1, y1 + 1);
+    this.tctx.putImageData(this.image, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
     if (!watch) return;
     // Solo una muestra: suficiente para que el frente «hierva» sin saturar
     const fx = this.fx;
@@ -226,7 +240,7 @@ export class Renderer {
         if (Math.random() < p) fx.skirmish((t % W) + 0.5, ((t / W) | 0) + 0.5, Math.random() < 0.15);
       }
     }
-    if (wild.length && this.camera.zoom >= 2) {
+    if (wild.length && this.camera.zoom * RES >= 2) {
       const p = Math.min(0.15, 2 / wild.length);
       for (const t of wild) if (Math.random() < p) fx.dust((t % W) + 0.5, ((t / W) | 0) + 0.5);
     }
@@ -461,7 +475,7 @@ export class Renderer {
   /** Dos capas de crestas que se desplazan sobre el mar (debajo de la tierra). */
   _drawWaves(now) {
     const { ctx, camera } = this;
-    const a = smooth(1.2, 3.5, camera.zoom);
+    const a = smooth(1.2, 3.5, camera.zoom * RES);
     if (a <= 0 || typeof DOMMatrix === 'undefined') return;
     if (!this._wavePat) {
       this._wavePat = ctx.createPattern(this.waveTex, 'repeat');
@@ -470,8 +484,8 @@ export class Renderer {
     const t = this.anim ? now / 1000 : 0;
     const v = this.view;
     const layers = [
-      [this._wavePat, 1 / 9, 0.55, 0.22, 0.55],
-      [this._wavePat2, 1 / 6, -0.35, 0.4, 0.3],
+      [this._wavePat, RES / 9, 0.55 * RES, 0.22 * RES, 0.55],
+      [this._wavePat2, RES / 6, -0.35 * RES, 0.4 * RES, 0.3],
     ];
     for (const [pat, k, vx, vy, alpha] of layers) {
       if (!pat || !pat.setTransform) continue;
@@ -487,14 +501,14 @@ export class Renderer {
   /** Sombras de nubes que pasan despacio (se apagan al acercarse mucho). */
   _drawClouds(now) {
     const { ctx, camera } = this;
-    const a = 0.2 * (1 - smooth(5, 10, camera.zoom));
+    const a = 0.2 * (1 - smooth(5, 10, camera.zoom * RES));
     if (a <= 0.01 || typeof DOMMatrix === 'undefined') return;
     if (!this._cloudPat) this._cloudPat = ctx.createPattern(this.cloudTex, 'repeat');
     if (!this._cloudPat || !this._cloudPat.setTransform) return;
-    const k = 0.75;
+    const k = 0.75 * RES;
     const period = 256 * k;
     const t = this.anim ? now / 1000 : 0;
-    this._cloudPat.setTransform(new DOMMatrix([k, 0, 0, k, (t * 1.6) % period, (t * 0.5) % period]));
+    this._cloudPat.setTransform(new DOMMatrix([k, 0, 0, k, (t * 1.6 * RES) % period, (t * 0.5 * RES) % period]));
     const v = this.view;
     ctx.globalAlpha = a;
     ctx.fillStyle = this._cloudPat;
@@ -538,12 +552,12 @@ export class Renderer {
   // ------------------------------------------------------------- edificios
 
   _buildingSize() {
-    return Math.min(30, Math.max(10, this.camera.zoom * 3));
+    return Math.min(30, Math.max(10, this.camera.zoom * RES * 3));
   }
 
   _drawBuildings(now) {
     const { ctx, game, camera } = this;
-    if (camera.zoom < 1.1 || !game.buildings.length) return;
+    if (camera.zoom * RES < 1.1 || !game.buildings.length) return;
     const map = game.map;
     const size = this._buildingSize();
     for (const b of game.buildings) {
@@ -649,8 +663,8 @@ export class Renderer {
 
   /** Estela de espuma: unas pocas partículas por segundo mientras navega. */
   _maybeWake(s, len, rate) {
-    if (!this.anim || this.camera.zoom < 2.5 || s.speed < 0.05) return;
-    if (Math.random() < this._dt * rate) this.fx.wake(s.x, s.y, s.ang, len / this.camera.zoom);
+    if (!this.anim || this.camera.zoom * RES < 2.5 || s.speed < 0.05 * RES) return;
+    if (Math.random() < this._dt * rate) this.fx.wake(s.x, s.y, s.ang, len / this.camera.zoom / RES);
   }
 
   /** Pesqueros y mercantes, con el color de su dueño. Destello al ser capturados. */
@@ -676,13 +690,13 @@ export class Renderer {
       const p = game.players[m.owner];
       const color = rgbToCss(p.color);
       const mine = p === game.human;
-      const moving = clamp(s.speed * 3, 0, 1);
+      const moving = clamp((s.speed / RES) * 3, 0, 1);
       if (m.kind === 'trade') {
-        const len = clamp(z * 2.6, 6, 30);
+        const len = clamp(z * RES * 2.6, 6, 30);
         drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
         this._maybeWake(s, len, 5);
       } else {
-        const len = clamp(z * 1.8, 5, 18);
+        const len = clamp(z * RES * 1.8, 5, 18);
         drawFishing(ctx, sx, sy, s.ang, len, color, mine, moving);
       }
     }
@@ -703,13 +717,14 @@ export class Renderer {
       this._boats.set(b.id, { x: s.x, y: s.y, pos: b.pos, len: b.path.length, gen, end: b.path[b.path.length - 1] });
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
-      if (!this._onScreen(sx, sy, 60)) continue;
       const p = game.players[b.owner];
-      const len = clamp(z * 2.4, 8, 30);
+      this._drawBoatTrail(b, s, p);
+      if (!this._onScreen(sx, sy, 60)) continue;
+      const len = clamp(z * RES * 2.4, 8, 30);
       drawTransport(ctx, sx, sy, s.ang, len, rgbToCss(p.color), p === human, 1);
       this._maybeWake(s, len, 8);
       const mine = human && (b.owner === human.id || b.targetId === human.id);
-      if (z >= 4 || mine) {
+      if (z * RES >= 4 || mine) {
         const text = formatNumber(b.troops);
         ctx.font = '700 11px system-ui, sans-serif';
         ctx.textAlign = 'center';
@@ -731,6 +746,58 @@ export class Renderer {
       if (st.pos >= st.len - 2) fx.landing((st.end % W) + 0.5, Math.floor(st.end / W) + 0.5);
       else fx.sink(st.x, st.y, false);
     }
+  }
+
+  /**
+   * Línea fina del barco de tropas: sólida desde donde salió hasta donde va
+   * y punteada hasta donde llegará. Todos la ven: así se sabe de dónde viene.
+   */
+  _drawBoatTrail(b, s, p) {
+    const { ctx, camera } = this;
+    const W = this.game.map.width;
+    const z = camera.zoom;
+    const path = b.path;
+    const step = Math.max(1, Math.floor(path.length / 90));
+    const pt = (t) => [((t % W) + 0.5 - camera.x) * z, (Math.floor(t / W) + 0.5 - camera.y) * z];
+    const color = p.color.join(', ');
+    const [hx, hy] = [(s.x - camera.x) * z, (s.y - camera.y) * z];
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // Recorrido hecho
+    ctx.beginPath();
+    let [x, y] = pt(path[0]);
+    ctx.moveTo(x, y);
+    for (let i = step; i < b.pos; i += step) {
+      [x, y] = pt(path[i]);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(hx, hy);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(${color}, 0.9)`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Lo que le queda
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    for (let i = b.pos + step; i < path.length; i += step) {
+      [x, y] = pt(path[i]);
+      ctx.lineTo(x, y);
+    }
+    [x, y] = pt(path[path.length - 1]);
+    ctx.lineTo(x, y);
+    ctx.setLineDash([3, 5]);
+    ctx.strokeStyle = `rgba(${color}, 0.45)`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Origen marcado
+    [x, y] = pt(path[0]);
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${color}, 0.9)`;
+    ctx.fill();
   }
 
   /** Buques de guerra: torretas que apuntan, fogonazos, proyectiles y hundimiento. */
@@ -768,7 +835,7 @@ export class Renderer {
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
       // Insignia circular: grande para reconocerla, sin tapar demasiado mapa
-      const r = clamp(z * 1.6, 11, 21);
+      const r = clamp(z * RES * 1.6, 11, 21);
       const len = r * 2;
       if (!this._onScreen(sx, sy, len * 2)) continue;
       const p = game.players[ws.owner];
@@ -786,7 +853,7 @@ export class Renderer {
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawWarship(ctx, sx, sy, s.ang, r, rgbToCss(p.color), p === game.human, aim, clamp(s.speed * 3, 0, 1));
+      drawWarship(ctx, sx, sy, s.ang, r, rgbToCss(p.color), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
       this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
@@ -813,7 +880,7 @@ export class Renderer {
       const shake = fx.shake;
       const flash = fx.flash;
       if (e.kind === 'boom') {
-        fx.explosion(e.x, e.y, CONFIG.missileRadius);
+        fx.explosion(e.x, e.y, CONFIG.missileRadius / RES);
       } else {
         // Busca el misil: el derribado ya no está en la simulación; el que se salva, sí
         live ??= new Set(game.missiles.map((m) => m.id));
@@ -832,7 +899,7 @@ export class Renderer {
         const bx = (e.from % W) + 0.5;
         const by = Math.floor(e.from / W) + 0.5;
         if (best && bestD < 64) fx.intercept(bx, by, best.gx, best.gy, best.z, best.vx, best.vy, best.vz, hit, best.color);
-        else if (hit) fx.airburst(e.x, e.y, 4);
+        else if (hit) fx.airburst(e.x, e.y, 4 * RES);
       }
       if (!visible) {
         fx.shake = shake;
@@ -860,7 +927,7 @@ export class Renderer {
         const ty = Math.floor(m.to / W) + 0.5;
         const s = this._lerpUnit(m, 0, 0, m.progress);
         const t = clamp(s.v, 0, 1);
-        const arc = Math.min(36, m.dist * 0.2);
+        const arc = Math.min(36 * RES, m.dist * 0.2);
         const gx = fx0 + (tx - fx0) * t;
         const gy = fy0 + (ty - fy0) * t;
         const alt = arc * Math.sin(Math.PI * t);
@@ -888,7 +955,7 @@ export class Renderer {
         if (this.anim) for (let k = 0; k < puffs; k++) fx.trail(gx - vx * 0.01 * k, gy - vy * 0.01 * k, alt);
         // Sombra en el suelo (más pequeña cuanto más alto)
         const [gsx, gsy] = camera.worldToScreen(gx, gy);
-        const len = clamp(z * 3, 16, 30);
+        const len = clamp(z * RES * 3, 16, 30);
         const k = 1 - (alt / Math.max(1, arc)) * 0.5;
         ctx.fillStyle = `rgba(0, 0, 0, ${0.3 * k})`;
         ctx.beginPath();
@@ -1011,7 +1078,7 @@ export class Renderer {
       const len = Math.max(4, p.name.length + (allied ? 2 : 0));
       let size = Math.min(radiusPx * 0.8, (radiusPx * 3) / len, 42);
       // Los aliados se nombran siempre (aunque sean pequeños), con el apretón de manos
-      if (allied) size = Math.max(size, Math.min(13, camera.zoom * 4));
+      if (allied) size = Math.max(size, Math.min(13, camera.zoom * RES * 4));
       if (size < 7) continue;
       if (sx < -200 || sy < -100 || sx > camera.viewW + 200 || sy > camera.viewH + 100) continue;
       const traitor = this.game.isTraitor(p);
@@ -1098,7 +1165,7 @@ export class Renderer {
       if (atk.done || atk.troops < 1 || !atk.targetId || !atk.inFrontier.size) continue;
       const incoming = human && atk.targetId === human.id;
       const mine = human && atk.attacker === human;
-      if (!incoming && !mine && camera.zoom < 2.5) continue;
+      if (!incoming && !mine && camera.zoom * RES < 2.5) continue;
       const L = this.labelById.get(atk.attacker.id);
       if (!L) continue;
       const [fx, fy] = game.attackFront(atk);

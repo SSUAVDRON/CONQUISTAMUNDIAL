@@ -1,7 +1,7 @@
 // IA de las naciones controladas por el ordenador. Cada bot tiene una
 // "personalidad" (agresividad, ritmo de expansión, diplomacia, lealtad) y
 // piensa cada pocos ticks.
-import { CONFIG } from './config.js';
+import { AREA, CONFIG, RES } from './config.js';
 
 const FRIENDLY = ['👍', '🤝', '❤️', '😂'];
 const HOSTILE = ['😠', '⚔️', '👎', '🔥'];
@@ -88,7 +88,7 @@ export class BotBrain {
   _maybeBuild(counts, coastal) {
     const g = this.game;
     const p = this.player;
-    if (p.tiles < 120) return false;
+    if (p.tiles < 120 * AREA) return false;
 
     let threat = null;
     for (const id of counts.keys()) {
@@ -109,11 +109,11 @@ export class BotBrain {
 
     // Ciudades: con tope (los precios se inflan con cada compra); pasado el tope, mejora
     let want = 'city';
-    if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / 2500)) want = 'fort';
-    else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / 6000) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
-    else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / 5000) && g.rng.chance(0.4)) want = 'port';
-    else if (p.buildings.city >= 1 && p.buildings.factory < 1 + Math.floor(p.tiles / 3000) && g.rng.chance(0.35)) want = 'factory';
-    else if (p.tiles > 2000 && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
+    if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
+    else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / (6000 * AREA)) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
+    else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / (5000 * AREA)) && g.rng.chance(0.4)) want = 'port';
+    else if (p.buildings.city >= 1 && p.buildings.factory < 1 + Math.floor(p.tiles / (3000 * AREA)) && g.rng.chance(0.35)) want = 'factory';
+    else if (p.tiles > 2000 * AREA && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
     else if (p.active.port > 0 && p.buildings.warship < p.active.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
     if (want === 'warship') {
@@ -123,7 +123,7 @@ export class BotBrain {
     }
     // A veces mejora uno que ya tiene en vez de levantar otro (sale más barato).
     // Si ya tiene todas las ciudades que quería, solo mejora.
-    const capped = want === 'city' && p.buildings.city >= 2 + Math.floor(p.tiles / 1500);
+    const capped = want === 'city' && p.buildings.city >= 2 + Math.floor(p.tiles / (1500 * AREA));
     if (want !== 'sam' && (capped || g.rng.chance(0.4))) {
       // Con el tope de ciudades, mejora la ciudad o fábrica de menor nivel
       const kinds = capped ? ['city', 'factory'] : [want];
@@ -158,8 +158,8 @@ export class BotBrain {
       }
       for (let i = 0; i < 20 && front.length; i++) {
         const t = front[r.int(0, front.length - 1)];
-        const x = map.x(t) + r.int(-4, 4);
-        const y = map.y(t) + r.int(-4, 4);
+        const x = map.x(t) + r.int(-4 * RES, 4 * RES);
+        const y = map.y(t) + r.int(-4 * RES, 4 * RES);
         if (!map.inBounds(x, y)) continue;
         const cand = map.index(x, y);
         if (!p.border.has(cand) && g.canBuild(p, kind, cand).ok) return cand;
@@ -328,7 +328,7 @@ export class BotBrain {
     for (const ws of g.warships) {
       if (ws.owner !== p.id || ws.path || ws.dead || ws.fireTick > g.ticks - 20) continue;
       let best = null;
-      let bestD = 140 * 140;
+      let bestD = (140 * RES) ** 2;
       for (const b of g.buildings) {
         if (b.kind !== 'port' || b.owner === p.id || p.allies.has(b.owner)) continue;
         const dx = map.x(b.tile) - map.x(ws.tile);
@@ -371,6 +371,8 @@ export class BotBrain {
       if (strength > 0.6) continue;
       const dx = map.x(t) - ox;
       const dy = map.y(t) - oy;
+      // Solo costas al alcance de un desembarco (las lejanas casi nunca tienen ruta)
+      if (dx * dx + dy * dy > (110 * RES) ** 2) continue;
       const dist = Math.sqrt(dx * dx + dy * dy) / map.width;
       const score = strength + dist;
       if (score < bestScore) {

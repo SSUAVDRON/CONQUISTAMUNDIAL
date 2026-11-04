@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { CONFIG } from '../src/config.js';
+import { CONFIG, RES } from '../src/config.js';
 
 function checksum(arr) {
   let h = 2166136261 >>> 0;
@@ -12,7 +12,7 @@ function checksum(arr) {
 }
 
 function runBots(seed, bots, ticks) {
-  const map = generateMap(220, 130, seed);
+  const map = generateMap(220 * RES, 130 * RES, seed);
   const game = new Game({ map, seed });
   game.addBots(bots);
   game.start();
@@ -41,9 +41,9 @@ function assertInvariants(game) {
 }
 
 test('el mapa es determinista y tiene tierra y agua', () => {
-  const a = generateMap(200, 120, 7);
-  const b = generateMap(200, 120, 7);
-  const c = generateMap(200, 120, 8);
+  const a = generateMap(200 * RES, 120 * RES, 7);
+  const b = generateMap(200 * RES, 120 * RES, 7);
+  const c = generateMap(200 * RES, 120 * RES, 8);
   assert.equal(checksum(a.terrain), checksum(b.terrain));
   assert.notEqual(checksum(a.terrain), checksum(c.terrain));
   const share = a.landCount / a.size;
@@ -76,7 +76,7 @@ test('misma semilla, misma partida', () => {
 });
 
 test('el jugador humano elige posición, se expande y puede recolocarse durante el despliegue', () => {
-  const map = generateMap(220, 130, 5);
+  const map = generateMap(220 * RES, 130 * RES, 5);
   const game = new Game({ map, seed: 5 });
   const human = game.addPlayer('Yo', [0, 0, 255], true);
   game.start();
@@ -115,7 +115,7 @@ test('el jugador humano elige posición, se expande y puede recolocarse durante 
 });
 
 test('un ataque contra un vecino conquista casillas y el defensor pierde tropas', () => {
-  const map = generateMap(220, 130, 11);
+  const map = generateMap(220 * RES, 130 * RES, 11);
   const game = new Game({ map, seed: 11 });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 255, 0], false);
@@ -159,7 +159,7 @@ test('un ataque contra un vecino conquista casillas y el defensor pierde tropas'
 test('los barcos cruzan el agua y desembarcan', () => {
   // Buscamos una semilla con al menos dos masas de tierra grandes
   for (let seed = 1; seed < 40; seed++) {
-    const map = generateMap(220, 130, seed);
+    const map = generateMap(220 * RES, 130 * RES, seed);
     const big = map.landBodySizes.map((s, i) => [s, i]).filter(([s]) => s >= CONFIG.minSpawnBodySize);
     if (big.length < 2) continue;
     const game = new Game({ map, seed });

@@ -1,6 +1,6 @@
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, TICK_MS, mapLabel } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, mapLabel } from './config.js';
 import { generateMap, loadRealMap } from './map.js';
 import { Game } from './game.js';
 import { Renderer } from './render.js';
@@ -465,7 +465,7 @@ function focusFront(key) {
     }
   }
   if (!at) return;
-  camera.flyTo(at[0], at[1], Math.max(camera.zoom, 5));
+  camera.flyTo(at[0], at[1], Math.max(camera.zoom, 5 / RES));
   state.ping = { x: at[0], y: at[1], t: performance.now(), danger };
 }
 
@@ -482,7 +482,7 @@ function myPosition() {
 function centerOnHuman() {
   const at = myPosition();
   if (!at) return;
-  camera.flyTo(at[0], at[1], Math.max(camera.zoom, 3.5));
+  camera.flyTo(at[0], at[1], Math.max(camera.zoom, 3.5 / RES));
   state.ping = { x: at[0], y: at[1], t: performance.now(), danger: false };
 }
 

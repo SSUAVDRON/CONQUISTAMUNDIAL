@@ -6,7 +6,7 @@
 // - texturas que se repiten para las olas y las sombras de las nubes, que el
 //   renderizador mueve en cada frame.
 // Todo esto es solo visual: no afecta a la simulación.
-import { TERRAIN } from './config.js';
+import { RES, TERRAIN } from './config.js';
 
 const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 
@@ -102,14 +102,13 @@ export function paintTerrain(map) {
     const s = shade[i] / 255;
     h[i] = t === WATER ? -0.05 : t === PLAINS ? 0.03 + 0.14 * s : t === HIGHLAND ? 0.24 + 0.22 * s : 0.52 + 0.48 * s;
   }
-  blur(h, W, H);
-  blur(h, W, H);
+  for (let k = 0; k < 2 * RES; k++) blur(h, W, H);
   const L = [-0.58, -0.66, 0.48];
   const ll = Math.hypot(L[0], L[1], L[2]);
   const Lx = L[0] / ll;
   const Ly = L[1] / ll;
   const Lz = L[2] / ll;
-  const E = 9; // exageración del relieve
+  const E = 9 * RES; // exageración del relieve (por casilla: más casillas, menos pendiente)
 
   // ---- Color iluminado de cada casilla de tierra
   const R = new Float32Array(size);
@@ -130,8 +129,8 @@ export function paintTerrain(map) {
       const nl = Math.hypot(dx, dy, 1);
       const lam = (-dx * Lx - dy * Ly + Lz) / nl;
       const light = clamp(1 + (lam - Lz) * 1.7, 0.5, 1.45);
-      const moist = valueNoise(x, y, 26, seed);
-      const forest = valueNoise(x, y, 7, seed + 11) * 0.65 + valueNoise(x, y, 3, seed + 23) * 0.35;
+      const moist = valueNoise(x, y, 26 * RES, seed);
+      const forest = valueNoise(x, y, 7 * RES, seed + 11) * 0.65 + valueNoise(x, y, 3 * RES, seed + 23) * 0.35;
       const tex = (hash2(x, y, seed + 5) - 0.5) * 0.06;
       let r;
       let g;
@@ -296,7 +295,7 @@ export function paintTerrain(map) {
   }
   while (head < tail) {
     const t = queue[head++];
-    if (dist[t] >= 60) continue;
+    if (dist[t] >= 60 * RES) continue;
     const c = map.neighbors(t, nb);
     for (let k = 0; k < c; k++) {
       const n = nb[k];
@@ -314,7 +313,7 @@ export function paintTerrain(map) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       const o = i * 4;
-      const d = terrain[i] === WATER ? dist[i] : 0;
+      const d = terrain[i] === WATER ? dist[i] / RES : 0;
       // Mar oscuro y casi uniforme: la orilla apenas un poco más clara que el fondo
       const k1 = smooth(0.5, 4, d);
       const k2 = smooth(3, 26, d);
@@ -324,7 +323,7 @@ export function paintTerrain(map) {
       r += (12 - r) * k2;
       g += (34 - g) * k2;
       b += (70 - b) * k2;
-      const n = (valueNoise(x, y, 18, seed + 7) - 0.5) * 7 * k2;
+      const n = (valueNoise(x, y, 18 * RES, seed + 7) - 0.5) * 7 * k2;
       wd[o] = clamp(r + n * 0.5, 0, 255);
       wd[o + 1] = clamp(g + n * 0.8, 0, 255);
       wd[o + 2] = clamp(b + n, 0, 255);

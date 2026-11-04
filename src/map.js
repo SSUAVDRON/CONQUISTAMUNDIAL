@@ -1,6 +1,6 @@
 // Mapa del mundo: rejilla de casillas con tipo de terreno. Se genera de forma
 // procedural a partir de una semilla (continentes + islas + cordilleras).
-import { TERRAIN } from './config.js';
+import { AREA, RES, TERRAIN } from './config.js';
 import { Rng, hashString } from './rng.js';
 import { createNoise2D, fbm } from './noise.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
@@ -10,8 +10,8 @@ const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 const LAND_SHARE = 0.42; // fracción aproximada de tierra
 const HIGHLAND_Q = 0.66; // percentil de altura (dentro de la tierra) para mesetas
 const MOUNTAIN_Q = 0.9; // percentil para montañas
-const MIN_ISLAND = 40; // islas más pequeñas se hunden (jugabilidad)
-const MAX_LAKE = 15; // lagos más pequeños se rellenan
+const MIN_ISLAND = 40 * AREA; // islas más pequeñas se hunden (jugabilidad)
+const MAX_LAKE = 15 * AREA; // lagos más pequeños se rellenan
 
 export class GameMap {
   constructor(width, height, terrain, shade) {
@@ -161,7 +161,7 @@ export function generateMap(width, height, seed) {
     const e = elev[i];
     const x = i % width;
     const y = (i / width) | 0;
-    const grain = (fbm(rough, x / 5, y / 5, 2) - 0.5) * 50;
+    const grain = (fbm(rough, x / (5 * RES), y / (5 * RES), 2) - 0.5) * 50;
     if (e < sea) {
       terrain[i] = WATER;
       shade[i] = band(sea - Math.max(e, minElev), 0, (sea - minElev) * 0.6);
@@ -283,9 +283,10 @@ function realShade(id, w, h, terrain) {
   for (let t = 0; t < size; t++) {
     const x = t % w;
     const y = (t / w) | 0;
-    const grain = fbm(rough, x / 6, y / 6, 3);
-    if (terrain[t] === WATER) shade[t] = Math.min(255, dist[t] * 14);
-    else if (terrain[t] === MOUNTAIN) shade[t] = clampByte(Math.min(dist[t], 8) * 26 + (grain - 0.5) * 60);
+    const grain = fbm(rough, x / (6 * RES), y / (6 * RES), 3);
+    const d = dist[t] / RES;
+    if (terrain[t] === WATER) shade[t] = Math.min(255, d * 14);
+    else if (terrain[t] === MOUNTAIN) shade[t] = clampByte(Math.min(d, 8) * 26 + (grain - 0.5) * 60);
     else shade[t] = clampByte(grain * 255);
   }
   return shade;

@@ -1,6 +1,7 @@
 // Tests del multijugador: lockstep con pérdida de mensajes, sin navegador.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { RES } from '../src/config.js';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { NetSync, stateHash } from '../src/multiplayer.js';
@@ -41,7 +42,7 @@ function fakeNetwork(dropRate, seed = 1) {
 }
 
 function makeGame(seed) {
-  const map = generateMap(200, 120, seed);
+  const map = generateMap(200 * RES, 120 * RES, seed);
   const game = new Game({ map, seed });
   game.addPlayer('Anfitriona', [255, 0, 0], true);
   game.addPlayer('Invitado', [0, 0, 255], true);

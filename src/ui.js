@@ -1,6 +1,6 @@
 // Interfaz HTML de la partida: panel del jugador, clasificación, diplomacia,
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
-import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, TERRAIN_NAMES, TICK_MS } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { drawBuildingIcon, flagCss, hasFlag } from './icons.js';
@@ -931,6 +931,8 @@ export class UI {
       set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
       li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;
       li.classList.toggle('yo', p === human);
+      li.classList.toggle('aliado', human.allies.has(p.id));
+      li.classList.toggle('colonia', !!p.weak);
       // Destello al subir o bajar de puesto
       const prev = this._lbIndex.get(p.id);
       if (prev !== undefined && prev !== rank && animate) {
@@ -980,7 +982,7 @@ export class UI {
     const o = game.owner[tile];
     if (o) {
       const p = game.players[o];
-      const b = game.buildingNear(tile, 2);
+      const b = game.buildingNear(tile, 2 * RES);
       const extra = [];
       if (b) {
         const lvl = b.level ? ` nv. ${b.level}` : '';

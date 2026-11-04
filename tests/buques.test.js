@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras } from './ayuda.js';
-import { BUILDINGS, CONFIG } from '../src/config.js';
+import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
 /** Dos naciones con puerto en la misma costa (busca una semilla que sirva). */
 function navalSetup() {
   for (let seed = 1; seed < 60; seed++) {
-    const map = generateMap(220, 130, seed);
+    const map = generateMap(220 * RES, 130 * RES, seed);
     const game = new Game({ map, seed });
     const a = game.addPlayer('A', [255, 0, 0], true);
     const b = game.addPlayer('B', [0, 0, 255], false);
@@ -23,7 +23,7 @@ function navalSetup() {
     const sea = map.waterBody[water(ta)];
     const tb = coast.find((t) => {
       const d = Math.hypot(map.x(t) - map.x(ta), map.y(t) - map.y(ta));
-      return d > 25 && d < 60 && map.waterBody[water(t)] === sea;
+      return d > 25 * RES && d < 60 * RES && map.waterBody[water(t)] === sea;
     });
     if (tb === undefined || !game.spawnPlayer(a, ta) || !game.spawnPlayer(b, tb)) continue;
     const tc = game.findSpawnTile();
@@ -38,7 +38,7 @@ function navalSetup() {
 }
 
 test('construir un buque exige puerto y oro, y su coste sube', () => {
-  const map = generateMap(220, 130, 21);
+  const map = generateMap(220 * RES, 130 * RES, 21);
   const game = new Game({ map, seed: 21 });
   const p = game.addPlayer('P', [0, 0, 0], true);
   game.start();

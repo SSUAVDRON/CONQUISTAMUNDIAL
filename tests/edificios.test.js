@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras } from './ayuda.js';
-import { BUILDINGS, CONFIG } from '../src/config.js';
+import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
 /** Partida con un humano ya desplegado en la mayor masa de tierra. */
 function setup(seed = 21) {
-  const map = generateMap(220, 130, seed);
+  const map = generateMap(220 * RES, 130 * RES, seed);
   const game = new Game({ map, seed });
   const human = game.addPlayer('Yo', [0, 0, 255], true);
   game.start();
@@ -71,7 +71,7 @@ test('la ciudad sube el máximo de tropas; el puerto, el oro (no los barcos)', (
   assert.equal(human.maxTroops(), maxBefore + CONFIG.cityMaxTroops);
 
   // Expandimos hasta tener costa y construimos un puerto
-  for (let i = 0; i < 60 && !ownTiles(game, human).some((t) => map.coastal[t]); i++) {
+  for (let i = 0; i < 60 && !ownTiles(game, human).some((t) => map.coastal[t] && game.canBuild(human, 'port', t).ok); i++) {
     human.troops = 1e5;
     game.launchAttack(human, 0, 50000);
     for (let k = 0; k < 20; k++) game.tick();
@@ -89,7 +89,7 @@ test('la ciudad sube el máximo de tropas; el puerto, el oro (no los barcos)', (
 test('el puerto se ajusta a la orilla propia más cercana al clic', () => {
   const { map, game, human } = setup();
   human.gold = 1e7;
-  for (let i = 0; i < 60 && !ownTiles(game, human).some((t) => map.coastal[t]); i++) {
+  for (let i = 0; i < 60 && !ownTiles(game, human).some((t) => map.coastal[t] && game.canBuild(human, 'port', t).ok); i++) {
     human.troops = 1e5;
     game.launchAttack(human, 0, 50000);
     for (let k = 0; k < 20; k++) game.tick();
@@ -144,7 +144,7 @@ test('los edificios cambian de dueño con su casilla y el eliminado deja botín'
 });
 
 test('los bots construyen durante la partida', () => {
-  const map = generateMap(220, 130, 3);
+  const map = generateMap(220 * RES, 130 * RES, 3);
   const game = new Game({ map, seed: 3 });
   game.addBots(10);
   game.start();
@@ -163,7 +163,7 @@ test('los bots construyen durante la partida', () => {
 });
 
 test('las reglas de la partida: oro inicial, victoria y armas desactivadas', () => {
-  const map = generateMap(220, 130, 21);
+  const map = generateMap(220 * RES, 130 * RES, 21);
   const game = new Game({ map, seed: 21, rules: { startGold: 250000, winShare: 0.5, missiles: false, warships: false } });
   const p = game.addPlayer('P', [0, 0, 0], true);
   game.addBots(3);
@@ -224,7 +224,7 @@ test('subir de nivel: cuesta más cada vez, tarda y suma su efecto; tope de nive
 });
 
 test('colonias: débiles, sin alianzas y con oro que saquear casilla a casilla', () => {
-  const map = generateMap(220, 130, 21);
+  const map = generateMap(220 * RES, 130 * RES, 21);
   const game = new Game({ map, seed: 21 });
   const a = game.addPlayer('A', [255, 0, 0], true);
   game.addColonies(4);

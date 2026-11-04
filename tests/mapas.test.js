@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadRealMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { REAL_MAPS } from '../src/config.js';
+import { AREA, REAL_MAPS, RES } from '../src/config.js';
 
 test('todos los mapas reales se cargan con tierra, agua y países', () => {
   for (const id of Object.keys(REAL_MAPS)) {
@@ -44,11 +44,11 @@ test('los bots de un mapa real son países y aparecen en su ubicación', () => {
     assert.ok(c, `${p.name} debería ser un país`);
     assert.ok(p.spawned, `${p.name} debería haber aparecido`);
     const d = Math.hypot(map.x(p.spawnTile) - map.x(c.tile), map.y(p.spawnTile) - map.y(c.tile));
-    assert.ok(d <= 15, `${p.name} aparece a ${d.toFixed(1)} casillas de su país`);
+    assert.ok(d <= 15 * RES, `${p.name} aparece a ${d.toFixed(1)} casillas de su país`);
   }
   // Y la partida avanza con normalidad
   for (let i = 0; i < 600; i++) game.tick();
-  assert.ok(game.bots.some((b) => b.player.tiles > 500));
+  assert.ok(game.bots.some((b) => b.player.tiles > 500 * AREA));
 });
 
 test('pedir más bots que países se limita a los países disponibles', () => {

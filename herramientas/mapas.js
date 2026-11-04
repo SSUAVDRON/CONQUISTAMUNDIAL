@@ -14,25 +14,27 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AREA, RES } from '../src/config.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const WATER = 0;
 const PLAINS = 1;
 const HIGHLAND = 2;
 const MOUNTAIN = 3;
-const MIN_COUNTRY_TILES = 40;
+// Medidas pensadas para la rejilla original: RES las adapta a la resolución actual
+const MIN_COUNTRY_TILES = 40 * AREA;
 // Jugabilidad: nada de islas ni lagos de unas pocas casillas
-const MIN_ISLAND_TILES = 40;
-const MAX_LAKE_TILES = 12;
+const MIN_ISLAND_TILES = 40 * AREA;
+const MAX_LAKE_TILES = 12 * AREA;
 const MAX_COUNTRIES = 90;
 
 export const DEFS = [
-  { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-56, 78], w: 880 },
-  { id: 'europa', name: 'Europa', lon: [-25, 45], lat: [34, 71], w: 640 },
-  { id: 'norteamerica', name: 'Norteamérica', lon: [-170, -50], lat: [7, 72], w: 720 },
-  { id: 'sudamerica', name: 'Sudamérica', lon: [-92, -30], lat: [-56, 14], w: 480 },
-  { id: 'africa', name: 'África', lon: [-20, 55], lat: [-36, 38], w: 560 },
-  { id: 'asia', name: 'Asia', lon: [25, 150], lat: [-11, 62], w: 760 },
+  { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-56, 78], w: 880 * RES },
+  { id: 'europa', name: 'Europa', lon: [-25, 45], lat: [34, 71], w: 640 * RES },
+  { id: 'norteamerica', name: 'Norteamérica', lon: [-170, -50], lat: [7, 72], w: 720 * RES },
+  { id: 'sudamerica', name: 'Sudamérica', lon: [-92, -30], lat: [-56, 14], w: 480 * RES },
+  { id: 'africa', name: 'África', lon: [-20, 55], lat: [-36, 38], w: 560 * RES },
+  { id: 'asia', name: 'Asia', lon: [25, 150], lat: [-11, 62], w: 760 * RES },
 ];
 
 // Nombres demasiado largos para la etiqueta de una nación
@@ -260,7 +262,7 @@ function buildMap(def, countries, regions, lakes) {
 
   // Las cordilleras de Natural Earth son zonas amplias: su borde pasa a meseta
   const mt = interiorDistance(Uint8Array.from(terrain, (t) => (t === MOUNTAIN ? 1 : 0)), proj.w, proj.h);
-  for (let i = 0; i < size; i++) if (terrain[i] === MOUNTAIN && mt[i] <= 2) terrain[i] = HIGHLAND;
+  for (let i = 0; i < size; i++) if (terrain[i] === MOUNTAIN && mt[i] <= 2 * RES) terrain[i] = HIGHLAND;
 
   // Países: tamaño y casilla más interior (donde aparecerá su bot)
   const dist = interiorDistance(owner, proj.w, proj.h);
