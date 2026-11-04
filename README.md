@@ -41,15 +41,19 @@ En todos los mapas se eliminan las islas de menos de 40 casillas y los lagos de
 menos de 12, para no perder el tiempo conquistando islotes.
 
 Los mapas reales salen de [Natural Earth](https://www.naturalearthdata.com)
-(dominio público). Para regenerarlos o añadir regiones (`DEFS` en el script):
+(países y lagos) y del relieve mundial
+[ETOPO5 de NOAA](https://www.ngdc.noaa.gov/mgg/global/etopo5.HTML), ambos de
+dominio público. La altura real decide el terreno (llanura por debajo de 700 m,
+meseta hasta 1800 m, montaña por encima) y el dibujo del relieve. Para
+regenerarlos o añadir regiones (`DEFS` en el script):
 
 ```bash
-node herramientas/mapas.js <carpeta con los .geojson de Natural Earth>
+node herramientas/mapas.js <carpeta con los .geojson de Natural Earth> <ETOPO5.DOS>
 ```
 
-Necesita `ne_50m_admin_0_countries`, `ne_50m_geography_regions_polys` y
-`ne_50m_lakes` (GeoJSON, en github.com/nvkelso/natural-earth-vector). Escribe
-`src/mapas-reales.js`.
+Necesita `ne_50m_admin_0_countries` y `ne_50m_lakes` (GeoJSON, en
+github.com/nvkelso/natural-earth-vector) y el fichero `ETOPO5.DOS` de NOAA.
+Escribe `src/mapas-reales.js`.
 
 Las banderas son de [flag-icons](https://github.com/lipis/flag-icons) (MIT).
 Para regenerar el sprite (`src/banderas.js`) con los SVG `4x3` de esa colección:
@@ -110,7 +114,7 @@ base de datos.
 
 | Concepto | Cómo funciona |
 |---|---|
-| Despliegue | Los primeros 10 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. Cada nación empieza con una mancha pequeña e irregular (unas 350 casillas; las colonias, menos). |
+| Despliegue | Los primeros 10 s haces clic donde quieres empezar (puedes cambiarlo). Si no eliges, se te asigna un sitio. Cada nación empieza con una mancha pequeña e irregular (unas 250 casillas; las colonias, menos). |
 | Expansión | Los países crecen con formas irregulares, no en círculos: cada nación tiene sus propios «lóbulos» de ruido que deciden por dónde avanza antes, el terreno difícil (mesetas, montañas) se rodea y se toma después, y hay algo de azar por casilla. Al principio los países son más pequeños que antes; contra otras naciones los frentes son casi como antes (un frente muy irregular es más largo y aceleraba las guerras). |
 | Mapa | Casillas muy pequeñas: los mapas tienen 4 veces la resolución del principio en cada eje (16 veces más casillas; el mundo, 3520×1597). Todo lo que se mide en casillas se adapta con el factor `RES` de `config.js`. Las rutas por mar se buscan primero en una rejilla gruesa y luego solo por ese pasillo, así que siguen siendo rápidas. |
 | Tropas | Crecen solas (más despacio que al principio y con un máximo menor). El máximo y la velocidad dependen de tu territorio; cerca del máximo el crecimiento se frena. |
@@ -130,7 +134,7 @@ base de datos.
 | Paneles plegables | Clasificación, combates y avisos se pliegan desde su cabecera (se recuerda). Plegados, la clasificación muestra tu puesto, los combates cuántos te atacan y cuántos ataques tuyos hay, y los avisos cuántos nuevos tienes. |
 | Clasificación | Tus aliados salen en verde; las colonias, en gris cursiva; tu nombre, en tu color de nombre. |
 | Panel de abajo | Centrado y compacto: tu estado, la fuerza de ataque y los edificios (en gris los que no puedes pagar, con una barra de cuánto oro te falta y un martillo si hay obras). Se minimiza con su botón o la tecla **V**. |
-| Gráficos | Mapa plano (2D) en píxeles nítidos, como el territorio, con un color liso por zona según el terreno y el clima: praderas, selva, estepa, sabana, desiertos, tundra, mesetas y montañas gris claro con cumbres nevadas (en los mapas reales el clima sale de la latitud). Sin sombras ni contornos oscuros: las zonas cambian con un borde ondulado, no con degradados. Playas y mar oscuro casi uniforme con olas que se mueven. Las casillas recién conquistadas brillan, saltan chispas y humo en los frentes y unas flechas marcan hacia dónde avanza cada ataque. Barcos dibujados con su rumbo y estela; misiles con humo y sombra; explosión con fogonazo, onda expansiva, hongo de humo y cráter; los antimisiles lanzan un interceptor visible (estela continua y rótulo «¡DERRIBADO!» / «FALLO»). Todo se desactiva con «Animaciones» en Ajustes. |
+| Gráficos | Mapa físico en píxeles nítidos: el color sale de la altura (verde en las tierras bajas, arena en las mesetas, pardo y gris en la montaña, blanco en las cumbres; en la franja de desiertos las tierras bajas tiran a arena) y el relieve se sombrea con luz del noroeste. En los mapas reales la altura es la de verdad (ETOPO5 de NOAA); en los aleatorios, la del generador. Un filo claro en la costa y un mar liso azul marino con olas suaves. Las casillas recién conquistadas brillan, saltan chispas y humo en los frentes y unas flechas marcan hacia dónde avanza cada ataque. Barcos dibujados con su rumbo y estela; misiles con humo y sombra; explosión con fogonazo, onda expansiva, hongo de humo y cráter; los antimisiles lanzan un interceptor visible (estela continua y rótulo «¡DERRIBADO!» / «FALLO»). Todo se desactiva con «Animaciones» en Ajustes. |
 | Barra superior | Tiempo de partida, tu puesto entre las naciones en pie y el líder con su territorio frente a la meta de victoria (se pone ámbar si se acerca). |
 | Oro | Se gana solo, según la **raíz cuadrada** de tu territorio: crece con el país, pero cada vez menos (así los imperios grandes no construyen sin parar). Puertos y fábricas suman +10 % / +25 % por nivel con rendimiento decreciente (bonus = % × n ÷ (1 + 0,12 n)). Una nación pequeña gana unos pocos miles por segundo; una grande, unas decenas de miles. Al eliminar a una nación te llevas el oro que le quede. Oro inicial opcional: 250k o 1,25M. |
 | Edificios | Se construyen en tu territorio con oro. Deben estar a 5 casillas o más de otro edificio. Si te conquistan la casilla, el edificio (con su nivel) pasa al conquistador. |

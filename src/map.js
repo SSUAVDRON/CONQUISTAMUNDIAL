@@ -178,8 +178,33 @@ export function generateMap(width, height, seed) {
   }
 
   cleanup(width, height, terrain, shade);
-  return new GameMap(width, height, terrain, shade);
+  const map = new GameMap(width, height, terrain, shade);
+  // Relieve para el dibujo: la altura relativa pasa a «metros» parecidos a los
+  // de los mapas reales (llanuras sobre todo bajas y verdes, mesetas de arena,
+  // montañas grises con nieve solo en lo más alto)
+  const step = 2;
+  const rw = Math.ceil(width / step) + 1;
+  const rh = Math.ceil(height / step) + 1;
+  const data = new Float32Array(rw * rh);
+  const lerp = (v, a, b, m0, m1) => m0 + ((v - a) / Math.max(1e-6, b - a)) * (m1 - m0);
+  for (let gy = 0; gy < rh; gy++) {
+    const y = Math.min(height - 1, gy * step);
+    for (let gx = 0; gx < rw; gx++) {
+      const x = Math.min(width - 1, gx * step);
+      const i = y * width + x;
+      const e = elev[i];
+      const t = terrain[i];
+      data[gy * rw + gx] =
+        t === WATER ? 0 : t === PLAINS ? Math.max(1, 420 * pow15(Math.max(0, lerp(e, sea, hi, 0, 1)))) : t === HIGHLAND ? lerp(e, hi, mt, 480, 1700) : lerp(e, mt, top, 1800, 4300);
+    }
+  }
+  map.relief = { w: rw, h: rh, step, data };
+  map.tileKm = 7; // relieve algo más suave que en los mapas reales
+  return map;
 }
+
+/** x^1,5 sin Math.pow (mismo resultado en todos los navegadores). */
+const pow15 = (x) => x * Math.sqrt(x);
 
 function clampByte(v) {
   return v < 0 ? 0 : v > 255 ? 255 : Math.round(v);
@@ -249,9 +274,39 @@ export function loadRealMap(id) {
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
+  map.relief = data.relief ? decodeRelief(data.relief) : null;
+  // Kilómetros por casilla (a media latitud): para la fuerza del sombreado del relieve
+  if (data.lon && data.lat) {
+    const mid = (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180;
+    map.tileKm = ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w;
+  }
   const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' }));
   lastReal = { id, map, countries };
   return { map, countries: countries.map((c) => ({ ...c })) };
+}
+
+/** Máxima altura representable en el relieve (como en herramientas/mapas.js). */
+const RELIEF_MAX_M = 6500;
+
+/**
+ * Relieve de un mapa real: { w, h, step, data } con la altura en metros cada
+ * `step` casillas. Formato: un byte por muestra (raíz de la altura); un 0 va
+ * seguido de cuántos ceros repite.
+ */
+function decodeRelief({ w, h, step, data }) {
+  const bin = atob(data);
+  const out = new Float32Array(w * h);
+  let o = 0;
+  for (let k = 0; k < bin.length; k++) {
+    const b = bin.charCodeAt(k);
+    if (b === 0) {
+      o += bin.charCodeAt(++k); // ya son ceros
+      continue;
+    }
+    const q = (b - 1) / 254;
+    out[o++] = q * q * RELIEF_MAX_M;
+  }
+  return { w, h, step, data: out };
 }
 
 /** Tonos: profundidad del mar por distancia a la costa; textura y cumbres en tierra. */

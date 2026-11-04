@@ -117,6 +117,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Mapa de colores planos (montañas gris claro, sin sombras de nubes ni
   contornos oscuros); salida pequeña e irregular; expansión con formas
   irregulares (lóbulos de ruido, terreno y azar)
+- Mapa físico: color por altura y relieve sombreado; en los mapas reales,
+  altura de verdad (ETOPO5 de NOAA) que también decide el tipo de terreno
 
 ## Próximo
 

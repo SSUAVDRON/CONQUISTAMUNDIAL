@@ -1,15 +1,18 @@
 // Genera src/mapas-reales.js a partir de datos de Natural Earth (dominio público,
 // https://www.naturalearthdata.com). Sin dependencias.
 //
-//   node herramientas/mapas.js <carpeta con los .geojson>
+//   node herramientas/mapas.js <carpeta con los .geojson> <ETOPO5.DOS>
 //
 // Necesita, en esa carpeta (descargables de github.com/nvkelso/natural-earth-vector):
 //   ne_50m_admin_0_countries.geojson   países (nombre en español: NAME_ES)
-//   ne_50m_geography_regions_polys.geojson   cordilleras (Range/mtn) y mesetas (Plateau)
 //   ne_50m_lakes.geojson               lagos
+// y el relieve mundial ETOPO5 de NOAA (dominio público, rejilla de 5 minutos de
+// arco, enteros de 16 bits little-endian, filas desde 90° N y columnas desde 0° E):
+//   https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO5/TOPO/ETOPO5/ETOPO5.DOS
 //
 // Para cada mapa se rasteriza en proyección de Miller: agua, llanura, meseta y
-// montaña (codificado por tramos y en base64), más la lista de países con la
+// montaña según la altura real (codificado por tramos y en base64), la altura
+// en una rejilla más gruesa para pintar el relieve, y la lista de países con la
 // casilla más interior de cada uno (donde aparece su bot).
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -27,6 +30,13 @@ const MIN_COUNTRY_TILES = 40 * AREA;
 const MIN_ISLAND_TILES = 40 * AREA;
 const MAX_LAKE_TILES = 12 * AREA;
 const MAX_COUNTRIES = 90;
+
+// Alturas (m) que separan llanura, meseta y montaña
+const HIGHLAND_M = 700;
+const MOUNTAIN_M = 1800;
+// Rejilla del relieve: una muestra cada `step` casillas (el mundo, más fina)
+const RELIEF_STEP = { mundo: 2 };
+const RELIEF_MAX_M = 6500;
 
 export const DEFS = [
   { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-56, 78], w: 880 * RES },
@@ -64,6 +74,51 @@ function shortName(name) {
 }
 
 const miller = (latDeg) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((latDeg * Math.PI) / 180)));
+const invMiller = (y) => ((2.5 * Math.atan(Math.exp(0.8 * y)) - (5 * Math.PI) / 8) * 180) / Math.PI;
+
+/** Altura (m) de ETOPO5 en (lon, lat), con interpolación bilineal. */
+function makeEtopo(buf) {
+  const W = 4320;
+  const H = 2160;
+  const z = new Int16Array(buf.buffer, buf.byteOffset, W * H);
+  const at = (c, r) => z[Math.max(0, Math.min(H - 1, r)) * W + (((c % W) + W) % W)];
+  return (lon, lat) => {
+    const fc = (((lon % 360) + 360) % 360) * 12;
+    const fr = (90 - lat) * 12;
+    const c0 = Math.floor(fc);
+    const r0 = Math.floor(fr);
+    const tx = fc - c0;
+    const ty = fr - r0;
+    const a = at(c0, r0);
+    const b = at(c0 + 1, r0);
+    const c = at(c0, r0 + 1);
+    const d = at(c0 + 1, r0 + 1);
+    return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+  };
+}
+
+/**
+ * Relieve para pintar: una muestra cada `step` casillas, en 1 byte (raíz de la
+ * altura: más detalle en las tierras bajas). El 0 (mar o bajo el nivel del
+ * mar) va seguido de cuántos ceros repite: el mar casi no ocupa.
+ */
+function encodeRelief(heights) {
+  const bytes = [];
+  let i = 0;
+  while (i < heights.length) {
+    const e = heights[i];
+    if (e > 0) {
+      bytes.push(1 + Math.round(Math.sqrt(Math.min(e, RELIEF_MAX_M) / RELIEF_MAX_M) * 254));
+      i++;
+      continue;
+    }
+    let n = 1;
+    while (i + n < heights.length && heights[i + n] <= 0 && n < 255) n++;
+    bytes.push(0, n);
+    i += n;
+  }
+  return Buffer.from(bytes).toString('base64');
+}
 
 function makeProjection(def) {
   const [lon0, lon1] = def.lon;
@@ -226,8 +281,13 @@ function interiorDistance(labels, w, h) {
   return d;
 }
 
-function buildMap(def, countries, regions, lakes) {
+function buildMap(def, countries, lakes, etopo) {
   const proj = makeProjection(def);
+  const yTop = miller(def.lat[1]);
+  const yBottom = miller(def.lat[0]);
+  const lonOf = (x) => def.lon[0] + (x / proj.w) * (def.lon[1] - def.lon[0]);
+  const latOf = (y) => invMiller(yTop - (y / proj.h) * (yTop - yBottom));
+  const latRow = Float64Array.from({ length: proj.h }, (_, y) => latOf(y + 0.5));
   const size = proj.w * proj.h;
   const terrain = new Uint8Array(size);
   const owner = new Int16Array(size); // índice de país + 1
@@ -248,21 +308,32 @@ function buildMap(def, countries, regions, lakes) {
       });
     }
   }
-  for (const f of regions) {
-    const cls = f.properties.FEATURECLA;
-    const value = cls === 'Range/mtn' ? MOUNTAIN : cls === 'Plateau' ? HIGHLAND : 0;
-    if (!value) continue;
-    for (const poly of polygonsOf(f.geometry)) {
-      fillPolygon(poly, proj, (i) => {
-        if (terrain[i] !== WATER && terrain[i] < value) terrain[i] = value;
-      });
+  // Tipo de terreno según la altura real
+  for (let y = 0; y < proj.h; y++) {
+    const lat = latRow[y];
+    for (let x = 0; x < proj.w; x++) {
+      const i = y * proj.w + x;
+      if (terrain[i] === WATER) continue;
+      const e = etopo(lonOf(x + 0.5), lat);
+      terrain[i] = e >= MOUNTAIN_M ? MOUNTAIN : e >= HIGHLAND_M ? HIGHLAND : PLAINS;
     }
   }
   const cleaned = removeSpecks(terrain, owner, proj.w, proj.h);
 
-  // Las cordilleras de Natural Earth son zonas amplias: su borde pasa a meseta
-  const mt = interiorDistance(Uint8Array.from(terrain, (t) => (t === MOUNTAIN ? 1 : 0)), proj.w, proj.h);
-  for (let i = 0; i < size; i++) if (terrain[i] === MOUNTAIN && mt[i] <= 2 * RES) terrain[i] = HIGHLAND;
+  // Relieve para el dibujo (más grueso que las casillas; el mar, a 0)
+  const step = RELIEF_STEP[def.id] || RES;
+  const rw = Math.ceil(proj.w / step) + 1;
+  const rh = Math.ceil(proj.h / step) + 1;
+  const heights = new Float32Array(rw * rh);
+  for (let gy = 0; gy < rh; gy++) {
+    const y = Math.min(proj.h - 1, gy * step);
+    const lat = latOf(y + 0.5);
+    for (let gx = 0; gx < rw; gx++) {
+      const x = Math.min(proj.w - 1, gx * step);
+      // Solo las casillas de tierra tienen altura: el mar y los lagos, 0
+      heights[gy * rw + gx] = terrain[y * proj.w + x] === WATER ? 0 : Math.max(1, etopo(lonOf(x + 0.5), lat));
+    }
+  }
 
   // Países: tamaño y casilla más interior (donde aparecerá su bot)
   const dist = interiorDistance(owner, proj.w, proj.h);
@@ -292,27 +363,34 @@ function buildMap(def, countries, regions, lakes) {
   let land = 0;
   for (let i = 0; i < size; i++) if (terrain[i] !== WATER) land++;
   console.log(`${def.id}: ${proj.w}×${proj.h}, tierra ${((100 * land) / size).toFixed(0)} %, ${list.length} países, ${cleaned.sunk} casillas de islotes hundidas, ${cleaned.filled} de charcas rellenas`);
-  return { name: def.name, w: proj.w, h: proj.h, lat: def.lat, rle: encodeRle(terrain), countries: list };
+  const kinds = [0, 0, 0, 0];
+  for (let i = 0; i < size; i++) kinds[terrain[i]]++;
+  console.log(`  llanura ${((100 * kinds[1]) / land).toFixed(0)} %, meseta ${((100 * kinds[2]) / land).toFixed(0)} %, montaña ${((100 * kinds[3]) / land).toFixed(0)} %`);
+  const relief = { w: rw, h: rh, step, data: encodeRelief(heights) };
+  return { name: def.name, w: proj.w, h: proj.h, lon: def.lon, lat: def.lat, rle: encodeRle(terrain), relief, countries: list };
 }
 
 async function main() {
   const dir = process.argv[2];
-  if (!dir) {
-    console.error('Uso: node herramientas/mapas.js <carpeta con los .geojson de Natural Earth>');
+  const etopoPath = process.argv[3];
+  if (!dir || !etopoPath) {
+    console.error('Uso: node herramientas/mapas.js <carpeta con los .geojson de Natural Earth> <ETOPO5.DOS>');
     process.exit(1);
   }
+  const etopo = makeEtopo(await readFile(etopoPath));
   const load = async (name) => JSON.parse(await readFile(join(dir, name), 'utf8')).features;
   const countries = (await load('ne_50m_admin_0_countries.geojson')).filter((f) => f.properties.CONTINENT !== 'Antarctica');
-  const regions = await load('ne_50m_geography_regions_polys.geojson');
   const lakes = await load('ne_50m_lakes.geojson');
 
   const maps = {};
-  for (const def of DEFS) maps[def.id] = buildMap(def, countries, regions, lakes);
+  for (const def of DEFS) maps[def.id] = buildMap(def, countries, lakes, etopo);
 
   const out = `// GENERADO por herramientas/mapas.js — no editar a mano.
-// Datos: Natural Earth (dominio público), https://www.naturalearthdata.com
-// Por mapa: ancho, alto, terreno codificado por tramos (base64) y países
-// [nombre, casilla más interior, casillas, código ISO] de mayor a menor.
+// Datos: Natural Earth (dominio público), https://www.naturalearthdata.com, y
+// relieve ETOPO5 de NOAA (dominio público), https://www.ngdc.noaa.gov
+// Por mapa: ancho, alto, terreno codificado por tramos (base64), relieve
+// (una altura cada \`step\` casillas) y países [nombre, casilla más interior,
+// casillas, código ISO] de mayor a menor.
 export const REAL_MAP_DATA = ${JSON.stringify(maps)};
 `;
   await writeFile(join(ROOT, 'src', 'mapas-reales.js'), out);

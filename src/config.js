@@ -19,7 +19,7 @@ export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
   spawnTicks: 100, // 10 s
-  spawnRadius: 2.6 * RES, // radio medio de la zona inicial (pequeña e irregular)
+  spawnRadius: 2.2 * RES, // radio medio de la zona inicial (pequeña e irregular)
   spawnJag: 0.4, // el radio varía ±40 % según la dirección
   startTroops: 1500,
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
