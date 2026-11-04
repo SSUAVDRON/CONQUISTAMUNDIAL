@@ -1572,25 +1572,10 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 @keyframes volar { from { transform: translate(-80px, 120px); } to { transform: translate(1280px, 70px); } }
 @keyframes ondear { 50% { transform: skewY(4deg) scaleX(0.94); } }
 
-/* Tarjetas de modo con ilustración */
-.modo { padding: 0 0 14px; overflow: hidden; gap: 4px; }
-.modo-arte { display: block; width: 100%; height: 96px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.4s ease; }
-.modo:hover .modo-arte { transform: scale(1.06); }
+/* Tarjetas de modo (solo texto) */
+.modo { padding: 14px 0; overflow: hidden; gap: 4px; }
 .modo-titulo, .modo-texto, .modo-insignia { margin: 0 14px; }
 .modo-insignia { margin-top: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--acento); background: rgba(242, 179, 61, 0.12); border: 1px solid rgba(242, 179, 61, 0.3); }
-.ma-giro { transform-box: fill-box; transform-origin: center; animation: girar 18s linear infinite; }
-.ma-rayo { animation: titilar 1.6s ease-in-out infinite; }
-.ma-ojos { animation: parpadeo 4s infinite; transform-box: fill-box; transform-origin: center; }
-.ma-luz { animation: titilar 1s ease-in-out infinite; }
-.ma-ondas path { animation: titilar 1.8s ease-in-out infinite; }
-.ma-ondas path:nth-child(2) { animation-delay: 0.3s; }
-.ma-ondas path:nth-child(3) { animation-delay: 0.6s; }
-.ma-enlace { animation: enlace 1s linear infinite; }
-.ma-brujula { animation: girarBrujula 6s ease-in-out infinite; }
-@keyframes girar { to { transform: rotate(360deg); } }
-@keyframes parpadeo { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
-@keyframes enlace { to { stroke-dashoffset: -11; } }
-@keyframes girarBrujula { 50% { transform: translate(196px, 30px) rotate(25deg); } 0%, 100% { transform: translate(196px, 30px) rotate(-15deg); } }
 
 /* Arsenal */
 .seccion-titulo { margin: 4px 0 8px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto-suave); }
@@ -1688,7 +1673,7 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   .tp-nivel { width: 44px; height: 44px; font-size: 18px; right: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .btn-brillo::after, .pt-estrellas circle, .pt-foco, .pt-explo, .pt-avion, .pt-bandera, .ma-giro, .ma-rayo, .ma-ojos, .ma-luz, .ma-ondas path, .ma-enlace, .ma-brujula, .arma, .portada, .tarjeta-perfil { animation: none !important; }
+  .btn-brillo::after, .pt-estrellas circle, .pt-foco, .pt-explo, .pt-avion, .pt-bandera, .arma, .portada, .tarjeta-perfil { animation: none !important; }
 }
 .sin-animaciones .pt-avion { transform: translate(300px, 90px); }
 .portada { margin-bottom: 14px; }

@@ -10,7 +10,7 @@ Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 
 ## Pantallas
 
-El inicio tiene cuatro modos en tarjetas animadas: **Partida rápida** (mundo
+El inicio tiene cuatro modos en tarjetas: **Partida rápida** (mundo
 real contra 45 países y un centenar de colonias, un clic), **Contra la IA** (galería de mapas con
 miniaturas y opciones), **Multijugador** y **Tutorial** (partida guiada paso a
 paso que avanza con lo que haces). Antes de cada partida hay una pantalla de
@@ -18,7 +18,7 @@ carga con los pasos reales y un consejo.
 
 | Pestaña | Qué hay |
 |---|---|
-| Jugar | Portada ilustrada con «Jugar ahora», los cuatro modos con su ilustración y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA»: mapa, rivales, dificultad, victoria al 50/70/90 %, oro inicial, misiles y buques activables, semilla. |
+| Jugar | Portada ilustrada con «Jugar ahora», los cuatro modos (tarjetas de texto, sin ilustraciones) y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA»: mapa, rivales, dificultad, victoria al 50/70/90 %, oro inicial, misiles y buques activables, semilla. |
 | Perfil | Tarjeta de perfil (estandarte, emblema con marco, nombre, título y nivel), nombre, color (con 16 colores rápidos), emblema (7 formas, 20 símbolos y colores), título, nivel y estadísticas. |
 | Apariencia | Estandarte (8), marco del emblema (bronce, plata, oro, laurel), color de tu nombre en el mapa (8) y patrón del territorio (lo ven también los demás online). Muchos se desbloquean con nivel o logros. |
 | Logros | 16 logros; desbloquean símbolos, patrones y títulos. |
