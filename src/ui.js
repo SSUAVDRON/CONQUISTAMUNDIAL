@@ -8,12 +8,54 @@ import { drawBuildingIcon, flagCss, hasFlag } from './icons.js';
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
 const EVENT_MS = 6000;
+const MAX_FRONTS = 5;
+const FRONT_GRACE_MS = 1800; // un combate que termina se queda un momento atenuado
+
+/** Cifra que se acerca suavemente a su valor (sin saltos ni parpadeos). */
+class Counter {
+  constructor(el, fmt = formatNumber) {
+    this.el = el;
+    this.fmt = fmt;
+    this.value = null;
+    this.target = 0;
+    this.text = '';
+  }
+
+  set(target) {
+    this.target = target;
+    if (this.value === null) {
+      this.value = target;
+      this._write();
+    }
+  }
+
+  step(dt) {
+    if (this.value === null || this.value === this.target) return;
+    this.value += (this.target - this.value) * (1 - Math.exp(-dt / 140));
+    if (Math.abs(this.target - this.value) < 0.5) this.value = this.target;
+    this._write();
+  }
+
+  _write() {
+    const t = this.fmt(this.value);
+    if (t !== this.text) {
+      this.text = t;
+      this.el.textContent = t;
+    }
+  }
+}
 
 export class UI {
   constructor() {
     this.handlers = {};
-    this._attackRows = new Map();
-    this._leaderSig = '';
+    this._fronts = new Map(); // clave → { li, a, d, gone }
+    this._lbRows = new Map(); // id → fila de la clasificación
+    this._lbIndex = new Map();
+    this._counters = new Set();
+    this._lastEvent = null;
+    this._troops = this._counter($('pj-tropas'));
+    this._troopsMax = this._counter($('pj-tropas-max'));
+    this._gold = this._counter($('pj-oro'));
 
     $('ratio').addEventListener('input', () => this.handlers.onRatio?.(Number($('ratio').value) / 100));
 
@@ -144,9 +186,13 @@ export class UI {
     $('eventos').replaceChildren();
     $('frentes').replaceChildren();
     $('solicitudes').replaceChildren();
+    $('lista-clasificacion').replaceChildren();
     this._requests.clear();
-    this._attackRows.clear();
-    this._leaderSig = '';
+    for (const f of this._fronts.values()) this._dropFront(f);
+    this._fronts.clear();
+    this._lbRows.clear();
+    this._lbIndex.clear();
+    for (const c of [this._troops, this._troopsMax, this._gold]) c.value = null;
     this.closeNation();
   }
 
@@ -293,13 +339,45 @@ export class UI {
 
   pushEvent(evt) {
     const box = $('eventos');
+    const now = performance.now();
+    // El mismo aviso varias veces seguidas: un solo aviso con contador
+    const last = this._lastEvent;
+    if (last && last.text === evt.text && now - last.at < 4000 && last.el.isConnected) {
+      last.count++;
+      last.at = now;
+      last.el.querySelector('.ev-veces').textContent = `×${last.count}`;
+      last.el.classList.remove('rebote');
+      void last.el.offsetWidth; // reinicia la animación del rebote
+      last.el.classList.add('rebote');
+      return;
+    }
     const el = document.createElement('div');
-    el.className = `evento ${evt.kind}`;
-    el.textContent = evt.text;
+    el.className = `evento ${evt.kind || 'info'}`;
+    el.style.setProperty('--dur', `${EVENT_MS}ms`);
+    const text = document.createElement('span');
+    text.className = 'ev-texto';
+    text.textContent = evt.text;
+    const times = document.createElement('span');
+    times.className = 'ev-veces';
+    const bar = document.createElement('span');
+    bar.className = 'ev-tiempo';
+    el.append(text, times, bar);
     box.prepend(el);
+    this._lastEvent = { text: evt.text, at: now, count: 1, el };
     while (box.children.length > MAX_EVENTS) box.lastChild.remove();
     setTimeout(() => el.classList.add('saliendo'), EVENT_MS);
-    setTimeout(() => el.remove(), EVENT_MS + 700);
+    setTimeout(() => el.remove(), EVENT_MS + 500);
+  }
+
+  _counter(el, fmt) {
+    const c = new Counter(el, fmt);
+    this._counters.add(c);
+    return c;
+  }
+
+  /** Avanza las cifras animadas (llamar en cada frame). */
+  animate(dt) {
+    for (const c of this._counters) c.step(dt);
   }
 
   update(game, human, ratio, buildMode) {
@@ -337,12 +415,16 @@ export class UI {
     $('pj-nombre').textContent = human.name;
     const max = human.maxTroops();
     $('pj-estado').textContent = human.alive ? '' : 'Derrotado · modo espectador';
-    $('pj-barra').style.width = `${Math.min(100, (human.troops / max) * 100)}%`;
+    const fill = Math.min(1, human.troops / max);
+    $('pj-barra').style.width = `${fill * 100}%`;
+    // Casi al máximo: la barra brilla (buen momento para atacar)
+    $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
     const playing = game.phase === 'playing';
-    $('pj-tropas').textContent = `${formatNumber(human.troops)} / ${formatNumber(max)}`;
+    this._troops.set(human.troops);
+    this._troopsMax.set(max);
     $('pj-crec').textContent = playing ? `+${formatNumber(human.growthPerTick() * perSecond)}/s` : '';
-    $('pj-oro').textContent = formatNumber(human.gold);
+    this._gold.set(human.gold);
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
     $('pj-terr').textContent = formatPercent(human.tiles / landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
@@ -396,10 +478,15 @@ export class UI {
    * Tarjetas de combate a la derecha: quién ataca a quién y con cuántas tropas
    * (ataques, desembarcos y misiles en los que participa el jugador). Las que
    * le atacan van primero y en rojo. Clic = la cámara va a ese frente.
+   *
+   * Sin parpadeos: cada tarjeta se crea una vez y se actualiza en su sitio;
+   * solo se mueve si cambia el orden, y al terminar el combate se queda un
+   * momento atenuada en vez de desaparecer (un ataque que se reanuda enseguida
+   * reutiliza su tarjeta).
    */
   _updateAttacks(game, human) {
     const list = $('frentes');
-    const seen = new Set();
+    const now = performance.now();
     const cards = [];
     const side = (p, fallback) => (p ? { name: p.name, flag: p.flag, color: p.color } : { name: fallback, flag: '', color: null });
     for (const atk of game.attacks) {
@@ -410,12 +497,12 @@ export class UI {
       const target = atk.targetId ? game.players[atk.targetId] : null;
       cards.push({
         key: `a${atk.attacker.id}-${atk.targetId}`,
+        kind: target ? 'ataque' : 'expansion',
         incoming,
         left: side(atk.attacker),
         right: side(target, 'Tierra libre'),
-        a: formatNumber(atk.troops),
-        d: target ? formatNumber(target.troops) : '—',
-        share: target ? atk.troops / (atk.troops + Math.max(1, target.troops)) : 1,
+        a: atk.troops,
+        d: target ? target.troops : null,
         middle: target ? 'VS' : 'Expansión',
         retreat: mine ? atk.targetId : null,
       });
@@ -427,12 +514,12 @@ export class UI {
       const target = b.targetId ? game.players[b.targetId] : null;
       cards.push({
         key: `b${b.id}`,
+        kind: 'desembarco',
         incoming,
         left: side(game.players[b.owner]),
         right: side(target, 'Tierra libre'),
-        a: formatNumber(b.troops),
-        d: target ? formatNumber(target.troops) : '—',
-        share: target ? b.troops / (b.troops + Math.max(1, target.troops)) : 1,
+        a: b.troops,
+        d: target ? target.troops : null,
         middle: 'Desembarco',
       });
     }
@@ -440,56 +527,83 @@ export class UI {
       const mine = m.owner === human.id;
       const incoming = m.targetId === human.id;
       if (!mine && !incoming) continue;
-      const left = Math.max(0, Math.ceil(((1 - m.progress) * m.dist) / CONFIG.missileSpeed / (1000 / TICK_MS)));
       cards.push({
         key: `m${m.id}`,
+        kind: 'misil',
         incoming,
         left: side(game.players[m.owner]),
         right: side(game.players[m.targetId], '—'),
-        a: 'Misil',
-        d: `${left} s`,
-        share: m.progress,
+        a: null,
+        aText: 'Misil',
+        d: null,
+        dText: `${Math.max(0, Math.ceil(((1 - m.progress) * m.dist) / CONFIG.missileSpeed / (1000 / TICK_MS)))} s`,
+        progress: m.progress,
         middle: 'Impacto',
       });
     }
     cards.sort((x, y) => Number(y.incoming) - Number(x.incoming));
 
-    const MAX = 5;
-    for (const c of cards.slice(0, MAX)) {
-      seen.add(c.key);
-      let li = this._attackRows.get(c.key);
-      if (!li) {
-        li = this._frontCard(c);
-        this._attackRows.set(c.key, li);
+    const shown = cards.slice(0, MAX_FRONTS);
+    const live = new Set();
+    shown.forEach((c, i) => {
+      live.add(c.key);
+      let f = this._fronts.get(c.key);
+      if (!f) {
+        f = this._newFront(c);
+        this._fronts.set(c.key, f);
       }
-      li.querySelector('.f-a').textContent = c.a;
-      li.querySelector('.f-d').textContent = c.d;
-      li.querySelector('.f-barra span').style.width = `${Math.round(Math.max(0.04, Math.min(1, c.share)) * 100)}%`;
-      list.append(li); // también reordena
-    }
-    for (const [key, li] of this._attackRows) {
-      if (!seen.has(key)) {
-        li.remove();
-        this._attackRows.delete(key);
+      if (f.gone) {
+        f.gone = 0;
+        f.li.classList.remove('saliendo');
+        f.vs.textContent = c.middle;
+      }
+      // Cifras (animadas) y barra de fuerzas
+      if (c.a === null) f.aEl.textContent = c.aText;
+      else f.a.set(c.a);
+      if (c.d === null) f.dEl.textContent = c.dText || '—';
+      else f.d.set(c.d);
+      const share = c.kind === 'misil' ? c.progress : c.d === null ? 1 : c.a / (c.a + Math.max(1, c.d));
+      const pct = Math.round(Math.max(0.04, Math.min(1, share)) * 100);
+      f.barA.style.width = `${pct}%`;
+      f.barD.style.width = `${100 - pct}%`;
+      // Solo se mueve si no está ya en su sitio (moverla reiniciaría animaciones)
+      if (list.children[i] !== f.li) list.insertBefore(f.li, list.children[i] || null);
+    });
+    for (const [key, f] of this._fronts) {
+      if (live.has(key)) continue;
+      if (!f.gone) {
+        f.gone = now;
+        f.li.classList.add('saliendo');
+        f.vs.textContent = 'Fin';
+      } else if (now - f.gone > FRONT_GRACE_MS) {
+        this._dropFront(f);
+        this._fronts.delete(key);
       }
     }
-    let more = list.querySelector('.f-mas');
-    if (cards.length > MAX) {
+    let more = this._moreFronts;
+    if (cards.length > MAX_FRONTS) {
       if (!more) {
-        more = document.createElement('li');
+        more = this._moreFronts = document.createElement('li');
         more.className = 'f-mas';
       }
-      more.textContent = `y ${cards.length - MAX} combate${cards.length - MAX > 1 ? 's' : ''} más`;
-      list.append(more);
+      more.textContent = `y ${cards.length - MAX_FRONTS} combate${cards.length - MAX_FRONTS > 1 ? 's' : ''} más`;
+      if (list.lastElementChild !== more) list.append(more);
     } else if (more) {
       more.remove();
     }
   }
 
-  /** Construye la tarjeta "A · tropas  VS  tropas · B". */
-  _frontCard(c) {
+  _dropFront(f) {
+    f.li.remove();
+    this._counters.delete(f.a);
+    this._counters.delete(f.d);
+  }
+
+  /** Crea una tarjeta "A · tropas  VS  tropas · B" (una sola vez por combate). */
+  _newFront(c) {
     const li = document.createElement('li');
-    li.className = `frente ${c.incoming ? 'entrante' : 'saliente'}`;
+    li.className = `frente ${c.incoming ? 'entrante' : 'saliente'} tipo-${c.kind} nueva`;
+    li.addEventListener('animationend', () => li.classList.remove('nueva'), { once: true });
     li.dataset.key = c.key;
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
@@ -517,17 +631,24 @@ export class UI {
     top.append(who(c.left, 'izq'), who(c.right, 'der'));
     const mid = document.createElement('div');
     mid.className = 'f-fila f-cifras';
-    const a = document.createElement('strong');
-    a.className = 'f-a';
+    const aEl = document.createElement('strong');
+    aEl.className = 'f-a';
     const vs = document.createElement('span');
     vs.className = 'f-vs';
     vs.textContent = c.middle;
-    const d = document.createElement('strong');
-    d.className = 'f-d';
-    mid.append(a, vs, d);
+    const dEl = document.createElement('strong');
+    dEl.className = 'f-d';
+    mid.append(aEl, vs, dEl);
+    // Barra de fuerzas en dos colores: atacante frente a defensor
     const bar = document.createElement('div');
     bar.className = 'f-barra';
-    bar.append(document.createElement('span'));
+    const barA = document.createElement('span');
+    barA.className = 'f-barra-a';
+    barA.style.background = c.left.color ? rgbToCss(c.left.color) : '';
+    const barD = document.createElement('span');
+    barD.className = 'f-barra-d';
+    barD.style.background = c.right.color ? rgbToCss(c.right.color) : 'rgba(255,255,255,0.18)';
+    bar.append(barA, barD);
     li.append(top, mid, bar);
     if (c.retreat !== null && c.retreat !== undefined) {
       const btn = document.createElement('button');
@@ -539,7 +660,8 @@ export class UI {
       btn.textContent = '✕';
       li.append(btn);
     }
-    return li;
+    $('frentes').append(li);
+    return { li, vs, aEl, dEl, barA, barD, a: this._counter(aEl), d: this._counter(dEl), gone: 0 };
   }
 
   /** Barra superior: tu puesto y el líder frente a la meta de victoria. */
@@ -556,28 +678,79 @@ export class UI {
     }
   }
 
+  /**
+   * Clasificación con filas estables: se actualizan en su sitio y, si alguien
+   * sube o baja de puesto, la fila se desliza hasta su nueva posición.
+   */
   _updateLeaderboard(game, human, landCount) {
+    const list = $('lista-clasificacion');
     const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
     const rows = alive.slice(0, 10);
-    const humanRank = alive.indexOf(human);
-    if (humanRank >= 10) rows.push(human);
-    const html = rows
-      .map((p) => {
-        const rank = alive.indexOf(p) + 1;
-        const marks = (human.allies.has(p.id) ? ' <span class="marca aliado" title="Aliado">🤝</span>' : '') +
-          (game.isTraitor(p) ? ' <span class="marca traidor" title="Traidor">⚠</span>' : '');
-        return `<li data-id="${p.id}" class="${p === human ? 'yo' : ''}">
-          <span class="pos">${rank}</span>
-          ${hasFlag(p.flag) ? `<span class="bandera" style="${flagCss(p.flag, 16)}"></span>` : `<span class="muestra" style="background:${rgbToCss(p.color)}"></span>`}
-          <span class="nom">${escapeHtml(p.name)}${marks}</span>
-          <span class="pct">${formatPercent(p.tiles / landCount)}</span>
-          <span class="tro">${formatNumber(p.troops)}</span>
-        </li>`;
-      })
-      .join('');
-    if (html !== this._leaderSig) {
-      $('lista-clasificacion').innerHTML = html;
-      this._leaderSig = html;
+    if (alive.indexOf(human) >= 10) rows.push(human);
+    const leaderTiles = alive.length ? alive[0].tiles : 1;
+    const animate = !document.body.classList.contains('sin-animaciones');
+    const before = new Map();
+    if (animate) for (const [id, li] of this._lbRows) before.set(id, li.getBoundingClientRect().top);
+
+    rows.forEach((p, i) => {
+      let li = this._lbRows.get(p.id);
+      if (!li) {
+        li = document.createElement('li');
+        li.dataset.id = p.id;
+        li.innerHTML = '<span class="pos"></span><span class="marca-pais"></span><span class="nom"><span class="nom-txt"></span><span class="marcas"></span></span><span class="pct"></span><span class="tro"></span><span class="lb-barra"><span></span></span>';
+        const mark = li.querySelector('.marca-pais');
+        if (hasFlag(p.flag)) {
+          mark.className = 'marca-pais bandera';
+          mark.style.cssText = flagCss(p.flag, 16);
+        } else {
+          mark.className = 'marca-pais muestra';
+          mark.style.background = rgbToCss(p.color);
+        }
+        li.querySelector('.nom-txt').textContent = p.name;
+        this._lbRows.set(p.id, li);
+      }
+      const rank = alive.indexOf(p) + 1;
+      const set = (sel, text) => {
+        const el = li.querySelector(sel);
+        if (el.textContent !== text) el.textContent = text;
+      };
+      set('.pos', String(rank));
+      set('.pct', formatPercent(p.tiles / landCount));
+      set('.tro', formatNumber(p.troops));
+      set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
+      li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;
+      li.classList.toggle('yo', p === human);
+      // Destello al subir o bajar de puesto
+      const prev = this._lbIndex.get(p.id);
+      if (prev !== undefined && prev !== rank && animate) {
+        li.classList.remove('sube', 'baja');
+        void li.offsetWidth;
+        li.classList.add(rank < prev ? 'sube' : 'baja');
+      }
+      this._lbIndex.set(p.id, rank);
+      if (list.children[i] !== li) list.insertBefore(li, list.children[i] || null);
+    });
+    const keep = new Set(rows.map((p) => p.id));
+    for (const [id, li] of this._lbRows) {
+      if (!keep.has(id)) {
+        li.remove();
+        this._lbRows.delete(id);
+      }
+    }
+    // FLIP: cada fila que cambió de posición parte de donde estaba
+    if (animate) {
+      for (const [id, top] of before) {
+        const li = this._lbRows.get(id);
+        if (!li) continue;
+        const dy = top - li.getBoundingClientRect().top;
+        if (Math.abs(dy) < 1) continue;
+        li.style.transition = 'none';
+        li.style.transform = `translateY(${dy}px)`;
+        requestAnimationFrame(() => {
+          li.style.transition = 'transform 0.35s ease';
+          li.style.transform = '';
+        });
+      }
     }
   }
 

@@ -462,7 +462,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   .frente { padding: 6px 8px 7px; }
   .f-a, .f-d { font-size: 14px; }
   .f-lado { font-size: 11px; }
-  .frente:nth-child(n+4) { display: none; }
+  .frente:nth-child(n+3) { display: none; }
+  #eventos .evento:nth-child(n+3) { display: none; }
+  .evento { padding: 5px 10px 6px 8px; font-size: 13px; }
   #columna-derecha {
     top: auto;
     bottom: calc(8px + env(safe-area-inset-bottom, 0px));
@@ -855,4 +857,135 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
   .modo-titulo { font-size: 16px; }
   .tutorial { top: auto; bottom: calc(270px + env(safe-area-inset-bottom, 0px)); }
   body.con-tutorial #eventos { top: auto; }
+}
+
+
+/* =========================================================== HUD pulido */
+
+/* Paneles: vidrio oscuro con un filo de luz arriba */
+#hud .panel, .frente, .evento {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Entrada escalonada al empezar la partida */
+#hud:not([hidden]) #barra-superior { animation: hudArriba 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+#hud:not([hidden]) #clasificacion { animation: hudIzquierda 0.45s 0.08s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+#hud:not([hidden]) #panel-jugador { animation: hudAbajo 0.5s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes hudArriba { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes hudIzquierda { from { opacity: 0; transform: translateX(-16px); } }
+@keyframes hudAbajo { from { opacity: 0; transform: translate(-50%, 18px); } to { transform: translate(-50%, 0); } }
+
+/* ---------- Panel del jugador ---------- */
+.etq { display: inline-flex; align-items: center; gap: 4px; }
+.etq-icono { width: 12px; height: 12px; opacity: 0.8; }
+.cifras .valor .max { color: var(--texto-suave); font-weight: 500; font-size: 0.82em; }
+.barra { position: relative; height: 8px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+#pj-barra {
+  position: relative;
+  background: linear-gradient(90deg, #d99a2b, #f2b33d 60%, #ffe39a);
+  transition: width 0.35s ease-out;
+  border-radius: 4px;
+}
+#pj-barra::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  background-size: 60px 100%;
+  background-repeat: no-repeat;
+  animation: brillo 2.6s linear infinite;
+}
+@keyframes brillo { from { background-position: -60px 0; } to { background-position: calc(100% + 60px) 0; } }
+.barra.lleno { box-shadow: 0 0 0 1px rgba(242, 179, 61, 0.6), 0 0 14px rgba(242, 179, 61, 0.55); }
+.cifras .sub { transition: color 0.3s; }
+
+/* Construcción: respuesta al pasar y al pulsar */
+#construir button { transition: transform 0.12s, border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+#construir button:not(:disabled):not(.caro):hover { transform: translateY(-2px); border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
+#construir button:not(:disabled):active { transform: translateY(0) scale(0.97); }
+#construir button.activo { box-shadow: 0 0 0 1px var(--acento), 0 0 16px rgba(242, 179, 61, 0.35); }
+
+/* ---------- Clasificación ---------- */
+#lista-clasificacion li { position: relative; overflow: hidden; transition: background 0.2s; }
+#lista-clasificacion .marca-pais { justify-self: center; }
+#lista-clasificacion .marcas { font-size: 11px; }
+#lista-clasificacion .marcas:empty { display: none; }
+.lb-barra { position: absolute; left: 4px; right: 4px; bottom: 1px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, 0.05); pointer-events: none; }
+.lb-barra span { display: block; height: 100%; border-radius: 1px; background: rgba(242, 179, 61, 0.55); transition: width 0.4s ease-out; }
+#lista-clasificacion li.yo .lb-barra span { background: var(--acento); }
+#lista-clasificacion li.sube { animation: sube 0.9s ease-out; }
+#lista-clasificacion li.baja { animation: baja 0.9s ease-out; }
+@keyframes sube { from { background: rgba(95, 211, 141, 0.35); } }
+@keyframes baja { from { background: rgba(255, 107, 107, 0.3); } }
+
+/* ---------- Tarjetas de combate ---------- */
+.frente { animation: none; transition: transform 0.15s, background 0.2s, opacity 0.35s, filter 0.35s; }
+.frente.nueva { animation: entrarDerecha 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.frente.entrante { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 107, 107, 0.35), 0 0 18px rgba(255, 60, 60, 0.18); }
+.frente.saliendo { opacity: 0.45; filter: saturate(0.3); pointer-events: none; }
+.frente.saliendo .f-vs { background: rgba(255, 255, 255, 0.06); color: var(--texto-suave); }
+.f-barra { display: flex; gap: 2px; height: 5px; background: transparent; }
+.f-barra span { display: block; height: 100%; border-radius: 3px; transition: width 0.4s ease-out; }
+.f-barra-a { background: var(--acento); box-shadow: 0 0 8px rgba(255, 255, 255, 0.15); }
+.frente.tipo-misil .f-barra-a { background: linear-gradient(90deg, #ff9b4a, #ff5a3c) !important; }
+.frente.tipo-misil .f-barra-d { background: rgba(255, 255, 255, 0.1) !important; }
+.frente.tipo-expansion .f-barra-d { display: none; }
+.f-vs { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+.frente.tipo-desembarco .f-vs::before { content: "⚓ "; }
+.frente.tipo-misil .f-vs::before { content: "🚀 "; }
+.f-retirar { opacity: 0; transition: opacity 0.15s; }
+.frente:hover .f-retirar, .frente:focus-within .f-retirar { opacity: 1; }
+@media (hover: none) { .f-retirar { opacity: 1; } }
+
+/* ---------- Avisos ---------- */
+.evento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  padding: 7px 14px 8px 10px;
+  border-left-width: 0;
+  background: rgba(12, 18, 30, 0.92);
+  animation: avisoEntra 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.evento::before {
+  content: "•";
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.12);
+}
+.evento.good::before { content: "✓"; background: rgba(95, 211, 141, 0.22); color: var(--bien); }
+.evento.danger::before { content: "!"; background: rgba(255, 107, 107, 0.25); color: var(--peligro); }
+.evento.warn::before { content: "!"; background: rgba(255, 200, 87, 0.22); color: var(--aviso); }
+.ev-veces { font-size: 12px; font-weight: 800; color: var(--acento); }
+.ev-veces:empty { display: none; }
+.ev-tiempo { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: rgba(255, 255, 255, 0.25); transform-origin: left; animation: consumir var(--dur, 6s) linear forwards; }
+.evento.good .ev-tiempo { background: var(--bien); }
+.evento.danger .ev-tiempo { background: var(--peligro); }
+.evento.warn .ev-tiempo { background: var(--aviso); }
+.evento.rebote { animation: rebote 0.35s ease-out; }
+.evento.rebote .ev-tiempo { animation: consumir var(--dur, 6s) linear forwards; }
+.evento.saliendo { opacity: 0; transform: translateY(-6px); transition: opacity 0.45s, transform 0.45s; }
+@keyframes avisoEntra { from { opacity: 0; transform: translateY(-10px) scale(0.97); } }
+@keyframes consumir { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes rebote { 40% { transform: scale(1.04); } }
+
+/* ---------- Aviso central, tooltip y propuestas ---------- */
+#aviso:not([hidden]) { animation: avisoEntra 0.3s ease-out; }
+#tooltip:not([hidden]) { animation: tipEntra 0.12s ease-out; }
+@keyframes tipEntra { from { opacity: 0; transform: translateY(3px); } }
+.solicitud { transition: transform 0.15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  #hud:not([hidden]) #barra-superior, #hud:not([hidden]) #clasificacion, #hud:not([hidden]) #panel-jugador,
+  .frente.nueva, .evento, .evento.rebote, #aviso:not([hidden]), #tooltip:not([hidden]), #pj-barra::after,
+  #lista-clasificacion li.sube, #lista-clasificacion li.baja { animation: none !important; }
+  .ev-tiempo { animation-duration: 0s !important; transform: scaleX(0); }
 }

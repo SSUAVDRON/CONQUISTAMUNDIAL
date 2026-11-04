@@ -650,6 +650,7 @@ function frame(now) {
   if (state.buildMode && (state.game.phase !== 'playing' || !state.human?.alive)) state.buildMode = null;
   input.update(dt);
   camera.update(now);
+  if (!state.demo) ui.animate(dt);
   state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
   updatePointer(now);
 
