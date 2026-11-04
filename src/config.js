@@ -55,11 +55,11 @@ export const CONFIG = {
   growRandom: 6, // azar por casilla
   growTerrain: 10, // por cada punto de coste de terreno por encima de la llanura
   growSmooth: 1, // prioridad a las casillas ya rodeadas (rellena huecos)
-  // Expansión dirigida: el lado del país que mira al clic avanza antes (todo a
-  // la vez, en un frente ancho) y el de detrás se retrasa hasta 2 × growFocus
-  // pasos; con menos ruido, para que crezca uniforme hacia allí
-  growFocus: 40,
-  growFocusNoise: 0.25,
+  // Expansión dirigida: el lado del país que mira al clic avanza antes y el de
+  // detrás se retrasa hasta 2 × growFocus pasos; con algo de ruido, para que
+  // el frente no salga perfecto
+  growFocus: 26,
+  growFocusNoise: 0.7,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
   // Barcos de transporte
