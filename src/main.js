@@ -18,6 +18,7 @@ import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
 import { NetSync, Sala, newRoomCode, normalizeCode, openRooms } from './multiplayer.js';
+import { Sound } from './sonido.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -168,7 +169,11 @@ function startDemo() {
 
 function enterGame(game) {
   state.demo = false;
-  game.onEvent = (evt) => (evt.kind === 'request' ? ui.addRequest(game, evt) : ui.pushEvent(evt));
+  game.onEvent = (evt) => {
+    if (!state.demo) sound.onEvent(evt);
+    if (evt.kind === 'request') ui.addRequest(game, evt);
+    else ui.pushEvent(evt);
+  };
   for (const evt of game.eventLog) game.onEvent(evt);
   state.speed = 1; // la partida va siempre a velocidad normal
   ui.setRatio(state.ratio);
@@ -216,8 +221,39 @@ const tutorial = new Tutorial({
 });
 
 /** Ajustes del jugador que afectan a la partida (render e interfaz). */
+// Sonido: arranca con el primer gesto (los navegadores no dejan sonar antes)
+const sound = new Sound();
+for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => sound.unlock(), true);
+// Un clic suave en cualquier botón del interfaz
+document.addEventListener('click', (e) => {
+  if (e.target instanceof Element && e.target.closest('button')) sound.play('click', 0.6, 40);
+});
+
+/** Botón de la barra superior (y tecla N): silencia o activa todo el sonido. */
+function toggleMute() {
+  profile.ajustes.silencio = !profile.ajustes.silencio;
+  saveProfile(profile);
+  applySettings();
+}
+document.getElementById('btn-sonido')?.addEventListener('click', toggleMute);
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyN' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) toggleMute();
+});
+
 function applySettings() {
   const a = profile.ajustes;
+  sound.setOptions({
+    music: a.musica !== false,
+    sfx: a.efectos !== false,
+    musicVol: a.volMusica ?? 0.5,
+    sfxVol: a.volEfectos ?? 0.6,
+    muted: !!a.silencio,
+  });
+  const muteBtn = document.getElementById('btn-sonido');
+  if (muteBtn) {
+    muteBtn.setAttribute('aria-pressed', String(!!a.silencio));
+    muteBtn.classList.toggle('silencio', !!a.silencio);
+  }
   state.pointerOn = a.puntero !== false;
   if (state.renderer) {
     state.renderer.options = {
@@ -702,6 +738,7 @@ function frame(now) {
   camera.update(now);
   if (!state.demo) ui.animate(dt);
   state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+  sound.update(state.game, camera, state.human, state.demo);
   updatePointer(now);
 
   if (!state.demo && state.human && now - state.lastHud > 200) {
@@ -724,6 +761,7 @@ applySettings();
 window.__dominia = state;
 window.__trinchera = state;
 state.camera = camera; // para pruebas automáticas
+state.sound = sound;
 state.profile = profile;
 
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después

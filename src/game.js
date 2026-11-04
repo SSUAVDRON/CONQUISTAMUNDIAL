@@ -785,6 +785,11 @@ export class Game {
       atk.troops -= cost;
       atk.budget -= slow;
       if (target) target.troops -= loss;
+      else {
+        // Expandirse también da oro: cada casilla libre, al momento
+        A.gold += CONFIG.wildTileGold;
+        A.stats.expansionGold = (A.stats.expansionGold || 0) + CONFIG.wildTileGold;
+      }
       this.setOwner(t, aid);
     }
     if (atk.inFrontier.size === 0 || atk.troops < 1) this._endAttack(atk);

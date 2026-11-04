@@ -84,7 +84,7 @@ export class Player {
 
   goldPerTick() {
     if (!this.tiles) return 0;
-    const base = CONFIG.goldBase + Math.sqrt(this.tiles) * CONFIG.goldSqrtMult;
+    const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
     return base * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus));
   }
 

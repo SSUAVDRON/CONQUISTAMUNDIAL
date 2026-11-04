@@ -66,12 +66,13 @@ export const CONFIG = {
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
   boatSpeed: 0.55 * RES, // casillas por tick
 
-  // Oro: ingreso por tick = (base + √casillas × mult) × (1 + bonus de puertos y fábricas)
+  // Oro: ingreso por tick = (base + casillas^0,75 × mult) × (1 + bonus de puertos y fábricas)
   startGold: 0,
   goldBase: 50,
-  // Ingreso por territorio ∝ √casillas: crece con el país pero cada vez menos
-  // (con casillas^0,75 los imperios grandes construían sin parar)
-  goldSqrtMult: 9.2 / RES,
+  // Ingreso casi proporcional al territorio (casillas^0,75): expandirse rinde.
+  // Los precios altos y la inflación del 25 % evitan que se construya sin parar
+  goldTileMult: 1.12 / RES15,
+  wildTileGold: 15, // oro al momento por cada casilla de tierra libre conquistada
   // Rendimiento decreciente de puertos y fábricas: bonus = % × n / (1 + 0,12 × n)
   bonusFalloff: 0.12,
   plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla

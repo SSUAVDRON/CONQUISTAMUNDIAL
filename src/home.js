@@ -232,6 +232,25 @@ export class Home {
         this.h.onSettings?.();
       });
     }
+    // Sonido: interruptores y volúmenes (0-100 en pantalla, 0-1 en el perfil)
+    for (const [id, key] of Object.entries({ 'aj-musica': 'musica', 'aj-efectos': 'efectos' })) {
+      $(id).checked = this.profile.ajustes[key] !== false;
+      $(id).addEventListener('change', () => {
+        this.profile.ajustes[key] = $(id).checked;
+        this.h.onProfileChange?.(false);
+      });
+    }
+    for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.6]]) {
+      const v = Math.round((this.profile.ajustes[key] ?? def) * 100);
+      $(id).value = String(v);
+      $(out).textContent = String(v);
+      $(id).addEventListener('input', () => {
+        $(out).textContent = $(id).value;
+        this.profile.ajustes[key] = Number($(id).value) / 100;
+        this.h.onSettings?.();
+      });
+      $(id).addEventListener('change', () => this.h.onProfileChange?.(false));
+    }
     $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
 
     // Portada, arsenal y muestras de color

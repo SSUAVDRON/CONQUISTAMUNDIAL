@@ -214,11 +214,11 @@
           <li><b>Misiles:</b> construye un silo (G) y lanza misiles (M) contra territorio enemigo: arrasan una zona, dejan las casillas libres y destruyen sus edificios. Los <i>antimisiles</i> (H) intentan derribar los misiles enemigos que pasan cerca; tras cada disparo recargan 20 s (anillo azul sobre la batería).</li>
           <li><b>Buques de guerra:</b> se botan desde tus puertos (tecla T) y van solos: patrullan la zona del mar donde hagas clic al botarlos (o junto al puerto si haces clic en tu costa), hunden buques y transportes de tropas enemigos y capturan sus pesqueros y mercantes. No atacan puertos. La zona no se puede cambiar después.</li>
             <li><b>Terreno:</b> el mapa muestra la altura: verde = llanura, arena = meseta, gris y blanco = montaña. Mesetas y montañas cuestan más tropas y tiempo de conquistar; al expandirte las rodeas y las tomas al final.</li>
-            <li><b>Oro y edificios:</b> ganas oro según tu territorio (cada vez menos por casilla cuanto más grande eres). Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (pesqueros, mercantes y oro; basta con hacer clic cerca de la costa) y <i>fortalezas</i> (defensa ×3 alrededor). Los edificios son caros: elige bien. Las obras tardan unos segundos (los antimisiles, los que más). Si te conquistan la casilla, el edificio cambia de dueño.</li>
+            <li><b>Oro y edificios:</b> ganas oro según tu territorio, y cada casilla libre que conquistas te da oro al momento. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (pesqueros, mercantes y oro; basta con hacer clic cerca de la costa) y <i>fortalezas</i> (defensa ×3 alrededor). Los edificios son caros: elige bien. Las obras tardan unos segundos (los antimisiles, los que más). Si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Niveles e inflación:</b> con un edificio seleccionado, haz clic sobre uno tuyo del mismo tipo para subirlo de nivel (hasta 5). Cada compra encarece un 25 % todo lo demás, salvo silos, misiles y antimisiles.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
             <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
-            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M misil · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo.</li>
+            <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M misil · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido.</li>
           </ul>
         </details>
       </section>
@@ -330,6 +330,14 @@
             <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
             <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones del menú</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-musica"><span>Música de fondo</span></label>
+            <label class="interruptor"><input type="checkbox" id="aj-efectos"><span>Efectos de sonido</span></label>
+          </div>
+          <div class="fila-2 volumenes">
+            <label class="campo"><span>Volumen de la música <strong id="out-vol-musica">50</strong></span>
+              <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
+            <label class="campo"><span>Volumen de los efectos <strong id="out-vol-efectos">60</strong></span>
+              <input id="aj-vol-efectos" type="range" min="0" max="100" value="60"></label>
           </div>
           <div class="botones-izq">
             <button type="button" id="aj-tutorial">Repetir el tutorial</button>
@@ -413,6 +421,9 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         <span id="dato-lider">—</span>
       </span>
+      <button type="button" id="btn-sonido" class="btn-sonido" title="Silenciar o activar el sonido (tecla N)" aria-pressed="false">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3H2.5z" fill="currentColor"/><path class="ondas" d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="tachado" d="M10.5 5.5l4 5M14.5 5.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
       <button type="button" id="btn-mi-nacion" class="btn-mi-nacion" title="Ir a tu nación (tecla C)">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span>Mi nación</span>

@@ -206,6 +206,11 @@ export function defaultProfile() {
       marcadores: true, // tropas de los ataques sobre el mapa
       emojis: true,
       animaciones: true,
+      musica: true, // música de fondo
+      efectos: true, // efectos de sonido
+      volMusica: 0.5,
+      volEfectos: 0.6,
+      silencio: false, // botón de la barra superior
     },
     tutorial: false,
     actualizado: 0,

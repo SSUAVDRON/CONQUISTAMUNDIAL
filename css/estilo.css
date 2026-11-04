@@ -1741,3 +1741,15 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   #construir button { min-width: 78px; }
 }
 #construir canvas { background: none; width: 30px; height: 30px; }
+
+/* Botón de sonido de la barra superior */
+.btn-sonido { display: inline-flex; align-items: center; justify-content: center; width: 34px; padding: 5px; }
+.btn-sonido svg { width: 16px; height: 16px; }
+.btn-sonido .tachado { display: none; }
+.btn-sonido.silencio { color: var(--texto-suave); }
+.btn-sonido.silencio .ondas { display: none; }
+.btn-sonido.silencio .tachado { display: inline; }
+/* Volúmenes en Ajustes */
+.volumenes { margin-top: 12px; gap: 14px; }
+.volumenes input[type="range"] { width: 100%; }
+#barra-superior .btn-sonido { padding: 5px; width: 34px; }

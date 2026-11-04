@@ -134,10 +134,11 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   mapas y naciones inventadas si se piden más) y colonias (hasta 300)
 - 15 s para elegir dónde empezar; más tropas al principio; la expansión
   avanza hacia donde haces clic y en proporción a las tropas enviadas
+- Oro al expandirse (por casilla libre) e ingresos casi proporcionales al
+  territorio; música de fondo y efectos de sonido sintetizados
 
 ## Próximo
 
-- Sonido y música propios
 - Misiles de distintos tamaños o con efectos duraderos (zona inhabitable un tiempo)
 - Más mapas reales: Oceanía, Oriente Medio, el Mediterráneo, un continente a
   más resolución (basta con añadir regiones en `herramientas/mapas.js`)
@@ -158,7 +159,6 @@ propio dominio hace falta un servidor que haga lo mismo que `room`:
 ## Fase 6 — Pulido
 
 - Mapas del mundo real a partir de datos de dominio público (p. ej. Natural Earth)
-- Sonido y música propios
 - Estadísticas de fin de partida, repeticiones (gratis gracias al determinismo)
 - PWA instalable en móvil
 - Cuentas y ranking
