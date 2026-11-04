@@ -57,14 +57,21 @@ test('construir un buque exige puerto y oro, y su coste sube', () => {
   assert.ok(g2.buildCost(a, 'warship') > cost, 'cada compra encarece la siguiente');
 });
 
-test('a un buque se le asigna una zona y la patrulla solo', () => {
+test('la zona de un buque se elige al botarlo, no cambia y la patrulla solo', () => {
   const { map, game, a, ta, tb, water } = navalSetup();
+  // Clic en tu costa: patrulla junto a su puerto
   buildNow(game, a, 'warship', ta);
-  const ws = game.warships[0];
-  assert.equal(ws.patrol, game.buildings.find((b) => b.kind === 'port' && b.owner === a.id).water, 'empieza patrullando su puerto');
+  assert.equal(game.warships[0].patrol, game.buildings.find((b) => b.kind === 'port' && b.owner === a.id).water, 'clic en tierra: junto a su puerto');
+  // Clic en el mar: esa es su zona
   const dest = water(tb);
-  assert.ok(game.moveWarship(a, dest));
+  assert.ok(buildNow(game, a, 'warship', dest));
+  const ws = game.warships[1];
   assert.equal(ws.patrol, dest);
+  // Ya no se puede mover: el clic en el mar no cambia nada
+  game.queueIntent({ type: 'moveWarship', playerId: a.id, tile: water(ta) });
+  game.tick();
+  assert.equal(ws.patrol, dest, 'la zona es fija');
+  assert.equal(game.moveWarship, undefined);
   const near = () => Math.hypot(map.x(ws.tile) - map.x(dest), map.y(ws.tile) - map.y(dest)) <= CONFIG.warshipPatrol * 1.3;
   for (let i = 0; i < 1500 && !near(); i++) game.tick();
   assert.ok(near(), 'debería llegar a su zona');
@@ -81,8 +88,7 @@ test('a un buque se le asigna una zona y la patrulla solo', () => {
 
 test('un buque hunde transportes enemigos pero no ataca puertos', () => {
   const { game, a, b, ta, tb, water } = navalSetup();
-  buildNow(game, a, 'warship', ta);
-  game.moveWarship(a, water(tb));
+  buildNow(game, a, 'warship', water(tb));
   const port = game.buildings.find((x) => x.kind === 'port' && x.owner === b.id);
   for (let i = 0; i < 300; i++) game.tick();
   // B manda un barco hacia la costa de A (sale de su costa, junto a la zona del buque)
@@ -101,12 +107,11 @@ test('un buque hunde transportes enemigos pero no ataca puertos', () => {
 
 test('dos buques enemigos se cañonean hasta que uno se hunde; los aliados no', () => {
   const { game, a, b, ta, tb, water } = navalSetup();
-  buildNow(game, a, 'warship', ta);
-  buildNow(game, b, 'warship', tb);
   // Aliados: nadie dispara
   game.proposeAlliance(a, b);
   game.proposeAlliance(b, a);
-  game.moveWarship(a, water(tb));
+  buildNow(game, a, 'warship', water(tb));
+  buildNow(game, b, 'warship', tb);
   for (let i = 0; i < 400; i++) game.tick();
   assert.equal(game.warships.length, 2);
   assert.ok(game.warships.every((w) => w.hp === CONFIG.warshipHp), 'entre aliados no hay combate');
@@ -115,4 +120,21 @@ test('dos buques enemigos se cañonean hasta que uno se hunde; los aliados no', 
   for (let i = 0; i < 400 && game.warships.length === 2; i++) game.tick();
   assert.equal(game.warships.length, 1, 'uno de los dos debería hundirse');
   assert.equal(a.buildings.warship + b.buildings.warship, 1);
+});
+
+test('un clic sobre tu puerto (o en el agua de al lado) lo sube de nivel', () => {
+  const { game, a, ta, water } = navalSetup();
+  const port = game.buildings.find((b) => b.kind === 'port' && b.owner === a.id);
+  assert.equal(port.level, 1);
+  // Antes, el ajuste a la costa buscaba otra orilla libre y nunca llegaba a mejorarlo
+  for (const click of [port.tile, water(port.tile) ?? port.tile]) {
+    assert.equal(game.snapBuildTile(a, 'port', click), port.tile);
+    assert.ok(game.canBuild(a, 'port', game.snapBuildTile(a, 'port', click)).upgrade === port);
+  }
+  game.queueIntent({ type: 'build', playerId: a.id, tile: water(port.tile) ?? port.tile, kind: 'port' });
+  game.tick();
+  terminarObras(game);
+  assert.equal(port.level, 2, 'el puerto sube a nivel 2');
+  assert.equal(game.buildings.filter((b) => b.kind === 'port' && b.owner === a.id).length, 1, 'sin puerto nuevo');
+  void ta;
 });

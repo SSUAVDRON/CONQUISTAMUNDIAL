@@ -8,20 +8,49 @@ const TAU = Math.PI * 2;
  * Dibuja el icono de `kind` centrado en (cx, cy) con tamaño `size` px.
  * `disc` (opcional) pinta un círculo de fondo; `ring` su contorno.
  */
+/**
+ * Triángulo equilátero con la punta arriba y las esquinas redondeadas,
+ * centrado en (0, 0) con «radio» `R` (del centro a cada vértice).
+ */
+function roundedTriangle(ctx, R, r) {
+  const pts = [0, 1, 2].map((i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 3;
+    return [Math.cos(a) * R, Math.sin(a) * R + R * 0.18];
+  });
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const start = mid(pts[2], pts[0]);
+  ctx.moveTo(start[0], start[1]);
+  for (let i = 0; i < 3; i++) {
+    const p = pts[i];
+    const n = pts[(i + 1) % 3];
+    ctx.arcTo(p[0], p[1], n[0], n[1], r);
+  }
+  ctx.closePath();
+}
+
 export function drawBuildingIcon(ctx, kind, cx, cy, size, { glyph = '#fff', disc = null, ring = null } = {}) {
   ctx.save();
   ctx.translate(cx, cy);
   const k = size / 20;
   ctx.scale(k, k);
+  // Antimisiles y silo van en un triángulo (se distinguen de un vistazo)
+  const tri = kind === 'sam' || kind === 'silo';
   if (disc) {
     ctx.beginPath();
-    ctx.arc(0, 0, 10, 0, TAU);
+    if (tri) roundedTriangle(ctx, 12.5, 2.4);
+    else ctx.arc(0, 0, 10, 0, TAU);
     ctx.fillStyle = disc;
     ctx.fill();
     if (ring) {
       ctx.lineWidth = 1.6;
+      ctx.lineJoin = 'round';
       ctx.strokeStyle = ring;
       ctx.stroke();
+    }
+    if (tri) {
+      // El dibujo, algo más pequeño y bajado al centro del triángulo
+      ctx.translate(0, 2.6);
+      ctx.scale(0.72, 0.72);
     }
   }
   ctx.fillStyle = glyph;

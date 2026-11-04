@@ -41,7 +41,6 @@ export class BotBrain {
     }
     if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
-    if (p.buildings.warship && r.chance(0.2)) this._commandWarships();
     if (p.active.silo && r.chance(0.15 + this.aggression * 0.2)) this._fireMissile(counts);
 
     // 1. Expandirse por tierra libre mientras la haya
@@ -119,7 +118,10 @@ export class BotBrain {
     if (want === 'warship') {
       if (p.gold < g.buildCost(p, want)) return false;
       const port = g.buildings.find((b) => b.owner === p.id && b.kind === 'port' && b.level > 0);
-      return !!port && g.build(p, 'warship', port.tile);
+      if (!port) return false;
+      // La zona se elige al botarlo: después ya no se puede cambiar
+      const zone = this._warshipZone(port);
+      return g.build(p, 'warship', zone >= 0 ? zone : port.tile);
     }
     // A veces mejora uno que ya tiene en vez de levantar otro (sale más barato).
     // Si ya tiene todas las ciudades que quería, solo mejora.
@@ -320,28 +322,24 @@ export class BotBrain {
     return false;
   }
 
-  /** Manda los buques parados contra el puerto enemigo más cercano. */
   /**
-   * Da a sus buques una zona que patrullar: casi siempre la de un puerto
-   * propio (defensa) y, si es agresivo, la de un puerto enemigo cercano para
-   * quedarse sus pesqueros y mercantes. El buque hace el resto solo.
+   * Zona para un buque nuevo (no se podrá cambiar): casi siempre junto a un
+   * puerto propio (defensa) y, si es agresivo, junto a un puerto enemigo
+   * cercano para quedarse sus pesqueros y mercantes.
    */
-  _commandWarships() {
+  _warshipZone(port) {
     const g = this.game;
     const p = this.player;
     const map = g.map;
     const r = g.rng;
+    if (!port || port.water < 0) return -1;
+    const sea = map.waterBody[port.water];
     const d2 = (a, b) => (map.x(a) - map.x(b)) ** 2 + (map.y(a) - map.y(b)) ** 2;
-    for (const ws of g.warships) {
-      if (ws.owner !== p.id || ws.dead || g.ticks < (ws.botZoneAt || 0)) continue;
-      ws.botZoneAt = g.ticks + r.int(400, 900);
-      const sea = map.waterBody[ws.tile];
-      const ports = g.buildings.filter((b) => b.kind === 'port' && b.level > 0 && b.water >= 0 && map.waterBody[b.water] === sea);
-      const own = ports.filter((b) => b.owner === p.id);
-      const enemy = ports.filter((b) => b.owner !== p.id && !p.allies.has(b.owner) && d2(b.water, ws.tile) < (140 * RES) ** 2);
-      const pick = enemy.length && r.chance(0.3 + this.aggression * 0.3) ? r.pick(enemy) : own.length ? r.pick(own) : null;
-      if (pick && pick.water !== ws.patrol) g.moveWarship(p, pick.water, ws);
-    }
+    const ports = g.buildings.filter((b) => b.kind === 'port' && b.level > 0 && b.water >= 0 && map.waterBody[b.water] === sea);
+    const own = ports.filter((b) => b.owner === p.id);
+    const enemy = ports.filter((b) => b.owner !== p.id && !p.allies.has(b.owner) && d2(b.water, port.water) < (140 * RES) ** 2);
+    const pick = enemy.length && r.chance(0.3 + this.aggression * 0.3) ? r.pick(enemy) : own.length ? r.pick(own) : null;
+    return pick ? pick.water : port.water;
   }
 
   /** Elige una costa ajena débil, preferiblemente cercana. */

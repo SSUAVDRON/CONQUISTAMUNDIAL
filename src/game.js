@@ -421,8 +421,6 @@ export class Game {
         const check = this.canBuild(p, it.kind, tile);
         if (check.ok) this.build(p, it.kind, tile);
         else this._notify(p, check.reason, 'warn');
-      } else if (it.type === 'moveWarship') {
-        if (this.phase === 'playing') this.moveWarship(p, it.tile);
       } else if (it.type === 'cancelAttack') {
         const atk = p.attacks.get(it.targetId);
         if (atk) this._endAttack(atk, 0.5); // retirarse cuesta la mitad de las tropas
@@ -726,6 +724,9 @@ export class Game {
     const def = BUILDINGS[kind];
     const map = this.map;
     if (!def || !def.coastal || tile < 0 || tile >= map.size) return tile;
+    // Clic sobre (o junto a) un puerto propio: se sube de nivel ese puerto
+    const up = this.upgradeTarget(p, kind, tile);
+    if (up) return up.tile;
     const free = (t) => map.coastal[t] && this.owner[t] === p.id && !this.buildingNear(t, CONFIG.buildingMinDist);
     if (free(tile)) return tile;
     const R = CONFIG.portSnap;
@@ -753,7 +754,7 @@ export class Game {
     if (check.upgrade) return this._startUpgrade(p, check.upgrade);
     p.gold -= this.buildCost(p, kind);
     if (!def.fixed) p.purchases++;
-    if (def.unit === 'ship') return this._launchWarship(p, check.water);
+    if (def.unit === 'ship') return this._launchWarship(p, check.water, check.zone);
     if (def.unit === 'missile') return this._launchMissile(p, check.silo, tile);
     p.stats.built++;
     // Empieza la obra: nivel 0 (sin efecto) hasta que termine
@@ -1239,17 +1240,40 @@ export class Game {
     }
     const cost = this.buildCost(p, 'warship');
     if (p.gold < cost) return { ok: false, reason: `Te falta oro: un buque cuesta ${formatNumber(cost)}` };
-    const port = this.nearestPort(p, tile >= 0 && tile < this.map.size ? tile : p.spawnTile);
+    const map = this.map;
+    const inMap = tile >= 0 && tile < map.size;
+    // Clic en el mar: esa es su zona para siempre; sale del puerto propio más
+    // cercano que dé a ese mismo mar. Clic en tierra: patrulla junto al puerto.
+    const sea = inMap && map.terrain[tile] === 0 ? map.waterBody[tile] : -1;
+    let port = null;
+    if (sea >= 0) {
+      let bestD = Infinity;
+      for (const b of this.buildings) {
+        if (b.owner !== p.id || b.kind !== 'port' || !b.level || b.water < 0 || map.waterBody[b.water] !== sea) continue;
+        const d = (map.x(b.tile) - map.x(tile)) ** 2 + (map.y(b.tile) - map.y(tile)) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          port = b;
+        }
+      }
+      if (!port) return { ok: false, reason: 'Ningún puerto tuyo da a ese mar' };
+    } else port = this.nearestPort(p, inMap ? tile : p.spawnTile);
     const nb = NB_MISC;
-    const c = this.map.neighbors(port.tile, nb);
-    for (let k = 0; k < c; k++) if (this.map.terrain[nb[k]] === 0) return { ok: true, reason: '', water: nb[k] };
+    const c = map.neighbors(port.tile, nb);
+    for (let k = 0; k < c; k++) {
+      if (map.terrain[nb[k]] === 0) return { ok: true, reason: '', water: nb[k], zone: sea >= 0 ? tile : nb[k] };
+    }
     return { ok: false, reason: 'Ese puerto no tiene agua al lado' };
   }
 
-  _launchWarship(p, water) {
+  /**
+   * Bota un buque en `water` (junto a un puerto) con su zona de patrulla
+   * `zone`: navega hasta allí y la vigila solo. La zona no se puede cambiar.
+   */
+  _launchWarship(p, water, zone = water) {
     p.buildings.warship++;
     p.stats.built++;
-    this.warships.push({
+    const ws = {
       id: this._nextWarshipId++,
       owner: p.id,
       tile: water,
@@ -1259,46 +1283,21 @@ export class Game {
       progress: 0,
       fireTick: -Infinity,
       fireAt: -1,
-      patrol: water, // patrulla junto a su puerto hasta que se le asigne otra zona
+      patrol: water,
       nextPatrol: this.ticks + 10,
-    });
-    this._notify(p, 'Buque botado: patrulla junto a su puerto. Clic en el mar para darle otra zona', 'good');
-    return true;
-  }
-
-  /** Envía el buque propio más cercano (o el indicado) a una casilla de agua. */
-  moveWarship(p, tile, ws = null) {
-    const map = this.map;
-    if (tile < 0 || tile >= map.size || map.terrain[tile] !== 0) return false;
-    if (!ws) {
-      let bestD = Infinity;
-      for (const w of this.warships) {
-        if (w.owner !== p.id || w.dead) continue;
-        const dx = map.x(w.tile) - map.x(tile);
-        const dy = map.y(w.tile) - map.y(tile);
-        const d = dx * dx + dy * dy;
-        if (d < bestD) {
-          bestD = d;
-          ws = w;
-        }
+    };
+    this.warships.push(ws);
+    if (zone !== water) {
+      const path = this._waterPath(water, zone);
+      if (path) {
+        ws.patrol = zone;
+        ws.path = path;
+      } else {
+        this._notify(p, 'Tu buque no llega a esa zona: patrullará junto a su puerto', 'warn');
+        return true;
       }
     }
-    if (!ws) {
-      this._notify(p, 'No tienes buques. Constrúyelos en un puerto', 'warn');
-      return false;
-    }
-    const path = this._waterPath(ws.tile, tile);
-    if (!path) {
-      this._notify(p, 'Tu buque no puede llegar a ese mar', 'warn');
-      return false;
-    }
-    // Nueva zona de patrulla: va hasta allí y luego la vigila solo
-    ws.patrol = tile;
-    ws.path = path;
-    ws.pos = 0;
-    ws.progress = 0;
-    ws.nextPatrol = this.ticks + 10;
-    this._notify(p, 'Zona de patrulla asignada a tu buque', 'good');
+    this._notify(p, zone !== water ? 'Buque botado: va a su zona y la patrullará siempre' : 'Buque botado: patrullará junto a su puerto', 'good');
     return true;
   }
 

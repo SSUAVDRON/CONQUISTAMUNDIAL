@@ -125,6 +125,8 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Fluidez: una sola imagen de mapa recortada a la vista, subida del
   territorio por bloques visibles, brillo de conquista en el territorio,
   resolución adaptable y clasificación más tranquila
+- Antimisiles y silos con icono triangular; puertos que se mejoran con un
+  clic encima; buques con zona fija elegida al botarlos
 
 ## Próximo
 

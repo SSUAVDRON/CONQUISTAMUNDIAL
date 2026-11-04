@@ -609,11 +609,7 @@ const input = new Input(canvas, camera, {
       if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
       return;
     }
-    if (!state.game.map.isLand(tile)) {
-      // Clic en el mar: mover el buque propio más cercano
-      if (state.human.buildings.warship) humanIntent({ type: 'moveWarship', tile });
-      return;
-    }
+    if (!state.game.map.isLand(tile)) return; // los buques no se mueven: su zona se elige al botarlos
     humanIntent({ type: 'action', tile, ratio: state.ratio });
   },
   onRightClick(sx, sy) {

@@ -74,8 +74,7 @@ test('un buque de guerra captura los barcos automáticos enemigos', () => {
   const { game, a, b, ta, tb, water } = setup();
   for (let i = 0; i < 200; i++) game.tick(); // B ya tiene pesqueros
   assert.ok(game.merchants.some((m) => m.owner === b.id && m.kind === 'fish'));
-  buildNow(game, a, 'warship', ta);
-  game.moveWarship(a, water(tb));
+  buildNow(game, a, 'warship', water(tb)); // su zona: el mar junto al puerto de B
   for (let i = 0; i < 1500 && !game.merchants.some((m) => m.kind === 'fish' && m.owner === a.id && m.port !== game.buildings.find((x) => x.owner === a.id && x.kind === 'port')?.id); i++) game.tick();
   assert.ok(a.stats.captured >= 1, 'A debería haber capturado algún barco');
   assert.ok(game.merchants.filter((m) => m.owner === a.id).length > 0);

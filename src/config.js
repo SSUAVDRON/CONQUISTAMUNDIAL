@@ -179,7 +179,7 @@ export const BUILDINGS = {
   silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar misiles' },
   sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos; recarga 20 s tras cada disparo' },
   // No son edificios: el buque se bota desde un puerto y el misil sale de un silo
-  warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Patrulla su zona: hunde buques y transportes y captura barcos civiles' },
+  warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Clic en el mar: patrulla esa zona para siempre; hunde buques y transportes y captura barcos civiles' },
   missile: { name: 'Misil', fem: false, base: 500000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
 };
 /** Edificios de verdad (no unidades). */

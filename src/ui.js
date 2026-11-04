@@ -585,9 +585,11 @@ export class UI {
       const cost = formatNumber(game.buildCost(human, buildMode));
       if (def.unit === 'missile') {
         aviso.textContent = `Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`;
+      } else if (def.unit === 'ship') {
+        aviso.textContent = `Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`;
       } else {
-        const where = def.unit ? 'cerca de uno de tus puertos' : def.coastal ? 'en tu costa' : 'en tu territorio';
-        const up = def.unit ? '' : ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
+        const where = def.coastal ? 'en tu costa' : 'en tu territorio';
+        const up = ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
         aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`;
       }
       aviso.hidden = false;
@@ -617,7 +619,7 @@ export class UI {
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
     $('pj-terr').textContent = formatPercent(human.tiles / landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
-    $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''} · clic en el mar: zona` : '';
+    $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
     $('ratio-tropas').textContent = `${formatNumber(human.troops * ratio)} tropas`;
     $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);

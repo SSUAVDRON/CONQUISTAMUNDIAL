@@ -1165,8 +1165,35 @@ export class Renderer {
     const ok = check.ok;
     let [sx, sy] = camera.worldToScreen(map.x(tile) + 0.5, map.y(tile) + 0.5);
     if (kind === 'warship' && ok) {
-      // El buque sale del puerto propio más cercano
-      [sx, sy] = camera.worldToScreen(map.x(check.water) + 0.5, map.y(check.water) + 0.5);
+      // Sale del puerto propio más cercano y se queda para siempre en su zona:
+      // línea desde el puerto y círculo de la zona que patrullará
+      const [px, py] = camera.worldToScreen(map.x(check.water) + 0.5, map.y(check.water) + 0.5);
+      [sx, sy] = camera.worldToScreen(map.x(check.zone) + 0.5, map.y(check.zone) + 0.5);
+      ctx.beginPath();
+      ctx.arc(sx, sy, CONFIG.warshipPatrol * camera.zoom, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(95, 211, 141, 0.08)';
+      ctx.fill();
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#5fd38d';
+      ctx.stroke();
+      if (Math.hypot(sx - px, sy - py) > 4) {
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(sx, sy);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.font = '700 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      const note = 'Zona fija: no se podrá cambiar';
+      ctx.strokeText(note, sx, sy + 22);
+      ctx.fillStyle = '#d8f5e4';
+      ctx.fillText(note, sx, sy + 22);
     }
     if (check.upgrade) {
       // Mejora de un edificio existente: se marca el propio edificio
