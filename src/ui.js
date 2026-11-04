@@ -31,7 +31,7 @@ const EVENT_ICONS = {
  */
 const IMPORTANT = [
   /alianza|traiciona|traidor/i,
-  /eliminad|derrotad/i,
+  /eliminad|derrotad|has conquistado/i,
   /contra ti|casillas tuyas|iba hacia ti|tu antimisiles/i,
   /uno de tus puertos/i,
   /logro|comienza la conquista/i,
@@ -560,6 +560,41 @@ export class UI {
     }
     set(folded, false);
     btn.addEventListener('click', () => set(!section.classList.contains('plegado')));
+  }
+
+  /**
+   * Botín: monedas que salen de (sx, sy) en pantalla, se abren un poco y
+   * vuelan hasta tu contador de oro, que da un golpe al recibirlas.
+   */
+  flyCoins(sx, sy, small = false) {
+    const target = $('pj-oro');
+    if (!target || target.closest('[hidden]')) return;
+    const r = target.getBoundingClientRect();
+    const tx = r.left + Math.min(24, r.width / 2);
+    const ty = r.top + r.height / 2;
+    const n = small ? 7 : 12;
+    for (let i = 0; i < n; i++) {
+      const c = document.createElement('div');
+      c.className = 'moneda-vuela';
+      document.body.append(c);
+      const jx = sx + (Math.random() - 0.5) * 90;
+      const jy = sy - 20 - Math.random() * 50;
+      const anim = c.animate(
+        [
+          { transform: `translate(${sx}px, ${sy}px) scale(0.5)`, opacity: 0 },
+          { transform: `translate(${jx}px, ${jy}px) scale(1.15)`, opacity: 1, offset: 0.3 },
+          { transform: `translate(${tx}px, ${ty}px) scale(0.75)`, opacity: 0.95 },
+        ],
+        { duration: 850 + i * 40, delay: i * 40, easing: 'cubic-bezier(0.45, 0, 0.7, 0.5)', fill: 'both' },
+      );
+      anim.onfinish = () => c.remove();
+    }
+    clearTimeout(this._goldHit);
+    this._goldHit = setTimeout(() => {
+      target.classList.remove('oro-golpe');
+      void target.offsetWidth; // reinicia la animación
+      target.classList.add('oro-golpe');
+    }, 850);
   }
 
   _counter(el, fmt) {

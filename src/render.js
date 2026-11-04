@@ -1174,6 +1174,14 @@ export class Renderer {
         fx.label(e.x, e.y - 1.5 * RES, `+${formatNumber(amount)}`, '#ffd76a', 12, 1.3);
         continue;
       }
+      if (e.kind === 'loot') {
+        // Has eliminado a alguien: lluvia de monedas y la cifra del botín
+        const h = game.human;
+        if (!h || e.owner !== h.id || !visible) continue;
+        fx.coinBurst(e.x, e.y, e.weak ? 14 : 24);
+        fx.label(e.x, e.y - 1.5 * RES, `+${formatNumber(e.gold)}`, '#ffd76a', e.weak ? 18 : 24, 2.4);
+        continue;
+      }
       if (e.kind === 'boom') {
         fx.explosion(e.x, e.y, CONFIG.missileRadius / RES);
       } else {

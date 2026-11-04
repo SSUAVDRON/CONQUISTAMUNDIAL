@@ -27,7 +27,7 @@ const CHORD_S = 9;
 export class Sound {
   constructor() {
     this.ctx = null;
-    this.opts = { music: true, sfx: true, musicVol: 0.5, sfxVol: 0.6, muted: false };
+    this.opts = { music: true, sfx: true, musicVol: 0.5, sfxVol: 0.8, muted: false };
     this._last = new Map(); // tipo → último momento (para no saturar)
     this._seenFx = new WeakSet();
     this._seenAtk = new WeakSet();
@@ -81,10 +81,11 @@ export class Sound {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const o = this.opts;
-    // Todo «de fondo»: la música muy baja y los efectos discretos
+    // La música de fondo, baja; los efectos, bien audibles (el compresor del
+    // final evita que se saturen cuando coinciden varios)
     this.master.gain.setTargetAtTime(o.muted ? 0 : 1, t, 0.08);
     this.musicBus.gain.setTargetAtTime(o.music ? 0.16 * o.musicVol : 0, t, 0.4);
-    this.sfxBus.gain.setTargetAtTime(o.sfx ? 0.55 * o.sfxVol : 0, t, 0.05);
+    this.sfxBus.gain.setTargetAtTime(o.sfx ? 1.1 * o.sfxVol : 0, t, 0.05);
   }
 
   // --------------------------------------------------------------- música
@@ -260,6 +261,11 @@ export class Sound {
   /** Aviso de la partida (el mismo que va al recuadro de avisos). */
   onEvent(evt) {
     if (!this.ctx) return;
+    // Avisos con sonido propio (conquista, guerra, alianza, desembarco…)
+    if (evt.sfx) {
+      this.play(evt.sfx, 1, 250);
+      return;
+    }
     if (evt.kind === 'request') this.play('ding', 0.6, 400);
     else if (evt.feedback && evt.kind === 'warn') this.play('error', 0.7, 300);
     else if (evt.feedback) return;
@@ -310,12 +316,24 @@ export class Sound {
         if (active > prev.active) this.play('built', 0.7, 300);
         if (human.boatCount > prev.boats) this.play('boat', 0.7, 300);
       }
+      let vsNation = false;
+      let vsWild = false;
       for (const atk of human.attacks.values()) {
+        if (atk.targetId) vsNation = true;
+        else vsWild = true;
         if (this._seenAtk.has(atk)) continue;
         this._seenAtk.add(atk);
-        this.play('launch', 0.6, 250);
+        this.play(atk.targetId ? 'charge' : 'launch', 0.8, 250);
       }
-      this._prev = { game, built: builtNow, active, boats: human.boatCount };
+      // Mientras avanzas: tambores de marcha contra naciones y un roce suave
+      // al expandirte por tierra libre (con calma: no cada casilla)
+      if (prev && prev.game === game && human.tiles > prev.tiles) {
+        if (vsNation) this.play('march', 0.7, 650);
+        else if (vsWild) this.play('expand', 0.6, 1100);
+      }
+      // Pierdes casillas a manos de otros: golpes sordos
+      if (prev && prev.game === game && human.tiles < prev.tiles - 2) this.play('hit', 0.7, 700);
+      this._prev = { game, built: builtNow, active, boats: human.boatCount, tiles: human.tiles };
       if (game.phase === 'ended' && !this._ended) {
         this._ended = true;
         this.play(game.winner === human ? 'victory' : 'defeat', 1, 0);
@@ -360,6 +378,89 @@ const SFX = {
   coin: (s, t, v) => {
     s._tone(t, 'sine', 1568, 1568, 0.18, 0.08 * v);
     s._tone(t + 0.07, 'sine', 2093, 2093, 0.3, 0.07 * v, { reverb: 0.3 });
+  },
+  // Lluvia de monedas (botín)
+  coins: (s, t, v) => {
+    const notes = [1568, 1760, 2093, 2349, 2637, 2093, 3136, 2637];
+    notes.forEach((f, i) => s._tone(t + i * 0.055 + Math.random() * 0.02, 'sine', f, f, 0.22, 0.09 * v, { reverb: 0.25 }));
+  },
+  // Has conquistado una nación: fanfarria de metales y timbales
+  conquer: (s, t, v) => {
+    s._tone(t, 'sine', 110, 55, 0.6, 0.5 * v);
+    s._noiseBurst(t, 'lowpass', 600, 120, 0.4, 0.25 * v);
+    [['G4', 0], ['C5', 0.14], ['E5', 0.28], ['G5', 0.42]].forEach(([n, d]) => {
+      s._tone(t + d, 'sawtooth', freq(n), freq(n), 0.32, 0.05 * v, { attack: 0.02 });
+      s._tone(t + d, 'triangle', freq(n), freq(n), 0.36, 0.13 * v, { attack: 0.02, reverb: 0.3 });
+    });
+    ['C5', 'E5', 'G5', 'C6'].forEach((n) => {
+      s._tone(t + 0.58, 'triangle', freq(n), freq(n), 1.4, 0.09 * v, { attack: 0.03, reverb: 0.6 });
+      s._tone(t + 0.58, 'sawtooth', freq(n), freq(n), 1.0, 0.025 * v, { attack: 0.03 });
+    });
+    s._tone(t + 0.58, 'sine', 98, 49, 0.9, 0.5 * v);
+    s._noiseBurst(t + 0.58, 'highpass', 5000, 3000, 1.2, 0.12 * v, { reverb: 0.5 });
+  },
+  // Has conquistado una colonia: fanfarria corta
+  conquerColony: (s, t, v) => {
+    s._tone(t, 'sine', 130, 65, 0.35, 0.4 * v);
+    s._tone(t, 'triangle', freq('C5'), freq('C5'), 0.22, 0.12 * v, { attack: 0.015 });
+    s._tone(t + 0.12, 'triangle', freq('G5'), freq('G5'), 0.7, 0.12 * v, { attack: 0.015, reverb: 0.45 });
+    s._tone(t + 0.12, 'sawtooth', freq('G5'), freq('G5'), 0.4, 0.03 * v, { attack: 0.015 });
+  },
+  // Una nación cae a lo lejos (no por ti): timbal apagado
+  fall: (s, t, v) => {
+    s._tone(t, 'sine', 90, 45, 0.9, 0.28 * v, { reverb: 0.5 });
+    s._noiseBurst(t, 'lowpass', 400, 80, 0.6, 0.12 * v, { reverb: 0.4 });
+  },
+  // Te declaran la guerra: tambores y cuerno
+  war: (s, t, v) => {
+    [0, 0.16, 0.42].forEach((d, i) => s._tone(t + d, 'sine', 95, 42, 0.32, (i === 2 ? 0.55 : 0.42) * v));
+    s._noiseBurst(t, 'lowpass', 700, 150, 0.2, 0.15 * v);
+    s._tone(t + 0.5, 'sawtooth', freq('A3'), freq('A3') * 0.97, 0.8, 0.06 * v, { attack: 0.06, reverb: 0.4 });
+    s._tone(t + 0.5, 'triangle', freq('A3'), freq('A3') * 0.97, 0.8, 0.14 * v, { attack: 0.06 });
+  },
+  // Atacas a una nación: carga (tambor y metal)
+  charge: (s, t, v) => {
+    s._tone(t, 'sine', 120, 55, 0.25, 0.4 * v);
+    s._noiseBurst(t, 'bandpass', 400, 1600, 0.35, 0.2 * v, { q: 0.8, attack: 0.05 });
+    s._tone(t + 0.08, 'triangle', freq('D4'), freq('A4'), 0.25, 0.08 * v);
+  },
+  march: (s, t, v) => {
+    s._tone(t, 'sine', 105, 60, 0.16, 0.32 * v);
+    s._noiseBurst(t, 'highpass', 3000, 2500, 0.04, 0.06 * v);
+  },
+  expand: (s, t, v) => s._noiseBurst(t, 'bandpass', 900, 1700, 0.18, 0.08 * v, { q: 1.2, attack: 0.04 }),
+  hit: (s, t, v) => {
+    s._tone(t, 'sine', 80, 40, 0.25, 0.32 * v);
+    s._noiseBurst(t, 'lowpass', 500, 100, 0.2, 0.15 * v);
+  },
+  capture: (s, t, v) => {
+    s._tone(t, 'sine', 140, 70, 0.25, 0.35 * v);
+    s._tone(t + 0.05, 'triangle', freq('E5'), freq('E5'), 0.2, 0.1 * v);
+    s._tone(t + 0.15, 'triangle', freq('A5'), freq('A5'), 0.5, 0.1 * v, { reverb: 0.4 });
+  },
+  sink: (s, t, v) => {
+    s._noiseBurst(t, 'lowpass', 1200, 150, 1.0, 0.35 * v, { reverb: 0.4 });
+    s._tone(t + 0.1, 'sine', 160, 50, 1.0, 0.2 * v);
+  },
+  land: (s, t, v) => {
+    s._noiseBurst(t, 'lowpass', 1500, 300, 0.4, 0.25 * v);
+    s._tone(t + 0.1, 'sine', 110, 60, 0.3, 0.35 * v);
+    s._tone(t + 0.2, 'triangle', freq('D5'), freq('D5'), 0.4, 0.08 * v, { reverb: 0.4 });
+  },
+  start: (s, t, v) => {
+    [['G3', 0], ['C4', 0.22], ['G4', 0.44]].forEach(([n, d], i) => {
+      s._tone(t + d, 'triangle', freq(n), freq(n), i === 2 ? 1.2 : 0.3, 0.14 * v, { attack: 0.03, reverb: 0.5 });
+      s._tone(t + d, 'sawtooth', freq(n), freq(n), i === 2 ? 0.9 : 0.25, 0.035 * v, { attack: 0.03 });
+    });
+    s._tone(t + 0.44, 'sine', 98, 49, 0.7, 0.35 * v);
+  },
+  alliance: (s, t, v) => {
+    ['C4', 'E4', 'G4', 'C5'].forEach((n, i) => s._tone(t + i * 0.07, 'sine', freq(n), freq(n), 1.4, 0.09 * v, { attack: 0.05, reverb: 0.6 }));
+  },
+  betray: (s, t, v) => {
+    s._tone(t, 'sawtooth', freq('E3'), freq('E3') * 0.94, 0.9, 0.06 * v, { attack: 0.03, reverb: 0.4 });
+    s._tone(t, 'sawtooth', freq('F3'), freq('F3') * 0.94, 0.9, 0.06 * v, { attack: 0.03 });
+    s._tone(t, 'sine', 90, 40, 0.6, 0.35 * v);
   },
   ding: (s, t, v) => s._tone(t, 'sine', 880, 880, 0.6, 0.1 * v, { reverb: 0.4 }),
   chime: (s, t, v) => {

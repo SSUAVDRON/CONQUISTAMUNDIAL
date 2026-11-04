@@ -209,7 +209,7 @@ export function defaultProfile() {
       musica: true, // música de fondo
       efectos: true, // efectos de sonido
       volMusica: 0.5,
-      volEfectos: 0.6,
+      volEfectos: 0.8,
       silencio: false, // botón de la barra superior
     },
     tutorial: false,

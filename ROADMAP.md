@@ -153,6 +153,11 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   pequeño en vertical y en horizontal; dibujo más ligero (resolución 1,5×,
   nombres y cifras guardados como imágenes, sin desenfoques) y corregido el
   desfase del mapa en pantallas muy densas
+- Expansión redondeada (sin brazos finos), en todas direcciones con algo de
+  sesgo hacia el clic; +25 % de tropas; oro fijo (sin oro por territorio ni
+  por expandirse), botín y recompensa al eliminar con lluvia de monedas;
+  efectos de sonido más altos y muchos nuevos (fanfarria al conquistar);
+  IA más agresiva y lista (reserva, mejores objetivos, remates, contraataques)
 
 ## Próximo
 

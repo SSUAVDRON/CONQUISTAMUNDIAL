@@ -25,15 +25,39 @@ function ownTiles(game, p) {
   return out;
 }
 
-test('el oro crece con el territorio', () => {
-  const { game, human } = setup();
+test('oro: ingreso fijo (no depende del territorio), nada por expandirse y botín al eliminar', () => {
+  const { map, game, human } = setup();
   assert.equal(human.gold, CONFIG.startGold);
   for (let i = 0; i < 50; i++) game.tick();
   assert.ok(human.gold > 0, 'debería haber ganado oro');
   const small = human.goldPerTick();
   human.tiles *= 10;
-  assert.ok(human.goldPerTick() > small);
+  assert.equal(human.goldPerTick(), small, 'más territorio no da más oro');
   human.tiles /= 10;
+
+  // Expandirse por tierra libre no da oro: solo el ingreso fijo de esos turnos
+  const before = human.gold;
+  human.troops = 5000;
+  game.launchAttack(human, 0, 3000);
+  const tiles0 = human.tiles;
+  for (let i = 0; i < 20; i++) game.tick();
+  assert.ok(human.tiles > tiles0, 'se ha expandido');
+  assert.ok(Math.abs(human.gold - before - 20 * small) < 1e-6, 'expandirse no da oro extra');
+
+  // Eliminar a alguien: su oro + la recompensa, y un efecto de botín donde cayó
+  const colony = game.addPlayer('Colonia de prueba', [200, 200, 200], false);
+  colony.weak = true;
+  const t = map.landTiles.find((x) => game.owner[x] === 0);
+  game.setOwner(t, colony.id);
+  colony.alive = true;
+  colony.gold = 5000;
+  const g0 = human.gold;
+  game.setOwner(t, human.id);
+  game._checkEliminations();
+  assert.equal(colony.alive, false);
+  assert.ok(Math.abs(human.gold - g0 - (5000 + CONFIG.killGoldColony)) < 1e-6, 'botín = su oro + recompensa');
+  const fx = game.effects.find((e) => e.kind === 'loot');
+  assert.ok(fx && fx.owner === human.id && fx.x === map.x(t) + 0.5, 'efecto de botín en su última casilla');
 });
 
 test('reglas de construcción: territorio propio, oro, distancia y coste creciente', () => {
@@ -145,7 +169,9 @@ test('los edificios cambian de dueño con su casilla y el eliminado deja botín'
 
 test('los bots construyen durante la partida', () => {
   const map = generateMap(220 * RES, 130 * RES, 3);
-  const game = new Game({ map, seed: 3 });
+  // Con oro inicial: el ingreso fijo solo no da para un edificio en 4 min (sin
+  // colonias que eliminar en este mapa de prueba)
+  const game = new Game({ map, seed: 3, rules: { startGold: 500000 } });
   game.addBots(10);
   game.start();
   for (let i = 0; i < 2500 && game.phase !== 'ended'; i++) game.tick();

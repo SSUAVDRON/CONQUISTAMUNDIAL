@@ -13,9 +13,11 @@ export class BotBrain {
     this.player = player;
     this.nextThink = 0;
     // Dificultad: cada cuánto piensan y cuánto les gusta atacar
-    const level = { facil: [1.7, 0.6], normal: [1, 1], dificil: [0.65, 1.25] }[difficulty] || [1, 1];
+    // (piensan cada x, agresividad, cuánto se defienden con contraataques)
+    const level = { facil: [1.6, 0.65, 0.25], normal: [0.85, 1, 0.7], dificil: [0.6, 1.2, 1] }[difficulty] || [0.85, 1, 0.7];
     this.thinkScale = level[0];
-    this.aggression = Math.min(1, (0.2 + r.float() * 0.6) * level[1]);
+    this.aggression = Math.min(1, (0.4 + r.float() * 0.5) * level[1]);
+    this.cunning = level[2];
     this.expandRatio = 0.2 + r.float() * 0.3;
     this.saveFor = null; // edificio caro para el que está ahorrando (no gasta en otra cosa)
     this.diplomacy = r.float(); // 0 = lobo solitario, 1 = diplomático
@@ -42,43 +44,104 @@ export class BotBrain {
     }
     if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
-    if (p.active.silo && r.chance(0.15 + this.aggression * 0.2)) this._fireMissile(counts);
+    if (p.active.silo && r.chance(0.2 + this.aggression * 0.25)) this._fireMissile(counts);
+
+    // 0. Defensa activa: si le atacan con fuerza, contraataca con lo justo para
+    // anular la ofensiva (las tropas de dos ataques cruzados se anulan)
+    if (this._counterAttack()) return;
 
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.troops > max * 0.1) {
       g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio));
-      return;
+      // Los agresivos no esperan a acabar: atacan a la vez a un vecino débil
+      if (!(counts.size && r.chance(this.aggression - 0.35))) return;
     }
 
-    // 2. Atacar al vecino más débil cuando haya reunido suficientes tropas
-    if (counts.size > 0 && p.troops > max * (0.6 - this.aggression * 0.35)) {
-      let best = null;
-      let bestScore = Infinity;
-      const leader = g.leader();
-      const leaderShare = leader ? leader.tiles / g.map.landCount : 0;
-      for (const [id, shared] of counts) {
-        const t = g.players[id];
-        // Preferimos objetivos débiles y con mucha frontera compartida
-        let score = t.troops / Math.max(1, p.troops) - Math.min(shared, 200) * 0.001 + r.float() * 0.3;
-        if (t === leader && leaderShare > 0.3) score -= 0.4; // todos contra el líder
-        if (this.grudges.has(id)) score -= 0.3;
-        if (g.isTraitor(t)) score -= 0.2;
-        if (score < bestScore) {
-          bestScore = score;
-          best = t;
-        }
-      }
-      if (best && !p.attacks.has(best.id) && best.troops < p.troops * (0.5 + this.aggression * 0.7)) {
-        g.launchAttack(p, best.id, Math.floor(p.troops * (0.25 + this.aggression * 0.35)));
-        return;
-      }
-    }
+    // 2. Guerra: con lo que sobre por encima de ~la mitad del máximo, contra el
+    // vecino que mejor se pueda ganar (o reforzando un ataque que se agota)
+    if (this._attackTurn(counts, max)) return;
 
     // 3. Sin tierra libre a mano: probar suerte por mar
     if (wild === 0 && coastal && p.boatCount === 0 && p.troops > max * 0.4 && r.chance(0.25)) {
       const tile = this._pickBoatTarget();
       if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * 0.35));
     }
+  }
+
+  /**
+   * Contraataque: un ataque enemigo grande en curso se anula lanzando otro en
+   * sentido contrario con algo más de tropas (si las tiene en casa).
+   */
+  _counterAttack() {
+    const g = this.game;
+    const p = this.player;
+    if (!g.rng.chance(this.cunning)) return false;
+    let worst = null;
+    for (const atk of g.attacks) {
+      if (atk.done || atk.targetId !== p.id || p.allies.has(atk.attacker.id)) continue;
+      if (atk.troops < 150 || atk.troops < p.troops * 0.12) continue;
+      if (!worst || atk.troops > worst.troops) worst = atk;
+    }
+    if (!worst || p.troops < worst.troops * 1.15) return false;
+    const send = Math.floor(Math.min(p.troops * 0.7, worst.troops * (1.1 + this.aggression * 0.3)));
+    return g.launchAttack(p, worst.attacker.id, send);
+  }
+
+  /**
+   * Elige a quién atacar y con cuánto. Guarda en casa cerca de la mitad del
+   * máximo (donde más rápido crecen las tropas) y lanza el resto. Prefiere
+   * vecinos con pocas tropas por casilla (se conquistan barato), colonias (dan
+   * oro), naciones ya en guerra con otros, traidores, rencores y, si se
+   * escapa, al líder. Remata: refuerza un ataque propio que se queda corto.
+   */
+  _attackTurn(counts, max) {
+    const g = this.game;
+    const p = this.player;
+    const r = g.rng;
+    if (!counts.size) return false;
+    const reserve = max * (0.5 - this.aggression * 0.22);
+    const spare = p.troops - reserve;
+    if (spare < max * 0.06) return false;
+    // Pocas guerras a la vez (los agresivos, alguna más)
+    let wars = 0;
+    for (const [id, atk] of p.attacks) if (id && !atk.done) wars++;
+    const leader = g.leader();
+    const leaderShare = leader ? leader.tiles / g.map.landCount : 0;
+    // Quién está ya bajo ataque de otros (más débil de lo que parece)
+    const pressed = new Map();
+    for (const atk of g.attacks) {
+      if (!atk.done && atk.targetId && atk.attacker !== p) pressed.set(atk.targetId, (pressed.get(atk.targetId) || 0) + atk.troops);
+    }
+    let best = null;
+    let bestScore = -Infinity;
+    for (const [id, shared] of counts) {
+      const t = g.players[id];
+      if (!t || !t.alive) continue;
+      const mine = p.attacks.get(id);
+      const ongoing = mine && !mine.done;
+      if (!ongoing && wars >= 1 + Math.round(this.aggression * 1.5)) continue;
+      const defense = Math.max(1, t.troops - (pressed.get(id) || 0) * 0.5);
+      const odds = spare / defense;
+      const density = t.troops / Math.max(1, t.tiles);
+      let score = Math.min(odds, 4) * 0.6 - Math.min(density / (CONFIG.maxTroopsPerTile * 1.5), 1) * 0.4;
+      score += Math.min(shared, 300) / 600;
+      if (t.weak) score += 0.45; // colonias: presa fácil y con oro
+      if (pressed.has(id)) score += 0.3;
+      if (this.grudges.has(id)) score += 0.5;
+      if (g.isTraitor(t)) score += 0.3;
+      if (t === leader && leaderShare > 0.3) score += 0.8; // todos contra el que se escapa
+      if (ongoing) score += mine.troops < t.troops * 0.6 ? 0.5 : -0.6; // rematar, no amontonar
+      score += r.float() * 0.25;
+      // Solo si hay opciones: los agresivos se atreven con menos ventaja
+      if (odds < 1.15 - this.aggression * 0.5 && !(t.weak && odds > 0.6)) continue;
+      if (score > bestScore) {
+        bestScore = score;
+        best = t;
+      }
+    }
+    if (!best) return false;
+    const send = Math.floor(Math.min(spare, Math.max(spare * (0.55 + this.aggression * 0.4), best.troops * 1.4)));
+    return send >= 1 && g.launchAttack(p, best.id, send);
   }
 
   /**

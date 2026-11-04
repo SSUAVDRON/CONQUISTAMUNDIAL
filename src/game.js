@@ -285,6 +285,7 @@ export class Game {
         if (this.human) this._trackLoot(newId, oldId, loot);
       }
       op.tiles--;
+      if (op.tiles === 0) op.lastTile = t;
       op.border.delete(t);
       if (newId) op.lastConqueredBy = newId;
     }
@@ -346,7 +347,7 @@ export class Game {
     if (acc.gained >= 1) {
       const [id] = top(acc.from);
       const more = acc.from.size > 1 ? ' y otros' : '';
-      this._emit(`💰 Saqueo: +${formatNumber(acc.gained)} de oro de ${this.players[id].name}${more}`, 'good');
+      this._emit(`💰 Saqueo: +${formatNumber(acc.gained)} de oro de ${this.players[id].name}${more}`, 'good', { sfx: 'coins' });
     }
     if (acc.lost >= 1) {
       const [id] = top(acc.by);
@@ -525,7 +526,7 @@ export class Game {
       if (atk.inFrontier.size === 0) return false;
       p.attacks.set(targetId, atk);
       this.attacks.push(atk);
-      if (target && target === this.human) this._emit(`⚔ ${p.name} te ataca con ${formatNumber(troops)} tropas`, 'danger');
+      if (target && target === this.human) this._emit(`⚔ ${p.name} te ataca con ${formatNumber(troops)} tropas`, 'danger', { sfx: 'war' });
       else if (p === this.human && target) this._emit(`⚔ Atacas a ${target.name} con ${formatNumber(troops)} tropas`, 'info');
     }
     if (deduct) p.troops -= troops;
@@ -846,11 +847,6 @@ export class Game {
       atk.troops -= cost;
       atk.budget -= slow;
       if (target) target.troops -= loss;
-      else {
-        // Expandirse también da oro: cada casilla libre, al momento
-        A.gold += CONFIG.wildTileGold * A.goldMult;
-        A.stats.expansionGold = (A.stats.expansionGold || 0) + CONFIG.wildTileGold * A.goldMult;
-      }
       this.setOwner(t, aid);
       if (!target) this._fillPockets(t, aid);
     }
@@ -1112,7 +1108,7 @@ export class Game {
     if (np.buildings.factory > np.stats.maxFactories) np.stats.maxFactories = np.buildings.factory;
     if (np === this.human) {
       if (built) this._emit(`Obras: ${name.toLowerCase()} lista en ${Math.round(b.buildTime / 10)} s`, 'info');
-      else this._emit(`Has capturado ${some}${b.level > 1 ? ` de nivel ${b.level}` : ''}`, 'good');
+      else this._emit(`Has capturado ${some}${b.level > 1 ? ` de nivel ${b.level}` : ''}`, 'good', { sfx: 'capture' });
     }
   }
 
@@ -1272,7 +1268,7 @@ export class Game {
     owner.gold += m.value;
     const partner = this.players[dest.owner];
     if (partner && partner.alive && partner !== owner) partner.gold += m.value * CONFIG.tradeReceiverShare;
-    if (owner === this.human) this._emit(`⚓ Un mercante vuelve con ${formatNumber(m.value)} de oro`, 'good');
+    if (owner === this.human) this._emit(`⚓ Un mercante vuelve con ${formatNumber(m.value)} de oro`, 'good', { sfx: 'coin' });
   }
 
   /** Un buque se queda con un barco automático enemigo: ahora produce para su nuevo dueño. */
@@ -1797,7 +1793,7 @@ export class Game {
           target.dead = true;
           me.stats.sunk++;
           const victim = this.players[target.owner];
-          if (me === this.human) this._emit(`Has hundido un buque de ${victim.name}`, 'good');
+          if (me === this.human) this._emit(`Has hundido un buque de ${victim.name}`, 'good', { sfx: 'sink' });
           else if (victim === this.human) this._emit(`${me.name} ha hundido uno de tus buques`, 'danger');
         }
       } else {
@@ -1805,7 +1801,7 @@ export class Game {
         const victim = this.players[target.owner];
         victim.boatCount--;
         me.stats.sunk++;
-        if (me === this.human) this._emit(`Has hundido un barco de ${victim.name} con ${formatNumber(target.troops)} tropas`, 'good');
+        if (me === this.human) this._emit(`Has hundido un barco de ${victim.name} con ${formatNumber(target.troops)} tropas`, 'good', { sfx: 'sink' });
         else if (victim === this.human) this._emit(`${me.name} ha hundido tu barco (${formatNumber(target.troops)} tropas)`, 'danger');
       }
     }
@@ -2114,7 +2110,7 @@ export class Game {
     this.setOwner(dest, p.id);
     p.stats.landings++;
     if (!this.launchAttack(p, o, boat.troops, { deduct: false })) p.troops += boat.troops;
-    if (p === this.human) this._emit('Desembarco con éxito', 'good');
+    if (p === this.human) this._emit('Desembarco con éxito', 'good', { sfx: 'land' });
   }
 
   // -------------------------------------------------------------------- tick
@@ -2175,7 +2171,7 @@ export class Game {
     }
     this.phase = 'playing';
     for (const bot of this.bots) bot.nextThink = this.ticks + this.rng.int(1, CONFIG.botThinkMax);
-    this._emit('¡Comienza la conquista!', 'good');
+    this._emit('¡Comienza la conquista!', 'good', { sfx: 'start' });
   }
 
   _checkEliminations() {
@@ -2185,13 +2181,18 @@ export class Game {
       p.alive = false;
       p.eliminatedTick = this.ticks;
       p.troops = 0;
-      // Botín: el oro del eliminado pasa a quien le quitó la última casilla
+      // Botín: el oro del eliminado y una recompensa pasan a quien le quitó la
+      // última casilla (con su lluvia de monedas allí donde cayó)
       const killer = this.players[p.lastConqueredBy];
-      if (killer && killer.alive) killer.stats.kills++;
-      if (killer && killer.alive && p.gold > 0) {
-        const loot = p.gold * CONFIG.plunderShare;
+      let loot = 0;
+      const lt = p.lastTile;
+      const lx = lt >= 0 ? this.map.x(lt) + 0.5 : 0;
+      const ly = lt >= 0 ? this.map.y(lt) + 0.5 : 0;
+      if (killer && killer.alive) {
+        killer.stats.kills++;
+        loot = Math.max(0, p.gold) * CONFIG.plunderShare + (p.weak ? CONFIG.killGoldColony : CONFIG.killGoldNation) * killer.goldMult;
         killer.gold += loot;
-        if (killer === this.human) this._emit(`Botín: +${Math.floor(loot)} de oro de ${p.name}`, 'good');
+        if (lt >= 0) this.effects.push({ kind: 'loot', x: lx, y: ly, gold: loot, owner: killer.id, weak: p.weak, tick: this.ticks });
       }
       p.gold = 0;
       for (const atk of [...p.attacks.values()]) this._endAttack(atk);
@@ -2202,7 +2203,10 @@ export class Game {
       for (const b of this.boats) if (b.owner === p.id) b.done = true;
       this.boats = this.boats.filter((b) => !b.done);
       p.boatCount = 0;
-      this._emit(p === this.human ? 'Has sido derrotado' : `${p.name} ha sido eliminado`, p === this.human ? 'danger' : 'info');
+      if (p === this.human) this._emit('Has sido derrotado', 'danger');
+      else if (killer && killer === this.human) {
+        this._emit(`🏆 Has conquistado ${p.name}: +${formatNumber(loot)} de oro`, 'good', { sfx: p.weak ? 'conquerColony' : 'conquer', loot, x: lx, y: ly, weak: p.weak });
+      } else this._emit(`${p.name} ha sido eliminado`, 'info', p.weak ? null : { sfx: 'fall' });
     }
   }
 
@@ -2345,7 +2349,7 @@ export class Game {
     const human = a === this.human ? a : b === this.human ? b : null;
     if (human) {
       const other = human === a ? b : a;
-      this._emit(`🤝 Alianza firmada con ${other.name}`, 'good');
+      this._emit(`🤝 Alianza firmada con ${other.name}`, 'good', { sfx: 'alliance' });
     } else if (this._isNotable(a) || this._isNotable(b)) {
       this._emit(`🤝 ${a.name} y ${b.name} forman una alianza`, 'info');
     }
@@ -2362,7 +2366,7 @@ export class Game {
     p.betrayals++;
     this.diploVersion++;
     if (p === this.human) this._emit(`Has roto la alianza con ${other.name}. Eres traidor durante ${CONFIG.traitorTicks / 10} s`, 'warn');
-    else if (other === this.human) this._emit(`💔 ${p.name} ha roto vuestra alianza`, 'danger');
+    else if (other === this.human) this._emit(`💔 ${p.name} ha roto vuestra alianza`, 'danger', { sfx: 'betray' });
     else this._emit(`💔 ${p.name} traiciona a ${other.name}`, 'info');
     this.brains.get(other.id)?.onBetrayed(p);
     return true;
@@ -2381,7 +2385,7 @@ export class Game {
     target[key] += amount;
     const what = key === 'gold' ? 'de oro' : 'tropas';
     if (p === this.human) this._emit(`Has enviado ${amount} ${what} a ${target.name}`, 'info');
-    if (target === this.human) this._emit(`${p.name} te envía ${amount} ${what}`, 'good');
+    if (target === this.human) this._emit(`${p.name} te envía ${amount} ${what}`, 'good', { sfx: 'coin' });
     return true;
   }
 

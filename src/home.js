@@ -418,7 +418,7 @@ export class Home {
         this.h.onProfileChange?.(false);
       });
     }
-    for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.6]]) {
+    for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
       const v = Math.round((this.profile.ajustes[key] ?? def) * 100);
       $(id).value = String(v);
       $(out).textContent = String(v);

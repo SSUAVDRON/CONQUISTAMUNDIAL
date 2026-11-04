@@ -29,6 +29,8 @@ export class Player {
     this.goldMult = 1;
     /** Resumen de vecinos de la IA guardado (ver Game.neighborSummary). */
     this._nbSummary = null;
+    /** Última casilla que perdió (donde sale el botín al ser eliminado). */
+    this.lastTile = -1;
 
     this.troops = 0;
     this.gold = CONFIG.startGold;
@@ -96,8 +98,7 @@ export class Player {
 
   goldPerTick() {
     if (!this.tiles) return 0;
-    const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
-    return base * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus)) * this.goldMult;
+    return CONFIG.goldBase * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus)) * this.goldMult;
   }
 
   maxBoats() {

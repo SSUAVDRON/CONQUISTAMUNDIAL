@@ -39,7 +39,8 @@ test('la expansión avanza hacia el punto del clic', () => {
   const gained = expand(game, a, focus, 1500);
   assert.ok(gained.length > 50, `gana casillas: ${gained.length}`);
   const cx = gained.reduce((s, t) => s + map.x(t), 0) / gained.length;
-  assert.ok(cx > map.x(ta) + 4 * RES, `lo ganado queda hacia el clic (x media ${cx.toFixed(0)} frente a ${map.x(ta)})`);
+  // Sesgo suave (crece en todas direcciones, algo más hacia el clic)
+  assert.ok(cx > map.x(ta) + 2 * RES, `lo ganado queda hacia el clic (x media ${cx.toFixed(0)} frente a ${map.x(ta)})`);
 });
 
 test('con pocas tropas se expande poco y con muchas, mucho más', () => {

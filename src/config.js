@@ -31,16 +31,16 @@ export const CONFIG = {
   // menos tropas en el mapa y crecen más despacio)
   maxTroopsBase: 3000, // máximo de base alto: al principio se generan muchas tropas
   maxTroopsPerTile: 36 / AREA,
-  growthBase: 18.4, // crecimiento de base (pesa sobre todo al principio)
+  growthBase: 23, // crecimiento de base (pesa sobre todo al principio)
   // Curva de crecimiento (en campana): lo más rápido con la mitad del máximo;
   // con muy pocas tropas, más despacio (nunca menos de growthFloor del pico) y
   // por encima del 60 % cada vez menos, hasta 0 en el tope
   growthFloor: 0.15,
-  growthTileMult: 0.345 / RES15, // × casillas^0,75
+  growthTileMult: 0.43 / RES15, // × casillas^0,75
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
-  wildTileCost: 48 / AREA, // tropas por casilla de tierra libre (llanura): lo que te expandes va con las tropas que mandas
+  wildTileCost: 55 / AREA, // tropas por casilla de tierra libre (llanura): lo que te expandes va con las tropas que mandas
   playerTileBaseCost: 1 / AREA, // coste fijo por casilla enemiga
   defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor
   defenderLossMult: 0.8, // tropas que pierde el defensor por casilla perdida (× densidad)
@@ -54,15 +54,16 @@ export const CONFIG = {
   // «pasos» de cada casilla del frente. Lóbulos de ruido, terreno difícil y
   // azar hacen que los países crezcan irregulares y no como círculos.
   growCell: 7 * RES, // tamaño de los lóbulos
-  growNoise: 16, // retraso máximo por lóbulos grandes
-  growNoiseFine: 6, // y por los pequeños
+  growNoise: 10, // retraso máximo por lóbulos grandes
+  growNoiseFine: 4, // y por los pequeños
   growRandom: 2.5, // azar por casilla (poco: si no, quedan casillas sueltas)
   growTerrain: 10, // por cada punto de coste de terreno por encima de la llanura
-  growSmooth: 1, // prioridad a las casillas ya rodeadas (rellena huecos)
+  growSmooth: 3, // prioridad a las casillas ya rodeadas: rellena huecos y esquinas antes que alargar puntas (sin brazos finos)
   // Expansión dirigida: el lado del país que mira al clic avanza antes y el de
   // detrás se retrasa hasta 2 × growFocus pasos; con algo de ruido, para que
-  // el frente no salga perfecto
-  growFocus: 26,
+  // el frente no salga perfecto. Poco: si no, todo el avance se iba a la punta
+  // y salían brazos finos; así crece en todas direcciones, algo más hacia el clic
+  growFocus: 8,
   growFocusNoise: 0.7,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
@@ -70,13 +71,14 @@ export const CONFIG = {
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
   boatSpeed: 0.55 * RES, // casillas por tick
 
-  // Oro: ingreso por tick = (base + casillas^0,75 × mult) × (1 + bonus de puertos y fábricas)
+  // Oro: ingreso fijo por tick × (1 + bonus de puertos y fábricas). No depende
+  // del territorio ni se gana por expandirse: el oro grande sale de conquistar
+  // (cada casilla quitada se lleva su parte del oro del rival) y de eliminar
   startGold: 0,
-  goldBase: 50,
-  // Ingreso casi proporcional al territorio (casillas^0,75): expandirse rinde.
-  // Los precios altos y la inflación del 25 % evitan que se construya sin parar
-  goldTileMult: 1.12 / RES15,
-  wildTileGold: 15, // oro al momento por cada casilla de tierra libre conquistada
+  goldBase: 60,
+  // Recompensa por eliminar a una nación o a una colonia (además de su oro)
+  killGoldNation: 40000,
+  killGoldColony: 12000,
   // Rendimiento decreciente de puertos y fábricas: bonus = % × n / (1 + 0,12 × n)
   bonusFalloff: 0.12,
   plunderShare: 1, // fracción del oro del eliminado que se lleva quien le quita la última casilla
@@ -168,8 +170,8 @@ export const CONFIG = {
   emojiCooldownTicks: 20,
 
   // Bots
-  botThinkMin: 6,
-  botThinkMax: 20,
+  botThinkMin: 5,
+  botThinkMax: 16,
   botDiplomacyStartTicks: 600, // empiezan a negociar al minuto de juego
 };
 

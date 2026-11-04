@@ -468,6 +468,67 @@ export class Fx {
   }
 
   /**
+   * Lluvia de monedas del botín: saltan desde (x, y) hacia arriba, giran (se
+   * estrechan y ensanchan) y caen. Tamaño fijo en pantalla.
+   */
+  coinBurst(x, y, n = 18) {
+    const coins = [];
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+      const v = 80 + Math.random() * 130;
+      coins.push({ vx: Math.cos(a) * v, vy: Math.sin(a) * v, ox: 0, oy: 0, spin: Math.random() * 6, rate: 7 + Math.random() * 9, delay: Math.random() * 0.18 });
+    }
+    let age = 0;
+    const life = 1.7;
+    this.scripts.push({
+      update(dt) {
+        age += dt;
+        for (const c of coins) {
+          if (age < c.delay) continue;
+          c.vy += 300 * dt;
+          c.ox += c.vx * dt;
+          c.oy += c.vy * dt;
+          c.spin += c.rate * dt;
+        }
+        return age < life;
+      },
+      draw(ctx, cam) {
+        const sx = (x - cam.x) * cam.zoom;
+        const sy = (y - cam.y) * cam.zoom;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, (life - age) * 2.5);
+        // Destello dorado al principio
+        if (age < 0.35) {
+          const k = age / 0.35;
+          const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 20 + k * 40);
+          g.addColorStop(0, `rgba(255, 226, 120, ${0.55 * (1 - k)})`);
+          g.addColorStop(1, 'rgba(255, 226, 120, 0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(sx - 70, sy - 70, 140, 140);
+        }
+        for (const c of coins) {
+          if (age < c.delay) continue;
+          const w = Math.abs(Math.cos(c.spin)) * 6 + 1;
+          const cx = sx + c.ox;
+          const cy = sy + c.oy;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, w, 6, 0, 0, TAU);
+          ctx.fillStyle = '#f5c542';
+          ctx.fill();
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = '#9c6a0c';
+          ctx.stroke();
+          if (w > 3) {
+            ctx.fillStyle = '#fff4b8';
+            ctx.fillRect(cx - w * 0.35, cy - 3.5, Math.max(1, w * 0.25), 4);
+          }
+        }
+        ctx.restore();
+      },
+    });
+  }
+
+  /**
    * Rótulo flotante sobre el mapa («¡DERRIBADO!»): tamaño fijo en pantalla,
    * sube un poco y se apaga. Va aparte de las partículas para que nunca se pierda.
    */

@@ -181,6 +181,12 @@ function enterGame(game) {
   state.demo = false;
   game.onEvent = (evt) => {
     if (!state.demo) sound.onEvent(evt);
+    // Botín al eliminar a alguien: monedas que vuelan del mapa a tu oro
+    if (evt.loot && !state.demo && evt.tick >= game.ticks - 2 && state.renderer?.anim) {
+      const [sx, sy] = camera.worldToScreen(evt.x, evt.y);
+      ui.flyCoins(sx, sy, evt.weak);
+      setTimeout(() => sound.play('coins', 0.9, 0), 850);
+    }
     if (evt.kind === 'request') ui.addRequest(game, evt);
     else ui.pushEvent(evt);
   };
@@ -256,7 +262,7 @@ function applySettings() {
     music: a.musica !== false,
     sfx: a.efectos !== false,
     musicVol: a.volMusica ?? 0.5,
-    sfxVol: a.volEfectos ?? 0.6,
+    sfxVol: a.volEfectos ?? 0.8,
     muted: !!a.silencio,
   });
   const muteBtn = document.getElementById('btn-sonido');

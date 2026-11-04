@@ -1886,3 +1886,23 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #avisos { background: linear-gradient(180deg, rgba(16, 24, 40, 0.95), rgba(9, 13, 22, 0.97)); }
   #pj-barra::after, #combates .frente:not(.saliendo) .f-barra-a::after { animation: none; }
 }
+
+/* Botín al eliminar a alguien: monedas que vuelan a tu oro y golpe del contador */
+.moneda-vuela {
+  position: fixed;
+  left: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c2, #f5c542 45%, #b8800f);
+  border: 1px solid #8a5d08;
+  box-shadow: 0 0 10px rgba(255, 200, 60, 0.75);
+  z-index: 60;
+  pointer-events: none;
+}
+#pj-oro.oro-golpe { animation: oroGolpe 0.7s ease-out; }
+@keyframes oroGolpe {
+  25% { transform: scale(1.35); color: #ffe27a; text-shadow: 0 0 14px rgba(255, 210, 80, 0.95); }
+}
+#pj-oro { transform-origin: left center; }
