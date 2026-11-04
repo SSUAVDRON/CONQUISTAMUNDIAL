@@ -695,6 +695,7 @@ const input = new Input(canvas, camera, {
 
 ui.on({
   onRatio: setRatio,
+  onShare: (share) => humanIntent({ type: 'share', share }),
   onFocusFront: focusFront,
   onExit(force) {
     if (!force && !state.demo && state.game.phase !== 'ended' && state.human?.alive) {

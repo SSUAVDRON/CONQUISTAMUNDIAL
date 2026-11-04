@@ -5,7 +5,9 @@ const $ = (id) => document.getElementById(id);
 
 export const TIPS = [
   'Las montañas y mesetas cuestan más tropas y tiempo: rodéalas.',
-  'Cerca del máximo tus tropas crecen despacio: ataca antes de llenarte.',
+  'Tu población crece más rápido hacia el 43 % del máximo: ataca antes de llenarte.',
+  'Más trabajadores, más oro; más soldados, más fuerza: cambia el reparto según la fase.',
+  'La fuerza de ataque es un porcentaje de tus soldados, no de toda la población.',
   'Un puerto saca pesqueros y mercantes que te dan oro sin hacer nada.',
   'Tus buques de guerra capturan los pesqueros y mercantes enemigos.',
   'Dos misiles a la vez saturan una batería antimisiles.',

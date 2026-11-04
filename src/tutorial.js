@@ -16,7 +16,7 @@ const STEPS = [
     check: (s) => s.human.spawned,
   },
   {
-    text: 'Bien. Cuando termine la cuenta atrás empieza la partida. Tus tropas crecen solas: las ves en el panel de abajo.',
+    text: 'Bien. Cuando termine la cuenta atrás empieza la partida. Tu población crece sola y se reparte entre soldados (atacan) y trabajadores (oro): lo ves en el panel de abajo.',
     highlight: '#panel-jugador',
     check: (s) => s.game.phase === 'playing',
   },

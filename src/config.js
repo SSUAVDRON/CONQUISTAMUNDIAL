@@ -21,22 +21,27 @@ export const CONFIG = {
   spawnTicks: 150, // 15 s para elegir dónde empezar
   spawnRadius: 2.2 * RES, // radio medio de la zona inicial (pequeña e irregular)
   spawnJag: 0.4, // el radio varía ±40 % según la dirección
-  startTroops: 2500,
+  startTroops: 3500, // población inicial (repartida entre soldados y trabajadores)
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
 
   // Victoria: controlar esta fracción de toda la tierra
   winLandShare: 0.7,
 
-  // Tropas: máximo y crecimiento por tick (un 40 % menos que al principio:
-  // menos tropas en el mapa y crecen más despacio)
-  maxTroopsBase: 3000, // máximo de base alto: al principio se generan muchas tropas
+  // Población: una sola cifra P con su capacidad máxima (base + territorio +
+  // ciudades). Crece G = k × (10 + P^0,75 / 4) × (1 − P / Pmáx): lo más rápido
+  // hacia el 43 % del máximo, cada vez menos al acercarse y, si te pasas (has
+  // perdido territorio), decrece
+  maxTroopsBase: 5000,
   maxTroopsPerTile: 36 / AREA,
-  growthBase: 23, // crecimiento de base (pesa sobre todo al principio)
-  // Curva de crecimiento (en campana): lo más rápido con la mitad del máximo;
-  // con muy pocas tropas, más despacio (nunca menos de growthFloor del pico) y
-  // por encima del 60 % cada vez menos, hasta 0 en el tope
-  growthFloor: 0.15,
-  growthTileMult: 0.43 / RES15, // × casillas^0,75
+  popGrowthBase: 10,
+  popGrowthDiv: 4,
+  popGrowthScale: 0.55,
+  // Reparto de la población: soldados (atacan y defienden) y trabajadores
+  // (producen oro). Lo elige cada jugador; al cambiarlo, la gente cambia de
+  // oficio poco a poco (como mucho shareRate de la población por turno)
+  soldierShare: 0.7,
+  minSoldierShare: 0.05,
+  shareRate: 0.02,
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
@@ -75,7 +80,10 @@ export const CONFIG = {
   // del territorio ni se gana por expandirse: el oro grande sale de conquistar
   // (cada casilla quitada se lleva su parte del oro del rival) y de eliminar
   startGold: 0,
-  goldBase: 60,
+  goldBase: 0, // sin ingreso fijo: el oro de cada turno sale de los trabajadores
+  // Oro por turno = goldPerWorker × trabajadores^0,75: casi proporcional al
+  // principio y con rendimiento decreciente en los imperios enormes
+  goldPerWorker: 0.12,
   // Recompensa por eliminar a una nación o a una colonia (además de su oro)
   killGoldNation: 40000,
   killGoldColony: 12000,
@@ -94,7 +102,7 @@ export const CONFIG = {
   // Edificios
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
-  cityMaxTroops: 15000, // tropas máximas extra por nivel de ciudad
+  cityMaxTroops: 25000, // capacidad de población extra por nivel de ciudad
   portGoldBonus: 0.15, // +15% de oro por puerto
   factoryGoldBonus: 0.35, // +35% de oro por fábrica (y sus trenes)
   fortRadius: 12 * RES,
@@ -228,7 +236,7 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
  * (100 ms cada uno); `fixed`: precio fijo, sin inflación.
  */
 export const BUILDINGS = {
-  city: { name: 'Ciudad', fem: true, base: 300000, build: 50, key: 'KeyQ', desc: '+15k tropas máximas por nivel' },
+  city: { name: 'Ciudad', fem: true, base: 300000, build: 50, key: 'KeyQ', desc: '+25k de población máxima por nivel' },
   port: { name: 'Puerto', fem: false, base: 250000, build: 60, key: 'KeyE', coastal: true, desc: 'Pesqueros, mercantes y +15% de oro' },
   fort: { name: 'Fortaleza', fem: true, base: 200000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor' },
   factory: { name: 'Fábrica', fem: true, base: 400000, build: 60, key: 'KeyF', desc: '+35% de oro por nivel; une con raíles las ciudades y puertos cercanos (también enemigos) y sus trenes dan oro al llegar' },

@@ -22,7 +22,7 @@ const SWATCHES = [
 
 /** Lo que se muestra en «Tu arsenal»: dibujo del juego, nombre y para qué sirve. */
 const ARSENAL = [
-  { kind: 'city', text: 'Más tropas máximas' },
+  { kind: 'city', text: 'Más población máxima' },
   { kind: 'port', text: 'Pesca, comercio y oro' },
   { kind: 'fort', text: 'Defensa ×2,5 alrededor' },
   { kind: 'factory', text: '+25 % de oro' },

@@ -105,10 +105,24 @@ export class UI {
     this._counters = new Set();
     this._lastEvent = null;
     this._troops = this._counter($('pj-tropas'));
+    this._pop = this._counter($('pj-pob'));
     this._troopsMax = this._counter($('pj-tropas-max'));
     this._gold = this._counter($('pj-oro'));
 
     $('ratio').addEventListener('input', () => this.handlers.onRatio?.(Number($('ratio').value) / 100));
+    // Reparto soldados / trabajadores: se envía al soltar y, mientras se
+    // arrastra, como mucho cada 0,25 s (en multijugador va por la red)
+    const reparto = $('reparto');
+    const sendShare = () => {
+      this._shareSentAt = performance.now();
+      this.handlers.onShare?.(Number(reparto.value) / 100);
+    };
+    reparto.addEventListener('input', () => {
+      this._shareDragAt = performance.now();
+      this._showShare(Number(reparto.value) / 100);
+      if (!(performance.now() - (this._shareSentAt || 0) < 250)) sendShare();
+    });
+    reparto.addEventListener('change', sendShare);
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
@@ -295,7 +309,7 @@ export class UI {
     this._lbRows.clear();
     this._lbAt = -Infinity;
     this._lbIndex.clear();
-    for (const c of [this._troops, this._troopsMax, this._gold]) c.value = null;
+    for (const c of [this._troops, this._pop, this._troopsMax, this._gold]) c.value = null;
     this.closeNation();
   }
 
@@ -433,6 +447,14 @@ export class UI {
 
   hideEnd() {
     $('fin').hidden = true;
+  }
+
+  /** Rótulo del reparto: «70 % soldados · 30 % trabajadores». */
+  _showShare(s) {
+    const pct = Math.round(s * 100);
+    $('reparto-valor').textContent = `${pct}%`;
+    $('reparto-txt').textContent = `soldados · ${100 - pct}% trab.`;
+    $('reparto').style.setProperty('--valor', `${pct}%`);
   }
 
   setRatio(r) {
@@ -656,22 +678,35 @@ export class UI {
     $('pj-nombre').textContent = human.name;
     const max = human.maxTroops();
     $('pj-estado').textContent = human.alive ? '' : 'Derrotado · modo espectador';
-    const fill = Math.min(1, human.troops / max);
+    const pop = human.population();
+    const fill = Math.min(1, pop / max);
     $('pj-barra').style.width = `${fill * 100}%`;
+    // Dentro de la barra: la parte de soldados (dorada) y la de trabajadores
+    $('pj-barra').style.setProperty('--soldados', `${pop > 0 ? Math.round((100 * human.troops) / pop) : 100}%`);
     // Casi al máximo: la barra brilla (buen momento para atacar)
     $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
     const playing = game.phase === 'playing';
     this._troops.set(human.troops);
+    this._pop.set(pop);
     this._troopsMax.set(max);
-    $('pj-crec').textContent = playing ? `+${formatNumber(human.growthPerTick() * perSecond)}/s` : '';
+    const growth = human.growthPerTick() * perSecond;
+    $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${formatNumber(Math.abs(growth))}/s` : '';
+    $('pj-crec').classList.toggle('baja', growth < 0);
+    $('pj-trab').textContent = `${formatNumber(human.workers)} trab.`;
+    // El deslizador sigue al reparto real salvo mientras lo estás moviendo
+    if (!(performance.now() - (this._shareDragAt || 0) < 1500)) {
+      $('reparto').value = Math.round(human.soldierShare * 100);
+      this._showShare(human.soldierShare);
+    }
     this._gold.set(human.gold);
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
     $('pj-terr').textContent = formatPercent(human.tiles / landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
-    $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
+    $('pj-buques').textContent = human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
-    $('ratio-tropas').textContent = `${formatNumber(human.troops * ratio)} tropas`;
+    // El ataque sale de los soldados (no de toda la población)
+    $('ratio-tropas').textContent = `${formatNumber(human.troops * ratio)} soldados`;
     $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
 
     const works = {};

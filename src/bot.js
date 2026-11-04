@@ -42,6 +42,7 @@ export class BotBrain {
       this.nextDiplomacy = g.ticks + r.int(250, 600);
       this._diplomacyTurn(summary.counts);
     }
+    this._chooseShare(wild, counts, max);
     if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
     if (p.active.silo && r.chance(0.2 + this.aggression * 0.25)) this._fireMissile(counts);
@@ -51,7 +52,7 @@ export class BotBrain {
     if (this._counterAttack()) return;
 
     // 1. Expandirse por tierra libre mientras la haya
-    if (wild > 0 && !p.attacks.has(0) && p.troops > max * 0.1) {
+    if (wild > 0 && !p.attacks.has(0) && p.population() > max * 0.15) {
       g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio));
       // Los agresivos no esperan a acabar: atacan a la vez a un vecino débil
       if (!(counts.size && r.chance(this.aggression - 0.35))) return;
@@ -66,6 +67,33 @@ export class BotBrain {
       const tile = this._pickBoatTarget();
       if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * 0.35));
     }
+  }
+
+  /**
+   * Reparto entre soldados y trabajadores según la fase: expansión inicial
+   * 80 % soldados, guerra 85 %, fronteras tranquilas 60 % y, si ahorra para
+   * un edificio sin amenazas cerca, economía 40 % (más trabajadores, más oro).
+   */
+  _chooseShare(wild, counts, max) {
+    const g = this.game;
+    const p = this.player;
+    let war = false;
+    for (const [id, atk] of p.attacks) if (id && !atk.done) war = true;
+    for (const atk of g.attacks) {
+      if (!war && !atk.done && atk.targetId === p.id && atk.troops > p.troops * 0.1) war = true;
+    }
+    let threat = false;
+    for (const id of counts.keys()) {
+      if (g.players[id].troops > p.troops * 0.8) threat = true;
+    }
+    let share;
+    if (war) share = 0.85;
+    else if (wild > 0) share = 0.8;
+    else if (threat) share = 0.65;
+    else if (this.saveFor || p.population() > max * 0.5) share = 0.4;
+    else share = 0.6;
+    // Los más agresivos tiran algo más a soldados
+    g.setSoldierShare(p, share + (this.aggression - 0.6) * 0.1);
   }
 
   /**
@@ -99,9 +127,11 @@ export class BotBrain {
     const p = this.player;
     const r = g.rng;
     if (!counts.size) return false;
-    const reserve = max * (0.5 - this.aggression * 0.22);
-    const spare = p.troops - reserve;
-    if (spare < max * 0.06) return false;
+    // Mantiene la población hacia el 43 % del máximo (donde más crece) y
+    // ataca con los soldados que sobren por encima
+    const keep = max * (0.45 - this.aggression * 0.15);
+    const spare = Math.min(p.troops * 0.92, p.population() - keep);
+    if (spare < max * 0.05) return false;
     // Pocas guerras a la vez (los agresivos, alguna más)
     let wars = 0;
     for (const [id, atk] of p.attacks) if (id && !atk.done) wars++;
@@ -331,7 +361,7 @@ export class BotBrain {
   _helpAllies(max) {
     const g = this.game;
     const p = this.player;
-    if (!p.allies.size || p.troops < max * 0.75 || !g.rng.chance(0.15)) return false;
+    if (!p.allies.size || p.population() < max * 0.6 || !g.rng.chance(0.15)) return false;
     for (const atk of g.attacks) {
       if (atk.done || !p.allies.has(atk.targetId) || p.allies.has(atk.attacker.id)) continue;
       return g.donate(p, g.players[atk.targetId], 'troops', 0.15);
@@ -464,7 +494,7 @@ export class ColonyBrain {
     const g = this.game;
     const p = this.player;
     // Lo barato primero: solo se mira la frontera si de verdad puede expandirse
-    if (!p.attacks.has(0) && p.troops > p.maxTroops() * 0.25 && g.hasWildNeighbor(p)) {
+    if (!p.attacks.has(0) && p.population() > p.maxTroops() * 0.3 && g.hasWildNeighbor(p)) {
       g.launchAttack(p, 0, Math.floor(p.troops * 0.2));
     }
   }

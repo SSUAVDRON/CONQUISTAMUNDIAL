@@ -193,7 +193,7 @@ export class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share']);
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
 function cleanIntent(raw) {
@@ -204,6 +204,7 @@ function cleanIntent(raw) {
   if (int(raw.targetId) !== undefined) out.targetId = raw.targetId;
   if (int(raw.fromId) !== undefined) out.fromId = raw.fromId;
   if (typeof raw.ratio === 'number' && raw.ratio >= 0 && raw.ratio <= 1) out.ratio = raw.ratio;
+  if (typeof raw.share === 'number' && raw.share >= 0 && raw.share <= 1) out.share = raw.share;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
   if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile'].includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;

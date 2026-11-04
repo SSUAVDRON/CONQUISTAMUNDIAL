@@ -25,24 +25,32 @@ function ownTiles(game, p) {
   return out;
 }
 
-test('oro: ingreso fijo (no depende del territorio), nada por expandirse y botín al eliminar', () => {
+test('oro: lo producen los trabajadores, nada por expandirse y botín al eliminar', () => {
   const { map, game, human } = setup();
   assert.equal(human.gold, CONFIG.startGold);
   for (let i = 0; i < 50; i++) game.tick();
   assert.ok(human.gold > 0, 'debería haber ganado oro');
-  const small = human.goldPerTick();
+  // Más trabajadores, más oro; el territorio por sí solo no cambia nada
+  human.workers = 1000;
+  const g1 = human.goldPerTick();
+  human.workers = 16000; // 16^0,75 = 8: más trabajadores, más oro (con rendimiento decreciente)
+  assert.ok(Math.abs(human.goldPerTick() - 8 * g1) < 1e-9, 'el oro va con los trabajadores');
   human.tiles *= 10;
-  assert.equal(human.goldPerTick(), small, 'más territorio no da más oro');
+  assert.ok(Math.abs(human.goldPerTick() - 8 * g1) < 1e-9, 'más territorio sin más trabajadores no da más oro');
   human.tiles /= 10;
 
-  // Expandirse por tierra libre no da oro: solo el ingreso fijo de esos turnos
-  const before = human.gold;
+  // Expandirse por tierra libre no da oro: solo lo que producen los trabajadores
   human.troops = 5000;
   game.launchAttack(human, 0, 3000);
   const tiles0 = human.tiles;
-  for (let i = 0; i < 20; i++) game.tick();
+  let expected = human.gold;
+  for (let i = 0; i < 20; i++) {
+    // El oro del turno se calcula con los trabajadores tras crecer la población
+    game.tick();
+    expected += human.goldPerTick();
+  }
   assert.ok(human.tiles > tiles0, 'se ha expandido');
-  assert.ok(Math.abs(human.gold - before - 20 * small) < 1e-6, 'expandirse no da oro extra');
+  assert.ok(Math.abs(human.gold - expected) < expected * 0.02, `expandirse no da oro extra (${human.gold.toFixed(0)} frente a ${expected.toFixed(0)})`);
 
   // Eliminar a alguien: su oro + la recompensa, y un efecto de botín donde cayó
   const colony = game.addPlayer('Colonia de prueba', [200, 200, 200], false);
@@ -58,6 +66,40 @@ test('oro: ingreso fijo (no depende del territorio), nada por expandirse y botí
   assert.ok(Math.abs(human.gold - g0 - (5000 + CONFIG.killGoldColony)) < 1e-6, 'botín = su oro + recompensa');
   const fx = game.effects.find((e) => e.kind === 'loot');
   assert.ok(fx && fx.owner === human.id && fx.x === map.x(t) + 0.5, 'efecto de botín en su última casilla');
+});
+
+test('población: crece más rápido hacia el 43 % del máximo y se reparte en soldados y trabajadores', () => {
+  const { game, human } = setup();
+  const max = human.maxTroops();
+  const at = (x) => {
+    human.troops = max * x * human.soldierShare;
+    human.workers = max * x - human.troops;
+    return human.growthPerTick();
+  };
+  const g20 = at(0.2);
+  const g43 = at(0.43);
+  const g70 = at(0.7);
+  const g95 = at(0.95);
+  assert.ok(g43 > g20 && g43 > g70 && g70 > g95, `pico hacia el 43 %: ${g20.toFixed(1)} ${g43.toFixed(1)} ${g70.toFixed(1)} ${g95.toFixed(1)}`);
+  assert.ok(at(1) === 0, 'en el tope no crece');
+  assert.ok(at(1.2) < 0, 'por encima del tope, decrece');
+
+  // Reparto: al empezar, 70 % soldados; al cambiarlo, la gente cambia de oficio poco a poco
+  at(0.4);
+  const P = human.population();
+  assert.ok(Math.abs(human.troops / P - CONFIG.soldierShare) < 1e-9);
+  game.queueIntent({ type: 'share', playerId: human.id, share: 0.3 });
+  game.tick();
+  assert.equal(human.soldierShare, 0.3);
+  const after1 = human.troops / human.population();
+  assert.ok(after1 < CONFIG.soldierShare && after1 > 0.3, `cambia poco a poco: ${after1.toFixed(2)}`);
+  for (let i = 0; i < 60; i++) game.tick();
+  assert.ok(Math.abs(human.troops / human.population() - 0.3) < 0.01, 'acaba en el reparto elegido');
+  // Valores fuera de rango se recortan
+  game.setSoldierShare(human, 2);
+  assert.equal(human.soldierShare, 1);
+  game.setSoldierShare(human, -1);
+  assert.equal(human.soldierShare, CONFIG.minSoldierShare);
 });
 
 test('reglas de construcción: territorio propio, oro, distancia y coste creciente', () => {

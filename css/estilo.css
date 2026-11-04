@@ -1906,3 +1906,50 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   25% { transform: scale(1.35); color: #ffe27a; text-shadow: 0 0 14px rgba(255, 210, 80, 0.95); }
 }
 #pj-oro { transform-origin: left center; }
+
+/* ===================================================== Población: soldados y trabajadores
+   La barra muestra la población sobre su máximo: la parte de soldados en
+   dorado y la de trabajadores en verde azulado. La franja marca donde más
+   rápido crece (hacia el 43 % del máximo). */
+#panel-jugador #pj-barra {
+  background: linear-gradient(90deg, #d99a2b, #f2b33d var(--soldados, 100%), #2f9e8f var(--soldados, 100%), #5fd3c0);
+}
+#panel-jugador .barra::before { left: 33%; width: 20%; }
+#panel-jugador .cifras .sub.baja { color: var(--peligro); }
+#panel-jugador .cifras .sub-trab { color: #7fd8c9; }
+#panel-jugador .cifras .sub-barcos { color: var(--texto-suave); }
+/* Dos controles en la columna de ataque: fuerza de ataque y reparto */
+#panel-jugador .pj-ataque { justify-content: center; gap: 4px; }
+#panel-jugador .pj-ataque .ratio { gap: 1px; }
+#panel-jugador .pj-ataque .ratio-titulo { font-size: 9.5px; }
+#panel-jugador .pj-ataque .ratio-cifra strong { font-size: 15px; }
+#panel-jugador .pj-ataque .ratio-cifra span { font-size: 11px; }
+#panel-jugador .pj-ataque #ratio { margin: 2px 0 0; }
+#reparto {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  margin: 2px 0 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #d99a2b, var(--acento) var(--valor, 70%), #2f9e8f var(--valor, 70%), #5fd3c0);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+#reparto::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #e9fffb; border: 3px solid #3fb5a3; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+#reparto::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #e9fffb; border: 3px solid #3fb5a3; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+.reparto .ratio-cifra strong { color: var(--acento); }
+@media (max-width: 720px), (max-height: 500px) and (orientation: landscape) {
+  #reparto::-webkit-slider-thumb { width: 22px; height: 22px; }
+  #panel-jugador .pj-ataque { gap: 5px; }
+}
+#panel-jugador .cifras .sub-barcos { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#panel-jugador .pj-ataque .ratio-cifra { overflow: hidden; text-overflow: ellipsis; }
+@media (max-height: 500px) and (orientation: landscape) {
+  /* En horizontal, solo las cifras: el deslizador ya muestra el reparto */
+  #panel-jugador .reparto .ratio-cifra span { display: none; }
+  #panel-jugador .pj-ataque { gap: 2px; }
+  #panel-jugador .pj-ataque .ratio { gap: 1px; }
+  #panel-jugador .pj-ataque .ratio-cifra strong { font-size: 14px; }
+}
+/* Columnas del resumen: población (con su máximo), soldados, oro y territorio */
+#panel-jugador .cifras { grid-template-columns: 1.6fr 1fr 0.95fr 0.95fr; }

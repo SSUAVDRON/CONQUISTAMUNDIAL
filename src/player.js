@@ -32,7 +32,12 @@ export class Player {
     /** Última casilla que perdió (donde sale el botín al ser eliminado). */
     this.lastTile = -1;
 
+    /** Soldados: atacan y defienden (es la cifra de «tropas» de todo el juego). */
     this.troops = 0;
+    /** Trabajadores: producen el oro de cada turno. */
+    this.workers = 0;
+    /** Fracción de la población que quiere como soldados (el resto, trabajadores). */
+    this.soldierShare = CONFIG.soldierShare;
     this.gold = CONFIG.startGold;
     this.tiles = 0;
     this.alive = true;
@@ -77,28 +82,32 @@ export class Player {
     this.requestCooldown = new Map();
   }
 
+  /** Población total: soldados + trabajadores. */
+  population() {
+    return this.troops + this.workers;
+  }
+
+  /** Capacidad máxima de población: base + territorio + ciudades. */
   maxTroops() {
     return (CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.levels.city * CONFIG.cityMaxTroops) * this.strength;
   }
 
   /**
-   * Crecimiento por tick, en campana: lo más rápido con la mitad del máximo;
-   * con muy pocas tropas se genera menos y por encima del 60 % cada vez menos
-   * (0 en el tope). Conviene no gastarlo todo ni dejar que se llene.
+   * Crecimiento de la población por turno: k × (10 + P^0,75 / 4) × (1 − P / Pmáx).
+   * Lo más rápido hacia el 43 % del máximo; 0 en el tope y negativo por
+   * encima (al perder territorio, la población sobrante se va).
    */
   growthPerTick() {
     const max = this.maxTroops();
-    if (this.troops >= max) return 0;
-    const x = Math.max(0, this.troops) / max;
-    const bell = 4 * x * (1 - x);
-    const f = x < 0.5 ? CONFIG.growthFloor + (1 - CONFIG.growthFloor) * bell : bell;
-    const raw = CONFIG.growthBase + pow34(this.tiles) * CONFIG.growthTileMult;
-    return raw * this.strength * f * this.troopMult;
+    const P = Math.max(0, this.troops + this.workers);
+    const raw = CONFIG.popGrowthBase + pow34(P) / CONFIG.popGrowthDiv;
+    return CONFIG.popGrowthScale * raw * (1 - P / max) * this.strength * this.troopMult;
   }
 
+  /** Oro por turno: lo producen los trabajadores (más con puertos y fábricas). */
   goldPerTick() {
     if (!this.tiles) return 0;
-    return CONFIG.goldBase * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus)) * this.goldMult;
+    return (CONFIG.goldBase + pow34(Math.max(0, this.workers)) * CONFIG.goldPerWorker) * (1 + goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus)) * this.goldMult;
   }
 
   maxBoats() {

@@ -158,6 +158,10 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   por expandirse), botín y recompensa al eliminar con lluvia de monedas;
   efectos de sonido más altos y muchos nuevos (fanfarria al conquistar);
   IA más agresiva y lista (reserva, mejores objetivos, remates, contraataques)
+- Población y economía nuevas: población con máximo (territorio y ciudades)
+  que crece más rápido hacia el 43 %, reparto soldados/trabajadores con
+  deslizador (el ataque es un % de los soldados), oro de los trabajadores
+  y la IA cambia de reparto según la fase
 
 ## Próximo
 

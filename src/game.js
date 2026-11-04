@@ -253,8 +253,44 @@ export class Game {
     }
     p.spawned = true;
     p.spawnTile = tile;
-    p.troops = CONFIG.startTroops;
+    p.troops = CONFIG.startTroops * p.soldierShare;
+    p.workers = CONFIG.startTroops - p.troops;
     return true;
+  }
+
+  /**
+   * Crecimiento y reparto de la población: lo nuevo se reparte según el
+   * reparto elegido y, además, la gente cambia de oficio poco a poco hacia
+   * él (los soldados que salen a atacar o caen se reponen así de los
+   * trabajadores, y al revés).
+   */
+  _growPopulation(p) {
+    const g = p.growthPerTick();
+    const share = p.soldierShare;
+    p.troops += g * share;
+    p.workers += g * (1 - share);
+    const P = p.troops + p.workers;
+    if (P <= 0) {
+      p.troops = Math.max(0, p.troops);
+      p.workers = Math.max(0, p.workers);
+      return;
+    }
+    const diff = P * share - p.troops;
+    const lim = P * CONFIG.shareRate;
+    const move = diff > lim ? lim : diff < -lim ? -lim : diff;
+    p.troops += move;
+    p.workers -= move;
+    if (p.workers < 0) {
+      p.troops += p.workers;
+      p.workers = 0;
+    }
+    if (p.troops < 0) p.troops = 0;
+  }
+
+  /** Cambia el reparto entre soldados y trabajadores (de minSoldierShare a 1). */
+  setSoldierShare(p, share) {
+    if (!Number.isFinite(share)) return;
+    p.soldierShare = Math.round(Math.min(1, Math.max(CONFIG.minSoldierShare, share)) * 100) / 100;
   }
 
   _releaseAll(p) {
@@ -459,6 +495,8 @@ export class Game {
         } else if (this.phase === 'playing') {
           this._handleAttackIntent(p, it.tile, it.ratio);
         }
+      } else if (it.type === 'share') {
+        this.setSoldierShare(p, it.share);
       } else if (it.type === 'build') {
         if (this.phase !== 'playing') continue;
         const tile = this.snapBuildTile(p, it.kind, it.tile);
@@ -2128,7 +2166,7 @@ export class Game {
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive) continue;
-      p.troops += p.growthPerTick();
+      this._growPopulation(p);
       p.gold += p.goldPerTick();
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }
@@ -2181,6 +2219,7 @@ export class Game {
       p.alive = false;
       p.eliminatedTick = this.ticks;
       p.troops = 0;
+      p.workers = 0;
       // Botín: el oro del eliminado y una recompensa pasan a quien le quitó la
       // última casilla (con su lluvia de monedas allí donde cayó)
       const killer = this.players[p.lastConqueredBy];

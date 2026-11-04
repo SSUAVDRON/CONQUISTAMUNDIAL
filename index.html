@@ -144,7 +144,7 @@
           <summary>Cómo se juega</summary>
           <ul>
             <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas.</li>
-            <li><b>Tropas:</b> crecen solas; cuanto más territorio, más tropas y más rápido. Crecen más rápido con la <i>mitad</i> de tu máximo (la franja marcada en la barra): con muy pocas se genera poco y por encima del 60 % cada vez menos. No lo gastes todo ni dejes que se llene.</li>
+            <li><b>Población:</b> crece sola hasta un máximo que dan tu territorio y tus ciudades; crece más rápido hacia el <i>43 %</i> de ese máximo (la franja marcada en la barra) y se para al llenarse: no esperes con la barra llena, amplía territorio. Se reparte entre <i>soldados</i> (atacan y defienden; la fuerza de ataque es un % de los soldados) y <i>trabajadores</i> (producen el oro): muévelo con el deslizador «Reparto» — más soldados para la expansión y la guerra, más trabajadores para ahorrar. La gente cambia de oficio poco a poco.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Se envía el % de tropas marcado en <i>Fuerza de ataque</i>: tu país avanza hacia donde haces clic, y cuantas más tropas mandas, más lejos y más rápido llega (cada casilla libre cuesta tropas).</li>
             <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco de transporte desde tu costa (máx. 3 a la vez).</li>
             <li><b>Colonias:</b> además de las naciones hay colonias («Colonia de…», «Aldea de…»): débiles, no firman alianzas y guardan oro. Hay muchas por todo el mapa: presa fácil al empezar.</li>
@@ -153,7 +153,7 @@
           <li><b>Misiles:</b> construye un silo (G) y lanza misiles (M) contra territorio enemigo: arrasan una zona, dejan las casillas libres y destruyen sus edificios. Los <i>antimisiles</i> (H) intentan derribar los misiles enemigos que pasan cerca; tras cada disparo recargan 20 s (anillo azul sobre la batería).</li>
           <li><b>Buques de guerra:</b> se botan desde tus puertos (tecla T) y van solos: patrullan la zona del mar donde hagas clic al botarlos (o junto al puerto si haces clic en tu costa), hunden buques y transportes de tropas enemigos y capturan sus pesqueros y mercantes. No atacan puertos. La zona no se puede cambiar después.</li>
             <li><b>Terreno:</b> el mapa muestra la altura: verde = llanura, arena = meseta, gris y blanco = montaña. Mesetas y montañas cuestan más tropas y tiempo de conquistar; al expandirte las rodeas y las tomas al final.</li>
-            <li><b>Oro y edificios:</b> ganas un poco de oro fijo (expandirte no da oro); el oro de verdad sale de conquistar: cada casilla que le quitas a otro trae parte de su oro, y al eliminar a una nación o colonia te quedas con todo el suyo más una recompensa. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (pesqueros, mercantes y oro; basta con hacer clic cerca de la costa) y <i>fortalezas</i> (defensa ×3 alrededor). Los edificios son caros: elige bien. Las obras tardan unos segundos (los antimisiles, los que más). Si te conquistan la casilla, el edificio cambia de dueño.</li>
+            <li><b>Oro y edificios:</b> el oro lo producen tus trabajadores (expandirte no da oro); además, cada casilla que le quitas a otro trae parte de su oro, y al eliminar a una nación o colonia te quedas con todo el suyo más una recompensa. Trenes, mercantes y aliados también traen oro. Con él construyes <i>ciudades</i> (más tropas máximas), <i>puertos</i> (pesqueros, mercantes y oro; basta con hacer clic cerca de la costa) y <i>fortalezas</i> (defensa ×3 alrededor). Los edificios son caros: elige bien. Las obras tardan unos segundos (los antimisiles, los que más). Si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Niveles e inflación:</b> con un edificio seleccionado, haz clic sobre uno tuyo del mismo tipo para subirlo de nivel (hasta 5). Cada compra encarece un 25 % todo lo demás, salvo silos, misiles y antimisiles.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s y te vuelve más fácil de conquistar.</li>
             <li><b>Victoria:</b> controla el 70% de la tierra del mundo, o queda en pie solo con tus aliados.</li>
@@ -396,12 +396,12 @@
         <strong id="pj-nombre"></strong>
         <span id="pj-estado"></span>
       </div>
-      <div class="barra" title="Tropas / máximo. Crecen más rápido en la franja marcada (cerca de la mitad del máximo)"><div id="pj-barra"></div></div>
+      <div class="barra" title="Población / máximo (dorado: soldados; verde azulado: trabajadores). Crece más rápido en la franja marcada, hacia el 43 % del máximo"><div id="pj-barra"></div></div>
       <div class="cifras">
-        <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Tropas</span><span class="valor"><span id="pj-tropas">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub" id="pj-crec"></small></div>
+        <div title="Población total y su máximo (territorio y ciudades). Crece más rápido hacia el 43 % del máximo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Población</span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub" id="pj-crec"></small></div>
+        <div title="Soldados: atacan y defienden. Trabajadores: producen el oro"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Soldados</span><span class="valor" id="pj-tropas">0</span><small class="sub sub-trab" id="pj-trab"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
-        <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Territorio</span><span class="valor" id="pj-terr">0%</span></div>
-        <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 10h12l-2 3.5H4zM8 10V3l4 5H8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Barcos</span><span class="valor" id="pj-barcos">0</span><small class="sub" id="pj-buques"></small></div>
+        <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Territorio</span><span class="valor" id="pj-terr">0%</span><small class="sub sub-barcos" title="Barcos de transporte en el mar / máximo, y buques de guerra"><span id="pj-barcos">0</span> barcos<span id="pj-buques"></span></small></div>
       </div>
       </div>
       <div class="pj-col pj-ataque">
@@ -409,6 +409,11 @@
         <span class="ratio-titulo">Fuerza de ataque</span>
         <span class="ratio-cifra"><strong id="ratio-valor">20%</strong> <span id="ratio-tropas"></span></span>
         <input id="ratio" type="range" min="1" max="100" value="20">
+      </label>
+      <label class="ratio reparto" title="Reparto de la población: soldados (atacan y defienden) y trabajadores (producen oro). Al cambiarlo, la gente cambia de oficio poco a poco">
+        <span class="ratio-titulo">Reparto</span>
+        <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
+        <input id="reparto" type="range" min="5" max="100" step="5" value="70">
       </label>
       </div>
       <div class="pj-col pj-obras">
