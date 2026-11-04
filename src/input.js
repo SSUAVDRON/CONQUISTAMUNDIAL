@@ -2,6 +2,7 @@
 // clic sin arrastrar = acción sobre la casilla.
 
 const DRAG_THRESHOLD = 6;
+const LONG_PRESS_MS = 500;
 
 export class Input {
   constructor(canvas, camera, handlers) {
@@ -33,7 +34,22 @@ export class Input {
     const [x, y] = this._pos(e);
     this.canvas.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button, shift: e.shiftKey });
-    if (this.pointers.size === 1) this.dragging = false;
+    if (this.pointers.size === 1) {
+      this.dragging = false;
+      this.longPressed = false;
+      // Mantener pulsado (táctil) equivale al clic derecho
+      clearTimeout(this.longPressTimer);
+      if (e.pointerType !== 'mouse') {
+        this.longPressTimer = setTimeout(() => {
+          if (!this.dragging && this.pointers.size === 1) {
+            this.longPressed = true;
+            this.h.onRightClick?.(x, y);
+          }
+        }, LONG_PRESS_MS);
+      }
+    } else {
+      clearTimeout(this.longPressTimer);
+    }
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       this.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -49,7 +65,10 @@ export class Input {
       return;
     }
     if (this.pointers.size === 1) {
-      if (!this.dragging && Math.hypot(x - ptr.sx, y - ptr.sy) > DRAG_THRESHOLD) this.dragging = true;
+      if (!this.dragging && Math.hypot(x - ptr.sx, y - ptr.sy) > DRAG_THRESHOLD) {
+        this.dragging = true;
+        clearTimeout(this.longPressTimer);
+      }
       if (this.dragging) this.camera.pan(x - ptr.x, y - ptr.y);
       ptr.x = x;
       ptr.y = y;
@@ -68,7 +87,8 @@ export class Input {
     const ptr = this.pointers.get(e.pointerId);
     if (!ptr) return;
     this.pointers.delete(e.pointerId);
-    if (!cancelled && !this.dragging && this.pointers.size === 0) {
+    clearTimeout(this.longPressTimer);
+    if (!cancelled && !this.dragging && !this.longPressed && this.pointers.size === 0) {
       if (ptr.button === 0) this.h.onClick?.(ptr.x, ptr.y, ptr.shift);
       else if (ptr.button === 2) this.h.onRightClick?.(ptr.x, ptr.y);
     }

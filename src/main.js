@@ -75,8 +75,8 @@ function startGame(opts) {
   state.demo = false;
   const seed = opts.seed ? hashString(opts.seed) : randomSeed();
   const game = newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, human: { name: opts.name, color: opts.color } });
-  game.onEvent = (evt) => ui.pushEvent(evt);
-  for (const evt of game.eventLog) ui.pushEvent(evt);
+  game.onEvent = (evt) => (evt.kind === 'request' ? ui.addRequest(game, evt) : ui.pushEvent(evt));
+  for (const evt of game.eventLog) game.onEvent(evt);
   state.speed = 1;
   ui.setSpeed(1);
   ui.setRatio(state.ratio);
@@ -114,6 +114,20 @@ function centerOnHuman() {
   else camera.centerOn(game.map.x(t), game.map.y(t));
 }
 
+function openNation(id) {
+  ui.openNation(id);
+  ui.update(state.game, state.human, state.ratio, state.buildMode);
+}
+
+/** Encola una acción del jugador humano (y refresca la interfaz). */
+function humanIntent(intent) {
+  const { game, human } = state;
+  if (state.demo || !human) return;
+  game.queueIntent({ ...intent, playerId: human.id });
+  // Si está en pausa, la acción se aplica al reanudar; avisamos para que no parezca rota
+  if (state.speed === 0) ui.pushEvent({ text: 'En pausa: se aplicará al reanudar', kind: 'info' });
+}
+
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
 function setBuildMode(kind) {
   const { game, human } = state;
@@ -136,11 +150,21 @@ const input = new Input(canvas, camera, {
     }
     state.game.queueIntent({ type: 'action', playerId: state.human.id, tile, ratio: state.ratio });
   },
-  onRightClick() {
-    state.buildMode = null;
+  onRightClick(sx, sy) {
+    if (state.buildMode) {
+      state.buildMode = null;
+      return;
+    }
+    if (state.demo || !state.human) return;
+    // Clic derecho / pulsación larga sobre otra nación: abrir su ficha
+    const tile = tileAt(sx, sy);
+    const owner = tile >= 0 ? state.game.owner[tile] : 0;
+    if (owner && owner !== state.human.id) openNation(owner);
+    else ui.closeNation();
   },
   onEscape() {
     state.buildMode = null;
+    ui.closeNation();
   },
   buildKeys,
   onBuildKey: setBuildMode,
@@ -171,7 +195,17 @@ ui.on({
   onFocusPlayer(id) {
     const label = state.renderer?.labels.find((l) => l.player.id === id);
     if (label) camera.centerOn(label.x, label.y);
+    if (state.human && id !== state.human.id) openNation(id);
   },
+  onProposeAlliance(id) {
+    const incoming = state.game.pendingRequest(id, state.human?.id);
+    if (incoming) humanIntent({ type: 'respondAlliance', fromId: id, accept: true });
+    else humanIntent({ type: 'proposeAlliance', targetId: id });
+  },
+  onBreakAlliance: (id) => humanIntent({ type: 'breakAlliance', targetId: id }),
+  onDonate: (id, resource) => humanIntent({ type: 'donate', targetId: id, resource, ratio: state.ratio }),
+  onEmoji: (id, emoji) => humanIntent({ type: 'emoji', targetId: id, emoji }),
+  onRespondAlliance: (fromId, accept) => humanIntent({ type: 'respondAlliance', fromId, accept }),
   onCancelAttack(targetId) {
     if (state.human) state.game.queueIntent({ type: 'cancelAttack', playerId: state.human.id, targetId });
   },
@@ -185,8 +219,13 @@ function checkEnd() {
   const seconds = (Math.max(0, game.ticks - CONFIG.spawnTicks) * TICK_MS) / 1000;
   if (game.phase === 'ended' && !state.endShown) {
     state.endShown = true;
-    if (game.winner === human) {
+    if (game.winningAlliance && game.winningAlliance.includes(human)) {
+      const others = game.winningAlliance.filter((p) => p !== human).map((p) => p.name).join(', ');
+      ui.showEnd('¡Victoria en alianza!', `Solo quedáis tú y tus aliados (${others}) en ${formatTime(seconds)}.\nTu territorio: ${formatPercent(human.tiles / game.map.landCount)}.`);
+    } else if (game.winner === human) {
       ui.showEnd('¡Victoria!', `Has conquistado el ${formatPercent(human.tiles / game.map.landCount)} del mundo en ${formatTime(seconds)}.`);
+    } else if (game.winningAlliance) {
+      ui.showEnd('Fin de la partida', `La alianza de ${game.winningAlliance.map((p) => p.name).join(', ')} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / game.map.landCount)} del territorio.`);
     } else {
       ui.showEnd('Fin de la partida', `${game.winner.name} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / game.map.landCount)} del territorio.`);
     }
@@ -226,6 +265,9 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
+
+// Acceso desde la consola del navegador para depurar: __dominia.game, __dominia.human…
+window.__dominia = state;
 
 startDemo();
 requestAnimationFrame(frame);

@@ -1,5 +1,5 @@
 // Interfaz HTML: menú, panel del jugador, clasificación, eventos y tooltip.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, TERRAIN_NAMES, TICK_MS } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { drawBuildingIcon } from './icons.js';
@@ -72,6 +72,46 @@ export class UI {
       this.handlers.onExit?.(true);
     });
 
+    // Ficha de nación (diplomacia)
+    this.nationId = 0;
+    this._breakArmedUntil = 0;
+    $('pn-cerrar').addEventListener('click', () => this.closeNation());
+    $('pn-alianza').addEventListener('click', () => {
+      const id = this.nationId;
+      if (!id) return;
+      if ($('pn-alianza').dataset.action === 'break') {
+        // Romper exige un segundo clic: te marca como traidor
+        if (performance.now() < this._breakArmedUntil) {
+          this._breakArmedUntil = 0;
+          this.handlers.onBreakAlliance?.(id);
+        } else {
+          this._breakArmedUntil = performance.now() + 4000;
+          $('pn-alianza').textContent = '¿Seguro? Pulsa otra vez';
+        }
+      } else {
+        this.handlers.onProposeAlliance?.(id);
+      }
+    });
+    $('pn-env-tropas').addEventListener('click', () => this.handlers.onDonate?.(this.nationId, 'troops'));
+    $('pn-env-oro').addEventListener('click', () => this.handlers.onDonate?.(this.nationId, 'gold'));
+    for (const emoji of EMOJIS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = emoji;
+      b.setAttribute('aria-label', `Enviar ${emoji}`);
+      b.addEventListener('click', () => this.handlers.onEmoji?.(this.nationId, emoji));
+      $('pn-emojis').append(b);
+    }
+
+    // Propuestas recibidas
+    this._requests = new Map(); // fromId → tarjeta
+    $('solicitudes').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-from]');
+      if (!btn) return;
+      this.handlers.onRespondAlliance?.(Number(btn.dataset.from), btn.dataset.accept === '1');
+      this._removeRequest(Number(btn.dataset.from));
+    });
+
     this._buildButtons = new Map();
     for (const kind of BUILDING_KINDS) {
       const def = BUILDINGS[kind];
@@ -123,8 +163,110 @@ export class UI {
     $('fin').hidden = true;
     $('eventos').replaceChildren();
     $('lista-ataques').replaceChildren();
+    $('solicitudes').replaceChildren();
+    this._requests.clear();
     this._attackRows.clear();
     this._leaderSig = '';
+    this.closeNation();
+  }
+
+  // ------------------------------------------------------------- diplomacia
+
+  openNation(id) {
+    this.nationId = id;
+    this._breakArmedUntil = 0;
+    $('panel-nacion').hidden = false;
+  }
+
+  closeNation() {
+    this.nationId = 0;
+    $('panel-nacion').hidden = true;
+  }
+
+  _updateNation(game, human, ratio) {
+    if (!this.nationId) return;
+    const p = game.players[this.nationId];
+    if (!p || !p.alive) {
+      this.closeNation();
+      return;
+    }
+    const allied = human.allies.has(p.id);
+    $('pn-color').style.background = rgbToCss(p.color);
+    $('pn-nombre').textContent = p.name;
+    $('pn-tropas').textContent = formatNumber(p.troops);
+    $('pn-terr').textContent = formatPercent(p.tiles / game.map.landCount);
+    $('pn-aliados').textContent = p.allies.size
+      ? [...p.allies].map((id) => game.players[id].name).join(', ')
+      : 'ninguno';
+
+    const chip = $('pn-relacion');
+    let relation = 'Neutral';
+    let tone = '';
+    if (allied) [relation, tone] = ['Aliado', 'bien'];
+    else if (p.attacks.has(human.id)) [relation, tone] = ['Te ataca', 'mal'];
+    else if (human.attacks.has(p.id)) [relation, tone] = ['En guerra', 'mal'];
+    if (game.isTraitor(p)) [relation, tone] = [allied ? 'Aliado · traidor' : 'Traidor', 'mal'];
+    chip.textContent = relation;
+    chip.className = `chip ${tone}`;
+
+    const btn = $('pn-alianza');
+    const playing = game.phase === 'playing' && human.alive;
+    let note = '';
+    if (allied) {
+      btn.dataset.action = 'break';
+      if (performance.now() >= this._breakArmedUntil) btn.textContent = 'Romper alianza';
+      btn.disabled = !playing;
+      btn.className = 'peligro';
+      note = `Romperla te marca como traidor ${CONFIG.traitorTicks / 10} s y te hace más fácil de conquistar.`;
+    } else {
+      btn.dataset.action = 'propose';
+      btn.className = 'principal';
+      const check = game.canPropose(human, p);
+      const incoming = game.pendingRequest(p.id, human.id);
+      btn.textContent = incoming ? 'Aceptar su alianza' : check.ok ? 'Proponer alianza' : check.reason;
+      btn.disabled = !playing || (!check.ok && !incoming);
+      if (game.isTraitor(p)) note = 'Ha traicionado una alianza hace poco.';
+    }
+    const pct = Math.round(ratio * 100);
+    $('pn-env-tropas').textContent = `Enviar ${pct}% tropas (${formatNumber(human.troops * ratio)})`;
+    $('pn-env-oro').textContent = `Enviar ${pct}% oro (${formatNumber(human.gold * ratio)})`;
+    $('pn-env-tropas').disabled = $('pn-env-oro').disabled = !allied || !playing;
+    if (!allied && !note) note = 'Solo puedes enviar tropas y oro a tus aliados. La cantidad sigue la fuerza de ataque.';
+    $('pn-nota').textContent = note;
+  }
+
+  addRequest(game, evt) {
+    if (this._requests.has(evt.fromId)) return;
+    const p = game.players[evt.fromId];
+    const card = document.createElement('div');
+    card.className = 'solicitud';
+    card.innerHTML = `
+      <div class="sol-texto"><span class="muestra" style="background:${rgbToCss(p.color)}"></span>
+        <span><b>${escapeHtml(p.name)}</b> te propone una alianza</span></div>
+      <div class="sol-botones">
+        <button type="button" data-from="${p.id}" data-accept="0">Rechazar</button>
+        <button type="button" class="principal" data-from="${p.id}" data-accept="1">Aceptar</button>
+      </div>
+      <div class="sol-tiempo"><div></div></div>`;
+    $('solicitudes').prepend(card);
+    this._requests.set(evt.fromId, card);
+  }
+
+  _removeRequest(fromId) {
+    this._requests.get(fromId)?.remove();
+    this._requests.delete(fromId);
+  }
+
+  _updateRequests(game, human) {
+    for (const [fromId, card] of this._requests) {
+      const req = game.pendingRequest(fromId, human.id);
+      if (!req) {
+        this._removeRequest(fromId);
+        continue;
+      }
+      const left = Math.max(0, (req.expires - game.ticks) / CONFIG.allianceRequestTicks);
+      card.querySelector('.sol-tiempo div').style.width = `${left * 100}%`;
+    }
   }
 
   confirmExit() {
@@ -215,6 +357,8 @@ export class UI {
 
     this._updateAttacks(game, human);
     this._updateLeaderboard(game, human, landCount);
+    this._updateNation(game, human, ratio);
+    this._updateRequests(game, human);
   }
 
   _updateAttacks(game, human) {
@@ -254,10 +398,12 @@ export class UI {
     const html = rows
       .map((p) => {
         const rank = alive.indexOf(p) + 1;
+        const marks = (human.allies.has(p.id) ? ' <span class="marca aliado" title="Aliado">🤝</span>' : '') +
+          (game.isTraitor(p) ? ' <span class="marca traidor" title="Traidor">⚠</span>' : '');
         return `<li data-id="${p.id}" class="${p.isHuman ? 'yo' : ''}">
           <span class="pos">${rank}</span>
           <span class="muestra" style="background:${rgbToCss(p.color)}"></span>
-          <span class="nom">${escapeHtml(p.name)}</span>
+          <span class="nom">${escapeHtml(p.name)}${marks}</span>
           <span class="pct">${formatPercent(p.tiles / landCount)}</span>
           <span class="tro">${formatNumber(p.troops)}</span>
         </li>`;
@@ -289,7 +435,9 @@ export class UI {
       if (b) extra.push(BUILDINGS[b.kind].name);
       if (game.fortMultiplier(p, tile) > 1) extra.push('zona fortificada');
       extra.push(terrain);
-      tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${p.isHuman ? ' (tú)' : ''}<br>
+      const human = game.human;
+      const tag = p.isHuman ? ' (tú)' : human && human.allies.has(p.id) ? ' · aliado' : game.isTraitor(p) ? ' · traidor' : '';
+      tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
         ${formatNumber(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>`;
     } else {

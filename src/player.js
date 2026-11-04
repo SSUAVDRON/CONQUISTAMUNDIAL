@@ -28,6 +28,14 @@ export class Player {
     this.maxTilesReached = 0;
     this.eliminatedTick = -1;
     this.lastConqueredBy = 0;
+
+    // Diplomacia
+    this.allies = new Set();
+    this.traitorUntil = 0; // tick hasta el que figura como traidor
+    this.betrayals = 0;
+    this.lastEmojiTick = -Infinity;
+    /** id → tick a partir del cual se le puede volver a proponer alianza. */
+    this.requestCooldown = new Map();
   }
 
   maxTroops() {

@@ -39,6 +39,7 @@ export class Renderer {
     this.image = this.tctx.createImageData(width, height);
     this.pixels = new Uint32Array(this.image.data.buffer);
     this._buildPalette();
+    this.diploVersion = game.diploVersion;
     game.trackDirty = true;
     game.dirty.length = 0;
     this._paintAllTerritory();
@@ -60,8 +61,9 @@ export class Renderer {
       if (!p) continue;
       const [r, g, b] = p.color;
       this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
-      // La frontera del jugador humano se dibuja clara para reconocerla de un vistazo
-      const bc = p.isHuman ? [255, 255, 255] : shadeRgb(p.color, 0.55);
+      // Frontera blanca para el humano y verde para sus aliados: se reconocen de un vistazo
+      const human = this.game.human;
+      const bc = p.isHuman ? [255, 255, 255] : human && human.allies.has(p.id) ? [120, 235, 165] : shadeRgb(p.color, 0.55);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
     }
   }
@@ -190,6 +192,13 @@ export class Renderer {
    */
   draw(now, overlay = {}) {
     const { ctx, camera, dpr, game } = this;
+    if (game.diploVersion !== this.diploVersion) {
+      // Cambió alguna alianza: recolorear fronteras de aliados
+      this.diploVersion = game.diploVersion;
+      this._buildPalette();
+      game.dirty.length = 0;
+      this._paintAllTerritory();
+    }
     this._flushDirty();
     if (now - this.lastLabelTime > LABEL_INTERVAL_MS) {
       this._updateLabels();
@@ -211,6 +220,7 @@ export class Renderer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this._drawBuildings();
     this._drawLabels();
+    this._drawEmojis();
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
   }
@@ -299,18 +309,55 @@ export class Renderer {
       const size = Math.min(radiusPx * 0.8, (radiusPx * 3) / len, 42);
       if (size < 7) continue;
       if (sx < -200 || sy < -100 || sx > camera.viewW + 200 || sy > camera.viewH + 100) continue;
+      const human = this.game.human;
+      const allied = human && human.allies.has(p.id);
+      const traitor = this.game.isTraitor(p);
+      const name = traitor ? `⚠ ${p.name}` : p.name;
       ctx.font = `600 ${size}px system-ui, sans-serif`;
       ctx.lineWidth = Math.max(2, size / 5);
       ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillStyle = p.isHuman ? '#fff6c8' : '#ffffff';
-      ctx.strokeText(p.name, sx, sy - size * 0.35);
-      ctx.fillText(p.name, sx, sy - size * 0.35);
+      ctx.fillStyle = p.isHuman ? '#fff6c8' : allied ? '#b8f5cf' : traitor ? '#ffb4a8' : '#ffffff';
+      ctx.strokeText(name, sx, sy - size * 0.35);
+      ctx.fillText(name, sx, sy - size * 0.35);
       const s2 = size * 0.78;
       ctx.font = `500 ${s2}px system-ui, sans-serif`;
       ctx.lineWidth = Math.max(2, s2 / 5);
       const troops = formatNumber(p.troops);
       ctx.strokeText(troops, sx, sy + size * 0.6);
       ctx.fillText(troops, sx, sy + size * 0.6);
+    }
+  }
+
+  /** Burbujas de emoji sobre quien lo envía (solo las que implican al humano). */
+  _drawEmojis() {
+    const { ctx, game, camera } = this;
+    if (!game.emojis.length) return;
+    const human = game.human;
+    const map = game.map;
+    for (const e of game.emojis) {
+      if (human && e.to !== human.id && e.from !== human.id && e.to !== 0) continue;
+      const sender = game.players[e.from];
+      if (!sender.alive) continue;
+      const label = this.labels.find((l) => l.player === sender);
+      const wx = label ? label.x : map.x(sender.spawnTile) + 0.5;
+      const wy = label ? label.y : map.y(sender.spawnTile) + 0.5;
+      const [sx, sy0] = camera.worldToScreen(wx, wy);
+      const age = game.ticks - e.tick;
+      const sy = sy0 - 34 - age * 0.4;
+      ctx.globalAlpha = Math.max(0, Math.min(1, (CONFIG.emojiTicks - age) / 10));
+      ctx.beginPath();
+      ctx.arc(sx, sy, 17, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = rgbToCss(sender.color);
+      ctx.stroke();
+      ctx.font = '20px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#000';
+      ctx.fillText(e.emoji, sx, sy + 1);
+      ctx.globalAlpha = 1;
     }
   }
 

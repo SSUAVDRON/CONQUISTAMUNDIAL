@@ -28,12 +28,21 @@ Pendiente de esta fase, si hace falta al probar:
 - Gastar oro en reclutar tropas de golpe
 - Ajustar precios y efectos tras jugar varias partidas
 
-## Fase 3 — Diplomacia
+## ✅ Fase 3 — Diplomacia (hecho)
 
-- Alianzas (proponer / aceptar / romper, con penalización por traición)
-- Los aliados no se atacan y comparten visión del frente
-- Bots que forman alianzas contra el líder
-- Emojis / mensajes rápidos
+- Alianzas: proponer, aceptar/rechazar (caducan a los 15 s), romper con doble
+  confirmación; máximo 3 aliados; espera de 1 min tras un rechazo
+- Traición: 60 s marcado, defensa ×0,6, los bots le guardan rencor
+- Los aliados no se atacan; al firmar se detienen los ataques entre ambos
+- Envío de tropas y oro entre aliados
+- Victoria compartida si solo quedan aliados
+- Bots: se alían contra el líder y le abandonan cuando se acerca a ganar,
+  refuerzan a aliados atacados, contestan emojis
+- Ficha de nación (clic derecho / pulsación larga / clasificación), tarjetas de
+  propuesta, fronteras verdes para aliados, ⚠ para traidores, burbujas de emoji
+
+Ideas para más adelante: pedir ayuda a los aliados con un botón, ver en el mapa
+contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 
 ## Fase 4 — Guerra naval y armas especiales
 

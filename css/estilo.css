@@ -239,6 +239,74 @@ button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 }
 #lista-ataques button { padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 18px; }
 
+/* ---------- Diplomacia ---------- */
+button.peligro { background: rgba(255, 107, 107, 0.16); border-color: rgba(255, 107, 107, 0.5); color: #ffd0d0; }
+button.peligro:hover { background: rgba(255, 107, 107, 0.28); }
+button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; filter: none; }
+
+/* Columna derecha: propuestas recibidas encima y ficha de nación debajo */
+#columna-derecha {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 6;
+  pointer-events: none;
+}
+#columna-derecha > * { pointer-events: auto; }
+#panel-nacion { position: static; padding: 10px 12px 12px; }
+#panel-nacion .cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-width: 0; }
+#pn-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cerrar { margin-left: auto; padding: 2px 8px; flex: none; }
+.chip {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--texto-suave);
+}
+.chip.bien { background: rgba(95, 211, 141, 0.18); color: var(--bien); }
+.chip.mal { background: rgba(255, 107, 107, 0.18); color: var(--peligro); }
+.pn-cifras { display: grid; grid-template-columns: auto auto 1fr; gap: 12px; margin-bottom: 10px; }
+.pn-cifras div { display: flex; flex-direction: column; min-width: 0; }
+.pn-cifras .valor { font-weight: 600; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pn-aliados { font-weight: 500; font-size: 12px; white-space: normal; }
+.pn-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pn-acciones #pn-alianza { grid-column: 1 / -1; }
+.pn-acciones button { font-size: 13px; padding: 7px 8px; }
+.nota { margin: 8px 0; font-size: 12px; color: var(--texto-suave); }
+.nota:empty { display: none; }
+.emojis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 8px; }
+.emojis button { padding: 4px 0; font-size: 18px; line-height: 1.2; }
+
+.marca { font-size: 11px; }
+.marca.traidor { color: var(--peligro); }
+
+#solicitudes { display: flex; flex-direction: column; gap: 8px; }
+#solicitudes:empty { display: none; }
+.solicitud {
+  background: var(--panel);
+  border: 1px solid rgba(95, 211, 141, 0.45);
+  border-radius: var(--radio);
+  padding: 10px 12px 0;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  animation: entrar 0.25s ease-out;
+  overflow: hidden;
+}
+.sol-texto { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sol-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.sol-tiempo { height: 3px; margin: 0 -12px; background: rgba(255, 255, 255, 0.08); }
+.sol-tiempo div { height: 100%; background: var(--bien); transition: width 0.2s linear; }
+
+@media (prefers-reduced-motion: reduce) {
+  .evento, .solicitud { animation: none; }
+  #pj-barra, .sol-tiempo div { transition: none; }
+}
+
 /* ---------- Tooltip ---------- */
 #tooltip {
   position: fixed;
@@ -271,4 +339,13 @@ button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
   .cifras { gap: 4px; }
   .cifras .valor { font-size: 14px; }
   #tooltip { display: none !important; }
+  /* En móvil, propuestas y ficha se abren como hoja inferior, sobre el panel del jugador */
+  #columna-derecha {
+    top: auto;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    width: auto;
+    z-index: 8;
+  }
 }

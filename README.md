@@ -52,7 +52,10 @@ base de datos.
 | Ciudad | +15.000 tropas máximas. 5k de oro, +5k por cada ciudad que ya tengas. |
 | Puerto | En la costa. +1 barco simultáneo y +10 % de oro. 4k, +4k. |
 | Fortaleza | En un radio de 10 casillas, conquistarte cuesta ×2,5 tropas y tiempo. 3k, +3k. |
-| Victoria | Controlar el 70 % de la tierra, o ser el último en pie. |
+| Alianzas | Clic derecho (o mantener pulsado) sobre otra nación abre su ficha: proponer alianza, enviar tropas u oro (solo a aliados, según la fuerza de ataque) y emojis. Máximo 3 aliados. Los aliados no pueden atacarse; al firmar, los ataques entre ambos se detienen y las tropas vuelven. |
+| Propuestas | Las que recibes aparecen con Aceptar/Rechazar y caducan a los 15 s. Si te rechazan, debes esperar 1 min para volver a proponer. |
+| Traición | Romper una alianza (pide doble confirmación) te marca como traidor 60 s: conquistarte cuesta ×0,6 y los bots no se fían de ti. |
+| Victoria | Controlar el 70 % de la tierra, ser el último en pie o que solo queden naciones aliadas entre sí. |
 
 ### Controles
 
@@ -60,8 +63,18 @@ base de datos.
 - **1–9 / 0**: fuerza de ataque 10 %–100 % · **Mayús + rueda**: ajuste fino
 - **Q / E / R**: construir ciudad / puerto / fortaleza (o los botones del panel), luego clic en el mapa
 - **Mayús + clic** al construir: colocar varios seguidos · **Esc / clic derecho**: cancelar
-- **Espacio**: pausa · **C**: centrar en tu nación · **+ / −**: zoom
-- Clic en la clasificación: centra la cámara en esa nación
+- **Clic derecho / mantener pulsado** sobre otra nación: ficha de diplomacia
+- **Espacio**: pausa · **C**: centrar en tu nación · **+ / −**: zoom · **Esc**: cerrar
+- Clic en la clasificación: centra la cámara en esa nación y abre su ficha
+
+En el mapa, tu frontera es blanca, la de tus aliados verde y los traidores llevan ⚠.
+
+### Los bots
+
+Cada bot tiene personalidad: agresividad, ritmo de expansión, gusto por la
+diplomacia y lealtad. Expanden, construyen, se alían con vecinos de su talla y
+contra el líder (y le abandonan si pasa del 35 %), envían refuerzos a aliados
+atacados, no perdonan una traición y contestan a tus emojis.
 
 ## Estructura del código
 
@@ -86,7 +99,7 @@ dominia/
 │   ├── ui.js           Panel del jugador, construcción, clasificación, avisos
 │   ├── icons.js        Iconos de edificios (mapa y botones)
 │   └── rng.js, noise.js, heap.js, colors.js, names.js, format.js
-└── tests/              simulacion.test.js, edificios.test.js
+└── tests/              simulacion, edificios y diplomacia
 ```
 
 Decisiones de diseño que conviene conservar:
@@ -112,4 +125,8 @@ npm test
 
 Comprueban la generación del mapa, la coherencia de los datos tras miles de
 ticks de bots, el determinismo, el despliegue del jugador, los ataques, los
-barcos, el oro y las reglas y efectos de cada edificio.
+barcos, el oro, los edificios y la diplomacia (que nunca haya ataques entre
+aliados, traiciones, envíos, caducidad de propuestas, victoria en alianza).
+
+Para depurar en el navegador, el estado está en la consola como
+`window.__dominia` (`__dominia.game`, `__dominia.human`…).

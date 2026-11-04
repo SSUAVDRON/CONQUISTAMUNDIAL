@@ -51,10 +51,22 @@ export const CONFIG = {
   fortRadius: 10,
   fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
 
+  // Diplomacia
+  maxAllies: 3,
+  allianceRequestTicks: 150, // 15 s para responder a una propuesta
+  rejectCooldownTicks: 600, // 1 min sin poder volver a proponer a quien te rechazó
+  traitorTicks: 600, // 1 min marcado como traidor tras romper una alianza
+  traitorDefenseMult: 0.6, // conquistar a un traidor cuesta menos
+  emojiTicks: 40, // cuánto dura una burbuja de emoji
+  emojiCooldownTicks: 20,
+
   // Bots
   botThinkMin: 6,
   botThinkMax: 20,
+  botDiplomacyStartTicks: 600, // empiezan a negociar al minuto de juego
 };
+
+export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '⚔️', '🏳️', '❤️'];
 
 /** Tipos de edificio. El coste sube con cada edificio del mismo tipo que ya tengas. */
 export const BUILDINGS = {

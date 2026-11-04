@@ -1,6 +1,6 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { BUILDINGS, CONFIG } from './config.js';
+import { BUILDINGS, CONFIG, EMOJIS } from './config.js';
 import { Rng } from './rng.js';
 import { Player } from './player.js';
 import { Attack } from './attack.js';
@@ -29,6 +29,11 @@ export class Game {
     this.buildings = []; // { id, kind, tile, owner }
     this.buildingAt = new Map(); // casilla → edificio
     this._nextBuildingId = 1;
+    this.brains = new Map(); // id de jugador → BotBrain
+    this.requests = []; // propuestas de alianza: { from, to, expires, decideAt }
+    this.emojis = []; // { from, to, emoji, tick }
+    this.diploVersion = 0; // sube cada vez que cambia una alianza (el render repinta)
+    this.winningAlliance = null;
     this.ticks = 0;
     this.phase = 'spawn'; // 'spawn' | 'playing' | 'ended'
     this.winner = null;
@@ -65,7 +70,9 @@ export class Game {
     const names = generateNames(this.rng, count, existing);
     for (let i = 0; i < count; i++) {
       const p = this.addPlayer(names[i], botColor(this.players.length, this.rng), false);
-      this.bots.push(new BotBrain(this, p));
+      const brain = new BotBrain(this, p);
+      this.bots.push(brain);
+      this.brains.set(p.id, brain);
     }
   }
 
@@ -279,6 +286,18 @@ export class Game {
       } else if (it.type === 'cancelAttack') {
         const atk = p.attacks.get(it.targetId);
         if (atk) this._endAttack(atk, 0.5); // retirarse cuesta la mitad de las tropas
+      } else if (this.phase !== 'playing') {
+        continue;
+      } else if (it.type === 'proposeAlliance') {
+        this.proposeAlliance(p, this.players[it.targetId]);
+      } else if (it.type === 'respondAlliance') {
+        this.respondAlliance(p, this.players[it.fromId], it.accept);
+      } else if (it.type === 'breakAlliance') {
+        this.breakAlliance(p, this.players[it.targetId]);
+      } else if (it.type === 'donate') {
+        this.donate(p, this.players[it.targetId], it.resource, it.ratio);
+      } else if (it.type === 'emoji') {
+        this.sendEmoji(p, it.targetId, it.emoji);
       }
     }
   }
@@ -288,6 +307,10 @@ export class Game {
     if (tile < 0 || tile >= map.size || !map.isLand(tile)) return;
     const targetId = this.owner[tile];
     if (targetId === p.id) return;
+    if (this.isAllied(p.id, targetId)) {
+      this._notify(p, `${this.players[targetId].name} es tu aliado. Rompe la alianza si quieres atacarle`, 'warn');
+      return;
+    }
     const troops = Math.floor(p.troops * clamp(ratio, 0, 1));
     if (troops < 1) {
       this._notify(p, 'No tienes tropas suficientes', 'warn');
@@ -307,7 +330,7 @@ export class Game {
   launchAttack(p, targetId, troops, { deduct = true } = {}) {
     if (!p.alive || targetId === p.id) return false;
     const target = targetId ? this.players[targetId] : null;
-    if (target && !target.alive) return false;
+    if (target && (!target.alive || this.isAllied(p.id, targetId))) return false;
     if (deduct) troops = Math.min(troops, Math.floor(p.troops));
     if (troops < 1) return false;
 
@@ -363,7 +386,8 @@ export class Game {
   tileCost(t, target) {
     const m = CONFIG.terrainCost[this.map.terrain[t]];
     if (!target) return { cost: CONFIG.wildTileCost * m, loss: 0, slow: m };
-    const fort = this.fortMultiplier(target, t);
+    let fort = this.fortMultiplier(target, t);
+    if (this.isTraitor(target)) fort *= CONFIG.traitorDefenseMult;
     const density = target.troops / Math.max(1, target.tiles);
     return {
       cost: (CONFIG.playerTileBaseCost + density * CONFIG.defenseDensityMult) * m * fort,
@@ -518,6 +542,7 @@ export class Game {
     }
     if (deduct) troops = Math.min(troops, Math.floor(p.troops));
     if (troops < 1) return false;
+    if (this.isAllied(p.id, this.owner[tile])) return false;
     const dest = this._findLandingTile(tile);
     if (dest < 0) {
       this._notify(p, 'No hay frontera ni costa a la que llegar', 'warn');
@@ -656,7 +681,8 @@ export class Game {
     p.boatCount--;
     const dest = boat.dest;
     const o = this.owner[dest];
-    if (o === p.id) {
+    if (o === p.id || this.isAllied(p.id, o)) {
+      // Llega a casa o a un aliado (la alianza se firmó durante el viaje)
       p.troops += boat.troops;
       return;
     }
@@ -697,6 +723,10 @@ export class Game {
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateBoats();
+    this._processRequests();
+    if (this.emojis.length && this.emojis[0].tick < this.ticks - CONFIG.emojiTicks) {
+      this.emojis = this.emojis.filter((e) => e.tick >= this.ticks - CONFIG.emojiTicks);
+    }
 
     for (const bot of this.bots) {
       if (!bot.player.alive || this.ticks < bot.nextThink) continue;
@@ -737,6 +767,10 @@ export class Game {
       }
       p.gold = 0;
       for (const atk of [...p.attacks.values()]) this._endAttack(atk);
+      for (const id of p.allies) this.players[id].allies.delete(p.id);
+      if (p.allies.size) this.diploVersion++;
+      p.allies.clear();
+      this.requests = this.requests.filter((r) => r.from !== p.id && r.to !== p.id);
       for (const b of this.boats) if (b.owner === p.id) b.done = true;
       this.boats = this.boats.filter((b) => !b.done);
       p.boatCount = 0;
@@ -761,13 +795,191 @@ export class Game {
       this.winner = winner;
       this.phase = 'ended';
       this._emit(winner.isHuman ? '¡Victoria! Dominas el mundo' : `${winner.name} domina el mundo`, winner.isHuman ? 'good' : 'danger');
+      return;
     }
+    // Si solo quedan naciones aliadas entre sí, gana la alianza
+    if (alive > 1) {
+      const rest = this.alivePlayers();
+      const allAllied = rest.every((a) => rest.every((b) => a === b || a.allies.has(b.id)));
+      if (allAllied) {
+        rest.sort((a, b) => b.tiles - a.tiles);
+        this.winner = rest[0];
+        this.winningAlliance = rest;
+        this.phase = 'ended';
+        const human = rest.find((p) => p.isHuman);
+        this._emit(
+          human ? '¡Victoria en alianza!' : `La alianza de ${rest.map((p) => p.name).join(', ')} domina el mundo`,
+          human ? 'good' : 'danger',
+        );
+      }
+    }
+  }
+
+  // -------------------------------------------------------------- diplomacia
+
+  isAllied(a, b) {
+    if (!a || !b || a === b) return false;
+    const p = this.players[a];
+    return !!p && p.allies.has(b);
+  }
+
+  isTraitor(p) {
+    return p.traitorUntil > this.ticks;
+  }
+
+  /** Nación con más territorio. */
+  leader() {
+    let best = null;
+    for (let i = 1; i < this.players.length; i++) {
+      const p = this.players[i];
+      if (p.alive && (!best || p.tiles > best.tiles)) best = p;
+    }
+    return best;
+  }
+
+  pendingRequest(fromId, toId) {
+    return this.requests.find((r) => r.from === fromId && r.to === toId) || null;
+  }
+
+  /** ¿Puede `p` proponer alianza a `target` ahora mismo? Si no, explica por qué. */
+  canPropose(p, target) {
+    if (!target || target === p || !target.alive) return { ok: false, reason: 'No disponible' };
+    if (p.allies.has(target.id)) return { ok: false, reason: 'Ya sois aliados' };
+    if (this.pendingRequest(p.id, target.id)) return { ok: false, reason: 'Propuesta enviada' };
+    if (p.allies.size >= CONFIG.maxAllies) return { ok: false, reason: `Máximo ${CONFIG.maxAllies} aliados` };
+    if (target.allies.size >= CONFIG.maxAllies) return { ok: false, reason: `${target.name} ya tiene ${CONFIG.maxAllies} aliados` };
+    const wait = (p.requestCooldown.get(target.id) || 0) - this.ticks;
+    if (wait > 0) return { ok: false, reason: `Rechazada hace poco (espera ${Math.ceil(wait / 10)} s)` };
+    return { ok: true, reason: '' };
+  }
+
+  proposeAlliance(p, target) {
+    const check = this.canPropose(p, target);
+    if (!check.ok) {
+      this._notify(p, check.reason, 'warn');
+      return false;
+    }
+    // Si el otro ya nos lo había propuesto, se firma directamente
+    if (this.pendingRequest(target.id, p.id)) return this._formAlliance(p, target);
+    const req = {
+      from: p.id,
+      to: target.id,
+      expires: this.ticks + CONFIG.allianceRequestTicks,
+      decideAt: target.isHuman ? Infinity : this.ticks + this.rng.int(10, 40),
+    };
+    this.requests.push(req);
+    if (target.isHuman) {
+      this._emit(`🤝 ${p.name} te propone una alianza`, 'request', { fromId: p.id });
+    } else if (p.isHuman) {
+      this._emit(`Propuesta de alianza enviada a ${target.name}`, 'info');
+    }
+    return true;
+  }
+
+  respondAlliance(p, from, accept) {
+    if (!from) return false;
+    const req = this.pendingRequest(from.id, p.id);
+    if (!req) return false;
+    this.requests = this.requests.filter((r) => r !== req);
+    if (accept && from.alive && p.alive && p.allies.size < CONFIG.maxAllies && from.allies.size < CONFIG.maxAllies) {
+      return this._formAlliance(p, from);
+    }
+    from.requestCooldown.set(p.id, this.ticks + CONFIG.rejectCooldownTicks);
+    if (from.isHuman) this._emit(`${p.name} rechaza tu alianza`, 'warn');
+    this.brains.get(from.id)?.onRejected(p);
+    return false;
+  }
+
+  _formAlliance(a, b) {
+    a.allies.add(b.id);
+    b.allies.add(a.id);
+    this.requests = this.requests.filter((r) => !((r.from === a.id && r.to === b.id) || (r.from === b.id && r.to === a.id)));
+    // La paz detiene los ataques entre ambos y devuelve las tropas
+    const ab = a.attacks.get(b.id);
+    if (ab) this._endAttack(ab);
+    const ba = b.attacks.get(a.id);
+    if (ba) this._endAttack(ba);
+    this.diploVersion++;
+    const human = a.isHuman ? a : b.isHuman ? b : null;
+    if (human) {
+      const other = human === a ? b : a;
+      this._emit(`🤝 Alianza firmada con ${other.name}`, 'good');
+    } else if (this._isNotable(a) || this._isNotable(b)) {
+      this._emit(`🤝 ${a.name} y ${b.name} forman una alianza`, 'info');
+    }
+    this.brains.get(a.id)?.onAllied(b);
+    this.brains.get(b.id)?.onAllied(a);
+    return true;
+  }
+
+  breakAlliance(p, other) {
+    if (!other || !p.allies.has(other.id)) return false;
+    p.allies.delete(other.id);
+    other.allies.delete(p.id);
+    p.traitorUntil = this.ticks + CONFIG.traitorTicks;
+    p.betrayals++;
+    this.diploVersion++;
+    if (p.isHuman) this._emit(`Has roto la alianza con ${other.name}. Eres traidor durante ${CONFIG.traitorTicks / 10} s`, 'warn');
+    else if (other.isHuman) this._emit(`💔 ${p.name} ha roto vuestra alianza`, 'danger');
+    else this._emit(`💔 ${p.name} traiciona a ${other.name}`, 'info');
+    this.brains.get(other.id)?.onBetrayed(p);
+    return true;
+  }
+
+  /** Envía una fracción de tropas u oro a un aliado. */
+  donate(p, target, resource, ratio) {
+    if (!target || !p.allies.has(target.id) || !target.alive) {
+      this._notify(p, 'Solo puedes enviar ayuda a tus aliados', 'warn');
+      return false;
+    }
+    const key = resource === 'gold' ? 'gold' : 'troops';
+    const amount = Math.floor(p[key] * clamp(ratio, 0, 1));
+    if (amount < 1) return false;
+    p[key] -= amount;
+    target[key] += amount;
+    const what = key === 'gold' ? 'de oro' : 'tropas';
+    if (p.isHuman) this._emit(`Has enviado ${amount} ${what} a ${target.name}`, 'info');
+    if (target.isHuman) this._emit(`${p.name} te envía ${amount} ${what}`, 'good');
+    return true;
+  }
+
+  sendEmoji(p, targetId, emoji) {
+    if (!EMOJIS.includes(emoji) || this.ticks - p.lastEmojiTick < CONFIG.emojiCooldownTicks) return false;
+    p.lastEmojiTick = this.ticks;
+    this.emojis.push({ from: p.id, to: targetId || 0, emoji, tick: this.ticks });
+    const target = this.players[targetId];
+    if (target && target.isHuman) this._emit(`${p.name} te envía ${emoji}`, 'info');
+    if (target) this.brains.get(target.id)?.onEmoji(p, emoji);
+    return true;
+  }
+
+  _processRequests() {
+    if (!this.requests.length) return;
+    for (const req of [...this.requests]) {
+      if (!this.requests.includes(req)) continue;
+      const from = this.players[req.from];
+      const to = this.players[req.to];
+      if (!from.alive || !to.alive) {
+        this.requests = this.requests.filter((r) => r !== req);
+      } else if (this.ticks >= req.decideAt) {
+        this.respondAlliance(to, from, this.brains.get(to.id).wantsAlliance(from));
+      } else if (this.ticks >= req.expires) {
+        // Sin respuesta: cuenta como rechazo
+        this.respondAlliance(to, from, false);
+      }
+    }
+  }
+
+  /** Solo se anuncian las alianzas entre bots si afectan a alguien relevante. */
+  _isNotable(p) {
+    const ranked = this.alivePlayers().sort((a, b) => b.tiles - a.tiles);
+    return ranked.indexOf(p) < 3 || (this.human && this.human.alive && this.neighborSummary(this.human).counts.has(p.id));
   }
 
   // ----------------------------------------------------------------- eventos
 
-  _emit(text, kind = 'info') {
-    const evt = { tick: this.ticks, text, kind };
+  _emit(text, kind = 'info', extra = null) {
+    const evt = { tick: this.ticks, text, kind, ...extra };
     this.eventLog.push(evt);
     if (this.eventLog.length > 200) this.eventLog.shift();
     if (this.onEvent) this.onEvent(evt);

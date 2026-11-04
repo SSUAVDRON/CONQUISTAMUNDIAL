@@ -1,5 +1,10 @@
 // IA de las naciones controladas por el ordenador. Cada bot tiene una
-// "personalidad" (agresividad, ritmo de expansión) y piensa cada pocos ticks.
+// "personalidad" (agresividad, ritmo de expansión, diplomacia, lealtad) y
+// piensa cada pocos ticks.
+import { CONFIG } from './config.js';
+
+const FRIENDLY = ['👍', '🤝', '❤️', '😂'];
+const HOSTILE = ['😠', '⚔️', '👎', '🔥'];
 
 export class BotBrain {
   constructor(game, player) {
@@ -9,6 +14,11 @@ export class BotBrain {
     this.nextThink = 0;
     this.aggression = 0.2 + r.float() * 0.6;
     this.expandRatio = 0.2 + r.float() * 0.3;
+    this.diplomacy = r.float(); // 0 = lobo solitario, 1 = diplomático
+    this.loyalty = r.float(); // probabilidad de no traicionar por oportunismo
+    this.nextDiplomacy = CONFIG.spawnTicks + CONFIG.botDiplomacyStartTicks + r.int(0, 300);
+    /** Naciones que le traicionaron: no vuelve a aliarse y prefiere atacarlas. */
+    this.grudges = new Set();
   }
 
   think() {
@@ -16,9 +26,17 @@ export class BotBrain {
     const p = this.player;
     const r = g.rng;
     const max = p.maxTroops();
-    const { wild, counts, coastal } = g.neighborSummary(p);
+    const summary = g.neighborSummary(p);
+    const { wild, coastal } = summary;
+    // Los aliados no cuentan como objetivos
+    const counts = new Map([...summary.counts].filter(([id]) => !p.allies.has(id)));
 
-    // 0. Construir si hay oro (no gasta tropas, así que sigue pensando después)
+    // 0. Diplomacia y construcción (no gastan tropas propias de ataque)
+    if (g.ticks >= this.nextDiplomacy) {
+      this.nextDiplomacy = g.ticks + r.int(250, 600);
+      this._diplomacyTurn(summary.counts);
+    }
+    if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
 
     // 1. Expandirse por tierra libre mientras la haya
@@ -31,10 +49,15 @@ export class BotBrain {
     if (counts.size > 0 && p.troops > max * (0.6 - this.aggression * 0.35)) {
       let best = null;
       let bestScore = Infinity;
+      const leader = g.leader();
+      const leaderShare = leader ? leader.tiles / g.map.landCount : 0;
       for (const [id, shared] of counts) {
         const t = g.players[id];
         // Preferimos objetivos débiles y con mucha frontera compartida
-        const score = t.troops / Math.max(1, p.troops) - Math.min(shared, 200) * 0.001 + r.float() * 0.3;
+        let score = t.troops / Math.max(1, p.troops) - Math.min(shared, 200) * 0.001 + r.float() * 0.3;
+        if (t === leader && leaderShare > 0.3) score -= 0.4; // todos contra el líder
+        if (this.grudges.has(id)) score -= 0.3;
+        if (g.isTraitor(t)) score -= 0.2;
         if (score < bestScore) {
           bestScore = score;
           best = t;
@@ -65,6 +88,7 @@ export class BotBrain {
     let threat = null;
     for (const id of counts.keys()) {
       const t = g.players[id];
+      if (p.allies.has(id)) continue;
       if (t.troops > p.troops * 1.3 && (!threat || t.troops > threat.troops)) threat = t;
     }
 
@@ -113,6 +137,108 @@ export class BotBrain {
     return -1;
   }
 
+  // ------------------------------------------------------------- diplomacia
+
+  /** Rompe alianzas que ya no le convienen y propone otras nuevas. */
+  _diplomacyTurn(counts) {
+    const g = this.game;
+    const p = this.player;
+    const r = g.rng;
+    const leader = g.leader();
+    const share = leader ? leader.tiles / g.map.landCount : 0;
+
+    for (const id of [...p.allies]) {
+      const ally = g.players[id];
+      // Nadie quiere ayudar a que otro gane
+      if (ally === leader && share > 0.35 && r.chance(0.5)) {
+        g.breakAlliance(p, ally);
+        return;
+      }
+      // Traición oportunista contra un aliado vecino muy debilitado
+      if (counts.has(id) && ally.troops < p.troops * 0.35 && r.chance((1 - this.loyalty) * this.aggression * 0.3)) {
+        g.breakAlliance(p, ally);
+        return;
+      }
+    }
+
+    if (p.allies.size >= CONFIG.maxAllies || !r.chance(0.2 + this.diplomacy * 0.6)) return;
+    let best = null;
+    let bestScore = -Infinity;
+    const candidates = new Set(counts.keys());
+    for (let i = 0; i < 4; i++) {
+      const other = g.players[r.int(1, g.players.length - 1)];
+      if (other.alive) candidates.add(other.id);
+    }
+    const leaderNeighbors = leader ? g.neighborSummary(leader).counts : new Map();
+    for (const id of candidates) {
+      const other = g.players[id];
+      if (other === p || !g.canPropose(p, other).ok) continue;
+      if (this.grudges.has(id) || g.isTraitor(other)) continue;
+      if (other === leader && share > 0.25) continue;
+      let score = r.float() * 0.5 - other.betrayals * 0.3;
+      if (counts.has(id)) score += 0.4; // vecino: la paz da tranquilidad
+      if (leaderNeighbors.has(p.id) && leaderNeighbors.has(id)) score += 0.6; // enemigo común
+      const ratio = other.troops / Math.max(1, p.troops);
+      if (ratio > 0.5 && ratio < 2) score += 0.3; // de su talla
+      if (score > bestScore) {
+        bestScore = score;
+        best = other;
+      }
+    }
+    if (best && bestScore > 0.3) g.proposeAlliance(p, best);
+  }
+
+  /** Decide si acepta la propuesta de alianza de `from`. */
+  wantsAlliance(from) {
+    const g = this.game;
+    const p = this.player;
+    if (p.allies.size >= CONFIG.maxAllies || this.grudges.has(from.id) || g.isTraitor(from)) return false;
+    const leader = g.leader();
+    const share = leader ? leader.tiles / g.map.landCount : 0;
+    const neighbors = g.neighborSummary(p).counts;
+    let score = 0.2 + this.diplomacy * 0.5 - from.betrayals * 0.25;
+    if (from === leader && share > 0.3) score -= 0.5;
+    if (neighbors.has(from.id) && from.troops > p.troops * 1.5) score += 0.3; // mejor tenerlo de amigo
+    if (from.attacks.has(p.id) && from.troops > p.troops) score += 0.2; // pedir la paz si va perdiendo
+    if (leader && leader !== from && leader !== p) {
+      const ln = g.neighborSummary(leader).counts;
+      if (ln.has(p.id) && ln.has(from.id)) score += 0.3;
+    }
+    return g.rng.float() < Math.min(0.95, Math.max(0.05, score));
+  }
+
+  /** Si un aliado está siendo atacado y le sobran tropas, le envía refuerzos. */
+  _helpAllies(max) {
+    const g = this.game;
+    const p = this.player;
+    if (!p.allies.size || p.troops < max * 0.75 || !g.rng.chance(0.15)) return false;
+    for (const atk of g.attacks) {
+      if (atk.done || !p.allies.has(atk.targetId) || p.allies.has(atk.attacker.id)) continue;
+      return g.donate(p, g.players[atk.targetId], 'troops', 0.15);
+    }
+    return false;
+  }
+
+  onAllied(other) {
+    if (this.game.rng.chance(0.5)) this.game.sendEmoji(this.player, other.id, '🤝');
+  }
+
+  onRejected(by) {
+    if (this.game.rng.chance(0.3 * this.aggression)) this.game.sendEmoji(this.player, by.id, '👎');
+  }
+
+  onBetrayed(by) {
+    this.grudges.add(by.id);
+    this.game.sendEmoji(this.player, by.id, '😠');
+  }
+
+  onEmoji(from, emoji) {
+    const g = this.game;
+    if (!g.rng.chance(0.3)) return;
+    const pool = HOSTILE.includes(emoji) || this.grudges.has(from.id) ? HOSTILE : FRIENDLY;
+    g.sendEmoji(this.player, from.id, g.rng.pick(pool));
+  }
+
   /** Elige una costa ajena débil, preferiblemente cercana. */
   _pickBoatTarget() {
     const g = this.game;
@@ -127,7 +253,7 @@ export class BotBrain {
     for (let i = 0; i < 16; i++) {
       const t = coast[g.rng.int(0, coast.length - 1)];
       const o = g.owner[t];
-      if (o === p.id) continue;
+      if (o === p.id || p.allies.has(o)) continue;
       const strength = o === 0 ? 0 : g.players[o].troops / Math.max(1, p.troops);
       if (strength > 0.6) continue;
       const dist = Math.hypot(map.x(t) - ox, map.y(t) - oy) / map.width;
