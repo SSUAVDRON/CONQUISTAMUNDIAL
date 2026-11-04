@@ -334,8 +334,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   #aviso { top: auto; bottom: calc(270px + env(safe-area-inset-bottom, 0px)); }
   #eventos { top: auto; bottom: calc(262px + env(safe-area-inset-bottom, 0px)); flex-direction: column-reverse; }
   #panel-jugador { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px 10px; }
-  #construir { grid-template-columns: repeat(2, 1fr); }
-  #construir button { padding: 4px 6px 4px 4px; gap: 4px; }
+  /* En móvil la barra de construcción se desliza en horizontal */
+  #construir { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
+  #construir button { flex: 0 0 auto; min-width: 116px; padding: 4px 6px 4px 4px; gap: 4px; }
   #construir canvas { width: 20px; height: 20px; }
   #construir .b-nombre { font-size: 12px; }
   .cifras { gap: 4px; }

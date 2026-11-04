@@ -63,10 +63,16 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Tropas de cada ataque visibles en el frente y en el panel (también las que
   te atacan y los barcos en camino)
 
-## Fase 4 — Armas especiales
+## ✅ Misiles, antimisiles y fábricas (hecho)
 
-- Armas de largo alcance que arrasan una zona (caras y con tiempo de carga)
-- Defensas antiaéreas
+- Fábricas (+25 % de oro cada una)
+- Silos y misiles que arrasan una zona enemiga (recarga, alcance, coste)
+- Antimisiles con probabilidad de acierto y recarga; la IA los usa todos
+- Mapas sin islas ni lagos diminutos
+
+## Próximo
+
+- Misiles de distintos tamaños o con efectos duraderos (zona inhabitable un tiempo)
 - Más mapas reales: Oceanía, Oriente Medio, el Mediterráneo, un continente a
   más resolución (basta con añadir regiones en `herramientas/mapas.js`)
 - Elegir jugar como un país concreto en los mapas reales

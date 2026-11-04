@@ -21,6 +21,9 @@ const PLAINS = 1;
 const HIGHLAND = 2;
 const MOUNTAIN = 3;
 const MIN_COUNTRY_TILES = 40;
+// Jugabilidad: nada de islas ni lagos de unas pocas casillas
+const MIN_ISLAND_TILES = 40;
+const MAX_LAKE_TILES = 12;
 const MAX_COUNTRIES = 90;
 
 export const DEFS = [
@@ -137,6 +140,67 @@ function encodeRle(grid) {
   return Buffer.from(bytes).toString('base64');
 }
 
+/**
+ * Componentes conexas (4-vecindad) de tierra o agua: devuelve, por casilla, el
+ * tamaño de su componente y si toca el borde del mapa.
+ */
+function componentSizes(terrain, w, h, wantLand) {
+  const size = w * h;
+  const comp = new Int32Array(size).fill(-1);
+  const sizes = [];
+  const edge = [];
+  const queue = new Int32Array(size);
+  for (let s = 0; s < size; s++) {
+    if (comp[s] !== -1 || (terrain[s] !== WATER) !== wantLand) continue;
+    const id = sizes.length;
+    let head = 0;
+    let tail = 0;
+    let touches = false;
+    queue[tail++] = s;
+    comp[s] = id;
+    while (head < tail) {
+      const t = queue[head++];
+      const x = t % w;
+      if (x === 0 || x === w - 1 || t < w || t >= size - w) touches = true;
+      for (const n of [x > 0 ? t - 1 : -1, x < w - 1 ? t + 1 : -1, t - w, t + w]) {
+        if (n < 0 || n >= size || comp[n] !== -1 || (terrain[n] !== WATER) !== wantLand) continue;
+        comp[n] = id;
+        queue[tail++] = n;
+      }
+    }
+    sizes.push(tail);
+    edge.push(touches);
+  }
+  return { comp, sizes, edge };
+}
+
+/** Hunde islas pequeñas y rellena lagos pequeños (in situ). */
+function removeSpecks(terrain, owner, w, h) {
+  let sunk = 0;
+  let filled = 0;
+  const land = componentSizes(terrain, w, h, true);
+  for (let i = 0; i < terrain.length; i++) {
+    const c = land.comp[i];
+    if (c >= 0 && land.sizes[c] < MIN_ISLAND_TILES) {
+      terrain[i] = WATER;
+      owner[i] = 0;
+      sunk++;
+    }
+  }
+  const water = componentSizes(terrain, w, h, false);
+  for (let i = 0; i < terrain.length; i++) {
+    const c = water.comp[i];
+    if (c >= 0 && !water.edge[c] && water.sizes[c] < MAX_LAKE_TILES) {
+      terrain[i] = PLAINS;
+      // El hueco pasa al país de alguna casilla vecina
+      const x = i % w;
+      owner[i] = (x > 0 && owner[i - 1]) || (x < w - 1 && owner[i + 1]) || (i >= w && owner[i - w]) || owner[i + w] || 0;
+      filled++;
+    }
+  }
+  return { sunk, filled };
+}
+
 /** Distancia (4-vecindad) al borde de la región de cada casilla. */
 function interiorDistance(labels, w, h) {
   const size = w * h;
@@ -192,6 +256,8 @@ function buildMap(def, countries, regions, lakes) {
       });
     }
   }
+  const cleaned = removeSpecks(terrain, owner, proj.w, proj.h);
+
   // Las cordilleras de Natural Earth son zonas amplias: su borde pasa a meseta
   const mt = interiorDistance(Uint8Array.from(terrain, (t) => (t === MOUNTAIN ? 1 : 0)), proj.w, proj.h);
   for (let i = 0; i < size; i++) if (terrain[i] === MOUNTAIN && mt[i] <= 2) terrain[i] = HIGHLAND;
@@ -222,7 +288,7 @@ function buildMap(def, countries, regions, lakes) {
 
   let land = 0;
   for (let i = 0; i < size; i++) if (terrain[i] !== WATER) land++;
-  console.log(`${def.id}: ${proj.w}×${proj.h}, tierra ${((100 * land) / size).toFixed(0)} %, ${list.length} países`);
+  console.log(`${def.id}: ${proj.w}×${proj.h}, tierra ${((100 * land) / size).toFixed(0)} %, ${list.length} países, ${cleaned.sunk} casillas de islotes hundidas, ${cleaned.filled} de charcas rellenas`);
   return { name: def.name, w: proj.w, h: proj.h, rle: encodeRle(terrain), countries: list };
 }
 

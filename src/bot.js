@@ -42,6 +42,7 @@ export class BotBrain {
     if (this._helpAllies(max)) return;
     this._maybeBuild(counts, coastal);
     if (p.buildings.warship && r.chance(0.2)) this._commandWarships();
+    if (p.buildings.silo && r.chance(0.15 + this.aggression * 0.2)) this._fireMissile(counts);
 
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.troops > max * 0.1) {
@@ -96,9 +97,22 @@ export class BotBrain {
       if (t.troops > p.troops * 1.3 && (!threat || t.troops > threat.troops)) threat = t;
     }
 
+    // ¿Hay algún silo enemigo que nos alcance? Entonces conviene tener antimisiles
+    const map = g.map;
+    const reach = CONFIG.missileRange * CONFIG.missileRange;
+    const enemySilos = p.spawnTile >= 0 && g.buildings.some((b) => {
+      if (b.kind !== 'silo' || b.owner === p.id || p.allies.has(b.owner)) return false;
+      const dx = map.x(b.tile) - map.x(p.spawnTile);
+      const dy = map.y(b.tile) - map.y(p.spawnTile);
+      return dx * dx + dy * dy <= reach;
+    });
+
     let want = 'city';
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / 2500)) want = 'fort';
+    else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / 6000) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
     else if (coastal && p.buildings.city >= 1 && p.buildings.port < 1 + Math.floor(p.tiles / 5000) && g.rng.chance(0.4)) want = 'port';
+    else if (p.buildings.city >= 1 && p.buildings.factory < 1 + Math.floor(p.tiles / 3000) && g.rng.chance(0.35)) want = 'factory';
+    else if (p.tiles > 2000 && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
     else if (p.buildings.port > 0 && p.buildings.warship < p.buildings.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
     if (p.gold < g.buildCost(p, want)) return false;
@@ -246,6 +260,42 @@ export class BotBrain {
     if (!g.rng.chance(0.3)) return;
     const pool = HOSTILE.includes(emoji) || this.grudges.has(from.id) ? HOSTILE : FRIENDLY;
     g.sendEmoji(this.player, from.id, g.rng.pick(pool));
+  }
+
+  /**
+   * Lanza un misil contra el líder (si se escapa) o contra el vecino más
+   * fuerte o rencoroso. Apunta primero a sus antimisiles, ciudades y fortalezas.
+   */
+  _fireMissile(counts) {
+    const g = this.game;
+    const p = this.player;
+    if (p.gold < g.buildCost(p, 'missile') * 1.2) return false;
+    const leader = g.leader();
+    const share = leader ? leader.tiles / g.map.landCount : 0;
+    let enemy = null;
+    if (leader && leader !== p && share > 0.25 && !p.allies.has(leader.id)) enemy = leader;
+    if (!enemy) {
+      let best = -Infinity;
+      for (const id of counts.keys()) {
+        const t = g.players[id];
+        const score = t.troops + (this.grudges.has(id) ? 1e6 : 0);
+        if (score > best) {
+          best = score;
+          enemy = t;
+        }
+      }
+    }
+    if (!enemy) return false;
+    const priority = { sam: 0, city: 1, fort: 2, silo: 3, factory: 4, port: 5 };
+    const targets = g.buildings
+      .filter((b) => b.owner === enemy.id && b.kind in priority)
+      .sort((a, b) => priority[a.kind] - priority[b.kind]);
+    for (const b of targets) {
+      if (g.canBuild(p, 'missile', b.tile).ok) return g.build(p, 'missile', b.tile);
+    }
+    // Sin edificios a tiro: el centro de su territorio
+    if (enemy.spawnTile >= 0 && g.canBuild(p, 'missile', enemy.spawnTile).ok) return g.build(p, 'missile', enemy.spawnTile);
+    return false;
   }
 
   /** Manda los buques parados contra el puerto enemigo más cercano. */

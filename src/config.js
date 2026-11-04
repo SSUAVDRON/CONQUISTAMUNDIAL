@@ -46,6 +46,7 @@ export const CONFIG = {
   buildingMinDist: 5, // casillas mínimas entre dos edificios
   cityMaxTroops: 15000, // tropas máximas extra por ciudad
   portGoldBonus: 0.1, // +10% de oro por puerto
+  factoryGoldBonus: 0.25, // +25% de oro por fábrica
   fortRadius: 10,
   fortDefenseMult: 2.5, // coste y tiempo de conquista dentro del radio
 
@@ -57,6 +58,16 @@ export const CONFIG = {
   warshipsPerPort: 3,
   portHp: 80,
   portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
+
+  // Misiles y antimisiles
+  missileRadius: 8, // casillas arrasadas alrededor del impacto
+  missileSpeed: 3, // casillas por tick
+  missileRange: 220, // distancia máxima desde el silo
+  siloReload: 150, // ticks entre lanzamientos de un mismo silo
+  missileTroopLoss: 1.2, // × densidad del defensor por casilla arrasada
+  samRange: 22, // radio de intercepción de una batería
+  samReload: 80, // ticks entre disparos de una batería
+  samHitChance: 0.6, // probabilidad de derribar el misil al disparar
 
   // Diplomacia
   maxAllies: 3,
@@ -80,8 +91,12 @@ export const BUILDINGS = {
   city: { name: 'Ciudad', fem: true, base: 5000, step: 5000, key: 'KeyQ', desc: '+15k tropas máximas' },
   port: { name: 'Puerto', fem: false, base: 4000, step: 4000, key: 'KeyE', coastal: true, desc: '+1 barco y +10% de oro' },
   fort: { name: 'Fortaleza', fem: true, base: 3000, step: 3000, key: 'KeyR', desc: 'Defensa ×2,5 alrededor' },
-  // No es un edificio: se bota desde un puerto propio y navega
-  warship: { name: 'Buque', fem: false, base: 6000, step: 3000, key: 'KeyT', unit: true, desc: 'Hunde barcos y bombardea puertos' },
+  factory: { name: 'Fábrica', fem: true, base: 6000, step: 6000, key: 'KeyF', desc: '+25% de oro' },
+  silo: { name: 'Silo', fem: false, base: 10000, step: 10000, key: 'KeyG', desc: 'Permite lanzar misiles' },
+  sam: { name: 'Antimisiles', fem: false, base: 8000, step: 6000, key: 'KeyH', desc: 'Derriba misiles enemigos cercanos' },
+  // No son edificios: el buque se bota desde un puerto y el misil sale de un silo
+  warship: { name: 'Buque', fem: false, base: 6000, step: 3000, key: 'KeyT', unit: 'ship', desc: 'Hunde barcos y bombardea puertos' },
+  missile: { name: 'Misil', fem: false, base: 12000, step: 0, key: 'KeyM', unit: 'missile', desc: 'Arrasa una zona enemiga' },
 };
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
 

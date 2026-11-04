@@ -69,6 +69,67 @@ export function drawBuildingIcon(ctx, kind, cx, cy, size, { glyph = '#fff', disc
     ctx.moveTo(1.5, -1.2);
     ctx.lineTo(7, -3.2);
     ctx.stroke();
+  } else if (kind === 'factory') {
+    // Nave con tejado en dientes de sierra y chimenea
+    ctx.beginPath();
+    ctx.moveTo(-7.5, 6.5);
+    ctx.lineTo(-7.5, -1);
+    ctx.lineTo(-4.5, -3.5);
+    ctx.lineTo(-4.5, -1);
+    ctx.lineTo(-1.5, -3.5);
+    ctx.lineTo(-1.5, -1);
+    ctx.lineTo(1.5, -3.5);
+    ctx.lineTo(1.5, 6.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(3, -7, 3, 13.5);
+  } else if (kind === 'silo') {
+    // Cohete vertical dentro de un foso
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.quadraticCurveTo(3, -5, 3, -1);
+    ctx.lineTo(3, 4);
+    ctx.lineTo(-3, 4);
+    ctx.lineTo(-3, -1);
+    ctx.quadraticCurveTo(-3, -5, 0, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(-7, 5, 14, 2.2);
+  } else if (kind === 'sam') {
+    // Lanzador con dos interceptores inclinados
+    ctx.fillRect(-7, 3.5, 14, 3);
+    ctx.save();
+    ctx.translate(-1, 3);
+    ctx.rotate(-0.75);
+    ctx.fillRect(-1.2, -9, 2.4, 9);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(3, 3);
+    ctx.rotate(-0.75);
+    ctx.fillRect(-1.2, -9, 2.4, 9);
+    ctx.restore();
+  } else if (kind === 'missile') {
+    // Misil en diagonal con aletas
+    ctx.save();
+    ctx.rotate(Math.PI / 4);
+    ctx.beginPath();
+    ctx.moveTo(0, -8.5);
+    ctx.quadraticCurveTo(2.4, -5.5, 2.4, -2);
+    ctx.lineTo(2.4, 5);
+    ctx.lineTo(-2.4, 5);
+    ctx.lineTo(-2.4, -2);
+    ctx.quadraticCurveTo(-2.4, -5.5, 0, -8.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-2.4, 2);
+    ctx.lineTo(-5, 7.5);
+    ctx.lineTo(-2.4, 5.5);
+    ctx.moveTo(2.4, 2);
+    ctx.lineTo(5, 7.5);
+    ctx.lineTo(2.4, 5.5);
+    ctx.fill();
+    ctx.restore();
   } else if (kind === 'fort') {
     // Torre almenada
     ctx.beginPath();

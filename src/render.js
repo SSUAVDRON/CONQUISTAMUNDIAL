@@ -232,6 +232,8 @@ export class Renderer {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this._drawBuildings();
     this._drawWarships();
+    this._drawEffects();
+    this._drawMissiles(now);
     this._drawLabels();
     this._drawAttackBadges();
     this._drawEmojis();
@@ -266,6 +268,93 @@ export class Renderer {
     ctx.fillRect(cx - width / 2, cy - 2, width, 4);
     ctx.fillStyle = frac > 0.5 ? '#5fd38d' : frac > 0.25 ? '#ffc857' : '#ff6b6b';
     ctx.fillRect(cx - width / 2, cy - 2, width * Math.max(0, frac), 4);
+  }
+
+  /** Misiles en vuelo: arco, estela y, si te afectan, la zona de impacto. */
+  _drawMissiles(now) {
+    const { ctx, game, camera } = this;
+    if (!game.missiles.length) return;
+    const W = game.map.width;
+    const human = game.human;
+    for (const m of game.missiles) {
+      const fx = (m.from % W) + 0.5;
+      const fy = Math.floor(m.from / W) + 0.5;
+      const tx = (m.to % W) + 0.5;
+      const ty = Math.floor(m.to / W) + 0.5;
+      const [sx0, sy0] = camera.worldToScreen(fx, fy);
+      const [sx1, sy1] = camera.worldToScreen(tx, ty);
+      const lift = Math.min(140, Math.hypot(sx1 - sx0, sy1 - sy0) * 0.25);
+      const point = (t) => [sx0 + (sx1 - sx0) * t, sy0 + (sy1 - sy0) * t - Math.sin(Math.PI * t) * lift];
+      const involved = human && (m.owner === human.id || m.targetId === human.id);
+      if (involved) {
+        const pulse = (Math.sin(now / 120) + 1) / 2;
+        ctx.beginPath();
+        ctx.arc(sx1, sy1, CONFIG.missileRadius * camera.zoom, 0, Math.PI * 2);
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = m.targetId === human.id ? `rgba(255, 80, 80, ${0.5 + pulse * 0.5})` : 'rgba(255, 200, 120, 0.7)';
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // Estela
+      ctx.beginPath();
+      const steps = 16;
+      for (let i = 0; i <= steps; i++) {
+        const [x, y] = point((m.progress * i) / steps);
+        if (i) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      }
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255, 220, 180, 0.55)';
+      ctx.stroke();
+      const [hx, hy] = point(m.progress);
+      ctx.beginPath();
+      ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff3d6';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = rgbToCss(game.players[m.owner].color);
+      ctx.stroke();
+    }
+  }
+
+  /** Explosiones e intercepciones recientes. */
+  _drawEffects() {
+    const { ctx, game, camera } = this;
+    if (!game.effects.length) return;
+    const W = game.map.width;
+    for (const e of game.effects) {
+      const age = game.ticks - e.tick;
+      const [x, y] = camera.worldToScreen(e.x, e.y);
+      if (e.kind === 'boom') {
+        if (age > 25) continue;
+        const r = (CONFIG.missileRadius + age * 0.4) * camera.zoom;
+        const a = Math.max(0, 1 - age / 25);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 120, 40, ${0.45 * a})`;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = `rgba(255, 230, 160, ${a})`;
+        ctx.stroke();
+      } else {
+        if (age > 10) continue;
+        const a = Math.max(0, 1 - age / 10);
+        const [bx, by] = camera.worldToScreen((e.from % W) + 0.5, Math.floor(e.from / W) + 0.5);
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(x, y);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = e.kind === 'intercept' ? `rgba(140, 210, 255, ${a})` : `rgba(200, 200, 200, ${a * 0.6})`;
+        ctx.stroke();
+        if (e.kind === 'intercept') {
+          ctx.beginPath();
+          ctx.arc(x, y, 4 + age * 1.5, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255, 255, 255, ${a})`;
+          ctx.stroke();
+        }
+      }
+    }
   }
 
   _drawWarships() {
@@ -333,9 +422,30 @@ export class Renderer {
       [sx, sy] = camera.worldToScreen(map.x(check.water) + 0.5, map.y(check.water) + 0.5);
     }
     const color = ok ? '#5fd38d' : '#ff6b6b';
-    if (kind === 'fort') {
+    if (kind === 'missile') {
+      // Zona que arrasará y trayectoria desde el silo elegido
       ctx.beginPath();
-      ctx.arc(sx, sy, CONFIG.fortRadius * camera.zoom, 0, Math.PI * 2);
+      ctx.arc(sx, sy, CONFIG.missileRadius * camera.zoom, 0, Math.PI * 2);
+      ctx.fillStyle = ok ? 'rgba(255, 90, 60, 0.18)' : 'rgba(255, 107, 107, 0.08)';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      if (ok) {
+        const [ox, oy] = camera.worldToScreen(map.x(check.silo.tile) + 0.5, map.y(check.silo.tile) + 0.5);
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(sx, sy);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      return;
+    }
+    if (kind === 'fort' || kind === 'sam') {
+      ctx.beginPath();
+      ctx.arc(sx, sy, (kind === 'sam' ? CONFIG.samRange : CONFIG.fortRadius) * camera.zoom, 0, Math.PI * 2);
       ctx.setLineDash([6, 5]);
       ctx.lineWidth = 2;
       ctx.strokeStyle = color;

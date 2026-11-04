@@ -255,6 +255,8 @@ function gameResult() {
     betrayals: human.betrayals,
     maxGold: human.stats.maxGold,
     maxCities: human.stats.maxCities,
+    maxFactories: human.stats.maxFactories,
+    missiles: human.stats.missiles,
     online: state.online,
     alive: human.alive,
     survivedSeconds: survived,

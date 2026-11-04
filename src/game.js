@@ -30,6 +30,10 @@ export class Game {
     this.boats = [];
     this.warships = []; // { id, owner, tile, hp, path, pos, progress, fireTick, fireAt }
     this._nextWarshipId = 1;
+    this.missiles = []; // { id, owner, from, to, dist, progress, targetId }
+    this._nextMissileId = 1;
+    /** Efectos visuales recientes: explosiones e intercepciones (no afectan a la simulación). */
+    this.effects = [];
     this.buildings = []; // { id, kind, tile, owner }
     this.buildingAt = new Map(); // casilla → edificio
     this._nextBuildingId = 1;
@@ -508,7 +512,7 @@ export class Game {
 
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
-    return def.base + def.step * p.buildings[kind];
+    return def.base + def.step * (p.buildings[kind] || 0);
   }
 
   /** Comprueba si `p` puede construir `kind` en `tile`; si no, explica por qué. */
@@ -516,7 +520,8 @@ export class Game {
     const map = this.map;
     const def = BUILDINGS[kind];
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
-    if (def.unit) return this._canBuildWarship(p, tile);
+    if (def.unit === 'ship') return this._canBuildWarship(p, tile);
+    if (def.unit === 'missile') return this._canLaunchMissile(p, tile);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
       return { ok: false, reason: 'Solo puedes construir en tu territorio' };
     }
@@ -532,13 +537,15 @@ export class Game {
     const check = this.canBuild(p, kind, tile);
     if (!check.ok) return false;
     p.gold -= this.buildCost(p, kind);
-    if (BUILDINGS[kind].unit) return this._launchWarship(p, check.water);
+    if (BUILDINGS[kind].unit === 'ship') return this._launchWarship(p, check.water);
+    if (BUILDINGS[kind].unit === 'missile') return this._launchMissile(p, check.silo, tile);
     p.stats.built++;
     const b = { id: this._nextBuildingId++, kind, tile, owner: 0 };
     if (kind === 'port') {
       b.hp = CONFIG.portHp;
       b.hitTick = -Infinity;
     }
+    if (kind === 'silo' || kind === 'sam') b.readyAt = this.ticks; // listo desde ya
     this.buildings.push(b);
     this.buildingAt.set(tile, b);
     this._transferBuilding(b, 0, p.id, true);
@@ -578,8 +585,169 @@ export class Game {
     const np = this.players[newId];
     np.buildings[b.kind]++;
     if (np.buildings.city > np.stats.maxCities) np.stats.maxCities = np.buildings.city;
+    if (np.buildings.factory > np.stats.maxFactories) np.stats.maxFactories = np.buildings.factory;
     if (b.kind === 'fort') np.forts.add(b.tile);
     if (np === this.human) this._emit(built ? `${name} ${def.fem ? 'construida' : 'construido'}` : `Has capturado ${some}`, 'good');
+  }
+
+  // ---------------------------------------------------- misiles y antimisiles
+
+  /** Silo propio listo y a tiro de `tile` (el más cercano), o null. */
+  readySilo(p, tile) {
+    const map = this.map;
+    const r2 = CONFIG.missileRange * CONFIG.missileRange;
+    let best = null;
+    let bestD = Infinity;
+    for (const b of this.buildings) {
+      if (b.owner !== p.id || b.kind !== 'silo' || b.readyAt > this.ticks) continue;
+      const dx = map.x(b.tile) - map.x(tile);
+      const dy = map.y(b.tile) - map.y(tile);
+      const d = dx * dx + dy * dy;
+      if (d <= r2 && d < bestD) {
+        bestD = d;
+        best = b;
+      }
+    }
+    return best;
+  }
+
+  _canLaunchMissile(p, tile) {
+    const map = this.map;
+    if (!p.buildings.silo) return { ok: false, reason: 'Necesitas un silo para lanzar misiles' };
+    if (tile < 0 || tile >= map.size || !map.isLand(tile)) return { ok: false, reason: 'Apunta a territorio enemigo' };
+    const o = this.owner[tile];
+    if (!o) return { ok: false, reason: 'Ahí no hay nadie: apunta a territorio enemigo' };
+    if (o === p.id || this.isAllied(p.id, o)) return { ok: false, reason: 'No puedes atacar tu territorio ni el de tus aliados' };
+    const cost = this.buildCost(p, 'missile');
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un misil cuesta ${Math.ceil(cost)}` };
+    const silo = this.readySilo(p, tile);
+    if (!silo) {
+      const any = this.buildings.some((b) => b.owner === p.id && b.kind === 'silo' && b.readyAt <= this.ticks);
+      return { ok: false, reason: any ? `Fuera de alcance (máx. ${CONFIG.missileRange} casillas desde un silo)` : 'Tus silos están recargando' };
+    }
+    return { ok: true, reason: '', silo };
+  }
+
+  _launchMissile(p, silo, tile) {
+    const map = this.map;
+    silo.readyAt = this.ticks + CONFIG.siloReload;
+    const dx = map.x(tile) - map.x(silo.tile);
+    const dy = map.y(tile) - map.y(silo.tile);
+    const targetId = this.owner[tile];
+    this.missiles.push({
+      id: this._nextMissileId++,
+      owner: p.id,
+      from: silo.tile,
+      to: tile,
+      dist: Math.max(1, Math.sqrt(dx * dx + dy * dy)),
+      progress: 0,
+      targetId,
+    });
+    p.stats.missiles++;
+    const target = this.players[targetId];
+    if (target === this.human) this._emit(`🚀 ¡${p.name} ha lanzado un misil contra ti!`, 'danger');
+    else if (p === this.human) this._emit(`🚀 Misil lanzado contra ${target.name}`, 'info');
+    return true;
+  }
+
+  /** Posición actual (en casillas, con decimales) de un misil en vuelo. */
+  missilePos(m) {
+    const W = this.map.width;
+    const fx = (m.from % W) + 0.5;
+    const fy = Math.floor(m.from / W) + 0.5;
+    const tx = (m.to % W) + 0.5;
+    const ty = Math.floor(m.to / W) + 0.5;
+    return [fx + (tx - fx) * m.progress, fy + (ty - fy) * m.progress];
+  }
+
+  _updateMissiles() {
+    if (!this.missiles.length) return;
+    const W = this.map.width;
+    const r2 = CONFIG.samRange * CONFIG.samRange;
+    for (const m of this.missiles) {
+      m.progress = Math.min(1, m.progress + CONFIG.missileSpeed / m.dist);
+      const [mx, my] = this.missilePos(m);
+      // Baterías antimisiles enemigas del lanzador que estén listas y a tiro
+      for (const b of this.buildings) {
+        if (b.kind !== 'sam' || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
+        const dx = (b.tile % W) + 0.5 - mx;
+        const dy = Math.floor(b.tile / W) + 0.5 - my;
+        if (dx * dx + dy * dy > r2) continue;
+        // La batería dispara (y recarga) acierte o no
+        b.readyAt = this.ticks + CONFIG.samReload;
+        const hit = this.rng.float() < CONFIG.samHitChance;
+        this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
+        if (!hit) continue;
+        m.dead = true;
+        const shooter = this.players[b.owner];
+        const launcher = this.players[m.owner];
+        if (shooter === this.human) this._emit(`🛡 Tu antimisiles ha derribado un misil de ${launcher.name}`, 'good');
+        else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
+        else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
+        break;
+      }
+      if (!m.dead && m.progress >= 1) {
+        m.dead = true;
+        this._detonate(m);
+      }
+    }
+    this.missiles = this.missiles.filter((m) => !m.dead);
+  }
+
+  /** Impacto: las casillas enemigas del radio quedan libres y sus defensores pierden tropas. */
+  _detonate(m) {
+    const map = this.map;
+    const R = CONFIG.missileRadius;
+    const cx = map.x(m.to);
+    const cy = map.y(m.to);
+    const before = new Map(); // id → { tiles, troops } antes del impacto
+    const lost = new Map();
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dx = -R; dx <= R; dx++) {
+        if (dx * dx + dy * dy > R * R) continue;
+        const x = cx + dx;
+        const y = cy + dy;
+        if (!map.inBounds(x, y)) continue;
+        const t = map.index(x, y);
+        const o = this.owner[t];
+        if (!o || !this._isEnemy(m.owner, o)) continue;
+        if (!before.has(o)) before.set(o, { tiles: this.players[o].tiles, troops: this.players[o].troops });
+        lost.set(o, (lost.get(o) || 0) + 1);
+        this.setOwner(t, 0); // los edificios de esas casillas se destruyen
+      }
+    }
+    for (const [o, n] of lost) {
+      const v = this.players[o];
+      const b = before.get(o);
+      const density = b.troops / Math.max(1, b.tiles);
+      v.troops = Math.max(0, v.troops - density * n * CONFIG.missileTroopLoss);
+      v.lastConqueredBy = m.owner; // si muere por esto, el botín es del lanzador
+    }
+    // Barcos y buques enemigos alcanzados
+    const W = map.width;
+    const inBlast = (t) => {
+      const dx = (t % W) - cx;
+      const dy = ((t / W) | 0) - cy;
+      return dx * dx + dy * dy <= (R + 1) * (R + 1);
+    };
+    for (const boat of this.boats) {
+      if (!boat.done && this._isEnemy(m.owner, boat.owner) && inBlast(boat.path[boat.pos])) {
+        boat.done = true;
+        this.players[boat.owner].boatCount--;
+      }
+    }
+    this.boats = this.boats.filter((b) => !b.done);
+    for (const ws of this.warships) {
+      if (!ws.dead && this._isEnemy(m.owner, ws.owner) && inBlast(ws.tile)) ws.hp -= 60;
+      if (ws.hp <= 0) ws.dead = true;
+    }
+    this.effects.push({ kind: 'boom', x: cx + 0.5, y: cy + 0.5, tick: this.ticks });
+
+    const attacker = this.players[m.owner];
+    const total = [...lost.values()].reduce((a, b) => a + b, 0);
+    if (attacker === this.human) this._emit(`💥 Impacto: ${total} casillas enemigas arrasadas`, 'good');
+    const mine = this.human ? lost.get(this.human.id) : 0;
+    if (mine) this._emit(`💥 Un misil de ${attacker.name} ha arrasado ${mine} casillas tuyas`, 'danger');
   }
 
   // -------------------------------------------------------- buques de guerra
@@ -995,6 +1163,10 @@ export class Game {
 
     this._updateBoats();
     this._updateWarships();
+    this._updateMissiles();
+    if (this.effects.length && this.effects[0].tick < this.ticks - 30) {
+      this.effects = this.effects.filter((e) => e.tick >= this.ticks - 30);
+    }
     this._processRequests();
     if (this.emojis.length && this.emojis[0].tick < this.ticks - CONFIG.emojiTicks) {
       this.emojis = this.emojis.filter((e) => e.tick >= this.ticks - CONFIG.emojiTicks);

@@ -53,6 +53,8 @@ export const TITLES = [
   { id: 'implacable', name: 'el Implacable', unlock: { ach: 'verdugo' } },
   { id: 'traicionero', name: 'el Traicionero', unlock: { ach: 'traidor' } },
   { id: 'veterano', name: 'Veterano', unlock: { ach: 'veterano' } },
+  { id: 'magnate', name: 'el Magnate', unlock: { ach: 'industrial' } },
+  { id: 'devastador', name: 'el Devastador', unlock: { ach: 'lluvia_fuego' } },
 ];
 
 /**
@@ -76,6 +78,8 @@ export const ACHIEVEMENTS = [
   { id: 'en_compania', icon: '👥', name: 'En compañía', desc: 'Juega una partida online', check: (r) => r.online },
   { id: 'veterano', icon: '🎖️', name: 'Veterano', desc: 'Juega 10 partidas', check: (r, p) => p.stats.partidas >= 10 },
   { id: 'tesoro', icon: '💰', name: 'Tesoro real', desc: 'Reúne 100.000 de oro', check: (r) => r.maxGold >= 100000 },
+  { id: 'industrial', icon: '🏭', name: 'Revolución industrial', desc: 'Ten 5 fábricas a la vez', check: (r) => (r.maxFactories || 0) >= 5 },
+  { id: 'lluvia_fuego', icon: '🚀', name: 'Lluvia de fuego', desc: 'Lanza 5 misiles en una partida', check: (r) => (r.missiles || 0) >= 5 },
 ];
 
 /** Qué desbloquea cada logro (para mostrarlo en la ficha del logro). */

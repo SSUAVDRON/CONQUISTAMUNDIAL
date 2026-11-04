@@ -31,7 +31,8 @@ export class Player {
     this.attacks = new Map();
     this.boatCount = 0;
     /** Edificios por tipo (se actualiza al construir, capturar o perder). */
-    this.buildings = { city: 0, port: 0, fort: 0, warship: 0 }; // warship = buques a flote
+    // warship = buques a flote; missile no se usa (el misil no se acumula)
+    this.buildings = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0, missile: 0 };
     /** Fortalezas propias (casillas), para calcular la defensa. */
     this.forts = new Set();
 
@@ -44,7 +45,7 @@ export class Player {
     this.pattern = 'liso';
 
     /** Contadores de la partida, para logros y estadísticas. */
-    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0, sunk: 0 };
+    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0, sunk: 0, missiles: 0, maxFactories: 0 };
 
     // Diplomacia
     this.allies = new Set();
@@ -70,7 +71,7 @@ export class Player {
   goldPerTick() {
     if (!this.tiles) return 0;
     const base = CONFIG.goldBase + pow34(this.tiles) * CONFIG.goldTileMult;
-    return base * (1 + this.buildings.port * CONFIG.portGoldBonus);
+    return base * (1 + this.buildings.port * CONFIG.portGoldBonus + this.buildings.factory * CONFIG.factoryGoldBonus);
   }
 
   maxBoats() {

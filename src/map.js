@@ -10,7 +10,7 @@ const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 const LAND_SHARE = 0.42; // fracción aproximada de tierra
 const HIGHLAND_Q = 0.66; // percentil de altura (dentro de la tierra) para mesetas
 const MOUNTAIN_Q = 0.9; // percentil para montañas
-const MIN_ISLAND = 25; // islas más pequeñas se hunden
+const MIN_ISLAND = 40; // islas más pequeñas se hunden (jugabilidad)
 const MAX_LAKE = 15; // lagos más pequeños se rellenan
 
 export class GameMap {

@@ -123,9 +123,11 @@ test('los bots construyen durante la partida', () => {
   for (const b of game.buildings) {
     assert.equal(game.owner[b.tile], b.owner, 'cada edificio pertenece al dueño de su casilla');
   }
-  const counted = { city: 0, port: 0, fort: 0 };
-  for (const p of game.players) if (p) for (const k in counted) counted[k] += p.buildings[k];
-  const real = { city: 0, port: 0, fort: 0 };
+  // Todos los tipos de edificio (los buques y misiles no son edificios)
+  const kinds = Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].unit);
+  const counted = Object.fromEntries(kinds.map((k) => [k, 0]));
+  for (const p of game.players) if (p) for (const k of kinds) counted[k] += p.buildings[k];
+  const real = Object.fromEntries(kinds.map((k) => [k, 0]));
   for (const b of game.buildings) real[b.kind]++;
   assert.deepEqual(counted, real, 'los recuentos por jugador cuadran con la lista de edificios');
 });

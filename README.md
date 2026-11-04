@@ -28,6 +28,9 @@ navegador y, en el enlace de Claude, también en tu cuenta.
   caro avanzar.
 - **Aleatorios:** pequeño, mediano y grande, generados con la semilla.
 
+En todos los mapas se eliminan las islas de menos de 40 casillas y los lagos de
+menos de 12, para no perder el tiempo conquistando islotes.
+
 Los mapas reales salen de [Natural Earth](https://www.naturalearthdata.com)
 (dominio público). Para regenerarlos o añadir regiones (`DEFS` en el script):
 
@@ -103,6 +106,10 @@ base de datos.
 | Ciudad | +15.000 tropas máximas. 5k de oro, +5k por cada ciudad que ya tengas. |
 | Puerto | En la costa. +1 barco simultáneo y +10 % de oro. 4k, +4k. |
 | Fortaleza | En un radio de 10 casillas, conquistarte cuesta ×2,5 tropas y tiempo. 3k, +3k. |
+| Fábrica | +25 % de oro por cada una. 6k, +6k. |
+| Silo | Permite lanzar misiles; cada silo recarga en 15 s. 10k, +10k. |
+| Misil | 12k cada uno, lanzado desde un silo a 220 casillas como máximo. Arrasa un círculo de radio 8: las casillas enemigas quedan libres, se destruyen sus edificios, el defensor pierde tropas y los barcos y buques alcanzados sufren daños. Nunca afecta a ti ni a tus aliados. |
+| Antimisiles | Dispara a los misiles enemigos que pasan a 22 casillas o menos; acierta un 60 % de las veces y recarga en 8 s. Varios misiles a la vez saturan la defensa. 8k, +6k. |
 | Alianzas | Clic derecho (o mantener pulsado) sobre otra nación abre su ficha: proponer alianza, enviar tropas u oro (solo a aliados, según la fuerza de ataque) y emojis. Máximo 3 aliados. Los aliados no pueden atacarse; al firmar, los ataques entre ambos se detienen y las tropas vuelven. |
 | Propuestas | Las que recibes aparecen con Aceptar/Rechazar y caducan a los 15 s. Si te rechazan, debes esperar 1 min para volver a proponer. |
 | Traición | Romper una alianza (pide doble confirmación) te marca como traidor 60 s: conquistarte cuesta ×0,6 y los bots no se fían de ti. |
@@ -112,7 +119,8 @@ base de datos.
 
 - **Arrastrar**: mover el mapa · **Rueda / pellizco**: zoom · **WASD / flechas**: desplazarse
 - **1–9 / 0**: fuerza de ataque 10 %–100 % · **Mayús + rueda**: ajuste fino
-- **Q / E / R / T**: construir ciudad / puerto / fortaleza / buque (o los botones del panel), luego clic en el mapa
+- **Q / E / R / F / G / H / T**: ciudad / puerto / fortaleza / fábrica / silo / antimisiles / buque (o los botones del panel), luego clic en el mapa
+- **M**: apuntar un misil (clic en territorio enemigo)
 - **Clic en el mar**: mover tu buque de guerra más cercano
 - **Mayús + clic** al construir: colocar varios seguidos · **Esc / clic derecho**: cancelar
 - **Clic derecho / mantener pulsado** sobre otra nación: ficha de diplomacia
@@ -158,7 +166,7 @@ dominia/
 │   ├── cloud.js        Perfil en la nube y clasificación global (db + user)
 │   ├── icons.js        Iconos de edificios, emblemas y patrones
 │   └── rng.js, noise.js, heap.js, colors.js, names.js, format.js
-└── tests/              simulación, edificios, buques, diplomacia, mapas, perfil y multijugador
+└── tests/              simulación, edificios, buques, misiles, diplomacia, mapas, perfil y multijugador
 ```
 
 Decisiones de diseño que conviene conservar:

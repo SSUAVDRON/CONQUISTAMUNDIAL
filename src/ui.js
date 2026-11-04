@@ -313,8 +313,13 @@ export class UI {
       aviso.hidden = false;
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
-      const where = def.unit ? 'cerca de uno de tus puertos' : def.coastal ? 'en tu costa' : 'en tu territorio';
-      aviso.textContent = `Toca ${where} para construir: ${def.name} (${formatNumber(game.buildCost(human, buildMode))} de oro). Esc para cancelar`;
+      const cost = formatNumber(game.buildCost(human, buildMode));
+      if (def.unit === 'missile') {
+        aviso.textContent = `Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`;
+      } else {
+        const where = def.unit ? 'cerca de uno de tus puertos' : def.coastal ? 'en tu costa' : 'en tu territorio';
+        aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro). Esc para cancelar`;
+      }
       aviso.hidden = false;
     } else {
       aviso.hidden = true;
@@ -343,9 +348,19 @@ export class UI {
 
     for (const [kind, btn] of this._buildButtons) {
       const cost = game.buildCost(human, kind);
-      btn.querySelector('.b-coste').textContent = `${formatNumber(cost)} oro`;
-      btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}` : '';
-      btn.classList.toggle('caro', human.gold < cost);
+      let unavailable = human.gold < cost;
+      if (kind === 'missile') {
+        // Coste y silos listos
+        const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
+        const ready = silos.filter((b) => b.readyAt <= game.ticks).length;
+        btn.querySelector('.b-coste').textContent = silos.length ? `${formatNumber(cost)} · ${ready}/${silos.length} listos` : 'Necesita silo';
+        btn.querySelector('.b-num').textContent = '';
+        unavailable = unavailable || !ready;
+      } else {
+        btn.querySelector('.b-coste').textContent = `${formatNumber(cost)} oro`;
+        btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}` : '';
+      }
+      btn.classList.toggle('caro', unavailable);
       btn.classList.toggle('activo', buildMode === kind);
       btn.disabled = !playing || !human.alive;
     }
