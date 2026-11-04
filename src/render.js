@@ -621,28 +621,24 @@ export class Renderer {
     ctx.fill();
   }
 
-  /** Nivel del edificio: estrellitas debajo del icono. */
+  /** Nivel del edificio (2 o más): el número en una chapa dorada encima del icono. */
   _drawLevel(sx, sy, size, level) {
     const { ctx } = this;
-    const n = Math.min(level, 5);
-    const s = Math.max(3, size * 0.16);
-    const total = n * s * 1.3;
-    let x = sx - total / 2 + s * 0.65;
-    const y = sy + size * 0.58;
-    for (let k = 0; k < n; k++) {
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const a = -Math.PI / 2 + (i * Math.PI * 4) / 5;
-        ctx.lineTo(x + Math.cos(a) * s * 0.6, y + Math.sin(a) * s * 0.6);
-      }
-      ctx.closePath();
-      ctx.fillStyle = '#ffd34d';
-      ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-      ctx.stroke();
-      x += s * 1.3;
-    }
+    const r = Math.max(6.5, size * 0.3);
+    const x = sx;
+    const y = sy - size * 0.62 - r * 0.35;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd34d';
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, r * 0.22);
+    ctx.strokeStyle = 'rgba(40, 26, 0, 0.9)';
+    ctx.stroke();
+    ctx.fillStyle = '#2a1a00';
+    ctx.font = `900 ${Math.round(r * 1.35)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(level), x, y + r * 0.08);
   }
 
   _hpBar(cx, cy, width, frac) {
@@ -857,17 +853,22 @@ export class Renderer {
       if (!this._onScreen(sx, sy, len * 2)) continue;
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
-      // Destino del buque propio
-      if (p === game.human && ws.path) {
-        const dest = ws.path[ws.path.length - 1];
-        const [dx, dy] = camera.worldToScreen((dest % W) + 0.5, Math.floor(dest / W) + 0.5);
-        ctx.setLineDash([4, 4]);
+      // Zona de patrulla de tus buques: círculo discontinuo y, si va hacia allí, la línea
+      if (p === game.human && ws.patrol >= 0) {
+        const [px, py] = camera.worldToScreen((ws.patrol % W) + 0.5, Math.floor(ws.patrol / W) + 0.5);
+        ctx.setLineDash([6, 6]);
         ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(dx, dy);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.arc(px, py, CONFIG.warshipPatrol * z, 0, Math.PI * 2);
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = 'rgba(160, 210, 255, 0.35)';
         ctx.stroke();
+        if (Math.hypot(px - sx, py - sy) > CONFIG.warshipPatrol * z) {
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(px, py);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.stroke();
+        }
         ctx.setLineDash([]);
       }
       drawWarship(ctx, sx, sy, s.ang, r, rgbToCss(p.color), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));

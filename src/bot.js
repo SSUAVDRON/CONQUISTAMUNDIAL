@@ -321,34 +321,26 @@ export class BotBrain {
   }
 
   /** Manda los buques parados contra el puerto enemigo más cercano. */
+  /**
+   * Da a sus buques una zona que patrullar: casi siempre la de un puerto
+   * propio (defensa) y, si es agresivo, la de un puerto enemigo cercano para
+   * quedarse sus pesqueros y mercantes. El buque hace el resto solo.
+   */
   _commandWarships() {
     const g = this.game;
     const p = this.player;
     const map = g.map;
+    const r = g.rng;
+    const d2 = (a, b) => (map.x(a) - map.x(b)) ** 2 + (map.y(a) - map.y(b)) ** 2;
     for (const ws of g.warships) {
-      if (ws.owner !== p.id || ws.path || ws.dead || ws.fireTick > g.ticks - 20) continue;
-      let best = null;
-      let bestD = (140 * RES) ** 2;
-      for (const b of g.buildings) {
-        if (b.kind !== 'port' || b.owner === p.id || p.allies.has(b.owner)) continue;
-        const dx = map.x(b.tile) - map.x(ws.tile);
-        const dy = map.y(b.tile) - map.y(ws.tile);
-        const d = dx * dx + dy * dy;
-        if (d < bestD) {
-          bestD = d;
-          best = b;
-        }
-      }
-      if (!best) continue;
-      // Agua junto al puerto objetivo
-      const nb = new Int32Array(4);
-      const c = map.neighbors(best.tile, nb);
-      for (let k = 0; k < c; k++) {
-        if (map.terrain[nb[k]] === 0) {
-          g.moveWarship(p, nb[k], ws);
-          break;
-        }
-      }
+      if (ws.owner !== p.id || ws.dead || g.ticks < (ws.botZoneAt || 0)) continue;
+      ws.botZoneAt = g.ticks + r.int(400, 900);
+      const sea = map.waterBody[ws.tile];
+      const ports = g.buildings.filter((b) => b.kind === 'port' && b.level > 0 && b.water >= 0 && map.waterBody[b.water] === sea);
+      const own = ports.filter((b) => b.owner === p.id);
+      const enemy = ports.filter((b) => b.owner !== p.id && !p.allies.has(b.owner) && d2(b.water, ws.tile) < (140 * RES) ** 2);
+      const pick = enemy.length && r.chance(0.3 + this.aggression * 0.3) ? r.pick(enemy) : own.length ? r.pick(own) : null;
+      if (pick && pick.water !== ws.patrol) g.moveWarship(p, pick.water, ws);
     }
   }
 

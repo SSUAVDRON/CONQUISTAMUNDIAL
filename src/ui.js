@@ -615,7 +615,7 @@ export class UI {
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
     $('pj-terr').textContent = formatPercent(human.tiles / landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
-    $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''} · clic en el mar` : '';
+    $('pj-buques').textContent = human.buildings.warship ? `${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''} · clic en el mar: zona` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
     $('ratio-tropas').textContent = `${formatNumber(human.troops * ratio)} tropas`;
     $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);

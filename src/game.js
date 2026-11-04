@@ -1228,8 +1228,10 @@ export class Game {
       progress: 0,
       fireTick: -Infinity,
       fireAt: -1,
+      patrol: water, // patrulla junto a su puerto hasta que se le asigne otra zona
+      nextPatrol: this.ticks + 10,
     });
-    this._notify(p, 'Buque botado. Haz clic en el mar para moverlo', 'good');
+    this._notify(p, 'Buque botado: patrulla junto a su puerto. Clic en el mar para darle otra zona', 'good');
     return true;
   }
 
@@ -1259,9 +1261,13 @@ export class Game {
       this._notify(p, 'Tu buque no puede llegar a ese mar', 'warn');
       return false;
     }
+    // Nueva zona de patrulla: va hasta allí y luego la vigila solo
+    ws.patrol = tile;
     ws.path = path;
     ws.pos = 0;
     ws.progress = 0;
+    ws.nextPatrol = this.ticks + 10;
+    this._notify(p, 'Zona de patrulla asignada a tu buque', 'good');
     return true;
   }
 
@@ -1440,10 +1446,18 @@ export class Game {
     return a !== b && !this.isAllied(a, b);
   }
 
+  /**
+   * Buques de guerra autónomos. Cada uno patrulla una zona (al botarlo, la de
+   * su puerto; el jugador puede asignarle otra). Por sí solo: dispara a los
+   * buques enemigos, hunde los transportes de tropas y captura pesqueros y
+   * mercantes; persigue a los intrusos que entren en su zona y, si no hay
+   * nadie, navega de un punto a otro de ella. No ataca puertos.
+   */
   _updateWarships() {
     if (!this.warships.length) return;
     const map = this.map;
     const r2 = CONFIG.warshipRange * CONFIG.warshipRange;
+    const guard2 = CONFIG.warshipGuard * CONFIG.warshipGuard;
     const W = map.width;
     for (const ws of this.warships) {
       if (ws.dead) continue;
@@ -1461,7 +1475,6 @@ export class Game {
         ws.tile = ws.path[ws.pos];
         if (ws.pos >= ws.path.length - 1) ws.path = null;
       }
-      // Combate: buques enemigos, luego transportes, luego puertos
       const x = ws.tile % W;
       const y = (ws.tile / W) | 0;
       const dist2 = (t) => {
@@ -1469,6 +1482,7 @@ export class Game {
         const dy = ((t / W) | 0) - y;
         return dx * dx + dy * dy;
       };
+      // Objetivo a tiro: buques enemigos, luego transportes, luego barcos civiles
       let target = null;
       let kind = '';
       let best = r2 + 1;
@@ -1493,13 +1507,9 @@ export class Game {
         }
       }
       if (!target) {
-        for (const b of this.buildings) {
-          if (b.kind !== 'port' || !this._isEnemy(ws.owner, b.owner)) continue;
-          const d = dist2(b.tile);
-          if (d < best) [best, target, kind] = [d, b, 'port'];
-        }
+        this._patrolWarship(ws, guard2);
+        continue;
       }
-      if (!target) continue;
       if (kind === 'merchant') {
         this._captureMerchant(ws, target);
         continue;
@@ -1516,22 +1526,13 @@ export class Game {
           if (me === this.human) this._emit(`Has hundido un buque de ${victim.name}`, 'good');
           else if (victim === this.human) this._emit(`${me.name} ha hundido uno de tus buques`, 'danger');
         }
-      } else if (kind === 'boat') {
+      } else {
         target.done = true;
         const victim = this.players[target.owner];
         victim.boatCount--;
         me.stats.sunk++;
         if (me === this.human) this._emit(`Has hundido un barco de ${victim.name} con ${formatNumber(target.troops)} tropas`, 'good');
         else if (victim === this.human) this._emit(`${me.name} ha hundido tu barco (${formatNumber(target.troops)} tropas)`, 'danger');
-      } else {
-        target.hp -= CONFIG.warshipDamage;
-        target.hitTick = this.ticks;
-        if (target.hp <= 0) {
-          const victim = this.players[target.owner];
-          this._transferBuilding(target, target.owner, 0);
-          if (me === this.human) this._emit(`Has destruido un puerto de ${victim.name}`, 'good');
-          else if (victim === this.human) this._emit(`${me.name} ha destruido uno de tus puertos`, 'danger');
-        }
       }
     }
     // Hundidos y buques de naciones eliminadas
@@ -1540,12 +1541,111 @@ export class Game {
       this.warships = this.warships.filter((w) => !w.dead);
     }
     this.boats = this.boats.filter((b) => !b.done);
-    // Los puertos que no reciben fuego se reparan
-    for (const b of this.buildings) {
-      if (b.kind === 'port' && b.hp < CONFIG.portHp && this.ticks - b.hitTick > 50) {
-        b.hp = Math.min(CONFIG.portHp, b.hp + CONFIG.portRegen);
+  }
+
+  /** Sin nadie a tiro: persigue intrusos de su zona o la recorre. */
+  _patrolWarship(ws, guard2) {
+    if (this.ticks < (ws.nextPatrol || 0)) return;
+    const map = this.map;
+    const W = map.width;
+    const cx = map.x(ws.patrol);
+    const cy = map.y(ws.patrol);
+    // ¿Algún intruso (buque, transporte o barco civil enemigo) dentro de su zona?
+    let prey = -1;
+    let best = guard2;
+    const consider = (t, owner) => {
+      if (!this._isEnemy(ws.owner, owner) || map.waterBody[t] !== map.waterBody[ws.tile]) return;
+      const dx = (t % W) - cx;
+      const dy = ((t / W) | 0) - cy;
+      const d = dx * dx + dy * dy;
+      if (d < best) {
+        best = d;
+        prey = t;
+      }
+    };
+    for (const o of this.warships) if (!o.dead) consider(o.tile, o.owner);
+    for (const b of this.boats) if (!b.done) consider(b.path[b.pos], b.owner);
+    for (const m of this.merchants) if (!m.done) consider(m.tile, m.owner);
+    if (prey >= 0) {
+      ws.nextPatrol = this.ticks + 15; // vuelve a apuntar a menudo: el intruso se mueve
+      const path = this._waterPath(ws.tile, prey, SEARCH.fish, false);
+      if (path) {
+        ws.path = path;
+        ws.pos = 0;
+        ws.progress = 0;
+      }
+      return;
+    }
+    if (ws.path) return;
+    ws.nextPatrol = this.ticks + this.rng.int(20, 60);
+    // Fuera de su zona: vuelve; dentro: va a otro punto de ella
+    const dx = map.x(ws.tile) - cx;
+    const dy = map.y(ws.tile) - cy;
+    const R = CONFIG.warshipPatrol;
+    let path = null;
+    if (dx * dx + dy * dy > R * R) path = this._waterPath(ws.tile, ws.patrol, SEARCH.warship, false);
+    else path = this._wanderPath(ws.tile, cx, cy, R);
+    if (path) {
+      ws.path = path;
+      ws.pos = 0;
+      ws.progress = 0;
+    }
+  }
+
+  /**
+   * Camino corto por el agua desde `from` hasta un punto al azar a menos de
+   * R casillas de (cx, cy); si no lo hay, al que más se acerque. Búsqueda en
+   * anchura acotada: barata y nunca se pierde.
+   */
+  _wanderPath(from, cx, cy, R) {
+    const map = this.map;
+    const W = map.width;
+    const terrain = map.terrain;
+    const stamp = this._nextStamp();
+    const seen = this._stampArr;
+    const parent = this._parent;
+    const depth = this._gcost;
+    const queue = this._queue;
+    const nb = NB_BFS;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = from;
+    seen[from] = stamp;
+    parent[from] = -1;
+    depth[from] = 0;
+    const near = [];
+    let closest = -1;
+    let closestD = Infinity;
+    while (head < tail) {
+      const t = queue[head++];
+      const d = depth[t];
+      if (d >= R / 3) {
+        const dx = (t % W) - cx;
+        const dy = ((t / W) | 0) - cy;
+        const dh = dx * dx + dy * dy;
+        if (dh <= R * R) near.push(t);
+        if (dh < closestD) {
+          closestD = dh;
+          closest = t;
+        }
+      }
+      if (d >= R) continue;
+      const c = map.neighbors(t, nb);
+      for (let k = 0; k < c; k++) {
+        const n = nb[k];
+        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        seen[n] = stamp;
+        parent[n] = t;
+        depth[n] = d + 1;
+        queue[tail++] = n;
       }
     }
+    const goal = near.length ? near[this.rng.int(0, near.length - 1)] : closest;
+    if (goal < 0) return null;
+    const back = [];
+    for (let t = goal; t !== -1; t = parent[t]) back.push(t);
+    back.reverse();
+    return back.length >= 2 ? Int32Array.from(back) : null;
   }
 
   // ------------------------------------------------------------------ barcos

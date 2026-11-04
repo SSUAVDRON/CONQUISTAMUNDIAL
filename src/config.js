@@ -45,7 +45,7 @@ export const CONFIG = {
 
   // Barcos de transporte
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
-  boatSpeed: 0.8 * RES, // casillas por tick
+  boatSpeed: 0.55 * RES, // casillas por tick
 
   // Oro: ingreso por tick = base + casillas^0,75 × mult (× bonus de puertos)
   startGold: 0,
@@ -84,8 +84,10 @@ export const CONFIG = {
   // Buques de guerra
   warshipHp: 100,
   warshipDamage: 1.5, // vida que quitan por tick a otro buque o a un puerto
-  warshipRange: 9 * RES, // casillas
-  warshipSpeed: 0.7 * RES, // casillas por tick
+  warshipRange: 9 * RES, // casillas de alcance de tiro
+  warshipSpeed: 0.5 * RES, // casillas por tick
+  warshipPatrol: 22 * RES, // radio de la zona que patrulla cada buque
+  warshipGuard: 34 * RES, // persigue a los intrusos que entren hasta aquí (desde el centro de su zona)
   warshipsPerPort: 3,
   portHp: 80,
   portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
@@ -94,12 +96,12 @@ export const CONFIG = {
   fishPerPort: 2, // pesqueros por puerto
   fishGold: 37.5, // oro por tick de cada pesquero
   fishRange: 14 * RES, // casillas alrededor del puerto donde faenan
-  fishSpeed: 0.4 * RES,
+  fishSpeed: 0.3 * RES,
   tradeEveryMin: 200, // ticks entre mercantes de un mismo puerto
   tradeEveryMax: 400,
   tradeGoldPerTile: 450 / RES, // oro por casilla de ruta, al llegar
   tradeReceiverShare: 0.5, // parte para el dueño del puerto de destino
-  tradeSpeed: 0.6 * RES,
+  tradeSpeed: 0.42 * RES,
 
   // Misiles y antimisiles
   missileRadius: 8 * RES, // casillas arrasadas alrededor del impacto
@@ -156,7 +158,7 @@ export const BUILDINGS = {
   silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar misiles' },
   sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', fixed: true, desc: 'Derriba misiles enemigos cercanos' },
   // No son edificios: el buque se bota desde un puerto y el misil sale de un silo
-  warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Hunde barcos y bombardea puertos' },
+  warship: { name: 'Buque', fem: false, base: 150000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Patrulla su zona: hunde buques y transportes y captura barcos civiles' },
   missile: { name: 'Misil', fem: false, base: 500000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
 };
 /** Edificios de verdad (no unidades). */

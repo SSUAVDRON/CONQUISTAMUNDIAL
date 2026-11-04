@@ -57,35 +57,45 @@ test('construir un buque exige puerto y oro, y su coste sube', () => {
   assert.ok(g2.buildCost(a, 'warship') > cost, 'cada compra encarece la siguiente');
 });
 
-test('un buque navega hasta donde se le manda', () => {
+test('a un buque se le asigna una zona y la patrulla solo', () => {
   const { map, game, a, ta, tb, water } = navalSetup();
   buildNow(game, a, 'warship', ta);
+  const ws = game.warships[0];
+  assert.equal(ws.patrol, game.buildings.find((b) => b.kind === 'port' && b.owner === a.id).water, 'empieza patrullando su puerto');
   const dest = water(tb);
   assert.ok(game.moveWarship(a, dest));
-  for (let i = 0; i < 400 && game.warships[0].path; i++) game.tick();
-  const ws = game.warships[0];
-  assert.equal(ws.path, null, 'debería haber llegado');
-  assert.equal(ws.tile, dest);
-  assert.equal(map.isLand(ws.tile), false);
+  assert.equal(ws.patrol, dest);
+  const near = () => Math.hypot(map.x(ws.tile) - map.x(dest), map.y(ws.tile) - map.y(dest)) <= CONFIG.warshipPatrol * 1.3;
+  for (let i = 0; i < 1500 && !near(); i++) game.tick();
+  assert.ok(near(), 'debería llegar a su zona');
+  // Y se queda en ella moviéndose por su cuenta
+  const seen = new Set();
+  for (let i = 0; i < 600; i++) {
+    game.tick();
+    seen.add(ws.tile);
+    assert.equal(map.isLand(ws.tile), false);
+  }
+  assert.ok(near(), 'sigue en su zona');
+  assert.ok(seen.size > 5, 'patrulla (se mueve) sin que nadie se lo mande');
 });
 
-test('un buque hunde transportes enemigos y destruye puertos', () => {
+test('un buque hunde transportes enemigos pero no ataca puertos', () => {
   const { game, a, b, ta, tb, water } = navalSetup();
   buildNow(game, a, 'warship', ta);
   game.moveWarship(a, water(tb));
-  // B manda un barco hacia la costa de A (no a su puerto, que podría capturar)
+  const port = game.buildings.find((x) => x.kind === 'port' && x.owner === b.id);
+  for (let i = 0; i < 300; i++) game.tick();
+  // B manda un barco hacia la costa de A (sale de su costa, junto a la zona del buque)
   b.troops = 50000;
   const target = [...a.border].find((t) => game.map.coastal[t] && t !== ta);
   const sent = target !== undefined && game.launchBoat(b, target, 5000);
-  const port = game.buildings.find((x) => x.kind === 'port' && x.owner === b.id);
   let sunkBoat = false;
-  for (let i = 0; i < 1500 && port.hp > 0; i++) {
+  for (let i = 0; i < 900; i++) {
     game.tick();
     if (sent && a.stats.sunk > 0) sunkBoat = true;
   }
-  assert.ok(port.hp <= 0, 'el puerto enemigo debería caer');
-  assert.equal(game.buildings.includes(port), false, 'el puerto desaparece');
-  assert.equal(b.buildings.port, game.buildings.filter((x) => x.kind === 'port' && x.owner === b.id).length);
+  assert.equal(port.hp, CONFIG.portHp, 'el puerto enemigo no recibe daño');
+  assert.ok(game.buildings.includes(port), 'el puerto sigue en pie');
   if (sent) assert.ok(sunkBoat || b.boatCount === 0, 'el transporte no debería seguir navegando');
 });
 

@@ -120,8 +120,8 @@ base de datos.
 | Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). |
 | Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. |
 | Saqueo | Cada casilla que conquistas a un país te da su parte de su oro (oro ÷ casillas). Cada 5 s un aviso resume lo saqueado (y lo que te saquean). |
-| Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; 150k de oro con inflación). Clic en el mar mueve el más cercano. Actúan solos a 9 casillas: disparan a buques enemigos, hunden transportes de tropas, **capturan** pesqueros y mercantes rivales (pasan a producir para ti) y bombardean puertos hasta destruirlos. |
-| Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |
+| Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; 150k de oro con inflación). Van solos: cada uno patrulla una zona (al botarlo, la de su puerto; clic en el mar asigna otra al más cercano y se ve como un círculo discontinuo). A tiro disparan a buques enemigos, hunden transportes de tropas y **capturan** pesqueros y mercantes rivales (pasan a producir para ti); si un intruso entra en su zona, lo persiguen. No atacan puertos. |
+| Barcos de tropas | Salen de cualquier costa tuya, no hace falta puerto. Todos los barcos van algo más despacio que al principio (transportes, buques, pesqueros y mercantes). Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |
 | Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo: más rojo y con latido más rápido cuanto más te atacan (tropas frente a las tuyas, número de atacantes, misiles). Desactivable en Ajustes. |
 | Tropas a la vista | Cada combate tuyo tiene una tarjeta debajo de la clasificación: quién ataca a quién, tropas del atacante **VS** tropas del defensor, con una leyenda bajo cada cifra («te ataca con» / «tus tropas», «atacas con» / «sus tropas») y una barra de fuerzas. **Roja** si te atacan (van primero) y **verde** si atacas tú; los marcadores del mapa usan los mismos colores. También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas. |
 | Avisos | En un recuadro abajo a la derecha, solo lo importante: alianzas y traiciones (de todos), países derrotados, barcos y misiles que vienen hacia ti, tu puerto destruido, logros e inicio de partida. Con icono según el tipo; los repetidos se agrupan (×N). Las respuestas a tus acciones («Te falta oro», «Buque botado»…) salen como una pista breve encima del panel. |
@@ -134,7 +134,7 @@ base de datos.
 | Edificios | Se construyen en tu territorio con oro. Deben estar a 5 casillas o más de otro edificio. Si te conquistan la casilla, el edificio (con su nivel) pasa al conquistador. |
 | Obras | Cada edificio tarda en construirse y no hace nada hasta terminar (anillo de progreso sobre el icono): fortaleza 4 s, ciudad 5 s, puerto y fábrica 6 s, silo 9 s, **antimisiles 16 s**. Subir de nivel tarda el 80 % de eso. |
 | Inflación | Cada compra (edificio, mejora o buque) encarece un **12 %** todo lo demás. Silos, misiles y antimisiles tienen precio fijo. |
-| Niveles | Con un edificio seleccionado, clic sobre uno tuyo del mismo tipo: sube de nivel (hasta 5; estrellas bajo el icono). Cuesta precio actual × 0,8 × nivel. Cada nivel repite el efecto: ciudad +15k tropas, puerto +10 % de oro y un pesquero más, fábrica +25 % de oro, fortaleza +2 de radio y +0,4 de defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto. |
+| Niveles | Con un edificio seleccionado, clic sobre uno tuyo del mismo tipo: sube de nivel (hasta 5; el número del nivel sale en una chapa dorada encima del edificio). Cuesta precio actual × 0,8 × nivel. Cada nivel repite el efecto: ciudad +15k tropas, puerto +10 % de oro y un pesquero más, fábrica +25 % de oro, fortaleza +2 de radio y +0,4 de defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto. |
 | Ciudad | +15.000 tropas máximas. 125k de oro (sin inflación). |
 | Puerto | En la costa: basta con hacer clic cerca de tu orilla (se coloca en la casilla costera libre más cercana, hasta 6 casillas, también si pulsas en el agua). +10 % de oro. Saca 2 pesqueros que faenan cerca y dan oro mientras naveguen, y cada 20-40 s un mercante hacia el puerto de otra nación con la que no estés en guerra: al llegar cobráis los dos (tú más). 100k. |
 | Fortaleza | En un radio de 10 casillas, conquistarte cuesta ×2,5 tropas y tiempo. 75k. |
@@ -153,7 +153,7 @@ base de datos.
 - **1–9 / 0**: fuerza de ataque 10 %–100 % · **Mayús + rueda**: ajuste fino
 - **Q / E / R / F / G / H / T**: ciudad / puerto / fortaleza / fábrica / silo / antimisiles / buque (o los botones del panel), luego clic en el mapa
 - **M**: apuntar un misil (clic en territorio enemigo)
-- **Clic en el mar**: mover tu buque de guerra más cercano
+- **Clic en el mar**: asignar zona de patrulla a tu buque de guerra más cercano
 - **Mayús + clic** al construir: colocar varios seguidos · **Esc / clic derecho**: cancelar
 - **Clic derecho / mantener pulsado** sobre otra nación: ficha de diplomacia
 - **C** o botón **Mi nación**: la cámara vuela a tu nación · **+ / −**: zoom · **Esc**: cerrar
