@@ -187,6 +187,24 @@ const EMBLEM_SHAPES = {
   circulo(ctx) {
     ctx.arc(0, 0, 9.5, 0, TAU);
   },
+  insignia(ctx) {
+    ctx.moveTo(0, -10);
+    ctx.lineTo(8.8, -5.5);
+    ctx.lineTo(8.8, 3.5);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(-8.8, 3.5);
+    ctx.lineTo(-8.8, -5.5);
+    ctx.closePath();
+  },
+  sello(ctx) {
+    // Círculo con el borde ondulado, como un sello de lacre
+    for (let i = 0; i <= 48; i++) {
+      const a = (i / 48) * TAU;
+      const r = 9.2 + Math.sin(a * 12) * 0.7;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath();
+  },
   escudo(ctx) {
     ctx.moveTo(-8.5, -9);
     ctx.lineTo(8.5, -9);
@@ -434,6 +452,159 @@ function star(ctx, r1, r2, points) {
 const EMBLEM_SYMBOLS = {
   estrella(ctx) {
     star(ctx, 6.5, 2.7, 5);
+  },
+  aguila(ctx) {
+    // Águila de frente con las alas abiertas
+    ctx.beginPath();
+    ctx.moveTo(0, -4.5);
+    ctx.quadraticCurveTo(-3.5, -6.5, -7.5, -5);
+    ctx.quadraticCurveTo(-6.5, -2.5, -4.5, -1.5);
+    ctx.quadraticCurveTo(-7, -0.8, -7.5, 1.2);
+    ctx.quadraticCurveTo(-4.5, 1, -2.4, 0.8);
+    ctx.lineTo(-2.6, 4.2);
+    ctx.lineTo(-1, 3.2);
+    ctx.lineTo(0, 6.8);
+    ctx.lineTo(1, 3.2);
+    ctx.lineTo(2.6, 4.2);
+    ctx.lineTo(2.4, 0.8);
+    ctx.quadraticCurveTo(4.5, 1, 7.5, 1.2);
+    ctx.quadraticCurveTo(7, -0.8, 4.5, -1.5);
+    ctx.quadraticCurveTo(6.5, -2.5, 7.5, -5);
+    ctx.quadraticCurveTo(3.5, -6.5, 0, -4.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, -5.6, 1.6, 0, TAU);
+    ctx.fill();
+  },
+  castillo(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-6.5, 6);
+    ctx.lineTo(-6.5, -4.5);
+    for (const x of [-6.5, -3.5, -0.5, 2.5]) {
+      ctx.lineTo(x, -6.5);
+      ctx.lineTo(x + 1.5, -6.5);
+      ctx.lineTo(x + 1.5, -4.5);
+      ctx.lineTo(x + 3, -4.5);
+    }
+    ctx.lineTo(6.5, -6.5);
+    ctx.lineTo(6.5, 6);
+    ctx.lineTo(1.8, 6);
+    ctx.lineTo(1.8, 2);
+    ctx.quadraticCurveTo(0, 0, -1.8, 2);
+    ctx.lineTo(-1.8, 6);
+    ctx.closePath();
+    ctx.fill();
+  },
+  copo(ctx) {
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(c * 7, s * 7);
+      // Ramitas
+      for (const d of [3.5, 5.3]) {
+        const bx = c * d;
+        const by = s * d;
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(a + 0.8) * 1.8, by + Math.sin(a + 0.8) * 1.8);
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(a - 0.8) * 1.8, by + Math.sin(a - 0.8) * 1.8);
+      }
+    }
+    ctx.stroke();
+  },
+  ojo(ctx, bg) {
+    ctx.beginPath();
+    ctx.moveTo(-7.5, 0);
+    ctx.quadraticCurveTo(0, -7, 7.5, 0);
+    ctx.quadraticCurveTo(0, 7, -7.5, 0);
+    ctx.closePath();
+    ctx.fill();
+    const prev = ctx.fillStyle;
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.8, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = prev;
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.3, 0, TAU);
+    ctx.fill();
+  },
+  lis(ctx) {
+    // Flor de lis
+    ctx.beginPath();
+    ctx.moveTo(0, -7.5);
+    ctx.quadraticCurveTo(2.6, -4, 1, 0.5);
+    ctx.lineTo(-1, 0.5);
+    ctx.quadraticCurveTo(-2.6, -4, 0, -7.5);
+    ctx.closePath();
+    ctx.fill();
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * 1, 0.5);
+      ctx.quadraticCurveTo(s * 2.5, -4.5, s * 6, -3);
+      ctx.quadraticCurveTo(s * 7, -0.5, s * 4.5, 0.2);
+      ctx.quadraticCurveTo(s * 5, 2.5, s * 2.2, 2.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillRect(-4.5, 1.6, 9, 1.6);
+    ctx.beginPath();
+    ctx.moveTo(-1.2, 3.2);
+    ctx.lineTo(1.2, 3.2);
+    ctx.lineTo(0.6, 7);
+    ctx.lineTo(-0.6, 7);
+    ctx.closePath();
+    ctx.fill();
+  },
+  brujula(ctx, bg) {
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 6.8, 0, TAU);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(1.8, 0);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(-1.8, 0);
+    ctx.closePath();
+    ctx.fill();
+    const prev = ctx.fillStyle;
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.lineTo(1.8, 0);
+    ctx.lineTo(-1.8, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = prev;
+    ctx.beginPath();
+    ctx.moveTo(-6, 0);
+    ctx.lineTo(0, -1.2);
+    ctx.lineTo(6, 0);
+    ctx.lineTo(0, 1.2);
+    ctx.closePath();
+    ctx.fill();
+  },
+  engranaje(ctx, bg) {
+    ctx.beginPath();
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * TAU;
+      const r = i % 2 ? 5.2 : 7;
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.fill();
+    const prev = ctx.fillStyle;
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = prev;
   },
   montana(ctx) {
     ctx.beginPath();
@@ -688,6 +859,109 @@ export function drawFrame(ctx, kind, cx, cy, size) {
     ctx.restore();
     return;
   }
+  if (kind === 'llamas') {
+    // Lenguas de fuego alrededor
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * TAU;
+      const len = size * (0.12 + (i % 2) * 0.07);
+      ctx.save();
+      ctx.rotate(a);
+      const g = ctx.createLinearGradient(0, -r, 0, -r - len);
+      g.addColorStop(0, '#ff4a1c');
+      g.addColorStop(0.6, '#ffb02e');
+      g.addColorStop(1, 'rgba(255, 240, 160, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.07, -r + size * 0.02);
+      ctx.quadraticCurveTo(-size * 0.02, -r - len * 0.6, 0, -r - len);
+      ctx.quadraticCurveTo(size * 0.02, -r - len * 0.6, size * 0.07, -r + size * 0.02);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.lineWidth = size * 0.05;
+    ctx.strokeStyle = '#ff7a1c';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  const gems = { esmeralda: ['#7dffb2', '#0c7a45'], rubi: ['#ff8aa1', '#9c0f2e'], zafiro: ['#8ec5ff', '#1641a8'], hielo: ['#ffffff', '#7fd3ff'], diamante: ['#ffffff', '#9fb8d6'], corona: ['#fff0a8', '#b8860b'] }[kind];
+  if (gems) {
+    const g = ctx.createLinearGradient(-r, -r, r, r);
+    g.addColorStop(0, gems[0]);
+    g.addColorStop(0.5, gems[1]);
+    g.addColorStop(1, gems[0]);
+    ctx.lineWidth = size * (kind === 'diamante' ? 0.09 : 0.075);
+    ctx.strokeStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.stroke();
+    // Gemas talladas alrededor (o cristales de hielo)
+    const n = kind === 'diamante' ? 12 : 6;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU - Math.PI / 2;
+      ctx.save();
+      ctx.translate(Math.cos(a) * r, Math.sin(a) * r);
+      ctx.rotate(a);
+      const s = size * (kind === 'diamante' ? 0.05 : 0.065);
+      ctx.beginPath();
+      if (kind === 'hielo') {
+        ctx.moveTo(0, -s * 1.8);
+        ctx.lineTo(s * 0.6, 0);
+        ctx.lineTo(0, s * 1.8);
+        ctx.lineTo(-s * 0.6, 0);
+      } else {
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s, 0);
+        ctx.lineTo(0, s);
+        ctx.lineTo(-s, 0);
+      }
+      ctx.closePath();
+      ctx.fillStyle = gems[0];
+      ctx.fill();
+      ctx.lineWidth = Math.max(0.6, size * 0.008);
+      ctx.strokeStyle = gems[1];
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (kind === 'corona') {
+      // Corona dorada encima
+      ctx.save();
+      ctx.translate(0, -r - size * 0.06);
+      const w = size * 0.32;
+      const h = size * 0.17;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, h / 2);
+      ctx.lineTo(-w / 2, -h / 2);
+      ctx.lineTo(-w / 4, 0);
+      ctx.lineTo(0, -h * 0.8);
+      ctx.lineTo(w / 4, 0);
+      ctx.lineTo(w / 2, -h / 2);
+      ctx.lineTo(w / 2, h / 2);
+      ctx.closePath();
+      ctx.fillStyle = '#ffd34d';
+      ctx.fill();
+      ctx.lineWidth = Math.max(0.8, size * 0.01);
+      ctx.strokeStyle = '#8a5d08';
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (kind === 'diamante') {
+      // Destellos
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      for (const a of [-2.3, -0.4, 1.9]) {
+        ctx.save();
+        ctx.translate(Math.cos(a) * r * 1.12, Math.sin(a) * r * 1.12);
+        ctx.scale(size / 140, size / 140);
+        star(ctx, 7, 1.6, 4);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+    return;
+  }
   const tones = { bronce: ['#f0b37a', '#8a4f22'], plata: ['#f4f7fb', '#7d8794'], oro: ['#fff0a8', '#b8860b'] }[kind];
   if (!tones) {
     ctx.restore();
@@ -734,6 +1008,29 @@ export function drawEmblem(ctx, e, cx, cy, size) {
   ctx.scale(k, k);
   ctx.beginPath();
   (EMBLEM_SHAPES[e.shape] || EMBLEM_SHAPES.escudo)(ctx);
+  // Bandera de un país como emblema: rellena la forma (si ya está cargada)
+  const flagImg = e.flag && hasFlag(e.flag) ? flagSprite() : null;
+  if (flagImg) {
+    ctx.save();
+    ctx.clip();
+    const i = FLAG_INDEX[e.flag];
+    const h = 22;
+    const w = (h * FLAG_W) / FLAG_H;
+    ctx.drawImage(flagImg, (i % FLAG_COLS) * FLAG_W, Math.floor(i / FLAG_COLS) * FLAG_H, FLAG_W, FLAG_H, -w / 2, -h / 2, w, h);
+    // Brillo suave para que parezca un escudo y no un recorte
+    const g = ctx.createLinearGradient(-10, -10, 10, 10);
+    g.addColorStop(0, 'rgba(255, 255, 255, 0.28)');
+    g.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-11, -11, 22, 22);
+    ctx.restore();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
   ctx.fillStyle = e.bg;
   ctx.fill();
   ctx.lineWidth = 1.4;
@@ -782,6 +1079,25 @@ export const PATTERN_FNS = {
   diamantes: (x, y) => Math.abs((x % 8) - 4) + Math.abs((y % 8) - 4) < 2,
   espiga: (x, y) => ((x % 8 < 4 ? x + y : x - y) % 8 + 8) % 8 < 2,
   mosaico: (x, y) => ((x * 7 + y * 13) ^ (x * y)) % 5 === 0,
+  estrellas: (x, y) => {
+    const cx = x % 10;
+    const cy = y % 10;
+    const ox = (Math.floor(y / 10) % 2) * 5;
+    const dx = Math.abs(((cx + ox) % 10) - 5);
+    const dy = Math.abs(cy - 5);
+    return (dx === 0 && dy <= 2) || (dy === 0 && dx <= 2) || (dx === 1 && dy === 1);
+  },
+  zigzag: (x, y) => (y + Math.abs((x % 8) - 4)) % 6 < 2,
+  escamas: (x, y) => {
+    const row = Math.floor(y / 4);
+    const cx = (x + (row % 2) * 4) % 8;
+    const cy = y % 4;
+    const d = (cx - 4) * (cx - 4) + (cy - 4) * (cy - 4) * 1.6;
+    return d >= 10 && d < 17;
+  },
+  camuflaje: (x, y) => Math.sin(x * 0.37 + Math.sin(y * 0.21) * 2.1) + Math.sin(y * 0.29 + Math.sin(x * 0.17) * 1.7) > 0.9,
+  circuito: (x, y) => (x % 10 === 0 && y % 20 < 12) || (y % 10 === 0 && x % 20 > 6) || (x % 10 === 5 && y % 10 === 5),
+  ladrillos: (x, y) => y % 5 === 0 || (x + (Math.floor(y / 5) % 2) * 5) % 10 === 0,
 };
 
 // -------------------------------------------------------------- banderas

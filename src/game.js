@@ -334,6 +334,11 @@ export class Game {
   _pointChanged(pt, oldId, newId) {
     const op = oldId ? this.players[oldId] : null;
     const np = newId ? this.players[newId] : null;
+    // Para logros y retos: puntos y capitales tomados durante la partida
+    if (np && this.phase === 'playing') {
+      np.stats.points++;
+      if (pt.kind === 'capital' && pt.nation && newId !== pt.nation) np.stats.capitals++;
+    }
     // Al conquistar la capital de otro: botín extra
     if (pt.kind === 'capital' && np && pt.nation && newId !== pt.nation) {
       const bounty = POI.capitalBounty * np.goldMult;
@@ -2939,6 +2944,8 @@ export class Game {
     const ba = p.attacks.get(from.id);
     if (ba && !ba.done) this._endAttack(ba);
     this.pacts.push({ a: from.id, b: p.id, kind, until: this.ticks + (kind === 'pact' ? CONFIG.pactTicks : CONFIG.peaceTicks) });
+    from.stats.pacts++;
+    p.stats.pacts++;
     let paid = 0;
     if (kind === 'peace' && offer.tribute > 0) {
       paid = Math.floor(from.gold * offer.tribute);

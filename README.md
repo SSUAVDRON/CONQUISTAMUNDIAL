@@ -10,23 +10,26 @@ Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 
 ## Pantallas
 
-El inicio tiene cuatro modos en tarjetas: **Partida rápida** (mundo
-real contra 90 países y cientos de colonias, un clic), **Contra la IA** (galería de mapas con
-miniaturas pintadas como en la partida y opciones), **Multijugador** y **Tutorial** (partida guiada paso a
-paso que avanza con lo que haces). Antes de cada partida hay una pantalla de
+El inicio tiene cuatro modos en tarjetas con solo su nombre sobre un trozo
+de mapa: **Partida rápida** (mundo real contra 90 países y cientos de
+colonias, un clic), **Contra la IA** (galería de mapas con miniaturas pintadas
+como en la partida y opciones), **Multijugador** y **Tutorial** (partida
+guiada paso a paso que avanza con lo que haces). Antes de cada partida hay una pantalla de
 carga con los pasos reales y un consejo.
 
 | Pestaña | Qué hay |
 |---|---|
-| Jugar | Portada con nuestro mapa del mundo (Europa, el Mediterráneo y Oriente Próximo con las naciones repartidas, en el mismo estilo que la partida) y «Jugar ahora», los cuatro modos (tarjetas de texto, sin ilustraciones) y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA» y en las salas multijugador (las ajusta el anfitrión) se elige: mapa, naciones rivales (1-200), dificultad y las reglas de la partida (ver «Reglas personalizables»). |
-| Perfil | Tarjeta de perfil (estandarte, emblema con marco, nombre, título y nivel), nombre, color (con 16 colores rápidos), emblema (7 formas, 20 símbolos y colores), título, nivel y estadísticas. |
-| Apariencia | Estandarte (8), marco del emblema (bronce, plata, oro, laurel), color de tu nombre en el mapa (8) y patrón del territorio (lo ven también los demás online). Muchos se desbloquean con nivel o logros. |
-| Logros | 16 logros; desbloquean símbolos, patrones y títulos. |
+| Jugar | Portada animada con nuestro mapa del mundo (Europa, el Mediterráneo y Oriente Próximo con las naciones, sus banderas y capitales, flechas de ataque que avanzan, explosiones en los frentes, buques patrullando y puntos estratégicos; solo se anima mientras se ve) y «Jugar ahora», los cuatro modos y «Tu arsenal» (los edificios y unidades dibujados como en el juego, con su precio). En «Contra la IA» y en las salas multijugador (las ajusta el anfitrión) se elige: mapa, naciones rivales (1-200), dificultad y las reglas de la partida (ver «Reglas personalizables»). |
+| Perfil | Tarjeta de perfil (estandarte, emblema con marco, nombre, título y nivel), nombre, color (con 16 colores rápidos), emblema (9 formas, 27 símbolos y colores) o la **bandera de un país del juego** como emblema (se ve también junto a tu nombre en el mapa, con una insignia de jugador, y en la clasificación), título, nivel y estadísticas. |
+| Apariencia | Tus monedas, estandarte (20, algunos animados en capas: aurora, galaxia, neón, brasas…), marco del emblema (12: metales, gemas, hielo, llamas, corona, diamante), color de tu nombre en el mapa (14) y patrón del territorio (15; lo ven también los demás online). Se desbloquean con nivel, con logros o **comprándolos con monedas** (🪙: un clic para elegir y otro para confirmar). |
+| Logros | **Retos de hoy** (3 al día, los mismos para todos, cambian a medianoche; cada uno da monedas y hacer los tres da un bonus) y 38 logros; cada logro da monedas y algunos desbloquean símbolos, estandartes, marcos, patrones y títulos. |
 | Clasificación | Global (todos los jugadores del enlace), tus récords y tu historial. |
 | Ajustes | Borde rojo al ser atacado, tropas de los ataques sobre el mapa, emojis, animaciones del menú, repetir el tutorial y créditos. |
 
-Cada partida da experiencia (territorio, eliminaciones, edificios, victoria…);
-los niveles desbloquean formas de emblema y patrones. El perfil se guarda en el
+Cada partida da experiencia (territorio, eliminaciones, edificios, victoria…)
+y monedas (más con los logros y los retos diarios); los niveles desbloquean
+formas de emblema y patrones, y las monedas se gastan en la tienda de
+Apariencia y en títulos. El perfil se guarda en el
 navegador y, en el enlace de Claude, también en tu cuenta.
 
 ## Mapas
@@ -211,11 +214,13 @@ dominia/
 │   ├── camera.js       Zoom y desplazamiento
 │   ├── input.js        Ratón, táctil y teclado
 │   ├── ui.js           Interfaz de la partida: panel, construcción, diplomacia, avisos
-│   ├── home.js         Pantallas de inicio (modos, galería, opciones, ajustes) y sala
+│   ├── home.js         Pantallas de inicio (modos, galería, opciones, ajustes, tienda, retos) y sala
+│   ├── portada.js      Portada animada del inicio
+│   ├── minimapa.js     Minimapa de la partida (clic para ir)
 │   ├── loading.js      Pantalla de carga
 │   ├── tutorial.js     Tutorial guiado
 │   ├── banderas.js     GENERADO: sprite de banderas (herramientas/banderas.cjs)
-│   ├── profile.js      Perfil, niveles, logros y desbloqueos
+│   ├── profile.js      Perfil, niveles, logros, retos diarios, monedas y tienda
 │   ├── multiplayer.js  Salas y sincronización lockstep
 │   ├── net.js          Transporte: room de Claude o pestañas del navegador
 │   ├── cloud.js        Perfil en la nube y clasificación global (db + user)

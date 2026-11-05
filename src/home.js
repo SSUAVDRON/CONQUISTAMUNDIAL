@@ -4,14 +4,15 @@ import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { decodeRelief, generateMap } from './map.js';
 import { paintMapPreview } from './terreno.js';
+import { CoverArt } from './portada.js';
 import { hexToRgb } from './colors.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame } from './icons.js';
 import { drawTransport, drawWarship } from './barcos.js';
 import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import {
-  ACHIEVEMENTS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
-  hasAchievement, isUnlocked, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
+  ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
+  buyItem, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
 } from './profile.js';
 
 /** Colores rápidos para el territorio y el emblema. */
@@ -108,77 +109,6 @@ function mapThumb(id, width = 168) {
   const c = el('canvas', { width, height, 'aria-hidden': 'true' });
   paintMapPreview(c, data);
   return c;
-}
-
-/**
- * Portada: nuestro mapa del mundo (de la costa de América a Oriente Próximo,
- * con Europa y el Mediterráneo en la parte que no tapa el texto) y las
- * naciones como territorios suaves con borde fino, igual que en la partida.
- * Cada casilla de tierra es del país cuyo centro le queda más cerca,
- * contando su tamaño (los países grandes llegan más lejos).
- */
-function paintCover(canvas) {
-  const data = realPreviewData('mundo');
-  const x0 = Math.round(data.w * 0.235);
-  const x1 = Math.round(data.w * 0.67);
-  const cropW = x1 - x0;
-  const cropH = Math.round((cropW * canvas.height) / canvas.width);
-  const y0 = Math.round(data.h * 0.13);
-  paintMapPreview(canvas, data, [x0, y0, x1, y0 + cropH]);
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
-  const k = W / cropW;
-  // Países a la vista (o cerca): posición en píxeles, peso por tamaño y color suave
-  const nations = [];
-  data.countries.forEach(([, tile, area], i) => {
-    const x = ((tile % data.w) - x0 + 0.5) * k;
-    const y = (Math.floor(tile / data.w) - y0 + 0.5) * k;
-    if (x < -W * 0.3 || y < -H * 0.5 || x > W * 1.3 || y > H * 1.5) return;
-    const hue = (i * 137.508 + 20) % 360;
-    const [r, g, b] = hslRgb(hue, 0.5, 0.62);
-    const [br, bg, bb] = hslRgb(hue, 0.5, 0.3);
-    nations.push({ x, y, w: (area / Math.PI) * k * k * 0.7, c: [r, g, b], e: [br, bg, bb] });
-  });
-  if (!nations.length) return;
-  const img = ctx.getImageData(0, 0, W, H);
-  const d = img.data;
-  const owner = new Int16Array(W * H).fill(-1);
-  const maxD2 = (110 * k) ** 2;
-  for (let py = 0; py < H; py++) {
-    const ty = Math.min(data.h - 1, Math.floor(y0 + (py + 0.5) / k));
-    for (let px = 0; px < W; px++) {
-      const tx = Math.min(data.w - 1, Math.floor(x0 + (px + 0.5) / k));
-      if (data.terrain[ty * data.w + tx] === 0) continue;
-      let best = -1;
-      let bestV = Infinity;
-      let bestD2 = 0;
-      for (let n = 0; n < nations.length; n++) {
-        const q = nations[n];
-        const d2 = (q.x - px) ** 2 + (q.y - py) ** 2;
-        const v = d2 - q.w;
-        if (v < bestV) {
-          bestV = v;
-          best = n;
-          bestD2 = d2;
-        }
-      }
-      if (best >= 0 && bestD2 < maxD2 + nations[best].w) owner[py * W + px] = best;
-    }
-  }
-  for (let i = 0; i < W * H; i++) {
-    const o = owner[i];
-    if (o < 0) continue;
-    const x = i % W;
-    const edge = (x > 0 && owner[i - 1] !== o) || (x < W - 1 && owner[i + 1] !== o) || (i >= W && owner[i - W] !== o) || (i < W * (H - 1) && owner[i + W] !== o);
-    const [r, g, b] = edge ? nations[o].e : nations[o].c;
-    const a = edge ? 0.85 : 0.4;
-    const p = i * 4;
-    d[p] = d[p] + (r - d[p]) * a;
-    d[p + 1] = d[p + 1] + (g - d[p + 1]) * a;
-    d[p + 2] = d[p + 2] + (b - d[p + 2]) * a;
-  }
-  ctx.putImageData(img, 0, 0);
 }
 
 /** HSL (h en grados, s y l de 0 a 1) a [r, g, b]. */
@@ -336,6 +266,17 @@ function maxBotsFor() {
   return MAX_BOTS;
 }
 
+/** Países de los mapas reales (sin repetir), por nombre: para elegir su bandera como emblema. */
+let countryCache = null;
+function countryList() {
+  if (!countryCache) {
+    const seen = new Map();
+    for (const m of Object.values(REAL_MAP_DATA)) for (const c of m.countries) if (c[3] && !seen.has(c[3])) seen.set(c[3], c[0]);
+    countryCache = [...seen].sort((a, b) => a[1].localeCompare(b[1], 'es'));
+  }
+  return countryCache;
+}
+
 function emblemCanvas(emblem, size = 32) {
   const c = el('canvas', { width: size * 2, height: size * 2, class: 'emblema', 'aria-hidden': 'true' });
   c.style.width = c.style.height = `${size}px`;
@@ -390,7 +331,20 @@ export class Home {
     this._buildGallery();
     // Portada con nuestro mapa (un poco después, para que el menú salga al instante)
     const cover = $('portada-mapa');
-    if (cover) setTimeout(() => paintCover(cover), 60);
+    if (cover) {
+      setTimeout(() => {
+        this.cover = new CoverArt(cover, realPreviewData('mundo'));
+        if (!$('inicio').hidden) this.cover.start();
+      }, 60);
+    }
+    // Tarjetas de modo: solo el título sobre uno de nuestros mapas
+    const modeMaps = { rapida: 'mundo', ia: 'europa', online: 'norteamerica', tutorial: 'sudamerica' };
+    setTimeout(() => {
+      for (const card of document.querySelectorAll('.modo[data-modo]')) {
+        const id = modeMaps[card.dataset.modo];
+        if (id) card.style.setProperty('--fondo-mapa', `url(${mapThumb(id, 360).toDataURL()})`);
+      }
+    }, 120);
     segmented($('seg-dificultad'), [['facil', 'Fácil'], ['normal', 'Normal'], ['dificil', 'Difícil']], this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
     });
@@ -482,7 +436,19 @@ export class Home {
       this._profileChanged();
     });
     $('in-titulo').addEventListener('change', () => {
+      const t = TITLES.find((x) => x.id === $('in-titulo').value);
+      if (t && !isUnlocked(this.profile, t)) {
+        // Título de la tienda: se ofrece comprarlo y el selector vuelve al actual
+        $('in-titulo').value = this.profile.titulo;
+        this._offerTitle(t);
+        return;
+      }
+      $('titulo-compra').hidden = true;
       this.profile.titulo = $('in-titulo').value;
+      this._profileChanged();
+    });
+    $('in-bandera').addEventListener('change', () => {
+      this.profile.emblema.flag = $('in-bandera').value;
       this._profileChanged();
     });
     $('in-emb-fondo').addEventListener('input', () => {
@@ -589,6 +555,7 @@ export class Home {
       el('span', { class: 'dato-portada' }, el('b', { text: String(p.stats.victorias) }), ' victorias'),
       el('span', { class: 'dato-portada' }, el('b', { text: String(p.stats.partidas) }), ' partidas'),
       el('span', { class: 'dato-portada' }, el('b', { text: `${ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length}/${ACHIEVEMENTS.length}` }), ' logros'),
+      el('span', { class: 'dato-portada dato-monedas' }, el('b', { text: `🪙 ${formatNumber(p.monedas || 0)}` }), ' monedas'),
     );
   }
 
@@ -664,57 +631,52 @@ export class Home {
     // Estandartes
     $('sel-estandartes').replaceChildren(
       ...BANNERS.map((b) => {
-        const ok = isUnlocked(p, b);
+        const s = this._shop(b);
         return el(
           'button',
           {
             type: 'button',
             role: 'radio',
             'aria-checked': String(b.id === p.estandarte),
-            class: `estandarte est-${b.id}${ok ? '' : ' bloqueada'}`,
-            disabled: !ok,
-            onclick: () => {
-              p.estandarte = b.id;
-              this._profileChanged();
-            },
+            class: `estandarte est-${b.id}${s.cls}`,
+            disabled: s.disabled,
+            title: s.title,
+            onclick: () => this._pick(b, () => (p.estandarte = b.id)),
           },
           el('span', { class: 'est-nombre', text: b.name }),
-          ok ? null : el('span', { class: 'est-req', text: `🔒 ${unlockText(b)}` }),
+          s.ok ? null : el('span', { class: 'est-req', text: s.label }),
         );
       }),
     );
     // Marcos
     $('sel-marcos').replaceChildren(
       ...FRAMES.map((f) => {
-        const ok = isUnlocked(p, f);
-        const cv = el('canvas', { width: 64, height: 64, class: 'emblema', 'aria-hidden': 'true' });
-        cv.style.width = cv.style.height = '34px';
+        const s = this._shop(f);
+        const cv = el('canvas', { width: 80, height: 80, class: 'emblema', 'aria-hidden': 'true' });
+        cv.style.width = cv.style.height = '40px';
         const cx = cv.getContext('2d');
-        drawEmblem(cx, p.emblema, 32, 32, 40);
-        drawFrame(cx, f.id, 32, 32, 40);
+        drawEmblem(cx, p.emblema, 40, 40, 44);
+        drawFrame(cx, f.id, 40, 40, 44);
         return el(
           'button',
           {
             type: 'button',
             role: 'radio',
             'aria-checked': String(f.id === p.marco),
-            class: `opcion${ok ? '' : ' bloqueada'}`,
-            disabled: !ok,
-            title: ok ? f.name : `${f.name}: ${unlockText(f)}`,
-            onclick: () => {
-              p.marco = f.id;
-              this._profileChanged();
-            },
+            class: `opcion${s.cls}`,
+            disabled: s.disabled,
+            title: s.title,
+            onclick: () => this._pick(f, () => (p.marco = f.id)),
           },
           cv,
-          el('span', { text: ok ? f.name : `🔒 ${unlockText(f)}` }),
+          el('span', { text: s.ok ? f.name : s.label }),
         );
       }),
     );
     // Color del nombre
     $('sel-color-nombre').replaceChildren(
       ...NAME_COLORS.map((n) => {
-        const ok = isUnlocked(p, n);
+        const s = this._shop(n);
         const color = n.color || nameColorOf({ ...p, colorNombre: 'propio' });
         return el(
           'button',
@@ -722,17 +684,14 @@ export class Home {
             type: 'button',
             role: 'radio',
             'aria-checked': String(n.id === p.colorNombre),
-            class: `color-nombre${ok ? '' : ' bloqueada'}`,
-            disabled: !ok,
+            class: `color-nombre${s.cls}`,
+            disabled: s.disabled,
             style: `--c:${color}`,
-            title: ok ? n.name : `${n.name}: ${unlockText(n)}`,
-            onclick: () => {
-              p.colorNombre = n.id;
-              this._profileChanged();
-            },
+            title: s.title,
+            onclick: () => this._pick(n, () => (p.colorNombre = n.id)),
           },
           el('span', { class: 'cn-muestra', text: p.nombre || 'Mi nación' }),
-          el('span', { class: 'cn-nombre', text: ok ? n.name : `🔒 ${unlockText(n)}` }),
+          el('span', { class: 'cn-nombre', text: s.ok ? n.name : s.label }),
         );
       }),
     );
@@ -742,10 +701,12 @@ export class Home {
     $('inicio').hidden = false;
     $('sala').hidden = true;
     this.renderAll();
+    this.cover?.start();
   }
 
   hide() {
     $('inicio').hidden = true;
+    this.cover?.stop();
   }
 
   setView(view) {
@@ -789,6 +750,104 @@ export class Home {
     $('chip-xp').style.width = `${Math.round(info.progress * 100)}%`;
     const total = ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length;
     $('cuenta-logros').textContent = `${total}/${ACHIEVEMENTS.length}`;
+    $('chip-monedas').textContent = `🪙 ${formatNumber(p.monedas || 0)}`;
+    $('bolsa-monedas').textContent = `🪙 ${formatNumber(p.monedas || 0)}`;
+  }
+
+  // ---------------------------------------------------------------- tienda
+
+  /** Estado de un objeto del catálogo: libre, bloqueado o a la venta (y si llega el dinero). */
+  _shop(item) {
+    const p = this.profile;
+    const ok = isUnlocked(p, item);
+    const price = !ok && item.unlock && item.unlock.price;
+    if (ok) return { ok, cls: '', disabled: false, label: item.name, title: item.name };
+    if (!price) return { ok, cls: ' bloqueada', disabled: true, label: `🔒 ${unlockText(item)}`, title: `${item.name}: ${unlockText(item)}` };
+    const afford = (p.monedas || 0) >= price;
+    const asking = this.buying === itemKey(item);
+    return {
+      ok,
+      cls: ` bloqueada en-venta${afford ? '' : ' cara'}${asking ? ' confirmar' : ''}`,
+      disabled: false,
+      label: asking ? `¿Comprar? 🪙 ${formatNumber(price)}` : `🪙 ${formatNumber(price)}`,
+      title: afford ? `${item.name}: cómpralo por ${formatNumber(price)} monedas` : `${item.name}: te faltan ${formatNumber(price - (p.monedas || 0))} monedas`,
+    };
+  }
+
+  /** Clic en un objeto: si es tuyo, se equipa; si está a la venta, primer clic pregunta y el segundo compra. */
+  _pick(item, equip) {
+    const p = this.profile;
+    if (!isUnlocked(p, item)) {
+      const price = item.unlock && item.unlock.price;
+      if (!price) return;
+      if ((p.monedas || 0) < price) {
+        this._flash(`Te faltan 🪙 ${formatNumber(price - (p.monedas || 0))} para «${item.name}». Gánalas con partidas, logros y retos diarios.`);
+        return;
+      }
+      if (this.buying !== itemKey(item)) {
+        this.buying = itemKey(item);
+        this.renderAppearance();
+        this.renderPatterns();
+        this.renderIdentity();
+        return;
+      }
+      this.buying = null;
+      if (!buyItem(p, item)) return;
+      this._flash(`¡Comprado! «${item.name}» ya es tuyo.`, true);
+      this.h.sound?.('coins');
+      if (Object.keys(p.comprados).length >= 5) {
+        const a = grantAchievement(p, 'coleccionista');
+        if (a) this._flash(`¡Logro: ${a.name}! +🪙 ${a.coins}`, true);
+      }
+    }
+    this.buying = null;
+    equip();
+    this._profileChanged();
+    this.renderAchievements();
+  }
+
+  /** Ofrece comprar un título de la tienda (los títulos van en un desplegable). */
+  _offerTitle(t) {
+    const p = this.profile;
+    const box = $('titulo-compra');
+    box.hidden = false;
+    const price = t.unlock && t.unlock.price;
+    if (!price) {
+      box.replaceChildren(el('span', { text: `«${t.name}»: ${unlockText(t)}` }));
+      return;
+    }
+    const afford = (p.monedas || 0) >= price;
+    box.replaceChildren(
+      el('span', { text: afford ? `«${t.name}» cuesta 🪙 ${formatNumber(price)}` : `«${t.name}» cuesta 🪙 ${formatNumber(price)}: te faltan ${formatNumber(price - (p.monedas || 0))}` }),
+      afford
+        ? el('button', {
+            type: 'button',
+            class: 'btn-comprar',
+            text: 'Comprar',
+            onclick: () => {
+              this.buying = itemKey(t);
+              this._pick(t, () => (p.titulo = t.id));
+              box.hidden = true;
+            },
+          })
+        : null,
+    );
+  }
+
+  /** Aviso breve encima de todo (compras, monedas que faltan). */
+  _flash(text, good = false) {
+    let box = document.getElementById('aviso-tienda');
+    if (!box) {
+      box = el('div', { id: 'aviso-tienda', class: 'aviso-tienda', role: 'status' });
+      document.body.append(box);
+    }
+    box.textContent = text;
+    box.classList.toggle('bien', good);
+    box.classList.remove('visible');
+    void box.offsetWidth;
+    box.classList.add('visible');
+    clearTimeout(this._flashT);
+    this._flashT = setTimeout(() => box.classList.remove('visible'), 2600);
   }
 
   // --------------------------------------------------------------- perfil
@@ -808,10 +867,16 @@ export class Home {
     sel.replaceChildren(
       ...TITLES.map((t) => {
         const ok = isUnlocked(p, t);
-        return el('option', { value: t.id, disabled: !ok, text: ok ? t.name : `${t.name} (${unlockText(t)})` });
+        const price = !ok && t.unlock && t.unlock.price;
+        return el('option', { value: t.id, disabled: !ok && !price, text: ok ? t.name : `${price ? '🪙' : '🔒'} ${t.name} (${unlockText(t)})` });
       }),
     );
     sel.value = p.titulo;
+    const flags = $('in-bandera');
+    if (!flags.options.length) {
+      flags.replaceChildren(el('option', { value: '', text: 'Ninguna (forma y símbolo)' }), ...countryList().map(([iso, name]) => el('option', { value: iso, text: name })));
+    }
+    flags.value = p.emblema.flag || '';
 
     this._renderSelector($('sel-formas'), SHAPES, p.emblema.shape, (item) => ({ ...p.emblema, shape: item.id }), (id) => {
       p.emblema.shape = id;
@@ -824,23 +889,20 @@ export class Home {
   _renderSelector(box, items, current, preview, apply) {
     box.replaceChildren(
       ...items.map((item) => {
-        const ok = isUnlocked(this.profile, item);
+        const s = this._shop(item);
         const btn = el(
           'button',
           {
             type: 'button',
             role: 'radio',
             'aria-checked': String(item.id === current),
-            class: `opcion${ok ? '' : ' bloqueada'}`,
-            disabled: !ok,
-            title: ok ? item.name : `${item.name}: ${unlockText(item)}`,
-            onclick: () => {
-              apply(item.id);
-              this._profileChanged();
-            },
+            class: `opcion${s.cls}`,
+            disabled: s.disabled,
+            title: s.title,
+            onclick: () => this._pick(item, () => apply(item.id)),
           },
-          emblemCanvas(preview(item), 30),
-          el('span', { text: ok ? item.name : `🔒 ${unlockText(item)}` }),
+          emblemCanvas({ ...preview(item), flag: '' }, 30),
+          el('span', { text: s.ok ? item.name : s.label }),
         );
         return btn;
       }),
@@ -878,23 +940,21 @@ export class Home {
     const p = this.profile;
     $('sel-patrones').replaceChildren(
       ...PATTERNS.map((item) => {
-        const ok = isUnlocked(p, item);
+        const s = this._shop(item);
         return el(
           'button',
           {
             type: 'button',
             role: 'radio',
             'aria-checked': String(item.id === p.patron),
-            class: `patron${ok ? '' : ' bloqueada'}`,
-            disabled: !ok,
-            onclick: () => {
-              p.patron = item.id;
-              this._profileChanged();
-            },
+            class: `patron${s.cls}`,
+            disabled: s.disabled,
+            title: s.title,
+            onclick: () => this._pick(item, () => (p.patron = item.id)),
           },
           patternCanvas(item.id, p.color),
           el('span', { class: 'patron-nombre', text: item.name }),
-          ok ? null : el('span', { class: 'patron-req', text: `🔒 ${unlockText(item)}` }),
+          s.ok ? null : el('span', { class: 'patron-req', text: s.label }),
         );
       }),
     );
@@ -905,7 +965,8 @@ export class Home {
   renderAchievements() {
     const p = this.profile;
     const done = ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length;
-    $('logros-resumen').textContent = `${done} de ${ACHIEVEMENTS.length}`;
+    $('logros-resumen').textContent = `${done} de ${ACHIEVEMENTS.length} · 🪙 ${formatNumber(p.monedas || 0)}`;
+    this.renderDaily();
     $('lista-logros').replaceChildren(
       ...ACHIEVEMENTS.map((a) => {
         const when = hasAchievement(p, a.id) ? p.logros[a.id] : 0;
@@ -921,13 +982,49 @@ export class Home {
             el('span', { text: a.desc }),
             rewards.length ? el('small', { text: `Recompensa: ${rewards.join(' · ')}` }) : null,
           ),
-          el('span', {
-            class: 'logro-estado',
-            text: when ? new Date(when).toLocaleDateString('es-ES') : 'Pendiente',
-          }),
+          el(
+            'span',
+            { class: 'logro-estado' },
+            a.coins ? el('b', { class: 'logro-monedas', text: `🪙 ${a.coins}` }) : null,
+            el('span', { text: when ? new Date(when).toLocaleDateString('es-ES') : 'Pendiente' }),
+          ),
         );
       }),
     );
+  }
+
+  /** Retos de hoy: tres al día, con su progreso, su premio y el bonus por hacer los tres. */
+  renderDaily() {
+    const p = this.profile;
+    const d = ensureDaily(p);
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const mins = Math.max(1, Math.round((midnight - now) / 60000));
+    $('retos-reloj').textContent = `cambian en ${Math.floor(mins / 60)} h ${mins % 60} min`;
+    $('retos-diarios').replaceChildren(
+      ...d.retos.map((id) => {
+        const r = DAILY.find((x) => x.id === id);
+        if (!r) return null;
+        const prog = Math.min(r.need, d.progreso[id] || 0);
+        const hecho = !!d.hechos[id];
+        return el(
+          'li',
+          { class: hecho ? 'hecho' : '' },
+          el('span', { class: 'reto-icono', 'aria-hidden': 'true', text: r.icon }),
+          el(
+            'div',
+            { class: 'reto-texto' },
+            el('strong', { text: r.name }),
+            el('span', { class: 'reto-barra' }, el('span', { style: `width:${Math.round((100 * prog) / r.need)}%` })),
+            el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}` }),
+          ),
+          el('b', { class: 'reto-premio', text: `🪙 ${r.coins}` }),
+        );
+      }),
+    );
+    const all = d.retos.every((id) => d.hechos[id]);
+    $('retos-bonus').textContent = d.bonus ? `¡Los tres hechos! Bonus de 🪙 ${DAILY_BONUS} conseguido. Mañana, más.` : `Completa los tres y ganas 🪙 ${DAILY_BONUS} más.${all ? '' : ` Llevas ${d.retos.filter((id) => d.hechos[id]).length} de 3.`}`;
+    $('retos-bonus').classList.toggle('bien', !!d.bonus);
   }
 
   // --------------------------------------------------------- clasificación

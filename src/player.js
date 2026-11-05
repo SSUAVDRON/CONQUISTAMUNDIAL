@@ -89,7 +89,7 @@ export class Player {
     this.pattern = 'liso';
 
     /** Contadores de la partida, para logros y estadísticas. */
-    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0, sunk: 0, missiles: 0, maxFactories: 0 };
+    this.stats = { built: 0, kills: 0, landings: 0, alliances: 0, maxGold: 0, maxCities: 0, sunk: 0, missiles: 0, maxFactories: 0, points: 0, capitals: 0, pacts: 0 };
 
     // Diplomacia
     this.allies = new Set();

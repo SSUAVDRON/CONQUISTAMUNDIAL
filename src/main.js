@@ -26,6 +26,7 @@ import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard }
 import { connectTransport } from './net.js';
 import { NetSync, Sala, newRoomCode, normalizeCode, openRooms } from './multiplayer.js';
 import { Sound } from './sonido.js';
+import { Minimap } from './minimapa.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -150,6 +151,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
     const p = game.addPlayer(name, hexToRgb(h.color), true);
     p.emblem = h.emblem;
     p.pattern = h.pattern;
+    // Bandera de un país elegida como emblema: también junto a su nombre y en la clasificación
+    p.flag = (h.emblem && h.emblem.flag) || '';
     return p;
   });
   const myGroup = localIndex >= 0 ? groups.findIndex((g) => g.includes(localIndex)) : -1;
@@ -202,7 +205,26 @@ function startDemo() {
   home.show();
 }
 
+// Minimapa abajo a la izquierda (oculto en el menú y en la partida de fondo)
+const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy) => camera.centerOn(wx, wy));
+const minimapBox = document.getElementById('minimapa');
+function setMinimapFolded(folded) {
+  const box = document.getElementById('minimapa');
+  box.classList.toggle('plegado', folded);
+  document.getElementById('minimapa-plegar').setAttribute('aria-label', folded ? 'Mostrar el minimapa' : 'Ocultar el minimapa');
+}
+document.getElementById('minimapa-plegar').addEventListener('click', () => {
+  const folded = !document.getElementById('minimapa').classList.contains('plegado');
+  setMinimapFolded(folded);
+  profile.ajustes.minimapa = !folded;
+  saveProfile(profile);
+});
+
 function enterGame(game) {
+  const small = TOUCH || window.innerWidth <= 720 || window.innerHeight <= 500;
+  minimap.setMaxSize(small ? 132 : 220, small ? 96 : 170);
+  minimap.setGame(game, state.renderer, camera);
+  setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
   game.onEvent = (evt) => {
     if (!state.demo) sound.onEvent(evt);
@@ -446,6 +468,14 @@ function gameResult() {
     maxFactories: human.stats.maxFactories,
     missiles: human.stats.missiles,
     online: state.online,
+    pointsTaken: human.stats.points || 0,
+    capitalsTaken: human.stats.capitals || 0,
+    pacts: human.stats.pacts || 0,
+    techs: human.techs ? human.techs.size : 0,
+    loot: human.income ? human.income.loot : 0,
+    sunk: human.stats.sunk || 0,
+    coop: !!state.coop,
+    victory: game.rules.victory,
     alive: human.alive,
     survivedSeconds: survived,
     rivals: game.players.length - 2,
@@ -504,6 +534,7 @@ const home = new Home(profile, {
     startGame({ tutorial: true, title: 'Tutorial', mapSize: 'pequeno', bots: 5, difficulty: 'facil', seed: 'trinchera-tutorial', rules: DEFAULT_RULES });
   },
   onSettings: applySettings,
+  sound: (name) => sound.play(name, 0.9, 0),
   onCreateRoom() {
     if (transport) openSala(newRoomCode(), true);
   },
@@ -870,6 +901,7 @@ function frame(now) {
   if (!(state.demo && TOUCH && state.frameNo & 1)) {
     state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
   }
+  if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
   sound.update(state.game, camera, state.human, state.demo);
   updatePointer(now);
 

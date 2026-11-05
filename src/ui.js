@@ -533,12 +533,24 @@ export class UI {
     if (progress) {
       const xp = document.createElement('p');
       xp.className = 'fin-xp';
-      xp.textContent = `+${progress.xp} XP${progress.levelUp ? ` · ¡Subes al nivel ${progress.level}!` : ''}`;
+      xp.textContent = `+${progress.xp} XP · +${progress.coins || 0} 🪙${progress.levelUp ? ` · ¡Subes al nivel ${progress.level}!` : ''}`;
       box.append(xp);
+      for (const d of progress.daily || []) {
+        const li = document.createElement('p');
+        li.className = 'fin-logro';
+        li.textContent = `${d.icon} Reto diario: ${d.name} (+${d.coins} 🪙)`;
+        box.append(li);
+      }
+      if (progress.dailyBonus) {
+        const li = document.createElement('p');
+        li.className = 'fin-logro';
+        li.textContent = `📅 ¡Los tres retos de hoy! (+${progress.dailyBonus} 🪙)`;
+        box.append(li);
+      }
       for (const a of progress.achievements) {
         const li = document.createElement('p');
         li.className = 'fin-logro';
-        li.textContent = `${a.icon} Logro conseguido: ${a.name}`;
+        li.textContent = `${a.icon} Logro conseguido: ${a.name}${a.coins ? ` (+${a.coins} 🪙)` : ''}`;
         box.append(li);
       }
     }

@@ -45,6 +45,7 @@
             <small id="chip-nivel"></small>
             <span class="chip-barra"><span id="chip-xp"></span></span>
           </span>
+          <span id="chip-monedas" class="chip-monedas" title="Tus monedas"></span>
         </button>
       </header>
 
@@ -65,7 +66,6 @@
           <div class="portada-texto">
             <span class="portada-saludo" id="portada-saludo">¡A las trincheras!</span>
             <h1 class="portada-titulo">Conquista el mundo</h1>
-            <p class="portada-sub">Naciones reales, colonias que saquear, buques, misiles y alianzas. Partidas de 15 a 25 minutos.</p>
             <div class="portada-datos" id="portada-datos"></div>
             <div class="portada-botones">
               <button type="button" class="principal grande btn-brillo" id="btn-jugar-ya">
@@ -79,23 +79,15 @@
         <div class="modos">
           <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
             <span class="modo-titulo">Partida rápida</span>
-            <span class="modo-texto">El mundo real contra 90 países y cientos de colonias. Un clic y a la trinchera.</span>
-            <span class="modo-insignia">90 países</span>
           </button>
           <button type="button" class="modo" data-modo="ia" style="--i:1">
             <span class="modo-titulo">Contra la IA</span>
-            <span class="modo-texto">Elige mapa, número de rivales, dificultad y reglas.</span>
-            <span class="modo-insignia">A tu medida</span>
           </button>
           <button type="button" class="modo" data-modo="online" style="--i:2">
             <span class="modo-titulo">Multijugador</span>
-            <span class="modo-texto">Crea una sala o únete con un código.</span>
-            <span class="modo-insignia">Con amigos</span>
           </button>
           <button type="button" class="modo" data-modo="tutorial" style="--i:3">
             <span class="modo-titulo">Tutorial</span>
-            <span class="modo-texto">Aprende lo básico jugando, paso a paso.</span>
-            <span class="modo-insignia">5 minutos</span>
           </button>
         </div>
 
@@ -161,6 +153,8 @@
             <li><b>Desarrollo (tecla I):</b> ingresos por fuente y oro por minuto, lo que rendiría construir una ciudad, fábrica o puerto, tu especialización (industria, infraestructura o desarrollo urbano) y 12 tecnologías en tres ramas; cada una encarece la siguiente, así que hay que elegir.</li>
             <li><b>Pactos y paz:</b> en la ficha de otra nación puedes proponer un pacto de no agresión de 5 min, ofrecer la paz si estáis en guerra (con un tributo en oro si quieres) y pedir ayuda a tus aliados. Romper un pacto te marca como traidor.</li>
             <li><b>Victoria:</b> según el modo de la partida: dominación (el 70 % de la tierra), capitales (controlar el 40 % de todas durante 60 s), economía (900.000 de oro por minuto durante 2 min) o supervivencia (al acabar el tiempo, la mejor puntuación). También ganas si quedas en pie solo con tus aliados.</li>
+            <li><b>Minimapa:</b> abajo a la izquierda ves todo el mapa en pequeño (tu nación late en blanco y el recuadro dorado es lo que ves); haz clic o arrastra en él para ir a ese sitio. Se pliega con su botón.</li>
+            <li><b>Monedas y retos:</b> cada partida da monedas, y más los logros y los 3 retos de cada día (en «Logros»). Gástalas en «Apariencia» en estandartes, marcos, patrones, símbolos, colores y títulos.</li>
             <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R fortaleza · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M misil · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido · I = desarrollo · Z = cambiar orden de ataque · B = defensa fortificada · L = avance continuo en tu último ataque.</li>
           </ul>
         </details>
@@ -191,6 +185,8 @@
                   <label class="campo"><span>Título</span><select id="in-titulo"></select></label>
                 </div>
                 <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
+                <div id="titulo-compra" class="compra-titulo" hidden></div>
+                <label class="campo"><span>Bandera de un país como emblema</span><select id="in-bandera"></select></label>
               </div>
             </div>
             <h3>Forma del emblema</h3>
@@ -223,6 +219,10 @@
 
       <!-- Apariencia -->
       <section class="vista" data-vista="apariencia" role="tabpanel" aria-labelledby="tab-apariencia" hidden>
+        <div class="bolsa">
+          <span class="bolsa-monedas" id="bolsa-monedas"></span>
+          <span class="bolsa-texto">Gana monedas con partidas, logros y retos diarios. Lo marcado con 🪙 se compra: pulsa una vez y otra para confirmar.</span>
+        </div>
         <div class="apariencia-rejilla">
           <div class="bloque">
             <h2>Estandarte</h2>
@@ -245,6 +245,11 @@
 
       <!-- Logros -->
       <section class="vista" data-vista="logros" role="tabpanel" aria-labelledby="tab-logros" hidden>
+        <div class="bloque retos-bloque">
+          <h2>Retos de hoy <small id="retos-reloj" class="nota-inline"></small></h2>
+          <ul id="retos-diarios" class="retos"></ul>
+          <p id="retos-bonus" class="retos-bonus"></p>
+        </div>
         <div class="bloque">
           <h2>Logros <small id="logros-resumen" class="nota-inline"></small></h2>
           <ul id="lista-logros" class="logros"></ul>
@@ -476,6 +481,14 @@
     </div>
 
     <div id="tooltip" hidden></div>
+
+    <!-- Minimapa: el mapa entero; clic o arrastrar = ir allí -->
+    <div id="minimapa" class="panel minimapa">
+      <canvas id="minimapa-lienzo" aria-label="Minimapa: haz clic para ir a ese punto"></canvas>
+      <button type="button" id="minimapa-plegar" class="minimapa-plegar" title="Ocultar o mostrar el minimapa" aria-label="Ocultar el minimapa">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4l4-1.5 4 1.5 4-1.5v9.5l-4 1.5-4-1.5-4 1.5z M6 2.5v9.5 M10 4v9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
 
     <!-- Desarrollo: economía (ingresos por fuente, retorno de inversiones),
          especialización y tecnologías -->

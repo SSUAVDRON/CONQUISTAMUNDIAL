@@ -84,3 +84,73 @@ test('fusionar perfiles no pierde progreso', () => {
   assert.ok(hasAchievement(m, 'primera_partida') && hasAchievement(m, 'marino'));
   assert.equal(m.nombre, 'Desde el móvil', 'la identidad viene del perfil más reciente');
 });
+
+test('monedas: partidas, logros y retos diarios; la tienda las gasta', async () => {
+  const { BANNERS, DAILY, DAILY_BONUS, buyItem, dailyFor, ensureDaily, itemKey } = await import('../src/profile.js');
+  const p = defaultProfile();
+  const out = recordGame(p, result({ won: true, kills: 3 }));
+  assert.ok(out.coins > 0);
+  assert.equal(p.monedas, out.coins);
+  // Las monedas de los logros nuevos van incluidas
+  const achCoins = out.achievements.reduce((s, a) => s + a.coins, 0);
+  assert.ok(out.coins >= achCoins + 10);
+  // Los retos del día son siempre los mismos ese día, tres y distintos
+  const a = dailyFor('2026-11-05');
+  assert.deepEqual(a, dailyFor('2026-11-05'));
+  assert.equal(new Set(a).size, 3);
+  for (const id of a) assert.ok(DAILY.some((d) => d.id === id));
+  // Al cambiar de día, empiezan de cero
+  const d1 = ensureDaily(p, '2026-11-05');
+  d1.progreso[d1.retos[0]] = 1;
+  assert.equal(ensureDaily(p, '2026-11-05'), d1);
+  assert.deepEqual(ensureDaily(p, '2026-11-06').progreso, {});
+  // Tienda: sin dinero no compra; con dinero, descuenta y desbloquea
+  const galaxia = BANNERS.find((b) => b.id === 'galaxia');
+  p.monedas = 10;
+  assert.equal(isUnlocked(p, galaxia), false);
+  assert.equal(buyItem(p, galaxia), false);
+  p.monedas = galaxia.unlock.price + 5;
+  assert.equal(buyItem(p, galaxia), true);
+  assert.equal(p.monedas, 5);
+  assert.ok(isUnlocked(p, galaxia));
+  assert.ok(p.comprados[itemKey(galaxia)]);
+  // No se compra dos veces ni se compra lo que no está a la venta
+  assert.equal(buyItem(p, galaxia), false);
+  assert.equal(buyItem(p, BANNERS.find((b) => b.id === 'real')), false);
+  assert.ok(DAILY_BONUS > 0);
+});
+
+test('completar los tres retos del día da su premio y el bonus', async () => {
+  const { DAILY, DAILY_BONUS, ensureDaily } = await import('../src/profile.js');
+  const p = defaultProfile();
+  const d = ensureDaily(p);
+  // Deja cada reto a un paso de completarse y juega una partida que los cumple todos
+  const big = result({
+    won: true, kills: 20, built: 20, maxShare: 0.5, techs: 5, pointsTaken: 5, capitalsTaken: 2, pacts: 2,
+    landings: 5, missiles: 3, alliances: 2, survivedSeconds: 1200, maxGold: 2000000,
+  });
+  for (const id of d.retos) d.progreso[id] = DAILY.find((x) => x.id === id).need - 1;
+  const out = recordGame(p, big);
+  assert.equal(out.daily.length, 3);
+  assert.equal(out.dailyBonus, DAILY_BONUS);
+  assert.equal(p.stats.retosDiarios, 3);
+  // Otra partida el mismo día ya no repite premio
+  const again = recordGame(p, big);
+  assert.equal(again.daily.length, 0);
+  assert.equal(again.dailyBonus, 0);
+});
+
+test('compras y bandera del emblema sobreviven a la fusión y a la limpieza', () => {
+  const a = defaultProfile();
+  a.comprados = { 'estandarte:galaxia': 1 };
+  a.actualizado = 1;
+  const b = defaultProfile();
+  b.comprados = { 'marco:diamante': 2 };
+  b.actualizado = 2;
+  b.emblema.flag = 'es';
+  const m = mergeProfiles(a, b);
+  assert.ok(m.comprados['estandarte:galaxia'] && m.comprados['marco:diamante']);
+  assert.equal(m.emblema.flag, 'es');
+  assert.equal(normalizeProfile({ emblema: { flag: '<script>' } }).emblema.flag, '');
+  assert.equal(normalizeProfile({ monedas: -50 }).monedas, 0);
+});

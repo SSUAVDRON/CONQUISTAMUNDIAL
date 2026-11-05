@@ -777,7 +777,7 @@ export class Renderer {
         ctx.fill();
       }
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
-      if (named) {
+      if (named && !capital) {
         ctx.font = '700 10px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
@@ -1562,7 +1562,7 @@ export class Renderer {
   _nameSprite(p, size, me, allied, traitor, player) {
     const e = this._labelEntry(p).name;
     const color = me ? this.options.nameColor || '#ffd23f' : '';
-    const flag = !player && flagReady() && hasFlag(p.flag);
+    const flag = flagReady() && hasFlag(p.flag);
     const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${this.dpr}`;
     if (e.key === key) return e;
     e.key = key;
@@ -1597,7 +1597,12 @@ export class Renderer {
     g.fillText(name, e.tx, e.ty);
     g.shadowBlur = 0;
     g.shadowColor = 'transparent';
-    if (player) {
+    if (player && flag) {
+      // Jugador con la bandera de un país como emblema: la bandera y una insignia pequeña de persona
+      const fx = e.tx - w / 2 - size * 0.85;
+      drawFlag(g, p.flag, fx, e.ty, size * 0.8);
+      drawPlayerBadge(g, fx + size * 0.5, e.ty + size * 0.38, size * 0.6, p.color);
+    } else if (player) {
       // Jugador de verdad (no un bot): insignia con una silueta de persona
       drawPlayerBadge(g, e.tx - w / 2 - size * 0.75, e.ty, size * 1.05, p.color);
     } else if (iconW) {

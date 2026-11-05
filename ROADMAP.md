@@ -169,6 +169,11 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   inversiones, pactos de no agresión, paz con tributo y petición de ayuda,
   victorias por capitales, economía y supervivencia, estimaciones y
   consejos, y cooperativo de dos jugadores por nación con roles opcionales
+- Minimapa abajo a la izquierda (clic o arrastrar para ir; plegable),
+  portada animada del inicio y tarjetas de modo sin descripciones
+- Monedas (partidas, logros y retos), 3 retos diarios con bonus, 38 logros,
+  tienda en Apariencia y títulos, muchas skins nuevas (formas, símbolos,
+  estandartes, marcos, colores y patrones) y la bandera de un país como emblema
 
 ## Próximo
 
