@@ -4,6 +4,7 @@ import { AREA, RES, TERRAIN } from './config.js';
 import { Rng, hashString } from './rng.js';
 import { createNoise2D, fbm } from './noise.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
+import { RIVERS } from './rios.js';
 
 const { WATER, PLAINS, HIGHLAND, MOUNTAIN } = TERRAIN;
 
@@ -20,6 +21,7 @@ export class GameMap {
     this.size = width * height;
     this.terrain = terrain; // Uint8Array, valores de TERRAIN
     this.shade = shade; // Uint8Array 0..255: altura relativa (tierra) o profundidad (agua)
+    this.river = new Uint8Array(width * height); // 0 = sin río, 1 = río, 2 = río grande
     this._computeDerived();
   }
 
@@ -200,7 +202,142 @@ export function generateMap(width, height, seed) {
   }
   map.relief = { w: rw, h: rh, step, data };
   map.tileKm = 7; // relieve algo más suave que en los mapas reales
+  traceRivers(map, elev, rng);
   return map;
+}
+
+/**
+ * Ríos de un mapa aleatorio: nacen en tierras altas y bajan siempre por la
+ * casilla vecina más baja hasta el mar (o hasta otro río, que desde ahí pasa
+ * a ser un río grande). Si se quedan en un hoyo, lo cruzan subiendo un poco;
+ * si no llegan, se descartan. Todo con la semilla: igual en todos los equipos.
+ */
+function traceRivers(map, elev, rng) {
+  const { width: W, height: H, size, terrain, river } = map;
+  const want = Math.max(4, Math.round(map.landCount / (2600 * AREA)));
+  const minLen = 14 * RES;
+  const spacing = 22 * RES;
+  const nb = new Int32Array(4);
+  const visit = new Int32Array(size); // sello por río (evita que dé vueltas)
+  const owner = new Int32Array(size).fill(-1); // qué río pasa por cada casilla
+  const paths = [];
+  const sources = [];
+  // Candidatas: tierra alta; se prueban en orden aleatorio (con la semilla)
+  const high = [];
+  for (let i = 0; i < size; i++) if (terrain[i] === HIGHLAND || terrain[i] === MOUNTAIN) high.push(i);
+  if (!high.length) return;
+  for (let attempt = 0; attempt < want * 12 && paths.length < want; attempt++) {
+    const s = high[rng.int(0, high.length - 1)];
+    const sx = s % W;
+    const sy = (s / W) | 0;
+    if (sources.some((t) => Math.abs((t % W) - sx) + Math.abs(((t / W) | 0) - sy) < spacing)) continue;
+    const stamp = attempt + 1;
+    const path = [s];
+    visit[s] = stamp;
+    let t = s;
+    let uphill = 0;
+    let end = -1; // -1 = no llegó; -2 = al mar; ≥0 = río al que se une
+    for (let step = 0; step < 6000; step++) {
+      const c = map.neighbors(t, nb);
+      let best = -1;
+      let bestE = Infinity;
+      for (let k = 0; k < c; k++) {
+        const n = nb[k];
+        if (terrain[n] === WATER) {
+          best = n;
+          bestE = -Infinity;
+          break;
+        }
+        if (visit[n] === stamp) continue;
+        if (elev[n] < bestE) {
+          bestE = elev[n];
+          best = n;
+        }
+      }
+      if (best < 0) break;
+      if (bestE === -Infinity) {
+        end = -2;
+        break;
+      }
+      if (bestE > elev[t] && ++uphill > 30 * RES) break;
+      t = best;
+      visit[t] = stamp;
+      if (owner[t] >= 0) {
+        end = owner[t];
+        break;
+      }
+      path.push(t);
+    }
+    if (end === -1 || path.length < minLen) continue;
+    const id = paths.length;
+    for (const p of path) {
+      owner[p] = id;
+      riverBrush(W, H, terrain, river, p % W, (p / W) | 0, 1);
+    }
+    paths.push(path);
+    sources.push(s);
+    if (end >= 0) {
+      // Se une a otro río: desde ahí abajo, río grande
+      const other = paths[end];
+      const at = other.indexOf(t);
+      for (let k = Math.max(0, at); k < other.length; k++) riverBrush(W, H, terrain, river, other[k] % W, (other[k] / W) | 0, 2);
+    }
+  }
+}
+
+/** Ancho del río en casillas según su clase (con casillas pequeñas, algo más ancho para que se vea). */
+const RIVER_WIDTH = [0, Math.max(1, RES >> 1), Math.max(2, (RES * 3) >> 2)];
+
+/** Pinta un trazo de río centrado en (x, y), solo sobre tierra. */
+function riverBrush(w, h, terrain, river, x, y, cls) {
+  const size = RIVER_WIDTH[cls];
+  const x0 = x - ((size - 1) >> 1);
+  const y0 = y - ((size - 1) >> 1);
+  for (let yy = y0; yy < y0 + size; yy++) {
+    if (yy < 0 || yy >= h) continue;
+    for (let xx = x0; xx < x0 + size; xx++) {
+      if (xx < 0 || xx >= w) continue;
+      const i = yy * w + xx;
+      if (terrain[i] !== WATER && river[i] < cls) river[i] = cls;
+    }
+  }
+}
+
+/**
+ * Marca sobre la tierra los ríos dados como polilíneas [clase, x0, y0, x1, y1, …]
+ * (clase 2 = río grande, dos casillas de ancho). Las líneas van de casilla en
+ * casilla sin saltos en diagonal: un río no deja pasar entre dos casillas.
+ */
+export function markRivers(w, h, terrain, lines, river = new Uint8Array(w * h)) {
+  const mark = (x, y, cls) => riverBrush(w, h, terrain, river, x, y, cls);
+  for (const line of lines) {
+    const cls = line[0];
+    for (let k = 1; k + 3 < line.length; k += 2) {
+      let x = line[k];
+      let y = line[k + 1];
+      const x1 = line[k + 2];
+      const y1 = line[k + 3];
+      const dx = Math.abs(x1 - x);
+      const dy = Math.abs(y1 - y);
+      const sx = x < x1 ? 1 : -1;
+      const sy = y < y1 ? 1 : -1;
+      let ix = 0;
+      let iy = 0;
+      for (let n = 0; n <= dx + dy; n++) {
+        mark(x, y, cls);
+        if (n === dx + dy) break;
+        // Avanza en x o en y (enteros: igual en todos los navegadores)
+        if ((1 + 2 * ix) * dy < (1 + 2 * iy) * dx) {
+          x += sx;
+          ix++;
+        } else {
+          y += sy;
+          iy++;
+        }
+      }
+    }
+  }
+  return river;
 }
 
 /** x^1,5 sin Math.pow (mismo resultado en todos los navegadores). */
@@ -273,6 +410,7 @@ export function loadRealMap(id) {
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
+  markRivers(w, h, terrain, RIVERS[id] || [], map.river);
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
   map.relief = data.relief ? decodeRelief(data.relief) : null;
   // Kilómetros por casilla (a media latitud): para la fuerza del sombreado del relieve

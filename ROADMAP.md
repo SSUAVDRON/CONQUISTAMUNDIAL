@@ -178,6 +178,10 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   siguiente (en todos los frentes a la vez), las tropas cuentan de forma
   continua (exactas hasta 9999 en el mapa; tus cifras con más precisión) y
   los nombres se deslizan a su sitio nuevo en vez de saltar
+- Fronteras de dos franjas con el color vivo del país (fuera más oscuro),
+  relleno más transparente y terreno con grano de píxel
+- Ríos: los reales de Natural Earth en los mapas del mundo y ríos que bajan
+  de las montañas al mar en los aleatorios; cruzarlos cuesta ×1,6
 
 ## Próximo
 

@@ -45,6 +45,7 @@ export const CONFIG = {
 
   // Ataques
   terrainCost: [Infinity, 1.0, 1.4, 2.0], // indexado por TERRAIN
+  riverCost: 1.6, // cruzar un río cuesta más tropas y tiempo (frontera natural)
   wildTileCost: 55 / AREA, // tropas por casilla de tierra libre (llanura): lo que te expandes va con las tropas que mandas
   playerTileBaseCost: 1 / AREA, // coste fijo por casilla enemiga
   defenseDensityMult: 0.75, // coste extra por cada tropa/casilla del defensor

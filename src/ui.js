@@ -1515,7 +1515,7 @@ export class UI {
       return;
     }
     const map = game.map;
-    const terrain = TERRAIN_NAMES[map.terrain[tile]];
+    const terrain = map.river[tile] ? `Río (cruzarlo cuesta ×${CONFIG.riverCost} tropas)` : TERRAIN_NAMES[map.terrain[tile]];
     if (!map.isLand(tile)) {
       tip.hidden = true;
       return;

@@ -39,6 +39,9 @@ navegador y, en el enlace de Claude, también en tu cuenta.
   por país) y aparecen en su ubicación. Cordilleras y mesetas reales hacen más lento y
   caro avanzar.
 - **Aleatorios:** pequeño, mediano y grande, generados con la semilla.
+- **Ríos:** en todos los mapas (los reales, con los ríos de verdad; en los
+  aleatorios nacen en las montañas y bajan hasta el mar). Cruzar un río cuesta
+  ×1,6 tropas y tiempo: son fronteras naturales y la expansión los toma al final.
 
 En todos los mapas se eliminan las islas de menos de 40 casillas y los lagos de
 menos de 12, para no perder el tiempo conquistando islotes.
@@ -56,7 +59,12 @@ node herramientas/mapas.js <carpeta con los .geojson de Natural Earth> <ETOPO5.D
 
 Necesita `ne_50m_admin_0_countries` y `ne_50m_lakes` (GeoJSON, en
 github.com/nvkelso/natural-earth-vector) y el fichero `ETOPO5.DOS` de NOAA.
-Escribe `src/mapas-reales.js`.
+Escribe `src/mapas-reales.js`. Los ríos van aparte (`src/rios.js`), desde
+`ne_50m_rivers_lake_centerlines` de Natural Earth:
+
+```bash
+node herramientas/rios.js <ne_50m_rivers_lake_centerlines.geojson>
+```
 
 Las banderas son de [flag-icons](https://github.com/lipis/flag-icons) (MIT).
 Para regenerar el sprite (`src/banderas.js`) con los SVG `4x3` de esa colección:
@@ -200,7 +208,8 @@ dominia/
 ├── servidor.js         Servidor estático para desarrollo (npm start)
 ├── herramientas/
 │   ├── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
-│   └── mapas.js        Genera src/mapas-reales.js desde Natural Earth
+│   ├── mapas.js        Genera src/mapas-reales.js desde Natural Earth
+│   └── rios.js         Genera src/rios.js (ríos de los mapas reales)
 ├── src/
 │   ├── config.js       ← Todos los números de equilibrio (empieza aquí para ajustar)
 │   ├── main.js         Bucle principal y unión de las piezas

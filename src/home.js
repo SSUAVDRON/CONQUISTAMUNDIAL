@@ -2,7 +2,8 @@
 // clasificación, y la sala de espera del multijugador.
 import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel } from './config.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
-import { decodeRelief, generateMap } from './map.js';
+import { decodeRelief, generateMap, markRivers } from './map.js';
+import { RIVERS } from './rios.js';
 import { paintMapPreview } from './terreno.js';
 import { CoverArt } from './portada.js';
 import { hexToRgb } from './colors.js';
@@ -74,7 +75,7 @@ function realPreviewData(id) {
   }
   const mid = data.lat ? (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180 : 0;
   const tileKm = data.lon ? ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w : 5;
-  d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries };
+  d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries, river: markRivers(w, h, terrain, RIVERS[id] || []) };
   realCache.set(id, d);
   return d;
 }
@@ -103,7 +104,7 @@ function mapThumb(id, width = 168) {
   else {
     const size = MAP_SIZES[id];
     const map = generateMap(Math.round(size.w / (3 * RES)), Math.round(size.h / (3 * RES)), 7 + Object.keys(MAP_SIZES).indexOf(id));
-    data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3 };
+    data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river };
   }
   const height = Math.round((width * data.h) / data.w);
   const c = el('canvas', { width, height, 'aria-hidden': 'true' });

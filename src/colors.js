@@ -36,6 +36,30 @@ export function rgbToCss([r, g, b], a = 1) {
   return a === 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${a})`;
 }
 
+/** [h (grados), s, l] de un color [r, g, b]. */
+export function rgbToHsl([r, g, b]) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+
+/**
+ * El mismo tono, más vivo: la saturación sube `ds` y la luz se multiplica por
+ * `fl` (acotada a [lo, hi]). Para fronteras con color, no grises.
+ */
+export function vividRgb(rgb, ds, fl, lo = 0.12, hi = 0.8) {
+  const [h, s, l] = rgbToHsl(rgb);
+  return hslToRgb(h, Math.min(1, s + ds), Math.max(lo, Math.min(hi, l * fl)));
+}
+
 export function shadeRgb([r, g, b], f) {
   if (f < 1) return [Math.round(r * f), Math.round(g * f), Math.round(b * f)];
   const t = f - 1;

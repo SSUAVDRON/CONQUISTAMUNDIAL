@@ -881,7 +881,7 @@ export class Game {
     const y = (t / map.width) | 0;
     const s = (atk.attacker.id * 7919 + this.seed) | 0;
     const lobes = valueNoise(x, y, CONFIG.growCell, s) * CONFIG.growNoise + valueNoise(x, y, CONFIG.growCell / 3, s + 1) * CONFIG.growNoiseFine;
-    const terr = (CONFIG.terrainCost[map.terrain[t]] - 1) * CONFIG.growTerrain;
+    const terr = (CONFIG.terrainCost[map.terrain[t]] * (map.river[t] ? CONFIG.riverCost : 1) - 1) * CONFIG.growTerrain;
     let k = atk.targetId ? CONFIG.growPlayerMult : 1;
     let focus = 0;
     if (atk.focus >= 0) {
@@ -921,7 +921,7 @@ export class Game {
    * multiplicador de tiempo (terreno × fortalezas).
    */
   tileCost(t, target) {
-    const m = CONFIG.terrainCost[this.map.terrain[t]];
+    const m = CONFIG.terrainCost[this.map.terrain[t]] * (this.map.river[t] ? CONFIG.riverCost : 1);
     if (!target) return { cost: CONFIG.wildTileCost * m, loss: 0, slow: m };
     let fort = this.fortMultiplier(target, t) * this.passMultiplier(target, t) * (1 + target.mods.defense);
     if (this.isTraitor(target)) fort *= CONFIG.traitorDefenseMult;

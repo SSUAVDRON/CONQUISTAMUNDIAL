@@ -77,6 +77,16 @@ function hypso(e) {
   cb = a[3] + (b[3] - a[3]) * t;
 }
 
+// Ríos: azul de agua dulce (algo más claro que el mar) y el de los grandes, más hondo
+const RIVER = [62, 118, 172];
+const RIVER_BIG = [46, 96, 152];
+
+/** ¿Toca la casilla de río `i` tierra sin río? (orilla, algo más oscura) */
+function riverEdge(i, W, H, river) {
+  const x = i % W;
+  return (x > 0 && !river[i - 1]) || (x < W - 1 && !river[i + 1]) || (i >= W && !river[i - W]) || (i < W * (H - 1) && !river[i + W]);
+}
+
 /** Píxeles de terreno por casilla: más en mapas pequeños, sin pasarse de memoria. */
 export function terrainScale(map) {
   return clamp(Math.floor(Math.sqrt(3.2e6 / map.size)), 1, 4);
@@ -165,7 +175,8 @@ function paintTerrainNow(map) {
       const moist = valueNoise(x, y, 30 * RES, seed);
       const dry = lat >= 0 ? clamp(sub * (1.3 - moist * 0.8), 0, 1) : smooth(0.34, 0.16, moist);
       hypso(e + dry * 320 + ridge * 120);
-      const px = (hash2(x, y, seed + 17) - 0.5) * 4;
+      // Grano por casilla: el terreno se ve en píxeles, como un mapa de juego
+      const px = (hash2(x, y, seed + 17) - 0.5) * 14;
       R[i] = cr + px;
       G[i] = cg + px;
       B[i] = cb + px;
@@ -237,6 +248,7 @@ function paintTerrainNow(map) {
   };
 
   // ---- Tierra a alta resolución
+  const river = map.river && map.river.some((v) => v) ? map.river : null;
   const LW = W * S;
   const LH = H * S;
   const land = makeCanvas(LW, LH);
@@ -268,6 +280,15 @@ function paintTerrainNow(map) {
         const g = k ? 196 : 100;
         const b = k ? 214 : 140;
         px[o] = ((Math.round(a * 255) << 24) | (b << 16) | (g << 8) | r) >>> 0;
+        continue;
+      }
+      const rv = river ? river[i] : 0;
+      if (rv) {
+        // Río: azul algo más claro que el mar (los grandes, un poco más hondos),
+        // con la orilla un pelín más oscura y algo de grano
+        const bank = (riverEdge(i, W, H, river) ? 0.86 : 1) + (hash2(pxl, py, seed + 41) - 0.5) * 0.05;
+        const c = rv === 2 ? RIVER_BIG : RIVER;
+        px[o] = ((255 << 24) | ((clamp(c[2] * bank, 0, 255) | 0) << 16) | ((clamp(c[1] * bank, 0, 255) | 0) << 8) | (clamp(c[0] * bank, 0, 255) | 0)) >>> 0;
         continue;
       }
       // Color plano de la casilla
@@ -329,7 +350,7 @@ function paintTerrainNow(map) {
       const g = 56 + (45 - 56) * k1;
       const b = 102 + (92 - 102) * k1;
       // Grano de píxel apenas visible
-      const n = (hash2(x, y, seed + 29) - 0.5) * 2.5;
+      const n = (hash2(x, y, seed + 29) - 0.5) * 5;
       wd[o] = clamp(r + n * 0.5, 0, 255);
       wd[o + 1] = clamp(g + n * 0.8, 0, 255);
       wd[o + 2] = clamp(b + n, 0, 255);
@@ -393,6 +414,13 @@ export function paintMapPreview(canvas, data, crop = null) {
         d[o] = 18;
         d[o + 1] = 45;
         d[o + 2] = 90;
+        continue;
+      }
+      if (data.river && data.river[i]) {
+        const c = data.river[i] === 2 ? RIVER_BIG : RIVER;
+        d[o] = c[0];
+        d[o + 1] = c[1];
+        d[o + 2] = c[2];
         continue;
       }
       const e = elev(tx, ty);

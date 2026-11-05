@@ -65,3 +65,39 @@ test('pedir más bots que países añade naciones inventadas además de los paí
   game.start();
   assert.ok(players.every((p) => p.spawned), 'todas aparecen en el mapa');
 });
+
+test('ríos: solo sobre tierra, sin huecos en diagonal y iguales con la misma semilla', async () => {
+  const { generateMap, loadRealMap, markRivers } = await import('../src/map.js');
+  const { CONFIG } = await import('../src/config.js');
+  const { Game } = await import('../src/game.js');
+  // Una línea diagonal queda unida casilla a casilla (no se puede pasar entre dos)
+  const w = 12;
+  const h = 12;
+  const terrain = new Uint8Array(w * h).fill(1);
+  const r = markRivers(w, h, terrain, [[1, 1, 1, 9, 7]]);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!r[y * w + x] || (x === 9 && y === 7)) continue;
+      const next = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => r[(y + dy) * w + x + dx]).length;
+      assert.ok(next >= 1, `casilla de río aislada en ${x},${y}`);
+    }
+  }
+  // Mapas aleatorios: deterministas y nunca sobre el agua
+  const a = generateMap(400, 240, 99);
+  const b = generateMap(400, 240, 99);
+  assert.deepEqual(a.river, b.river);
+  let n = 0;
+  for (let i = 0; i < a.size; i++) {
+    if (!a.river[i]) continue;
+    n++;
+    assert.notEqual(a.terrain[i], 0);
+  }
+  assert.ok(n > 0, 'el mapa aleatorio debería tener algún río');
+  // Mapas reales: hay ríos, y cruzarlos cuesta más
+  const { map } = loadRealMap('europa');
+  const t = map.river.findIndex((v, i) => v && map.terrain[i] === 1);
+  assert.ok(t >= 0);
+  const g = new Game({ map, seed: 1 });
+  const plain = map.landTiles.find((i) => !map.river[i] && map.terrain[i] === 1);
+  assert.ok(Math.abs(g.tileCost(t, null).cost / g.tileCost(plain, null).cost - CONFIG.riverCost) < 1e-9);
+});
