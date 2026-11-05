@@ -927,7 +927,8 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 #pj-barra {
   position: relative;
   background: linear-gradient(90deg, #d99a2b, #f2b33d 60%, #ffe39a);
-  transition: width 0.35s ease-out;
+  /* Se actualiza cada 200 ms: a ritmo constante, así crece sin pulsos */
+  transition: width 0.22s linear;
   border-radius: 4px;
 }
 #pj-barra::after {

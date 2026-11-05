@@ -2,7 +2,7 @@
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
 import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
-import { formatNumber, formatPercent, formatTime } from './format.js';
+import { formatCount, formatNumber, formatPercent, formatTime } from './format.js';
 import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
@@ -66,27 +66,40 @@ const MAX_FRONTS = 4;
 const FRONT_GRACE_MS = 1800; // un combate que termina se queda un momento atenuado
 
 /** Cifra que se acerca suavemente a su valor (sin saltos ni parpadeos). */
+/**
+ * Cifra animada: cuando cambia el objetivo, va hasta él a ritmo constante en
+ * `dur` ms. Si el objetivo cambia a cada turno y `dur` dura lo mismo que un
+ * turno, la cifra cuenta de forma continua (sin acelerones ni frenazos).
+ */
 class Counter {
-  constructor(el, fmt = formatNumber) {
+  constructor(el, fmt = formatNumber, dur = 210) {
     this.el = el;
     this.fmt = fmt;
+    this.dur = dur;
     this.value = null;
     this.target = 0;
+    this.from = 0;
+    this.t = 0;
     this.text = '';
   }
 
   set(target) {
-    this.target = target;
     if (this.value === null) {
-      this.value = target;
+      this.value = this.target = this.from = target;
       this._write();
+      return;
     }
+    if (target === this.target) return;
+    this.target = target;
+    this.from = this.value;
+    this.t = 0;
   }
 
   step(dt) {
     if (this.value === null || this.value === this.target) return;
-    this.value += (this.target - this.value) * (1 - Math.exp(-dt / 140));
-    if (Math.abs(this.target - this.value) < 0.5) this.value = this.target;
+    this.t += dt;
+    const k = Math.min(1, this.t / this.dur);
+    this.value = this.from + (this.target - this.from) * k;
     this._write();
   }
 
@@ -109,10 +122,12 @@ export class UI {
     this._lbIndex = new Map();
     this._counters = new Set();
     this._lastEvent = null;
-    this._troops = this._counter($('pj-tropas'));
-    this._pop = this._counter($('pj-pob'));
-    this._troopsMax = this._counter($('pj-tropas-max'));
-    this._gold = this._counter($('pj-oro'));
+    // Las del panel cambian a cada turno (cada 100 ms): se animan en lo que dura uno
+    this._troops = this._counter($('pj-tropas'), formatCount, 115);
+    this._pop = this._counter($('pj-pob'), formatCount, 115);
+    this._troopsMax = this._counter($('pj-tropas-max'), undefined, 115);
+    this._gold = this._counter($('pj-oro'), formatCount, 115);
+    this._liveTick = -1;
 
     $('ratio').addEventListener('input', () => this.handlers.onRatio?.(Number($('ratio').value) / 100));
     // Reparto soldados / trabajadores: se envía al soltar y, mientras se
@@ -737,10 +752,24 @@ export class UI {
     }, 850);
   }
 
-  _counter(el, fmt) {
-    const c = new Counter(el, fmt);
+  _counter(el, fmt, dur) {
+    const c = new Counter(el, fmt, dur);
     this._counters.add(c);
     return c;
+  }
+
+  /**
+   * Cifras principales del panel (tropas, población, máximo y oro): se leen
+   * en cuanto cambia el turno, no cada 200 ms, para que cuenten sin tirones.
+   * Llamar en cada fotograma; solo hace algo cuando hay turno nuevo.
+   */
+  liveNumbers(game, human) {
+    if (!human || game.ticks === this._liveTick) return;
+    this._liveTick = game.ticks;
+    this._troops.set(human.troops);
+    this._pop.set(human.population());
+    this._troopsMax.set(human.maxTroops());
+    this._gold.set(human.gold);
   }
 
   /** Avanza las cifras animadas (llamar en cada frame). */

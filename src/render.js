@@ -5,7 +5,7 @@
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
 import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb } from './colors.js';
-import { formatNumber } from './format.js';
+import { formatCount, formatNumber, formatTroops } from './format.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
@@ -140,7 +140,11 @@ export class Renderer {
     this._gen = 0;
     this._tick = game.ticks;
     this._tickAt = 0;
+    this._tickDur = TICK_MS;
     this._frac = 1;
+    this._fracEarly = 1;
+    this._runN = 0;
+    this._smooth = new WeakMap(); // cifras que suben poco a poco entre turnos
     this._dt = 0;
     this._lastNow = 0;
     this._trailAcc = 0;
@@ -170,6 +174,7 @@ export class Renderer {
     this.alt = new Uint32Array(n);
     this.border = new Uint32Array(n);
     this.patterns = new Array(n).fill(null);
+    this._anyPattern = false;
     this.allied = new Uint8Array(n);
     this.glowCol = GLOW_MIX.map(() => [new Uint32Array(n), new Uint32Array(n)]);
     const human = this.game.human;
@@ -184,6 +189,7 @@ export class Renderer {
       // Patrón del perfil: algunas casillas con un tono más oscuro.
       // Los aliados llevan franjas verdes en diagonal: se reconocen de un vistazo.
       this.patterns[p.id] = PATTERN_FNS[p.pattern] || null;
+      if (this.patterns[p.id]) this._anyPattern = true;
       const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(p.color, 0.72);
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para el humano y verde para sus aliados
@@ -195,15 +201,25 @@ export class Renderer {
     }
   }
 
+  /**
+   * ¿Es frontera la casilla `i` tal como se ve ahora? (Se calcula con el
+   * dueño que se muestra, que puede ir unos milisegundos por detrás de la
+   * simulación mientras se revela el último turno.)
+   */
+  _shownBorder(i, o) {
+    const s = this.prevOwner;
+    const w = this.game.map.width;
+    const x = i % w;
+    return x === 0 || x === w - 1 || i < w || i >= s.length - w || s[i - 1] !== o || s[i + 1] !== o || s[i - w] !== o || s[i + w] !== o;
+  }
+
   _paintTile(i) {
-    const o = this.game.owner[i];
+    const o = this.prevOwner[i];
     if (!o) {
       this.pixels[i] = 0;
       return;
     }
-    const p = this.game.players[o];
-    const border = p.border;
-    if (border.has(i)) {
+    if (this._shownBorder(i, o)) {
       this.pixels[i] = this.border[o];
       return;
     }
@@ -214,12 +230,26 @@ export class Renderer {
       this.pixels[i] = (x + y) % 7 < 2 ? this.alt[o] : this.fill[o];
       return;
     }
-    if ((x > 0 && border.has(i - 1)) || (x < w - 1 && border.has(i + 1)) || border.has(i - w) || border.has(i + w)) {
+    const pattern = this.patterns[o];
+    // Sin patrón junto a la frontera (franja interior lisa)
+    if (pattern && (this._shownBorder(i - 1, o) || this._shownBorder(i + 1, o) || this._shownBorder(i - w, o) || this._shownBorder(i + w, o))) {
       this.pixels[i] = this.inner[o];
       return;
     }
-    const pattern = this.patterns[o];
     this.pixels[i] = pattern && pattern(x, y) ? this.alt[o] : this.fill[o];
+  }
+
+  /** Repinta una casilla solo si su dueño lleva patrón (si no, no le afecta lo de dos casillas más allá). */
+  _repaintPattern(i) {
+    if (i >= 0 && i < this.pixels.length && this.patterns[this.prevOwner[i]]) this._repaint(i);
+  }
+
+  /** Repinta una casilla (si existe) y marca su bloque para subirlo. */
+  _repaint(i) {
+    if (i < 0 || i >= this.pixels.length) return;
+    this._paintTile(i);
+    const w = this.game.map.width;
+    this._markChunk(i % w, (i / w) | 0);
   }
 
   /**
@@ -276,71 +306,147 @@ export class Renderer {
     return x >= v.x0 - margin && y >= v.y0 - margin && x <= v.x1 + margin && y <= v.y1 + margin;
   }
 
-  /** Repinta lo que cambió y lanza destellos y chispas donde se conquista. */
+  /**
+   * Territorio que cambió. La simulación avanza a saltos (10 turnos por
+   * segundo): si se pintara todo lo conquistado en un turno de golpe, el
+   * avance se vería a tirones. Así que lo de cada turno se pone en cola y se
+   * va mostrando poco a poco hasta el turno siguiente, en el orden en que se
+   * conquistó y a la vez en todos los frentes.
+   */
   _flushDirty(now) {
     const game = this.game;
     const dirty = game.dirty;
-    if (!dirty.length) return;
-    const owner = game.owner;
-    const prev = this.prevOwner;
-    const map = game.map;
-    const W = map.width;
-    const size = map.size;
+    if (dirty.length) {
+      // Turno nuevo: primero se termina de mostrar el anterior
+      this._reveal(1, now);
+      this._queueChanges(dirty);
+      dirty.length = 0;
+    }
+    if (this._runN) this._reveal(this.anim ? this._fracEarly : 1, now);
+  }
+
+  /** Mete en la cola las casillas que han cambiado de dueño, agrupadas por tramos del mismo conquistador. */
+  _queueChanges(dirty) {
+    const owner = this.game.owner;
+    const shown = this.prevOwner;
+    const size = shown.length;
+    if (!this._queued) {
+      this._queued = new Uint8Array(size);
+      this._q = new Int32Array(1024);
+      this._runA = new Int32Array(64); // inicio del tramo en la cola
+      this._runB = new Int32Array(64); // fin
+      this._runD = new Int32Array(64); // cuántas ya mostradas
+    }
+    let n = 0;
+    let runs = 0;
+    let lastOwner = -1;
+    for (let k = 0; k < dirty.length; k++) {
+      const t = dirty[k];
+      const o = owner[t];
+      if (o === shown[t] || this._queued[t]) continue;
+      this._queued[t] = 1;
+      if (n >= this._q.length) {
+        const q = new Int32Array(this._q.length * 2);
+        q.set(this._q);
+        this._q = q;
+      }
+      if (o !== lastOwner) {
+        if (runs) this._runB[runs - 1] = n;
+        if (runs >= this._runA.length) {
+          for (const key of ['_runA', '_runB', '_runD']) {
+            const a = new Int32Array(this[key].length * 2);
+            a.set(this[key]);
+            this[key] = a;
+          }
+        }
+        this._runA[runs] = n;
+        this._runD[runs] = 0;
+        runs++;
+        lastOwner = o;
+      }
+      this._q[n++] = t;
+    }
+    if (runs) this._runB[runs - 1] = n;
+    this._runN = runs;
+    this._qN = n;
+  }
+
+  /** Muestra la fracción `f` (0-1) de lo que hay en cola, por igual en cada tramo. */
+  _reveal(f, now) {
+    const runs = this._runN;
+    if (!runs) return;
+    const owner = this.game.owner;
+    const shown = this.prevOwner;
+    const W = this.game.map.width;
     const battles = this._battleTmp;
     const wild = this._wildTmp;
     battles.length = 0;
     wild.length = 0;
     const watch = this.anim && this.camera.zoom * RES >= 1.2;
-    const H = map.height;
     const glowFrom = this._glow.head;
     // El brillo solo se ve con casillas de más de un píxel y dentro de la pantalla
     const glowOn = this.anim && this.camera.zoom * this.dpr >= 1.2;
-    for (let k = 0; k < dirty.length; k++) {
-      const t = dirty[k];
-      this._paintTile(t);
-      // Los vecinos pueden pasar a ser (o dejar de ser) la franja interior
-      const x = t % W;
-      const y = (t / W) | 0;
-      this._markChunk(x, y);
-      // Una casilla en el borde de un bloque toca también el de al lado
-      const cx = x % CHUNK;
-      const cy = y % CHUNK;
-      if (cx === 0 && x > 0) this._markChunk(x - 1, y);
-      else if (cx === CHUNK - 1 && x < W - 1) this._markChunk(x + 1, y);
-      if (cy === 0 && y > 0) this._markChunk(x, y - 1);
-      else if (cy === CHUNK - 1 && y < H - 1) this._markChunk(x, y + 1);
-      if (x > 0) this._paintTile(t - 1);
-      if (x < W - 1) this._paintTile(t + 1);
-      if (t >= W) this._paintTile(t - W);
-      if (t < size - W) this._paintTile(t + W);
-      const o = owner[t];
-      const was = prev[t];
-      if (o === was) continue;
-      prev[t] = o;
-      const kind = was && o ? 0 : o ? 1 : 2;
-      if (kind < 2) {
-        if (glowOn && this._inView(x, y, 2)) this._pushGlow(t, o, now, kind);
-      } else this._pushFlash(t, now, kind);
-      if (watch && kind < 2 && this._inView(x, (t / W) | 0, 2)) (kind === 0 ? battles : wild).push(t);
+    const q = this._q;
+    let pending = 0;
+    for (let r = 0; r < runs; r++) {
+      const a = this._runA[r];
+      const len = this._runB[r] - a;
+      const target = f >= 1 ? len : Math.min(len, Math.ceil(len * f));
+      for (let k = this._runD[r]; k < target; k++) {
+        const t = q[a + k];
+        this._queued[t] = 0;
+        const o = owner[t];
+        const was = shown[t];
+        if (o === was) continue;
+        shown[t] = o;
+        // La casilla y sus vecinas (su frontera puede cambiar); con patrón,
+        // también las de alrededor (la franja lisa junto a la frontera)
+        this._repaint(t);
+        this._repaint(t - 1);
+        this._repaint(t + 1);
+        this._repaint(t - W);
+        this._repaint(t + W);
+        if (this._anyPattern) {
+          this._repaintPattern(t - 2);
+          this._repaintPattern(t + 2);
+          this._repaintPattern(t - 2 * W);
+          this._repaintPattern(t + 2 * W);
+          this._repaintPattern(t - W - 1);
+          this._repaintPattern(t - W + 1);
+          this._repaintPattern(t + W - 1);
+          this._repaintPattern(t + W + 1);
+        }
+        const x = t % W;
+        const y = (t / W) | 0;
+        const kind = was && o ? 0 : o ? 1 : 2;
+        if (kind < 2) {
+          if (glowOn && this._inView(x, y, 2)) this._pushGlow(t, o, now, kind);
+        } else this._pushFlash(t, now, kind);
+        if (watch && kind < 2 && this._inView(x, y, 2)) (kind === 0 ? battles : wild).push(t);
+      }
+      this._runD[r] = Math.max(this._runD[r], target);
+      pending += len - this._runD[r];
     }
-    dirty.length = 0;
+    if (!pending) this._runN = 0;
     // El brillo se pinta al final: así no lo pisa el repintado de los vecinos
     const g = this._glow;
     for (let j = glowFrom; j !== g.head; j = (j + 1) % GLOW_N) {
       const t = g.t[j];
-      if (owner[t] === g.o[j]) this.pixels[t] = this.glowCol[g.k[j]][0][g.o[j]];
+      if (shown[t] === g.o[j]) this.pixels[t] = this.glowCol[g.k[j]][0][g.o[j]];
     }
     if (!watch) return;
     // Solo una muestra: suficiente para que el frente «hierva» sin saturar
+    // (el cupo es por turno; aquí se reparte entre los fotogramas)
+    const share = Math.min(1, (this._dt * 1000) / this._tickDur);
     const fx = this.fx;
     if (battles.length) {
-      const p = Math.min(0.6, 9 / battles.length);
+      const p = Math.min(0.6, (9 * share) / battles.length);
       for (const t of battles) {
         if (Math.random() < p) fx.skirmish((t % W) + 0.5, ((t / W) | 0) + 0.5, Math.random() < 0.15);
       }
     }
     if (wild.length && this.camera.zoom * RES >= 2) {
-      const p = Math.min(0.15, 2 / wild.length);
+      const p = Math.min(0.15, (2 * share) / wild.length);
       for (const t of wild) if (Math.random() < p) fx.dust((t % W) + 0.5, ((t / W) | 0) + 0.5);
     }
   }
@@ -361,7 +467,7 @@ export class Renderer {
   _glowStep(j, stage) {
     const g = this._glow;
     const t = g.t[j];
-    if (this.game.owner[t] === g.o[j]) {
+    if (this.prevOwner[t] === g.o[j]) {
       if (stage === 1) this.pixels[t] = this.glowCol[g.k[j]][1][g.o[j]];
       else this._paintTile(t);
       const W = this.game.map.width;
@@ -557,10 +663,20 @@ export class Renderer {
       }
     }
     this.labels = [];
+    // El nombre no salta a su sitio nuevo: se desliza (ver _glideLabels)
+    const old = (this._oldLabels ??= new Map());
+    old.clear();
+    for (const [id, L] of this.labelById) old.set(id, L);
     this.labelById.clear();
     for (const p of players) {
       if (!p || !p.alive || at[p.id] < 0) continue;
-      const L = { player: p, x: (at[p.id] % W) * F + F / 2, y: Math.floor(at[p.id] / W) * F + F / 2, r: best[p.id] * F };
+      const tx = (at[p.id] % W) * F + F / 2;
+      const ty = Math.floor(at[p.id] / W) * F + F / 2;
+      const tr = best[p.id] * F;
+      const prev = old.get(p.id);
+      // Si el sitio nuevo queda lejos (otro trozo del país), va directo
+      const near = prev && Math.abs(prev.x - tx) + Math.abs(prev.y - ty) < Math.max(40, tr * 3);
+      const L = { player: p, tx, ty, tr, x: near ? prev.x : tx, y: near ? prev.y : ty, r: near ? prev.r : tr };
       this.labels.push(L);
       this.labelById.set(p.id, L);
     }
@@ -575,10 +691,17 @@ export class Renderer {
     this._dt = this._lastNow ? Math.min(0.1, (now - this._lastNow) / 1000) : 0;
     this._lastNow = now;
     if (game.ticks !== this._tick) {
+      // Duración real de un turno (en multijugador no es siempre la misma):
+      // con ella se reparte lo que pasa en el turno entre los fotogramas
+      const gap = (now - this._tickAt) / Math.max(1, game.ticks - this._tick);
+      if (this._tickAt && gap > 30 && gap < 400) this._tickDur = this._tickDur * 0.8 + gap * 0.2;
       this._tick = game.ticks;
       this._tickAt = now;
     }
-    this._frac = clamp((now - this._tickAt) / TICK_MS, 0, 1);
+    this._frac = clamp((now - this._tickAt) / this._tickDur, 0, 1);
+    // Territorio y cifras: un pelín antes del turno siguiente ya está todo a la
+    // vista (así no queda nada pendiente que aparezca de golpe)
+    this._fracEarly = clamp((now - this._tickAt) / (this._tickDur * 0.9), 0, 1);
     const v = this.view;
     v.x0 = camera.x;
     v.y0 = camera.y;
@@ -1468,7 +1591,18 @@ export class Renderer {
 
   // ---------------------------------------------------------- nombres y HUD
 
+  /** Acerca cada nombre a su sitio nuevo poco a poco (se recalcula cada medio segundo). */
+  _glideLabels() {
+    const k = this.anim ? 1 - Math.exp(-this._dt / 0.3) : 1;
+    for (const L of this.labels) {
+      L.x += (L.tx - L.x) * k;
+      L.y += (L.ty - L.y) * k;
+      L.r += (L.tr - L.r) * k;
+    }
+  }
+
   _drawLabels() {
+    this._glideLabels();
     const { ctx, camera } = this;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1530,8 +1664,30 @@ export class Renderer {
       // En píxeles enteros del lienzo: copia directa, sin remuestrear
       const d = this.dpr;
       ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
-      this._drawTroops(formatNumber(p.troops), sx, sy + size * 0.6, s2, me);
+      this._drawTroops((me ? formatCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, s2, me);
     }
+  }
+
+  /**
+   * Cifra que cambia a saltos en cada turno (tropas), mostrada subiendo o
+   * bajando poco a poco entre un turno y el siguiente: así cuenta de forma
+   * continua en vez de ir a tirones. `obj` es su dueño (nación o ataque).
+   */
+  _smoothed(obj, value) {
+    const tick = this.game.ticks;
+    let e = this._smooth.get(obj);
+    if (!e) {
+      this._smooth.set(obj, (e = { tick, from: value, to: value, shown: value }));
+      return value;
+    }
+    if (e.tick !== tick) {
+      // Si hacía rato que no se veía, sin animación (iría desde un valor viejo)
+      e.from = tick - e.tick > 3 ? value : e.shown;
+      e.to = value;
+      e.tick = tick;
+    }
+    e.shown = e.from + (e.to - e.from) * this._fracEarly;
+    return e.shown;
   }
 
   /** Lienzo de una caché de nombres (se reutiliza el elemento si ya existe). */
@@ -1843,7 +1999,7 @@ export class Renderer {
       if (!f) continue;
       const [x, y] = camera.worldToScreen(f.x, f.y);
       if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
-      const text = `${incoming ? '🛡' : '⚔'} ${formatNumber(atk.troops)}`;
+      const text = `${incoming ? '🛡' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
       // Ancho por escalones: no «baila» cada vez que cambia una cifra
       const w = Math.max(64, Math.ceil((ctx.measureText(text).width + 14) / 10) * 10);
       ctx.beginPath();

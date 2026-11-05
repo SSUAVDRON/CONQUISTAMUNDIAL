@@ -174,6 +174,10 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
 - Monedas (partidas, logros y retos), 3 retos diarios con bonus, 38 logros,
   tienda en Apariencia y títulos, muchas skins nuevas (formas, símbolos,
   estandartes, marcos, colores y patrones) y la bandera de un país como emblema
+- Fluidez: lo conquistado en cada turno aparece poco a poco hasta el
+  siguiente (en todos los frentes a la vez), las tropas cuentan de forma
+  continua (exactas hasta 9999 en el mapa; tus cifras con más precisión) y
+  los nombres se deslizan a su sitio nuevo en vez de saltar
 
 ## Próximo
 

@@ -895,7 +895,10 @@ function frame(now) {
   if (state.buildMode && (state.game.phase !== 'playing' || !state.human?.alive)) state.buildMode = null;
   input.update(dt);
   camera.update(now);
-  if (!state.demo) ui.animate(dt);
+  if (!state.demo) {
+    ui.liveNumbers(state.game, state.human);
+    ui.animate(dt);
+  }
   // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
   state.frameNo = (state.frameNo || 0) + 1;
   if (!(state.demo && TOUCH && state.frameNo & 1)) {
