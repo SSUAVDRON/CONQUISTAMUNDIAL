@@ -286,7 +286,7 @@ function traceRivers(map, elev, rng) {
 }
 
 /** Ancho del río en casillas según su clase (con casillas pequeñas, algo más ancho para que se vea). */
-const RIVER_WIDTH = [0, Math.max(1, RES >> 1), Math.max(2, (RES * 3) >> 2)];
+const RIVER_WIDTH = [0, Math.max(1, RES >> 2), Math.max(2, RES >> 1)];
 
 /** Pinta un trazo de río centrado en (x, y), solo sobre tierra. */
 function riverBrush(w, h, terrain, river, x, y, cls) {

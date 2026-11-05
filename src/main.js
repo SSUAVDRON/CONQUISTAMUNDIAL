@@ -208,6 +208,12 @@ function startDemo() {
 // Minimapa abajo a la izquierda (oculto en el menú y en la partida de fondo)
 const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy) => camera.centerOn(wx, wy));
 const minimapBox = document.getElementById('minimapa');
+// Su altura, para que la clasificación (arriba a la izquierda) no la pise
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--mm-alto', `${Math.round(minimapBox.offsetHeight)}px`);
+  }).observe(minimapBox);
+}
 function setMinimapFolded(folded) {
   const box = document.getElementById('minimapa');
   box.classList.toggle('plegado', folded);
@@ -222,7 +228,9 @@ document.getElementById('minimapa-plegar').addEventListener('click', () => {
 
 function enterGame(game) {
   const small = TOUCH || window.innerWidth <= 720 || window.innerHeight <= 500;
-  minimap.setMaxSize(small ? 132 : 220, small ? 96 : 170);
+  // En el ordenador, del ancho del panel de la izquierda (va justo encima)
+  const desk = document.getElementById('hud').classList.contains('escritorio');
+  minimap.setMaxSize(small ? 132 : desk ? 300 : 220, small ? 96 : desk ? 140 : 170);
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
@@ -891,6 +899,13 @@ function frame(now) {
   }
   // En la demo, al terminar una partida empieza otra
   if (state.demo && game && game.phase === 'ended') startDemo();
+  // Empieza la conquista: la cámara vuela a tu zona y se acerca hasta ver la
+  // región (unas 80 casillas originales de ancho), aunque el mapa sea el mundo
+  if (game && !state.demo && state.lastPhase === 'spawn' && game.phase === 'playing') {
+    const at = myPosition();
+    if (at) camera.flyTo(at[0], at[1], Math.max(camera.zoom, camera.viewW / (80 * RES)), 900);
+  }
+  state.lastPhase = game ? game.phase : null;
 
   if (state.buildMode && (state.game.phase !== 'playing' || !state.human?.alive)) state.buildMode = null;
   input.update(dt);

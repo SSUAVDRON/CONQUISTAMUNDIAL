@@ -282,6 +282,7 @@ export class UI {
     const panel = $('panel-jugador');
     const setFolded = (folded) => {
       panel.classList.toggle('plegado', folded);
+      $('hud').classList.toggle('pj-plegado', folded);
       $('pj-plegar').setAttribute('aria-expanded', String(!folded));
       $('pj-plegar').title = folded ? 'Mostrar el panel completo (tecla V)' : 'Minimizar el panel (tecla V)';
       try {
@@ -308,6 +309,20 @@ export class UI {
       else if (e.code === 'KeyB') this.handlers.onStance?.();
       else if (e.code === 'KeyL') this.handlers.onAuto?.(-1);
     });
+    // En el ordenador (pantalla ancha y ratón): edificios en una barra propia
+    // abajo en el centro y el resto del panel abajo a la izquierda. En el
+    // móvil y las pantallas estrechas, todo junto como siempre.
+    const obras = panel.querySelector('.pj-obras');
+    const wide = window.matchMedia?.('(min-width: 1100px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
+    const layout = () => {
+      const desk = !!wide?.matches;
+      $('hud').classList.toggle('escritorio', desk);
+      $('barra-obras').hidden = !desk;
+      if (desk && obras.parentElement !== $('barra-obras')) $('barra-obras').append(obras);
+      else if (!desk && obras.parentElement !== panel) panel.append(obras);
+    };
+    layout();
+    wide?.addEventListener?.('change', layout);
     // Su altura real, para que los avisos se coloquen encima cuando no caben al lado
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(() => {
@@ -1429,7 +1444,7 @@ export class UI {
       if (!li) {
         li = document.createElement('li');
         li.dataset.id = p.id;
-        li.innerHTML = '<span class="pos"></span><span class="marca-pais"></span><span class="nom"><span class="nom-txt"></span><span class="marcas"></span></span><span class="pct"></span><span class="tro"></span><span class="lb-barra"><span></span></span>';
+        li.innerHTML = '<span class="pos"></span><span class="marca-pais"></span><span class="nom"><span class="nom-txt"></span><span class="marcas"></span></span><span class="pct"></span><span class="oro"></span><span class="tro"></span><span class="lb-barra"><span></span></span>';
         const mark = li.querySelector('.marca-pais');
         if (hasFlag(p.flag)) {
           mark.className = 'marca-pais bandera';
@@ -1448,6 +1463,7 @@ export class UI {
       };
       set('.pos', String(rank));
       set('.pct', formatPercent(p.tiles / landCount));
+      set('.oro', formatNumber(p.gold));
       set('.tro', formatNumber(p.troops));
       set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
       li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;

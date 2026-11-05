@@ -2172,3 +2172,83 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   .bolsa-monedas { font-size: 20px; }
   .retos { grid-template-columns: 1fr; }
 }
+
+/* =========================================================== Interfaz de escritorio
+   Con pantalla ancha y ratón (#hud.escritorio, lo pone ui.js): clasificación en
+   tabla arriba a la izquierda; tus cifras y el ataque abajo a la izquierda (con
+   el minimapa encima); los edificios en una barra abajo en el centro y los
+   avisos abajo a la derecha. En el móvil, todo sigue en el panel de abajo. */
+#lista-clasificacion .oro, .lb-cab { display: none; }
+#hud.escritorio #columna-izquierda { width: 330px; max-height: calc(100vh - var(--pj-alto, 260px) - var(--mm-alto, 0px) - 60px); }
+#hud.escritorio .lb-cab {
+  display: grid;
+  grid-template-columns: 18px 15px 1fr 46px 46px 46px;
+  gap: 5px;
+  padding: 1px 4px 4px;
+  margin-bottom: 2px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+#hud.escritorio .lb-cab .pos, #hud.escritorio .lb-cab .pct, #hud.escritorio .lb-cab .oro, #hud.escritorio .lb-cab .tro { text-align: right; }
+#hud.escritorio #lista-clasificacion li { grid-template-columns: 18px 15px 1fr 46px 46px 46px; padding: 3px 4px; font-size: 12.5px; }
+#hud.escritorio #lista-clasificacion .pct, #hud.escritorio #lista-clasificacion .tro { text-align: right; min-width: 0; }
+#hud.escritorio #lista-clasificacion .oro { display: block; text-align: right; color: #ffe39a; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+#hud.escritorio #lista-clasificacion .tro { font-size: 11.5px; }
+
+/* Panel de abajo a la izquierda: tus cifras arriba y el ataque debajo */
+#hud.escritorio #panel-jugador {
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  right: auto;
+  width: 330px;
+  max-width: none;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px 14px 12px;
+}
+#hud.escritorio .pj-resumen, #hud.escritorio .pj-ataque { flex: none; }
+#hud.escritorio .pj-ataque { padding: 9px 0 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+#hud.escritorio #panel-jugador .cabecera { padding-right: 26px; }
+#hud.escritorio #panel-jugador .cifras { grid-template-columns: 1fr 1fr; row-gap: 7px; }
+#hud.escritorio #panel-jugador .cifras .valor { font-size: 16px; }
+#hud.escritorio #panel-jugador.plegado .cifras { grid-template-columns: repeat(4, auto); }
+
+/* Barra de edificios: abajo, centrada en el hueco entre el panel y los avisos */
+#barra-obras[hidden] { display: none; }
+#hud.escritorio #barra-obras {
+  position: fixed;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: max(356px, calc(50% - 238px));
+  z-index: 5;
+  padding: 8px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(20, 28, 46, 0.93), rgba(9, 13, 22, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.42);
+  animation: hudSube 0.5s 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+#hud.escritorio #barra-obras .pj-obras { flex: none; opacity: 1; margin: 0; height: auto; pointer-events: auto; }
+#hud.escritorio #construir { display: grid; grid-template-columns: repeat(4, 112px); gap: 6px; margin: 0; }
+#hud.escritorio #construir button { height: 44px; }
+#hud.escritorio #construir canvas { width: 28px; height: 28px; }
+#hud.escritorio #construir .b-num { font-size: 11px; font-weight: 800; color: #fff; }
+#hud.escritorio.pj-plegado #barra-obras { display: none; }
+
+/* Avisos: abajo a la derecha (el panel ya no les quita el sitio) */
+#hud.escritorio #avisos { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+/* Minimapa: encima del panel de la izquierda */
+#hud.escritorio ~ .minimapa, #hud.escritorio .minimapa { bottom: calc(var(--pj-alto, 260px) + 20px + env(safe-area-inset-bottom, 0px)); }
+/* Si falta altura, la clasificación enseña menos filas (tu fila siempre) y nunca pisa el minimapa */
+#hud.escritorio #columna-izquierda #clasificacion { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+@media (max-height: 940px) { #hud.escritorio #lista-clasificacion li:nth-child(n+8):not(.yo) { display: none; } }
+@media (max-height: 820px) { #hud.escritorio #lista-clasificacion li:nth-child(n+6):not(.yo) { display: none; } }
+@media (max-height: 720px) { #hud.escritorio #lista-clasificacion li:nth-child(n+4):not(.yo) { display: none; } }
+@media (max-height: 820px) {
+  #hud.escritorio #panel-jugador { gap: 7px; padding-top: 8px; padding-bottom: 9px; }
+  #hud.escritorio #panel-jugador .cifras { row-gap: 4px; }
+  #hud.escritorio .pj-ataque { padding-top: 7px; }
+}

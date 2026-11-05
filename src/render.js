@@ -11,8 +11,8 @@ import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 
-const FILL_ALPHA = 108; // territorio semitransparente: se ve el relieve debajo
-const PASTEL = 0.12; // los colores de las naciones, apenas aclarados
+const FILL_ALPHA = 120; // territorio semitransparente: se ve el terreno debajo
+const PASTEL = 0.3; // los colores de las naciones, en tonos pastel
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
@@ -194,10 +194,11 @@ export class Renderer {
       const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(p.color, 0.72);
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera exterior blanca para el humano y verde para sus aliados
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(p.color, 0.22, 0.7, 0.14, 0.42);
-      this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
-      const b2 = vividRgb(p.color, 0.2, 1.02, 0.3, 0.62);
-      this.border2[p.id] = pack(b2[0], b2[1], b2[2], p === human ? 235 : 205);
+      // Las demás: su mismo tono, más vivo y algo más oscuro que el relleno
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(p.color, 0.15, 0.9, 0.24, 0.58);
+      this.border[p.id] = pack(bc[0], bc[1], bc[2], 245);
+      const b2 = vividRgb(p.color, 0.1, 1.12, 0.36, 0.72);
+      this.border2[p.id] = pack(b2[0], b2[1], b2[2], p === human ? 210 : 165);
       GLOW_MIX.forEach((stages, kind) => stages.forEach(([gr, gg, gb, m], st) => {
         this.glowCol[kind][st][p.id] = pack(Math.round(lerp(r, gr, m)), Math.round(lerp(g, gg, m)), Math.round(lerp(b, gb, m)), 235);
       }));
@@ -1734,7 +1735,7 @@ export class Renderer {
       const player = p.isHuman;
       const len = Math.max(4, p.name.length + (allied ? 2 : 0));
       // Lo que cabe dentro del país…
-      let size = Math.min(radiusPx * 0.8, (radiusPx * 3) / len, 42);
+      let size = Math.min(radiusPx * 0.6, (radiusPx * 2.6) / len, 28);
       // …pero al alejar el nombre no encoge con él: tamaño mínimo legible que
       // crece un poco con el país (aunque se salga de sus fronteras); las
       // colonias, algo más pequeñas

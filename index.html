@@ -346,7 +346,10 @@
         <button type="button" class="cab-plegable" aria-expanded="true" title="Plegar o desplegar">
           <span class="cab-titulo">Clasificación</span><span class="cab-extra" id="cab-puesto"></span><svg class="cab-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <div class="cuerpo-plegable"><div><ol id="lista-clasificacion"></ol></div></div>
+        <div class="cuerpo-plegable"><div>
+          <div class="lb-cab" aria-hidden="true"><span class="pos">#</span><span></span><span class="nom">Nación</span><span class="pct">Tierra</span><span class="oro">Oro</span><span class="tro">Tropas</span></div>
+          <ol id="lista-clasificacion"></ol>
+        </div></div>
       </aside>
       <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
       <section id="combates" class="panel plegable" data-plegable="combates" hidden>
@@ -400,6 +403,8 @@
       <div class="cuerpo-plegable"><div><div id="eventos" aria-live="polite"></div></div></div>
     </section>
 
+    <!-- En el ordenador, los edificios van en su propia barra, abajo en el centro (ver ui.js) -->
+    <section id="barra-obras" class="panel barra-obras" aria-label="Construir" hidden></section>
     <section id="panel-jugador" class="panel">
       <button type="button" id="pj-plegar" class="pj-plegar" aria-expanded="true" title="Minimizar el panel (tecla V)">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>

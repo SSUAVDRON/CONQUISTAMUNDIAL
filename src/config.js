@@ -19,8 +19,8 @@ export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
   spawnTicks: 150, // 15 s para elegir dónde empezar
-  spawnRadius: 2.2 * RES, // radio medio de la zona inicial (pequeña e irregular)
-  spawnJag: 0.4, // el radio varía ±40 % según la dirección
+  spawnRadius: 3.2 * RES, // radio medio de la zona inicial (una mancha redondeada)
+  spawnJag: 0.14, // el radio varía ±14 % según la dirección
   startTroops: 3500, // población inicial (repartida entre soldados y trabajadores)
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
 
@@ -125,7 +125,7 @@ export const CONFIG = {
   // Colonias: bots débiles que no son naciones (presa fácil con oro que saquear)
   colonyStrength: 0.45, // tropas máximas y crecimiento respecto a una nación
   colonyDefenseMult: 0.55, // conquistarlas cuesta menos
-  colonySpawnRadius: 1.5 * RES,
+  colonySpawnRadius: 2.1 * RES,
   colonyLandPer: 500 * AREA, // una colonia por cada tantas casillas de tierra…
   colonyMax: 300, // …hasta este máximo
 

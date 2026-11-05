@@ -186,6 +186,14 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   nivel), en ángulo recto y evitando el agua, uniendo también fábricas entre
   sí; dibujo nuevo (lecho oscuro con traviesas claras) y vista previa del
   alcance y de las vías al colocar una fábrica
+- Mapa con paleta plana de juego (llanura verde oliva, meseta y desierto
+  arena, montaña gris claro, moteado de píxel en los bordes, costa con
+  contorno oscuro y mar azul marino), territorios en pastel con borde del
+  mismo tono, zonas iniciales más grandes y redondas y la cámara en tu región
+  al empezar
+- Interfaz de escritorio: clasificación en tabla con oro, cifras y ataque
+  abajo a la izquierda, barra de edificios abajo en el centro y avisos
+  abajo a la derecha (en el móvil, como antes)
 
 ## Próximo
 

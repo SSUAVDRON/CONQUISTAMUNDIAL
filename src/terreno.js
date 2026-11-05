@@ -1,9 +1,9 @@
 // Terreno del mapa, pintado una sola vez al empezar la partida:
-// - el mar a 1 píxel por casilla (se dibuja suavizado): turquesa en la orilla
-//   y cada vez más profundo mar adentro;
-// - la tierra en colores planos de mapa (2D) según su tipo y su clima:
-//   praderas, selva, sabana, desiertos, tundra, mesetas y montañas gris claro
-//   con cumbres nevadas, en zonas planas con bordes tramados y playa;
+// - el mar, azul marino plano con manchas muy suaves;
+// - la tierra en colores planos de mapa de juego según la altura y el clima:
+//   llanura verde oliva, meseta y desierto color arena, montaña gris claro y
+//   cumbres casi blancas, mezcladas en los bordes con un moteado de píxeles;
+//   la costa, con un contorno oscuro; los ríos, en azul;
 // Mar y tierra se juntan en una sola imagen opaca (barata de dibujar).
 // Todo esto es solo visual: no afecta a la simulación.
 import { RES, TERRAIN } from './config.js';
@@ -49,37 +49,40 @@ function boxBlur(a, W, H, r) {
   }
 }
 
-// Paleta del mapa físico por altura (m): verde → arena → pardo → gris → nieve
-const HYPSO = [
-  [0, 98, 138, 64],
-  [120, 112, 147, 70],
-  [260, 146, 153, 86],
-  [430, 176, 160, 104],
-  [800, 188, 165, 115],
-  [1300, 194, 171, 127],
-  [1900, 186, 174, 154],
-  [2600, 206, 204, 198],
-  [3400, 232, 232, 232],
-  [4600, 247, 247, 247],
-];
 let cr = 0;
 let cg = 0;
 let cb = 0;
-/** Color de la altura `e` en (cr, cg, cb), sin crear arreglos (son millones de casillas). */
-function hypso(e) {
-  let k = 1;
-  while (k < HYPSO.length - 1 && HYPSO[k][0] < e) k++;
-  const a = HYPSO[k - 1];
-  const b = HYPSO[k];
-  const t = clamp((e - a[0]) / (b[0] - a[0]), 0, 1);
-  cr = a[1] + (b[1] - a[1]) * t;
-  cg = a[2] + (b[2] - a[2]) * t;
-  cb = a[3] + (b[3] - a[3]) * t;
-}
 
+// Paleta plana de mapa de juego: llanura verde oliva, meseta color arena,
+// montaña gris claro y cumbres casi blancas. Las zonas se mezclan en los
+// bordes con un moteado de píxeles (sin degradados ni sombreado).
+const TERRAIN_COLORS = [
+  [118, 146, 74], // llanura
+  [192, 170, 122], // meseta / desierto
+  [174, 174, 170], // montaña
+  [214, 214, 210], // cumbre
+];
+const COAST = [46, 49, 55]; // contorno de la costa
+const SEA = [27, 45, 82]; // mar
+
+/**
+ * Color plano de una casilla en (cr, cg, cb): según su altura `e` (m), lo
+ * seca que es la zona (0-1) y dos ruidos: `speck` (por casilla, para el
+ * moteado de los bordes entre zonas) y `patch` (manchas grandes).
+ */
+function flatColor(e, dry, speck, patch) {
+  const v = e + dry * 650 + (speck - 0.5) * 520 + (patch - 0.5) * 260;
+  const k = v < 320 ? 0 : v < 1450 ? 1 : v < 2700 ? 2 : 3;
+  const c = TERRAIN_COLORS[k];
+  // Un pelín de variación de brillo por casilla (textura de píxel)
+  const b = 1 + (speck - 0.5) * 0.07;
+  cr = c[0] * b;
+  cg = c[1] * b;
+  cb = c[2] * b;
+}
 // Ríos: azul de agua dulce (algo más claro que el mar) y el de los grandes, más hondo
-const RIVER = [62, 118, 172];
-const RIVER_BIG = [46, 96, 152];
+const RIVER = [52, 86, 140];
+const RIVER_BIG = [40, 70, 122];
 
 /** ¿Toca la casilla de río `i` tierra sin río? (orilla, algo más oscura) */
 function riverEdge(i, W, H, river) {
@@ -174,12 +177,10 @@ function paintTerrainNow(map) {
       // aleatorios) las tierras bajas tiran a arena
       const moist = valueNoise(x, y, 30 * RES, seed);
       const dry = lat >= 0 ? clamp(sub * (1.3 - moist * 0.8), 0, 1) : smooth(0.34, 0.16, moist);
-      hypso(e + dry * 320 + ridge * 120);
-      // Grano por casilla: el terreno se ve en píxeles, como un mapa de juego
-      const px = (hash2(x, y, seed + 17) - 0.5) * 14;
-      R[i] = cr + px;
-      G[i] = cg + px;
-      B[i] = cb + px;
+      flatColor(e + ridge * 420, dry, hash2(x, y, seed + 17), valueNoise(x, y, 3 * RES, seed + 5));
+      R[i] = cr;
+      G[i] = cg;
+      B[i] = cb;
     }
   }
   // La rejilla del relieve es más gruesa que las casillas: se suaviza para que
@@ -201,7 +202,8 @@ function paintTerrainNow(map) {
       const dx = (hr - hl) * 0.5;
       const dy = (hd - hu) * 0.5;
       const lit = (dx + dy + 1) / Math.sqrt(1 + dx * dx + dy * dy); // 1 en llano
-      const m = clamp(1 + (lit - 1) * 0.55, 0.62, 1.2);
+      // Mapa plano: el relieve apenas se insinúa
+      const m = clamp(1 + (lit - 1) * 0.08, 0.92, 1.05);
       R[i] = R[i] * m;
       G[i] = G[i] * m;
       B[i] = B[i] * m;
@@ -266,22 +268,7 @@ function paintTerrainNow(map) {
       const i = cy * W + cx;
       const o = py * LW + pxl;
       const m = edge[i];
-      if (terrain[i] === WATER) {
-        if (!m) continue;
-        // Una línea de espuma tenue pegada a la orilla (el mar es casi uniforme)
-        const d = edgeDist(m, fx, fy);
-        const wob = (hash2(pxl, py, seed + 3) - 0.5) * 0.08;
-        const foam = smooth(0.24, 0.03, d + wob);
-        const veil = smooth(0.6, 0.2, d) * 0.05;
-        const a = Math.max(foam * 0.3, veil);
-        if (a <= 0.01) continue;
-        const k = foam * 0.3 >= veil ? 1 : 0;
-        const r = k ? 170 : 60;
-        const g = k ? 196 : 100;
-        const b = k ? 214 : 140;
-        px[o] = ((Math.round(a * 255) << 24) | (b << 16) | (g << 8) | r) >>> 0;
-        continue;
-      }
+      if (terrain[i] === WATER) continue; // el mar va en su propia capa
       const rv = river ? river[i] : 0;
       if (rv) {
         // Río: azul algo más claro que el mar (los grandes, un poco más hondos),
@@ -295,13 +282,14 @@ function paintTerrainNow(map) {
       let r = R[i];
       let g = G[i];
       let b = B[i];
-      if (m) {
-        // Orilla: un filo fino más claro junto al agua
-        const d = edgeDist(m, fx, fy);
-        const k = smooth(0.5, 0.1, d) * 0.45;
-        r += (190 - r) * k;
-        g += (188 - g) * k;
-        b += (124 - b) * k;
+      if (m & 15) {
+        // Costa: contorno oscuro de una casilla (con varios píxeles por
+        // casilla, solo la franja pegada al agua)
+        if (S === 1 || edgeDist(m, fx, fy) < 0.5) {
+          r = COAST[0];
+          g = COAST[1];
+          b = COAST[2];
+        }
       }
       r = clamp(r, 0, 255) | 0;
       g = clamp(g, 0, 255) | 0;
@@ -343,17 +331,11 @@ function paintTerrainNow(map) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       const o = i * 4;
-      const d = terrain[i] === WATER ? dist[i] / RES : 0;
-      // Mar liso azul marino; solo pegado a la costa, un pelín más claro
-      const k1 = smooth(0.4, 2.5, d);
-      const r = 26 + (18 - 26) * k1;
-      const g = 56 + (45 - 56) * k1;
-      const b = 102 + (92 - 102) * k1;
-      // Grano de píxel apenas visible
-      const n = (hash2(x, y, seed + 29) - 0.5) * 5;
-      wd[o] = clamp(r + n * 0.5, 0, 255);
-      wd[o + 1] = clamp(g + n * 0.8, 0, 255);
-      wd[o + 2] = clamp(b + n, 0, 255);
+      // Mar azul marino plano, con manchas muy suaves y algo de grano
+      const n = (valueNoise(x, y, 14 * RES, seed + 31) - 0.5) * 7 + (hash2(x, y, seed + 29) - 0.5) * 3;
+      wd[o] = clamp(SEA[0] + n * 0.6, 0, 255);
+      wd[o + 1] = clamp(SEA[1] + n * 0.8, 0, 255);
+      wd[o + 2] = clamp(SEA[2] + n, 0, 255);
       wd[o + 3] = 255;
     }
   }
@@ -401,8 +383,16 @@ export function paintMapPreview(canvas, data, crop = null) {
     const r = relief.data;
     return r[k] + (r[k + 1] - r[k]) * ax + (r[k + relief.w] - r[k]) * ay + (r[k] - r[k + 1] - r[k + relief.w] + r[k + relief.w + 1]) * ax * ay;
   };
-  // Pendiente exagerada según los km que abarca cada píxel de la vista previa
-  const kz = 22 / (Math.max(sx, sy) * Math.max(0.5, data.tileKm || 5) * 1000);
+  // Latitud de cada fila (mapas reales): para pintar los desiertos
+  if (data.lat && !data.latOf) {
+    const miller = (deg) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((deg * Math.PI) / 180)));
+    const yTop = miller(data.lat[1]);
+    const yBottom = miller(data.lat[0]);
+    data.latOf = (ty) => {
+      const m = yTop - (ty / h) * (yTop - yBottom);
+      return (2.5 * (Math.atan(Math.exp(0.8 * m)) - Math.PI / 4) * 180) / Math.PI;
+    };
+  }
   for (let py = 0; py < H; py++) {
     const ty = y0 + (py + 0.5) * sy;
     for (let px = 0; px < W; px++) {
@@ -411,9 +401,9 @@ export function paintMapPreview(canvas, data, crop = null) {
       const o = (py * W + px) * 4;
       d[o + 3] = 255;
       if (terrain[i] === WATER) {
-        d[o] = 18;
-        d[o + 1] = 45;
-        d[o + 2] = 90;
+        d[o] = SEA[0];
+        d[o + 1] = SEA[1];
+        d[o + 2] = SEA[2];
         continue;
       }
       if (data.river && data.river[i]) {
@@ -424,17 +414,21 @@ export function paintMapPreview(canvas, data, crop = null) {
         continue;
       }
       const e = elev(tx, ty);
-      hypso(e);
-      const dx = (elev(tx + sx, ty) - elev(tx - sx, ty)) * 0.5 * kz;
-      const dy = (elev(tx, ty + sy) - elev(tx, ty - sy)) * 0.5 * kz;
-      const lit = (dx + dy + 1) / Math.sqrt(1 + dx * dx + dy * dy);
-      let m = clamp(1 + (lit - 1) * 0.55, 0.62, 1.2);
-      // Filo claro junto al agua
+      // Costa: contorno oscuro
       const coast = terrain[Math.min(h - 1, (ty + sy) | 0) * w + Math.min(w - 1, tx | 0)] === WATER || terrain[Math.min(h - 1, ty | 0) * w + Math.min(w - 1, (tx + sx) | 0)] === WATER;
-      if (coast) m = Math.max(m, 1.12);
-      d[o] = clamp(cr * m, 0, 255);
-      d[o + 1] = clamp(cg * m, 0, 255);
-      d[o + 2] = clamp(cb * m, 0, 255);
+      if (coast) {
+        d[o] = COAST[0];
+        d[o + 1] = COAST[1];
+        d[o + 2] = COAST[2];
+        continue;
+      }
+      // Desiertos en la franja subtropical (como en la partida)
+      const lat = data.latOf ? Math.abs(data.latOf(ty)) : -1;
+      const dry = lat >= 0 ? smooth(10, 17, lat) * (1 - smooth(31, 38, lat)) * 0.9 : 0;
+      flatColor(e, dry, hash2(px, py, 17), 0.5);
+      d[o] = clamp(cr, 0, 255);
+      d[o + 1] = clamp(cg, 0, 255);
+      d[o + 2] = clamp(cb, 0, 255);
     }
   }
   ctx.putImageData(img, 0, 0);

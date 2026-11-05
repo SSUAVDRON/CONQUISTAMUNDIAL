@@ -75,7 +75,7 @@ function realPreviewData(id) {
   }
   const mid = data.lat ? (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180 : 0;
   const tileKm = data.lon ? ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w : 5;
-  d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries, river: markRivers(w, h, terrain, RIVERS[id] || []) };
+  d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries, lat: data.lat || null, river: markRivers(w, h, terrain, RIVERS[id] || []) };
   realCache.set(id, d);
   return d;
 }
