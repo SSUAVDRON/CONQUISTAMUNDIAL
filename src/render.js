@@ -966,8 +966,10 @@ export class Renderer {
   }
 
   /**
-   * Raíles de las fábricas (balasto, traviesas y carril) y los trenes que
-   * circulan por ellos: locomotora del color del dueño con dos vagones.
+   * Vías de las fábricas: en ángulo recto (tramo horizontal y tramo
+   * vertical), como un trazado de mapa. Una línea oscura con traviesas
+   * claras encima, ajustada a los píxeles; y los trenes que circulan por
+   * ellas (locomotora del color del dueño con dos vagones).
    */
   _drawRails() {
     const { ctx, game, camera } = this;
@@ -975,51 +977,54 @@ export class Renderer {
     const map = game.map;
     const W = camera.viewW;
     const H = camera.viewH;
-    const segs = this._railSegs || (this._railSegs = []);
-    segs.length = 0;
+    const d = this.dpr;
+    // Coordenadas de pantalla en píxeles enteros del lienzo: líneas nítidas
+    const snap = (v) => Math.round(v * d) / d;
+    const pts = this._railSegs || (this._railSegs = []);
+    pts.length = 0;
     for (const r of game.rails) {
       const [ax, ay] = camera.worldToScreen(map.x(r.factory.tile) + 0.5, map.y(r.factory.tile) + 0.5);
+      const [cx, cy] = camera.worldToScreen(r.cx + 0.5, r.cy + 0.5);
       const [bx, by] = camera.worldToScreen(map.x(r.station.tile) + 0.5, map.y(r.station.tile) + 0.5);
-      if (Math.max(ax, bx) < -10 || Math.min(ax, bx) > W + 10 || Math.max(ay, by) < -10 || Math.min(ay, by) > H + 10) continue;
-      segs.push(ax, ay, bx, by);
+      if (Math.max(ax, bx, cx) < -10 || Math.min(ax, bx, cx) > W + 10 || Math.max(ay, by, cy) < -10 || Math.min(ay, by, cy) > H + 10) continue;
+      pts.push(snap(ax), snap(ay), snap(cx), snap(cy), snap(bx), snap(by));
     }
-    if (segs.length) {
-      const lw = clamp(camera.zoom * RES * 0.6, 1.4, 4);
+    if (pts.length) {
+      const lw = clamp(camera.zoom * RES * 0.42, 1.5, 4.5);
       const path = () => {
         ctx.beginPath();
-        for (let i = 0; i < segs.length; i += 4) {
-          ctx.moveTo(segs[i], segs[i + 1]);
-          ctx.lineTo(segs[i + 2], segs[i + 3]);
+        for (let i = 0; i < pts.length; i += 6) {
+          ctx.moveTo(pts[i], pts[i + 1]);
+          ctx.lineTo(pts[i + 2], pts[i + 3]);
+          ctx.lineTo(pts[i + 4], pts[i + 5]);
         }
       };
-      ctx.lineCap = 'butt';
+      ctx.lineCap = 'square';
+      ctx.lineJoin = 'miter';
       path();
-      ctx.lineWidth = lw * 2;
-      ctx.strokeStyle = 'rgba(38, 30, 22, 0.5)';
+      // Lecho oscuro…
+      ctx.lineWidth = lw * 1.6;
+      ctx.strokeStyle = 'rgba(30, 30, 36, 0.88)';
       ctx.stroke();
-      ctx.setLineDash([lw * 0.55, lw * 0.85]);
-      ctx.lineWidth = lw * 1.7;
-      ctx.strokeStyle = '#7a5434';
+      // …y traviesas claras a intervalos
+      ctx.setLineDash([lw * 0.9, lw * 0.9]);
+      ctx.lineCap = 'butt';
+      ctx.lineWidth = lw * 0.75;
+      ctx.strokeStyle = 'rgba(232, 234, 238, 0.95)';
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.lineWidth = Math.max(1, lw * 0.4);
-      ctx.strokeStyle = '#d5d9de';
-      ctx.stroke();
       ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
     }
     if (!game.trains.length) return;
     const L = clamp(camera.zoom * RES * 3.2, 9, 26);
     for (const t of game.trains) {
       const r = t.rail;
       const pos = clamp(t.pos + CONFIG.trainSpeed * t.dir * this._frac, 0, r.len);
-      const k = pos / r.len;
-      const fx = map.x(r.factory.tile) + 0.5;
-      const fy = map.y(r.factory.tile) + 0.5;
-      const sx = map.x(r.station.tile) + 0.5;
-      const sy = map.y(r.station.tile) + 0.5;
-      const [px, py] = camera.worldToScreen(fx + (sx - fx) * k, fy + (sy - fy) * k);
+      const [wx, wy, a] = game.railPoint(r, pos);
+      const [px, py] = camera.worldToScreen(wx, wy);
       if (px < -L * 2 || py < -L * 2 || px > W + L * 2 || py > H + L * 2) continue;
-      const ang = Math.atan2(sy - fy, sx - fx) + (t.dir < 0 ? Math.PI : 0);
+      const ang = a + (t.dir < 0 ? Math.PI : 0);
       const owner = game.players[r.factory.owner];
       drawTrain(ctx, px, py, ang, L, owner ? rgbToCss(owner.color) : '#888');
     }
@@ -1521,6 +1526,67 @@ export class Renderer {
 
   // ------------------------------------------------------------ vista previa
 
+  /**
+   * Al colocar una fábrica: su alcance (un rombo, porque se mide en recorrido
+   * horizontal + vertical) y las vías que tendería a las estaciones más cercanas.
+   */
+  _drawRailPreview(tile, sx, sy) {
+    const { ctx, game, camera } = this;
+    const map = game.map;
+    const human = game.human;
+    const R = game.railRange(1) * (1 + (human.mods.railRange || 0));
+    const z = camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - R * z);
+    ctx.lineTo(sx + R * z, sy);
+    ctx.lineTo(sx, sy + R * z);
+    ctx.lineTo(sx - R * z, sy);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.fill();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.stroke();
+    const fx = map.x(tile);
+    const fy = map.y(tile);
+    const body = map.landBody[tile];
+    const cands = [];
+    for (const b of game.buildings) {
+      if ((b.kind !== 'city' && b.kind !== 'port' && b.kind !== 'factory') || !b.level || map.landBody[b.tile] !== body) continue;
+      const d = Math.abs(map.x(b.tile) - fx) + Math.abs(map.y(b.tile) - fy);
+      if (d <= R) cands.push([d, b]);
+    }
+    cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    let n = 0;
+    for (const [, b] of cands) {
+      if (n >= CONFIG.railMaxPerFactory) break;
+      const corner = game._railCorner(tile, b.tile);
+      if (!corner) continue;
+      n++;
+      const [cx, cy] = camera.worldToScreen(corner[0] + 0.5, corner[1] + 0.5);
+      const [bx, by] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.font = '700 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    const note = n ? `${n} vía${n > 1 ? 's' : ''}: trenes con oro` : 'Sin estaciones al alcance (ciudades, puertos o fábricas)';
+    // Encima del icono: debajo va la estimación de lo que rendiría
+    ctx.strokeText(note, sx, sy - 30);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(note, sx, sy - 30);
+  }
+
   _drawBuildPreview(kind, tile) {
     const { ctx, game, camera } = this;
     const human = game.human;
@@ -1561,6 +1627,7 @@ export class Renderer {
       ctx.fillStyle = '#d8f5e4';
       ctx.fillText(note, sx, sy + 22);
     }
+    if (kind === 'factory' && ok && !check.upgrade) this._drawRailPreview(tile, sx, sy);
     if (check.upgrade) {
       // Mejora de un edificio existente: se marca el propio edificio
       const b = check.upgrade;

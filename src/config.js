@@ -175,9 +175,10 @@ export const CONFIG = {
   tradeSpeed: 0.42 * RES,
 
   // Raíles y trenes de las fábricas
-  railRange: 38 * RES, // alcance de los raíles de una fábrica de nivel 1 (casillas)
-  railRangePerLevel: 8 * RES, // y cuánto más por cada nivel extra
-  railMaxPerFactory: 6, // estaciones (ciudades y puertos) como mucho por fábrica, las más cercanas
+  railRange: 14 * RES, // alcance de las vías de una fábrica de nivel 1 (casillas de recorrido: en horizontal + en vertical)
+  railRangePerLevel: 4 * RES, // y cuánto más por cada nivel extra
+  railMaxPerFactory: 6, // estaciones (ciudades, puertos y otras fábricas) como mucho por fábrica, las más cercanas
+  railMaxWater: 2 * RES, // casillas de agua que puede cruzar una vía (un puente corto); si no, no se tiende
   railRefresh: 20, // ticks entre recálculos de la red
   trainEveryMin: 150, // ticks entre trenes de un mismo raíl
   trainEveryMax: 300,

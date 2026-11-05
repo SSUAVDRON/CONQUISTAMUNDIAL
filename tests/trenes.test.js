@@ -18,7 +18,9 @@ function setup(seed = 7) {
   const inland = [...map.landTiles].filter((t) => map.landBody[t] === body && !map.coastal[t]);
   const d = (t, u) => Math.hypot(map.x(t) - map.x(u), map.y(t) - map.y(u));
   const ta = inland[Math.floor(inland.length * 0.4)];
-  const tb = inland.find((t) => d(t, ta) > 25 * RES && d(t, ta) < 30 * RES);
+  // Recorrido de las vías: en horizontal + en vertical
+  const m = (t, u) => Math.abs(map.x(t) - map.x(u)) + Math.abs(map.y(t) - map.y(u));
+  const tb = inland.find((t) => m(t, ta) > 9 * RES && m(t, ta) < 12 * RES && d(t, ta) > 8 * RES);
   assert.ok(tb !== undefined && game.spawnPlayer(a, ta) && game.spawnPlayer(b, tb));
   game.spawnPlayer(c, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
@@ -32,7 +34,7 @@ function setup(seed = 7) {
   for (const atk of [...a.attacks.values()]) game._endAttack(atk);
   a.gold = b.gold = 1e8;
   assert.ok(buildNow(game, a, 'factory', ta), 'fábrica de A');
-  const cityTile = [...map.landTiles].find((t) => game.owner[t] === a.id && d(t, ta) > CONFIG.buildingMinDist + 2 && d(t, tb) > CONFIG.buildingMinDist + 2 && game.canBuild(a, 'city', t).ok);
+  const cityTile = [...map.landTiles].find((t) => game.owner[t] === a.id && d(t, ta) > CONFIG.buildingMinDist + 2 && m(t, ta) < CONFIG.railRange - 4 && d(t, tb) > CONFIG.buildingMinDist + 2 && game.canBuild(a, 'city', t).ok);
   assert.ok(cityTile !== undefined && buildNow(game, a, 'city', cityTile), 'ciudad de A');
   assert.ok(buildNow(game, b, 'city', tb), 'ciudad de B');
   return { map, game, a, b, ta, tb, cityTile };
@@ -73,4 +75,29 @@ test('si la estación desaparece, su raíl también', () => {
   for (let i = 0; i < CONFIG.railRefresh + 1; i++) game.tick();
   assert.ok(!game.rails.some((r) => r.station.tile === tb), 'el raíl a la ciudad destruida ya no está');
   assert.ok(game.trains.every((t) => game.rails.includes(t.rail)));
+});
+
+test('las vías van en ángulo recto, dentro del alcance, y unen también fábricas entre sí (una sola vía por pareja)', () => {
+  const { game, a, map, ta } = setup();
+  const d = (t, u) => Math.hypot(map.x(t) - map.x(u), map.y(t) - map.y(u));
+  const m = (t, u) => Math.abs(map.x(t) - map.x(u)) + Math.abs(map.y(t) - map.y(u));
+  const other = [...map.landTiles].find((t) => game.owner[t] === a.id && m(t, ta) < CONFIG.railRange - 4 && game.buildings.every((b) => d(t, b.tile) > CONFIG.buildingMinDist + 2) && game.canBuild(a, 'factory', t).ok);
+  assert.ok(other !== undefined && buildNow(game, a, 'factory', other), 'segunda fábrica');
+  for (let i = 0; i < CONFIG.railRefresh + 1; i++) game.tick();
+  const between = game.rails.filter((r) => r.factory.kind === 'factory' && r.station.kind === 'factory');
+  assert.equal(between.length, 1, 'una vía entre las dos fábricas');
+  for (const r of game.rails) {
+    const fx = map.x(r.factory.tile);
+    const fy = map.y(r.factory.tile);
+    const sx = map.x(r.station.tile);
+    const sy = map.y(r.station.tile);
+    // La esquina comparte una coordenada con cada extremo
+    assert.ok((r.cx === sx && r.cy === fy) || (r.cx === fx && r.cy === sy), 'esquina en ángulo recto');
+    assert.equal(r.len, Math.max(1, Math.abs(sx - fx) + Math.abs(sy - fy)));
+    assert.ok(r.len <= game.railRange(r.factory.level) * (1 + a.mods.railRange) + 1e-9);
+    const [x0, y0] = game.railPoint(r, 0);
+    const [x1, y1] = game.railPoint(r, r.len);
+    assert.deepEqual([x0, y0], [fx + 0.5, fy + 0.5]);
+    assert.deepEqual([x1, y1], [sx + 0.5, sy + 0.5]);
+  }
 });

@@ -182,6 +182,10 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   relleno más transparente y terreno con grano de píxel
 - Ríos: los reales de Natural Earth en los mapas del mundo y ríos que bajan
   de las montañas al mar en los aleatorios; cruzarlos cuesta ×1,6
+- Vías del tren con alcance corto (14 casillas de recorrido ×RES, +4 por
+  nivel), en ángulo recto y evitando el agua, uniendo también fábricas entre
+  sí; dibujo nuevo (lecho oscuro con traviesas claras) y vista previa del
+  alcance y de las vías al colocar una fábrica
 
 ## Próximo
 

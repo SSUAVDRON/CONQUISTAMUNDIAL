@@ -1021,10 +1021,12 @@ export class Game {
   }
 
   /**
-   * Red de raíles: cada fábrica terminada se une con las ciudades y puertos
-   * terminados a su alcance en la misma masa de tierra, sean de quien sean
-   * (también enemigos), como mucho CONFIG.railMaxPerFactory, los más cercanos.
-   * Los raíles que siguen existiendo conservan su tren.
+   * Red de vías: cada fábrica terminada se une con las ciudades, puertos y
+   * otras fábricas terminados a su alcance en la misma masa de tierra, sean de
+   * quien sean (también enemigos), como mucho CONFIG.railMaxPerFactory, las
+   * más cercanas. Las vías van en ángulo recto (un tramo en horizontal y otro
+   * en vertical, por donde cruzan menos agua) y el alcance se mide en ese
+   * recorrido. Las vías que siguen existiendo conservan su tren.
    */
   _updateRailNetwork() {
     const map = this.map;
@@ -1038,31 +1040,89 @@ export class Game {
       const body = map.landBody[f.tile];
       const cands = [];
       for (const s of this.buildings) {
-        if ((s.kind !== 'city' && s.kind !== 'port') || !s.level || map.landBody[s.tile] !== body) continue;
-        const dx = map.x(s.tile) - fx;
-        const dy = map.y(s.tile) - fy;
-        const d2 = dx * dx + dy * dy;
-        if (d2 <= R * R) cands.push([d2, s]);
+        if (s === f || (s.kind !== 'city' && s.kind !== 'port' && s.kind !== 'factory') || !s.level || map.landBody[s.tile] !== body) continue;
+        const d = Math.abs(map.x(s.tile) - fx) + Math.abs(map.y(s.tile) - fy);
+        if (d <= R) cands.push([d, s]);
       }
       cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
-      for (let k = 0; k < cands.length && k < CONFIG.railMaxPerFactory; k++) {
-        const [d2, s] = cands[k];
-        const key = `${f.id}:${s.id}`;
-        const r = this._railMap.get(key) || {
-          key,
-          factory: f,
-          station: s,
-          len: Math.max(1, Math.sqrt(d2)),
-          nextTrain: this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax),
-          train: null,
-        };
+      let made = 0;
+      for (let k = 0; k < cands.length && made < CONFIG.railMaxPerFactory; k++) {
+        const [d, s] = cands[k];
+        // Entre dos fábricas, una sola vía (la clave no depende del orden)
+        const key = s.kind === 'factory' ? `${Math.min(f.id, s.id)}:${Math.max(f.id, s.id)}` : `${f.id}:${s.id}`;
+        if (keep.has(key)) {
+          made++;
+          continue;
+        }
+        let r = this._railMap.get(key);
+        if (!r) {
+          const corner = this._railCorner(f.tile, s.tile);
+          if (!corner) continue; // demasiada agua en medio
+          r = {
+            key,
+            factory: f,
+            station: s,
+            cx: corner[0],
+            cy: corner[1],
+            len: Math.max(1, d),
+            nextTrain: this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax),
+            train: null,
+          };
+        }
         keep.set(key, r);
         list.push(r);
+        made++;
       }
     }
     if (this.trains.length) this.trains = this.trains.filter((t) => keep.has(t.rail.key));
     this._railMap = keep;
     this.rails = list;
+  }
+
+  /**
+   * Esquina de una vía en ángulo recto de `a` a `b`: primero en horizontal
+   * ([xb, ya]) o primero en vertical ([xa, yb]), la que cruce menos agua.
+   * null si las dos cruzan más de CONFIG.railMaxWater casillas de agua.
+   */
+  _railCorner(a, b) {
+    const map = this.map;
+    const W = map.width;
+    const t = map.terrain;
+    const xa = map.x(a);
+    const ya = map.y(a);
+    const xb = map.x(b);
+    const yb = map.y(b);
+    const wetRow = (y, x0, x1) => {
+      let n = 0;
+      for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) if (t[y * W + x] === 0) n++;
+      return n;
+    };
+    const wetCol = (x, y0, y1) => {
+      let n = 0;
+      for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) if (t[y * W + x] === 0) n++;
+      return n;
+    };
+    const h = wetRow(ya, xa, xb) + wetCol(xb, ya, yb);
+    const v = wetCol(xa, ya, yb) + wetRow(yb, xa, xb);
+    if (Math.min(h, v) > CONFIG.railMaxWater) return null;
+    return h <= v ? [xb, ya] : [xa, yb];
+  }
+
+  /** Punto de la vía `r` a `pos` casillas de la fábrica: [x, y, ángulo] (centros de casilla). */
+  railPoint(r, pos) {
+    const map = this.map;
+    const fx = map.x(r.factory.tile);
+    const fy = map.y(r.factory.tile);
+    const sx = map.x(r.station.tile);
+    const sy = map.y(r.station.tile);
+    const first = Math.abs(r.cx - fx) + Math.abs(r.cy - fy);
+    if (pos <= first) {
+      const k = first ? pos / first : 0;
+      return [fx + (r.cx - fx) * k + 0.5, fy + (r.cy - fy) * k + 0.5, Math.atan2(r.cy - fy, r.cx - fx)];
+    }
+    const second = Math.abs(sx - r.cx) + Math.abs(sy - r.cy);
+    const k = second ? Math.min(1, (pos - first) / second) : 1;
+    return [r.cx + (sx - r.cx) * k + 0.5, r.cy + (sy - r.cy) * k + 0.5, Math.atan2(sy - r.cy, sx - r.cx)];
   }
 
   /** Salen trenes, avanzan y pagan al llegar a cada extremo (ida a la estación y vuelta). */
