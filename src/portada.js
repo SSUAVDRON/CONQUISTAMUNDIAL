@@ -16,10 +16,16 @@ function hslRgb(h, s, l) {
 }
 
 export class CoverArt {
-  /** `data`: mapa real decodificado ({ w, h, terrain, relief, countries }). */
-  constructor(canvas, data) {
+  /**
+   * `data`: mapa real decodificado ({ w, h, terrain, relief, countries }).
+   * `crop`: recorte en fracciones del mapa ({ x0, x1, y0 }) y `labelFrom`: desde
+   * qué fracción del ancho se rotulan países (lo de la izquierda queda tapado).
+   */
+  constructor(canvas, data, { crop = null, labelFrom = 0.44 } = {}) {
     this.canvas = canvas;
     this.data = data;
+    this.crop = crop || { x0: 0.235, x1: 0.67, y0: 0.13 };
+    this.labelFrom = labelFrom;
     this.raf = 0;
     this.last = 0;
     this._paintBase();
@@ -30,11 +36,11 @@ export class CoverArt {
     const W = canvas.width;
     const H = canvas.height;
     // De la costa de América a Oriente Próximo: Europa y el Mediterráneo, a la derecha
-    const x0 = Math.round(data.w * 0.235);
-    const x1 = Math.round(data.w * 0.67);
+    const x0 = Math.round(data.w * this.crop.x0);
+    const x1 = Math.round(data.w * this.crop.x1);
     const cropW = x1 - x0;
     const cropH = Math.round((cropW * H) / W);
-    const y0 = Math.round(data.h * 0.13);
+    const y0 = Math.round(data.h * this.crop.y0);
     const base = document.createElement('canvas');
     base.width = W;
     base.height = H;
@@ -95,8 +101,21 @@ export class CoverArt {
     this.base = base;
 
     // Lo que se anima, en la parte que no tapa el texto (derecha)
-    const visible = nations.filter((n) => n.x > W * 0.44 && n.x < W - 20 && n.y > 20 && n.y < H - 16).sort((a, b) => b.area - a.area);
-    this.labels = visible.slice(0, 8);
+    const visible = nations.filter((n) => n.x > W * this.labelFrom && n.x < W - 20 && n.y > 20 && n.y < H - 16).sort((a, b) => b.area - a.area);
+    // Rótulos sin pisarse: de mayor a menor, se salta el que choca con uno ya puesto
+    const meas = document.createElement('canvas').getContext('2d');
+    meas.font = '800 15px system-ui, sans-serif';
+    const boxes = [];
+    this.labels = [];
+    for (const n of visible) {
+      if (this.labels.length >= 8) break;
+      const w = meas.measureText(n.name).width + (n.iso ? 26 : 0) + 8;
+      const box = [n.x - w / 2, n.y - 12, n.x + w / 2, n.y + 30];
+      if (box[0] < 4 || box[2] > W - 4) continue;
+      if (boxes.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+      boxes.push(box);
+      this.labels.push(n);
+    }
     // Frentes: parejas de vecinos cercanos entre los más grandes
     const fronts = [];
     const used = new Set();

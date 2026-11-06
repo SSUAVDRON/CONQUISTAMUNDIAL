@@ -6,6 +6,7 @@ import { decodeRelief, generateMap, markRivers } from './map.js';
 import { RIVERS } from './rios.js';
 import { paintMapPreview } from './terreno.js';
 import { CoverArt } from './portada.js';
+import { drawHeroScene, drawModeArt, drawNewsArt } from './ilustraciones.js';
 import { hexToRgb } from './colors.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame } from './icons.js';
 import { drawTransport, drawWarship } from './barcos.js';
@@ -22,17 +23,32 @@ const SWATCHES = [
   '#ff4d6d', '#e0483f', '#c2185b', '#b05cff', '#7b5cff', '#5b6b8c', '#f2f4f8', '#1b2133',
 ];
 
-/** Lo que se muestra en «Tu arsenal»: dibujo del juego, nombre y para qué sirve. */
-const ARSENAL = [
-  { kind: 'city', text: 'Más población máxima' },
-  { kind: 'port', text: 'Pesca, comercio y oro' },
-  { kind: 'fort', text: 'Defensa ×2,5 alrededor' },
-  { kind: 'factory', text: '+25 % de oro' },
-  { kind: 'silo', text: 'Lanza misiles' },
-  { kind: 'sam', text: 'Derriba misiles' },
-  { kind: 'warship', text: 'Domina el mar' },
-  { kind: 'transporte', name: 'Desembarco', text: 'Tropas por mar' },
-  { kind: 'missile', text: 'Arrasa una zona' },
+/** Lo que se muestra en el arsenal: dibujo del juego, nombre y para qué sirve (según las reglas). */
+const ARSENAL = {
+  city: { text: '+250 000 de techo de tropas por nivel' },
+  port: { text: 'Mercantes: oro para ti y para el puerto de destino' },
+  factory: { text: 'Vías y trenes: 10 000 de oro por tren (35 000 si es aliado)' },
+  fort: { text: 'Conquistar a su alrededor cuesta ×3 de tiempo y bajas' },
+  sam: { text: 'Intenta derribar las bombas que caen cerca' },
+  warship: { text: 'Patrulla una zona del mar y hunde barcos' },
+  transporte: { name: 'Desembarco', text: 'Lleva tropas por mar a otra costa', price: 'Tropas' },
+  silo: { text: 'Lanza las bombas' },
+  missile: { text: 'Arrasa una zona y la deja libre' },
+  hbomb: { text: 'Arrasa una zona enorme' },
+  mirv: { text: '24 cabezas repartidas por un país' },
+};
+/** Categorías del arsenal (portada y vista «Arsenal»). */
+const ARSENAL_CATS = [
+  { id: 'economia', name: 'Economía', text: 'Más tropas, comercio y trenes', icon: 'factory', items: ['city', 'port', 'factory'] },
+  { id: 'defensa', name: 'Defensa', text: 'Protege tus fronteras y tu cielo', icon: 'fort', items: ['fort', 'sam', 'warship'] },
+  { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
+];
+
+/** Novedades del carrusel de la portada. */
+const NEWS = [
+  { tag: 'Reglas', title: 'Mecánicas nuevas', text: 'Techo de tropas, regeneración, combate, cerco y retirada siguen ahora la especificación al pie de la letra.', art: 0 },
+  { tag: 'Arsenal', title: 'Bomba H y MIRV', text: 'El silo lanza dos bombas nuevas: la H arrasa una zona enorme y el MIRV reparte 24 cabezas por un país.', art: 1 },
+  { tag: 'Mapas', title: 'El mundo, más grande', text: 'Mapa del mundo de 2000 × 1000 casillas con 156 países y sus ríos de verdad.', art: 2 },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -336,18 +352,18 @@ export class Home {
     const cover = $('portada-mapa');
     if (cover) {
       setTimeout(() => {
-        this.cover = new CoverArt(cover, realPreviewData('mundo'));
+        // Europa, el Mediterráneo y Oriente Próximo (a la derecha de la portada, tras la línea dorada)
+        this.cover = new CoverArt(cover, realPreviewData('mundo'), { crop: { x0: 0.415, x1: 0.655, y0: 0.085 }, labelFrom: 0.2 });
         if (!$('inicio').hidden) this.cover.start();
       }, 60);
     }
-    // Tarjetas de modo: solo el título sobre uno de nuestros mapas
-    const modeMaps = { rapida: 'mundo', ia: 'europa', online: 'norteamerica', tutorial: 'sudamerica' };
-    setTimeout(() => {
-      for (const card of document.querySelectorAll('.modo[data-modo]')) {
-        const id = modeMaps[card.dataset.modo];
-        if (id) card.style.setProperty('--fondo-mapa', `url(${mapThumb(id, 360).toDataURL()})`);
-      }
-    }, 120);
+    // Ilustraciones de la portada y de las tarjetas de modo (después del primer pintado)
+    setTimeout(() => this._paintArt(), 30);
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => this._paintHero(), 150);
+    });
     segmented($('seg-dificultad'), Object.entries(DIFFICULTY), this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
     });
@@ -414,8 +430,18 @@ export class Home {
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
-    $('btn-elegir').addEventListener('click', () => this._mode('ia'));
+    $('btn-repetir').addEventListener('click', () => this._replay());
+    $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
+    $('novedades-todas').addEventListener('click', () => {
+      const box = $('novedades').closest('.tarjeta-ini');
+      const all = box.classList.toggle('todas');
+      $('novedades-todas').firstChild.textContent = all ? 'Ver menos ' : 'Ver todas ';
+    });
+    for (const b of document.querySelectorAll('[data-ir]')) {
+      if (b.id !== 'chip-perfil') b.addEventListener('click', () => this.setView(b.dataset.ir));
+    }
     this._buildArsenal();
+    this._buildNews();
     this._buildSwatches();
 
     // Multijugador
@@ -486,19 +512,94 @@ export class Home {
       this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
+    } else if (mode === 'personalizada') {
+      // El mismo panel que «Contra IA», directamente en las reglas
+      this._openPanel('ia', false);
+      setTimeout(() => $('reglas-ia').scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
     } else {
       this._openPanel(this.panel === mode ? null : mode);
     }
   }
 
-  _openPanel(name) {
+  /** «Volver a jugar»: la última partida contra la IA, con el mismo mapa, rivales y reglas. */
+  _replay(game = null) {
+    const a = this.profile.ajustes;
+    const map = game?.mapa && (REAL_MAPS[game.mapa] || MAP_SIZES[game.mapa]) ? game.mapa : this.choice.map;
+    const bots = Math.min(maxBotsFor(map), game?.rivales || a.bots || 70);
+    this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...a.reglas } });
+  }
+
+  /** Escena de la portada y dibujos de las tarjetas de modo. */
+  _paintArt() {
+    this._paintHero();
+    this._paintBackdrop();
+    const data = { world: realPreviewData('mundo'), europe: realPreviewData('europa') };
+    for (const card of document.querySelectorAll('.modo[data-modo]')) {
+      const c = card.querySelector('.modo-arte');
+      if (c) drawModeArt(card.dataset.modo, c, data);
+    }
+  }
+
+  /** Fondo de los menús: el mundo en puntos azules muy apagados, como un mapa de mando. */
+  _paintBackdrop() {
+    const d = realPreviewData('mundo');
+    const step = 6;
+    const W = 1500;
+    const H = Math.round((W * d.h) / d.w);
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = 'rgba(96, 140, 220, 0.2)';
+    for (let y = step / 2; y < H; y += step) {
+      const ty = Math.floor((y * d.h) / H) * d.w;
+      for (let x = step / 2; x < W; x += step) {
+        if (d.terrain[ty + Math.floor((x * d.w) / W)]) ctx.fillRect(x - 1.1, y - 1.1, 2.2, 2.2);
+      }
+    }
+    // Meridianos y paralelos
+    ctx.strokeStyle = 'rgba(120, 160, 230, 0.06)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += W / 12) {
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += H / 6) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(W, y + 0.5);
+      ctx.stroke();
+    }
+    c.toBlob?.((blob) => {
+      if (blob) document.documentElement.style.setProperty('--fondo-mundo', `url(${URL.createObjectURL(blob)})`);
+    });
+  }
+
+  /** La escena al atardecer, al tamaño real de la portada (nítida en pantallas densas). */
+  _paintHero() {
+    const c = $('heroe-escena');
+    if (!c || !c.clientWidth) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = Math.round(c.clientWidth * dpr);
+    const H = Math.round(c.clientHeight * dpr);
+    if (c.width === W && c.height === H && c._painted) return;
+    c.width = W;
+    c.height = H;
+    const narrow = c.clientWidth < 700;
+    drawHeroScene(c.getContext('2d'), W, H, 0, narrow ? 0.7 : 0.5);
+    c._painted = true;
+  }
+
+  _openPanel(name, scroll = true) {
     this.panel = name;
     for (const p of document.querySelectorAll('.panel-modo')) p.hidden = p.dataset.panel !== name;
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
       if (card.dataset.modo === 'ia' || card.dataset.modo === 'online') card.setAttribute('aria-expanded', String(card.dataset.modo === name));
     }
     const panel = name && document.querySelector(`.panel-modo[data-panel="${name}"]`);
-    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (panel && scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   _buildGallery() {
@@ -552,38 +653,181 @@ export class Home {
   renderHero() {
     const p = this.profile;
     const info = levelInfo(p.xp);
-    $('portada-saludo').textContent = p.nombre ? `¡A las trincheras, ${p.nombre}!` : '¡A las trincheras!';
+    $('portada-saludo').textContent = p.nombre ? `A las trincheras, ${p.nombre}` : 'A las trincheras';
+    const pill = (icon, value, label, cls = '') =>
+      el('span', { class: `dato-portada${cls}` }, el('span', { class: 'dato-icono', 'aria-hidden': 'true', text: icon }), el('b', { text: value }), ` ${label}`);
     $('portada-datos').replaceChildren(
-      el('span', { class: 'dato-portada' }, el('b', { text: String(info.level) }), ' nivel'),
-      el('span', { class: 'dato-portada' }, el('b', { text: String(p.stats.victorias) }), ' victorias'),
-      el('span', { class: 'dato-portada' }, el('b', { text: String(p.stats.partidas) }), ' partidas'),
-      el('span', { class: 'dato-portada' }, el('b', { text: `${ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length}/${ACHIEVEMENTS.length}` }), ' logros'),
-      el('span', { class: 'dato-portada dato-monedas' }, el('b', { text: `🪙 ${formatNumber(p.monedas || 0)}` }), ' monedas'),
+      pill('★', String(info.level), 'nivel'),
+      pill('🏆', String(p.stats.victorias), 'victorias'),
+      pill('⚔', String(p.stats.partidas), 'partidas'),
+      pill('🎖', `${ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length}/${ACHIEVEMENTS.length}`, 'logros'),
+    );
+    const last = p.historial[0];
+    $('btn-repetir').hidden = !last;
+    this.renderMissions();
+    this.renderLastGame();
+  }
+
+  /** Misiones diarias en la portada (los mismos retos que en «Progreso»). */
+  renderMissions() {
+    const p = this.profile;
+    const d = ensureDaily(p);
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const mins = Math.max(1, Math.round((midnight - now) / 60000));
+    $('misiones-reloj').textContent = `⏱ ${Math.floor(mins / 60)} h ${mins % 60} min`;
+    const items = d.retos.map((id) => {
+      const r = DAILY.find((x) => x.id === id);
+      if (!r) return null;
+      const prog = Math.min(r.need, d.progreso[id] || 0);
+      const done = !!d.hechos[id];
+      return el(
+        'li',
+        { class: done ? 'hecha' : '' },
+        el('span', { class: 'mision-check', 'aria-hidden': 'true', text: done ? '✓' : '' }),
+        el('span', { class: 'mision-nombre', text: r.name }),
+        el('span', { class: 'mision-prog', text: `${prog}/${r.need}` }),
+        el('b', { class: 'mision-premio', text: `🪙 ${r.coins}` }),
+      );
+    });
+    const doneCount = d.retos.filter((id) => d.hechos[id]).length;
+    items.push(
+      el(
+        'li',
+        { class: `mision-bonus${d.bonus ? ' hecha' : ''}` },
+        el('span', { class: 'mision-check', 'aria-hidden': 'true', text: d.bonus ? '✓' : '★' }),
+        el('span', { class: 'mision-nombre', text: d.bonus ? '¡Las tres hechas!' : 'Completa las tres' }),
+        el('span', { class: 'mision-prog', text: `${doneCount}/3` }),
+        el('b', { class: 'mision-premio', text: `🪙 ${DAILY_BONUS}` }),
+      ),
+    );
+    $('misiones-lista').replaceChildren(...items);
+  }
+
+  /** Tarjeta de la última partida: mapa, resultado y «jugar otra vez». */
+  renderLastGame() {
+    const g = this.profile.historial[0];
+    const box = $('ultima-partida');
+    if (!g) {
+      box.replaceChildren(
+        el('p', { class: 'nota', text: 'Aún no has terminado ninguna partida. ¡Empieza la primera!' }),
+        el('button', { type: 'button', class: 'secundario', onclick: () => this._mode('rapida'), text: 'Partida rápida' }),
+      );
+      return;
+    }
+    const win = g.resultado.startsWith('victoria');
+    const key = `${g.mapa}|${g.fecha}`;
+    if (box.dataset.clave === key) return;
+    box.dataset.clave = key;
+    const thumb = el('div', { class: 'ultima-mapa' }, mapThumb(REAL_MAP_DATA[g.mapa] || MAP_SIZES[g.mapa] ? g.mapa : 'mundo', 260));
+    thumb.append(el('span', { class: `ultima-resultado${win ? ' gana' : ''}`, text: g.resultado }));
+    box.replaceChildren(
+      thumb,
+      el(
+        'div',
+        { class: 'ultima-datos' },
+        el('strong', { text: mapLabel(g.mapa) }),
+        el('span', { text: `${formatPercent(g.pct)} del mapa · ${formatTime(g.duracion)}` }),
+        el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}${g.rivales ? ` · ${g.rivales} rivales` : ''}${g.online ? ' · online' : ''}` }),
+      ),
+      el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': 'Jugar otra vez en este mapa', title: 'Jugar otra vez en este mapa', onclick: () => this._replay(g) },
+        el('span', { 'aria-hidden': 'true', text: '▶' })),
     );
   }
 
-  /** Dibujos del juego (edificios, buques, misil) con su nombre y su precio. */
-  _buildArsenal() {
+  /** Carrusel de novedades (pasa solo cada 7 s mientras se ve el inicio). */
+  _buildNews() {
+    const slides = NEWS.map((n, i) => {
+      const c = el('canvas', { width: 320, height: 150, 'aria-hidden': 'true' });
+      drawNewsArt(c, n.art);
+      return el(
+        'article',
+        { class: 'novedad', 'data-i': String(i), hidden: i !== 0 },
+        el('div', { class: 'novedad-arte' }, c, el('span', { class: 'novedad-tag', text: n.tag })),
+        el('div', { class: 'novedad-texto' }, el('strong', { text: n.title }), el('p', { text: n.text })),
+      );
+    });
+    $('novedades').replaceChildren(...slides);
+    const dots = NEWS.map((n, i) =>
+      el('button', { type: 'button', role: 'tab', 'aria-label': n.title, 'aria-selected': String(i === 0), onclick: () => this._news(i, true) }),
+    );
+    $('novedades-puntos').replaceChildren(...dots);
+    this.newsIndex = 0;
+    this._newsTimer = setInterval(() => {
+      if (!$('inicio').hidden && this.view === 'jugar' && !document.hidden) this._news((this.newsIndex + 1) % NEWS.length);
+    }, 7000);
+  }
+
+  _news(i, manual = false) {
+    this.newsIndex = i;
+    for (const s of $('novedades').children) s.hidden = Number(s.dataset.i) !== i;
+    [...$('novedades-puntos').children].forEach((d, k) => d.setAttribute('aria-selected', String(k === i)));
+    if (manual) {
+      clearInterval(this._newsTimer);
+      this._newsTimer = setInterval(() => {
+        if (!$('inicio').hidden && this.view === 'jugar' && !document.hidden) this._news((this.newsIndex + 1) % NEWS.length);
+      }, 9000);
+    }
+  }
+
+  /** Un dibujo del juego para el arsenal (edificio, barco o bomba). */
+  _weaponArt(kind, size = 112) {
+    const c = el('canvas', { width: size, height: size, 'aria-hidden': 'true' });
+    const ctx = c.getContext('2d');
+    const m = size / 2;
     const color = '#2f7dff';
+    if (kind === 'warship') drawWarship(ctx, m, m, -0.5, size * 0.39, color, true, -0.9, 0);
+    else if (kind === 'transporte') drawTransport(ctx, m, m, -0.5, size * 0.57, color, true, 0);
+    else if (kind === 'missile') drawMissileSprite(ctx, m, m, -0.8, size * 0.57, '#e0483f', 0);
+    else drawBuildingReal(ctx, kind, m, m, size * 0.75, { ring: kind === 'hbomb' ? '#ff7a45' : kind === 'mirv' ? '#b05cff' : color });
+    return c;
+  }
+
+  /** Arsenal: tres categorías en la portada y la lista completa en su vista. */
+  _buildArsenal() {
+    const nameOf = (kind) => ARSENAL[kind].name || BUILDINGS[kind]?.name || kind;
+    const priceOf = (kind) => ARSENAL[kind].price || (BUILDINGS[kind] ? `${formatNumber(BUILDINGS[kind].base)} oro` : '');
+    $('arsenal-cats').replaceChildren(
+      ...ARSENAL_CATS.map((cat, i) =>
+        el(
+          'article',
+          { class: `arsenal-cat cat-${cat.id}`, style: `--i:${i}` },
+          el(
+            'header',
+            {},
+            el('span', { class: 'arsenal-cat-icono' }, this._weaponArt(cat.icon, 72)),
+            el('div', {}, el('strong', { text: cat.name }), el('small', { text: cat.text })),
+          ),
+          el(
+            'div',
+            { class: 'arsenal-cat-fichas' },
+            ...cat.items.slice(0, 4).map((kind) => el('span', { class: 'ficha-arma', title: `${nameOf(kind)}: ${ARSENAL[kind].text}` }, this._weaponArt(kind, 72), el('small', { text: nameOf(kind) }))),
+          ),
+          el('button', { type: 'button', class: 'enlace-ini', onclick: () => this.setView('arsenal') }, 'Ver todo ', el('span', { 'aria-hidden': 'true', text: '›' })),
+        ),
+      ),
+    );
+    let n = 0;
     $('arsenal').replaceChildren(
-      ...ARSENAL.map((item, i) => {
-        const def = BUILDINGS[item.kind];
-        const c = el('canvas', { width: 112, height: 112, 'aria-hidden': 'true' });
-        const ctx = c.getContext('2d');
-        if (item.kind === 'warship') drawWarship(ctx, 56, 56, -0.5, 44, color, true, -0.9, 0);
-        else if (item.kind === 'transporte') drawTransport(ctx, 56, 56, -0.5, 64, color, true, 0);
-        else if (item.kind === 'missile') drawMissileSprite(ctx, 56, 56, -0.8, 64, '#e0483f', 0);
-        else drawBuildingReal(ctx, item.kind, 56, 56, 84, { ring: '#2f7dff' });
-        const price = def ? `${formatNumber(def.base)} oro` : 'Tropas';
-        return el(
+      el('h2', { class: 'titulo-seccion' }, el('span', { text: 'Arsenal' })),
+      el('p', { class: 'arsenal-intro', text: 'Todo lo que puedes construir y lanzar en una partida, con su precio inicial. Subir de nivel cuesta lo mismo que uno nuevo.' }),
+      ...ARSENAL_CATS.flatMap((cat) => [
+        el('h3', { class: `arsenal-grupo cat-${cat.id}` }, el('span', { class: 'arsenal-cat-icono' }, this._weaponArt(cat.icon, 56)), el('span', { text: cat.name }), el('small', { text: cat.text })),
+        el(
           'div',
-          { class: 'arma', style: `--i:${i}` },
-          el('div', { class: 'arma-dibujo' }, c),
-          el('strong', { text: item.name || def.name }),
-          el('span', { class: 'arma-texto', text: item.text }),
-          el('span', { class: 'arma-precio', text: price }),
-        );
-      }),
+          { class: 'arsenal' },
+          ...cat.items.map((kind) =>
+            el(
+              'div',
+              { class: 'arma', style: `--i:${n++}` },
+              el('div', { class: 'arma-dibujo' }, this._weaponArt(kind)),
+              el('strong', { text: nameOf(kind) }),
+              el('span', { class: 'arma-texto', text: ARSENAL[kind].text }),
+              el('span', { class: 'arma-precio', text: priceOf(kind) }),
+            ),
+          ),
+        ),
+      ]),
     );
   }
 
@@ -705,6 +949,7 @@ export class Home {
     $('sala').hidden = true;
     this.renderAll();
     this.cover?.start();
+    requestAnimationFrame(() => this._paintHero());
   }
 
   hide() {
@@ -718,7 +963,10 @@ export class Home {
       tab.setAttribute('aria-selected', String(tab.dataset.vista === view));
     }
     for (const sec of document.querySelectorAll('.vista[data-vista]')) sec.hidden = sec.dataset.vista !== view;
+    $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
+    if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
+    $('inicio').scrollTo?.({ top: 0 });
   }
 
   renderAll() {
@@ -744,13 +992,14 @@ export class Home {
     const framed = p.marco && p.marco !== 'ninguno';
     drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * (framed ? 0.72 : 0.95));
     drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.72);
-    $('chip-perfil').className = `chip-perfil est-${p.estandarte}`;
+    $('chip-perfil').className = `chip-perfil est-${p.estandarte}${this.view === 'perfil' ? ' activo' : ''}`;
     $('chip-nombre').style.color = nameColorOf(p);
     const info = levelInfo(p.xp);
     $('chip-nombre').textContent = p.nombre || 'Sin nombre';
     const title = titleName(p);
     $('chip-nivel').textContent = `Nivel ${info.level}${title ? ` · ${title}` : ''}`;
     $('chip-xp').style.width = `${Math.round(info.progress * 100)}%`;
+    $('chip-xp-txt').textContent = `${formatNumber(p.xp)} / ${formatNumber(info.next)} XP`;
     const total = ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length;
     $('cuenta-logros').textContent = `${total}/${ACHIEVEMENTS.length}`;
     $('chip-monedas').textContent = `🪙 ${formatNumber(p.monedas || 0)}`;
