@@ -16,7 +16,7 @@ const STEPS = [
     check: (s) => s.human.spawned,
   },
   {
-    text: 'Bien. Cuando termine la cuenta atrás empieza la partida. Tu población crece sola y se reparte entre soldados (atacan) y trabajadores (oro): lo ves en el panel de abajo.',
+    text: 'Bien. Cuando termine la cuenta atrás empieza la partida. Tus tropas se regeneran solas (más rápido hacia el 42 % del techo) y ganas 100 de oro por turno: lo ves en el panel de abajo.',
     highlight: '#panel-jugador',
     check: (s) => s.game.phase === 'playing',
   },
@@ -49,7 +49,7 @@ const STEPS = [
     check: (s) => s.human.allies.size > 0 || s.game.requests.some((r) => r.from === s.human.id),
   },
   {
-    text: 'Construye un puerto en tu costa con la tecla E. Sus pesqueros y mercantes te darán oro solos. Si no tienes costa, salta este paso.',
+    text: 'Construye un puerto en tu costa con la tecla E. Sus mercantes irán a puertos de otros países y os darán oro a los dos al llegar. Si no tienes costa, salta este paso.',
     highlight: '#construir [data-kind="port"]',
     enter: (s) => {
       s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'port'));

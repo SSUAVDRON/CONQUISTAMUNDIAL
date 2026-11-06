@@ -12,6 +12,10 @@ import { botColor } from './colors.js';
 import { valueNoise } from './noise.js';
 import { POI, POI_TYPES, placePoints } from './estrategia.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
+import { MECH, bigEmpireBonus, neutralTimeCost, priceFor, pvpTile, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
+
+/** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
+const START_OFFSETS = startOffsets();
 
 // Buffers de vecinos, uno por función para evitar reentradas
 const NB_SET = new Int32Array(4);
@@ -102,6 +106,9 @@ export class Game {
     /** Rutas marítimas ya calculadas (el terreno no cambia): from·size+to → camino. */
     this._pathCache = new Map();
     this._nextBoatId = 1;
+    // Cerco: casillas ya vistas en este tick que no forman bolsa (tick en que se vio)
+    this._annexFail = new Uint32Array(map.size);
+    this._annexBudget = 0;
   }
 
   // ---------------------------------------------------------------- jugadores
@@ -112,6 +119,7 @@ export class Game {
     const p = new Player(id, name, color, isHuman);
     p.troopMult = this.rules.troopMult;
     p.goldMult = this.rules.goldMult;
+    p.economy = this.rules.economy;
     this.players.push(p);
     // El primer humano es el jugador local por defecto; en multijugador se fija aparte
     if (isHuman && !this.human) this.human = p;
@@ -136,6 +144,9 @@ export class Game {
         p.homeTile = c.tile;
         p.flag = c.iso || '';
       }
+      // Naciones de la IA (documento, 03.1-03.2): techo y regeneración según la dificultad
+      p.capMult = MECH.nationCapByDifficulty[difficulty] ?? MECH.nationCapByDifficulty.normal;
+      p.regenMult = MECH.nationRegenByDifficulty[difficulty] ?? MECH.nationRegenByDifficulty.normal;
       const brain = new BotBrain(this, p, difficulty);
       this.bots.push(brain);
       this.brains.set(p.id, brain);
@@ -152,7 +163,9 @@ export class Game {
       const v = this.rng.int(-14, 14);
       const p = this.addPlayer(name, base.map((c) => Math.max(0, Math.min(255, c + v))), false);
       p.weak = true;
-      p.strength = CONFIG.colonyStrength;
+      // Los «bots» del documento: un tercio del techo y la mitad de regeneración
+      p.capMult = MECH.botCapShare;
+      p.regenMult = MECH.botRegenMult;
       const brain = new ColonyBrain(this, p);
       this.bots.push(brain);
       this.brains.set(p.id, brain);
@@ -234,69 +247,48 @@ export class Game {
     if (map.landBodySizes[body] < minBody) return false;
     if (p.spawned) this._releaseAll(p);
 
-    // Zona inicial pequeña e irregular: el radio cambia según la dirección
-    // (ruido sobre la circunferencia, sin trigonometría para que sea igual en
-    // todos los navegadores). La forma es estrellada, así que siempre es conexa.
-    const r = p.weak ? CONFIG.colonySpawnRadius : CONFIG.spawnRadius;
-    const jag = CONFIG.spawnJag;
-    const R = Math.ceil(r * (1 + jag) + 1);
-    const s = (p.id * 7919 + this.seed) | 0;
+    // Zona inicial (documento, 02.2): el disco lógico de radio 4 desplazado
+    // (−0,5, −0,5) → 52 casillas. Si toca mar, otra masa de tierra o casillas
+    // ya ocupadas, se recorta (nunca se solapan propietarios).
     const cx = map.x(tile);
     const cy = map.y(tile);
-    for (let dy = -R; dy <= R; dy++) {
-      for (let dx = -R; dx <= R; dx++) {
-        const d2 = dx * dx + dy * dy;
-        if (d2 > R * R) continue;
-        if (d2 > 2) {
-          const d = Math.sqrt(d2);
-          const ux = dx / d + 2;
-          const uy = dy / d + 2;
-          const n = valueNoise(ux * 1.3, uy * 1.3, 1, s) * 2 - 1;
-          const f = valueNoise(ux * 3.5, uy * 3.5, 1, s + 1) * 2 - 1;
-          const rr = r * (1 + jag * n + 0.12 * f);
-          if (d2 > rr * rr + 1) continue;
-        }
-        const x = cx + dx;
-        const y = cy + dy;
-        if (!map.inBounds(x, y)) continue;
-        const i = map.index(x, y);
-        if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) this.setOwner(i, p.id);
-      }
+    for (const [dx, dy] of START_OFFSETS) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!map.inBounds(x, y)) continue;
+      const i = map.index(x, y);
+      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) this.setOwner(i, p.id);
     }
     p.spawned = true;
     p.spawnTile = tile;
-    p.troops = CONFIG.startTroops * p.soldierShare;
-    p.workers = CONFIG.startTroops - p.troops;
+    // Tropas iniciales: humano 25 000, bot 10 000 (naciones, como un humano)
+    const start = p.isHuman ? MECH.initialHumanTroops : p.weak ? MECH.initialBotTroops : MECH.initialNationTroops;
+    if (p.economy === 'workers') {
+      p.workers = Math.round(start * (1 - p.soldierShare));
+      p.troops = start - p.workers;
+    } else {
+      p.troops = start;
+      p.workers = 0;
+    }
     return true;
   }
 
   /**
-   * Crecimiento y reparto de la población: lo nuevo se reparte según el
-   * reparto elegido y, además, la gente cambia de oficio poco a poco hacia
-   * él (los soldados que salen a atacar o caen se reponen así de los
-   * trabajadores, y al revés).
+   * Regeneración del turno (documento, 03.2 y 07.2). Economía fija: las
+   * tropas crecen con su fórmula (acumulador decimal, sin redondear). Con
+   * trabajadores: crece la población P y se reparte al momento según el
+   * deslizador (sin crear ni destruir población: lo que se pierde en combate
+   * sale de los soldados, y los trabajadores no atacan ni defienden).
    */
   _growPopulation(p) {
     const g = p.growthPerTick();
-    const share = p.soldierShare;
-    p.troops += g * share;
-    p.workers += g * (1 - share);
-    const P = p.troops + p.workers;
-    if (P <= 0) {
-      p.troops = Math.max(0, p.troops);
-      p.workers = Math.max(0, p.workers);
+    if (p.economy !== 'workers') {
+      p.troops += g;
       return;
     }
-    const diff = P * share - p.troops;
-    const lim = P * CONFIG.shareRate;
-    const move = diff > lim ? lim : diff < -lim ? -lim : diff;
-    p.troops += move;
-    p.workers -= move;
-    if (p.workers < 0) {
-      p.troops += p.workers;
-      p.workers = 0;
-    }
-    if (p.troops < 0) p.troops = 0;
+    const P = Math.max(0, p.troops + p.workers + g);
+    p.workers = Math.round(P * (1 - p.soldierShare));
+    p.troops = P - p.workers;
   }
 
   // ------------------------------------------------- desarrollo y órdenes
@@ -307,7 +299,6 @@ export class Game {
     const m = emptyMods();
     for (const id of p.techs) addMods(m, TECHS[id].mods);
     if (p.spec && SPECS[p.spec]) addMods(m, SPECS[p.spec].mods);
-    if (p.fortified) addMods(m, CONFIG.fortifiedMods);
     let industry = 0;
     let ports = 0;
     let capitals = 0;
@@ -429,46 +420,6 @@ export class Game {
     return true;
   }
 
-  /** Defensa fortificada (sí/no), con un tiempo mínimo entre cambios. */
-  setStance(p, on) {
-    if (p.fortified === on) return false;
-    const wait = p.stanceAt + CONFIG.stanceCooldownTicks - this.ticks;
-    if (wait > 0) {
-      this._notify(p, `Espera ${Math.ceil(wait / 10)} s para cambiar de postura`, 'warn');
-      return false;
-    }
-    p.fortified = on;
-    p.stanceAt = this.ticks;
-    this._refreshMods(p);
-    if (p === this.human) this._emit(on ? '🛡 Defensa fortificada: cuesta más conquistarte, pero tus ataques rinden menos' : 'Postura normal', 'info', { feedback: true });
-    return true;
-  }
-
-  setAttackMode(p, mode) {
-    if (!CONFIG.attackModes[mode]) return false;
-    p.attackMode = mode;
-    return true;
-  }
-
-  /** Avance continuo: refuerza un ataque cada pocos segundos con `ratio` de los soldados. */
-  setAuto(p, targetId, on, ratio) {
-    const atk = p.attacks.get(targetId);
-    if (!atk || atk.done) return false;
-    atk.auto = on ? clamp(Number.isFinite(ratio) ? ratio : 0.2, 0.01, 1) : 0;
-    return true;
-  }
-
-  _autoReinforce() {
-    for (const atk of this.attacks) {
-      if (!atk.auto || atk.done) continue;
-      const p = atk.attacker;
-      // Nunca deja la casa vacía: por debajo del 10 % del máximo, espera
-      if (!p.alive || p.troops < p.maxTroops() * 0.1) continue;
-      const send = Math.floor(p.troops * atk.auto);
-      if (send >= 1) this.launchAttack(p, atk.targetId, send);
-    }
-  }
-
   /** Cambia el reparto entre soldados y trabajadores (de minSoldierShare a 1). */
   setSoldierShare(p, share) {
     if (!Number.isFinite(share)) return;
@@ -494,15 +445,8 @@ export class Game {
     owner[t] = newId;
     this.ownerVersion++;
     if (oldId) {
+      // Conquistar casillas no da oro (documento, 04.1): solo eliminar a un rival entero
       const op = this.players[oldId];
-      // Saqueo: quien conquista una casilla se lleva su parte del oro del país
-      if (newId && op.gold > 0 && op.tiles > 0) {
-        const loot = (op.gold / op.tiles) * CONFIG.tileLootShare;
-        op.gold -= loot;
-        this.players[newId].gold += loot;
-        this.players[newId].income.conquest += loot;
-        if (this.human) this._trackLoot(newId, oldId, loot);
-      }
       op.tiles--;
       if (op.tiles === 0) op.lastTile = t;
       op.border.delete(t);
@@ -544,37 +488,6 @@ export class Game {
         if (atk && !atk.done) this._addCandidate(atk, n);
       }
     }
-  }
-
-  /** Suma el saqueo que afecta al humano para avisarle de vez en cuando (no toca la simulación). */
-  _trackLoot(toId, fromId, loot) {
-    const h = this.human.id;
-    if (toId !== h && fromId !== h) return;
-    const acc = (this._loot ??= { gained: 0, lost: 0, from: new Map(), by: new Map() });
-    if (toId === h) {
-      acc.gained += loot;
-      acc.from.set(fromId, (acc.from.get(fromId) || 0) + loot);
-    } else {
-      acc.lost += loot;
-      acc.by.set(toId, (acc.by.get(toId) || 0) + loot);
-    }
-  }
-
-  /** Cada 5 s: «Saqueo: +X de oro de Y» y «Te han saqueado X». */
-  _flushLoot() {
-    const acc = this._loot;
-    if (!acc || this.ticks % 50 !== 0) return;
-    const top = (m) => [...m.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (acc.gained >= 1) {
-      const [id] = top(acc.from);
-      const more = acc.from.size > 1 ? ' y otros' : '';
-      this._emit(`💰 Saqueo: +${formatNumber(acc.gained)} de oro de ${this.players[id].name}${more}`, 'good', { sfx: 'coins' });
-    }
-    if (acc.lost >= 1) {
-      const [id] = top(acc.by);
-      this._emit(`💰 ${this.players[id].name} te ha saqueado ${formatNumber(acc.lost)} de oro`, 'warn');
-    }
-    this._loot = null;
   }
 
   _updateBorder(t) {
@@ -690,12 +603,6 @@ export class Game {
         this.startResearch(p, it.tech);
       } else if (it.type === 'spec') {
         this.setSpec(p, it.spec);
-      } else if (it.type === 'stance') {
-        this.setStance(p, !!it.on);
-      } else if (it.type === 'mode') {
-        this.setAttackMode(p, it.mode);
-      } else if (it.type === 'auto') {
-        this.setAuto(p, it.targetId, !!it.on, it.ratio);
       } else if (it.type === 'proposePact') {
         if (it.on === false) this.breakPact(p, this.players[it.targetId]);
         else this.makeOffer(p, this.players[it.targetId], 'pact');
@@ -713,7 +620,7 @@ export class Game {
         else this._notify(p, check.reason, 'warn');
       } else if (it.type === 'cancelAttack') {
         const atk = p.attacks.get(it.targetId);
-        if (atk) this._endAttack(atk, 0.5); // retirarse cuesta la mitad de las tropas
+        if (atk) this.retreat(atk);
       } else if (this.phase !== 'playing') {
         continue;
       } else if (it.type === 'proposeAlliance') {
@@ -765,12 +672,10 @@ export class Game {
 
     let atk = p.attacks.get(targetId);
     if (atk && !atk.done && focus >= 0 && focus !== atk.focus) this._refocus(atk, focus);
+    // Reforzar un ataque que se estaba retirando lo devuelve al frente
+    if (atk && !atk.done) atk.retreatAt = 0;
     if (!atk || atk.done) {
       atk = new Attack(p, targetId, 0);
-      // Orden elegida: rápido, normal o preparado (este espera unos segundos)
-      const mode = CONFIG.attackModes[p.attackMode] ? p.attackMode : 'normal';
-      atk.mode = mode;
-      atk.readyAt = this.ticks + CONFIG.attackModes[mode].wait;
       this._aim(atk, focus);
       this._initFrontier(atk);
       if (atk.inFrontier.size === 0) return false;
@@ -837,29 +742,6 @@ export class Game {
     atk.dy = vy / len;
   }
 
-  /**
-   * Tras conquistar `t` en tierra libre: las casillas libres vecinas que han
-   * quedado encerradas (todas sus vecinas son de `aid` o agua) pasan a ser
-   * suyas sin coste. Evita «bolsas» de una casilla difíciles de clicar.
-   */
-  _fillPockets(t, aid) {
-    const map = this.map;
-    const nb = (this._pocketA ??= new Int32Array(4));
-    const nb2 = (this._pocketB ??= new Int32Array(4));
-    const c = map.neighbors(t, nb);
-    for (let k = 0; k < c; k++) {
-      const n = nb[k];
-      if (this.owner[n] !== 0 || !map.isLand(n)) continue;
-      const c2 = map.neighbors(n, nb2);
-      let closed = true;
-      for (let j = 0; j < c2 && closed; j++) {
-        const m = nb2[j];
-        if (map.isLand(m) && this.owner[m] !== aid) closed = false;
-      }
-      if (closed) this.setOwner(n, aid);
-    }
-  }
-
   /** Un nuevo clic sobre el mismo objetivo: el frente se reordena hacia ese punto. */
   _refocus(atk, tile) {
     this._aim(atk, tile);
@@ -881,7 +763,8 @@ export class Game {
     const y = (t / map.width) | 0;
     const s = (atk.attacker.id * 7919 + this.seed) | 0;
     const lobes = valueNoise(x, y, CONFIG.growCell, s) * CONFIG.growNoise + valueNoise(x, y, CONFIG.growCell / 3, s + 1) * CONFIG.growNoiseFine;
-    const terr = (CONFIG.terrainCost[map.terrain[t]] * (map.river[t] ? CONFIG.riverCost : 1) - 1) * CONFIG.growTerrain;
+    // Terreno más caro (documento: coste 16,5 / 20 / 25), algo más tarde
+    const terr = (MECH.terrain[map.terrain[t]].tileCost / MECH.terrain[1].tileCost - 1) * CONFIG.growTerrain;
     let k = atk.targetId ? CONFIG.growPlayerMult : 1;
     let focus = 0;
     if (atk.focus >= 0) {
@@ -917,22 +800,41 @@ export class Game {
   }
 
   /**
-   * Coste en tropas de conquistar `t`, bajas que sufre el defensor y
-   * multiplicador de tiempo (terreno × fortalezas).
+   * Efectos de defensa de una casilla del defensor (multiplican el tiempo y
+   * las bajas del atacante): puestos defensivos, pasos de montaña y mejoras.
    */
-  tileCost(t, target) {
-    const m = CONFIG.terrainCost[this.map.terrain[t]] * (this.map.river[t] ? CONFIG.riverCost : 1);
-    if (!target) return { cost: CONFIG.wildTileCost * m, loss: 0, slow: m };
-    let fort = this.fortMultiplier(target, t) * this.passMultiplier(target, t) * (1 + target.mods.defense);
-    if (this.isTraitor(target)) fort *= CONFIG.traitorDefenseMult;
-    if (target.weak) fort *= CONFIG.colonyDefenseMult;
-    // Defienden los soldados (y, con Milicia, parte de los trabajadores)
-    const density = (target.troops + target.workers * target.mods.militia) / Math.max(1, target.tiles);
-    return {
-      cost: (CONFIG.playerTileBaseCost + density * CONFIG.defenseDensityMult) * m * fort,
-      loss: Math.min(target.troops, density * CONFIG.defenderLossMult),
-      slow: m * fort,
-    };
+  defenseMult(target, t) {
+    return this.fortMultiplier(target, t) * this.passMultiplier(target, t) * Math.max(0.2, 1 + target.mods.defense);
+  }
+
+  /** Tropas con las que defiende un país (con Milicia, también parte de sus trabajadores). */
+  defenders(target) {
+    return target.troops + target.workers * target.mods.militia;
+  }
+
+  /**
+   * Lo que cuesta conquistar la casilla `t` (documento, sección 05) con un
+   * ataque de `troops` tropas y un frente de `front` casillas:
+   * - tierra sin dueño: tiempo clamp(2000 × coste / tropas, 5, 100) y bajas
+   *   magnitud / 5 (16, 20 o 24 según el terreno);
+   * - otro país: fracción de tick speedCost × coste × multiplicadores / frente,
+   *   bajas del atacante magnitud × … y del defensor sus tropas / casillas.
+   * `time` se descuenta del presupuesto del ataque.
+   */
+  conquestCost(t, target, troops, front, attacker = null) {
+    const T = MECH.terrain[this.map.terrain[t]];
+    const speed = Math.max(0.2, 1 + (attacker ? attacker.mods.attackSpeed : 0));
+    const lossMul = Math.max(0.3, 1 + (attacker ? attacker.mods.attackCost : 0));
+    if (!target) {
+      return { time: neutralTimeCost(T.tileCost, troops) / speed, loss: (T.mag / MECH.neutralLossDiv) * lossMul, defLoss: 0 };
+    }
+    const mult = this.defenseMult(target, t);
+    const c = pvpTile(this.defenders(target), troops, target.tiles, front, {
+      traitor: this.isTraitor(target),
+      bigAttacker: bigEmpireBonus(attacker, this),
+      bigDefender: bigEmpireBonus(target, this),
+    });
+    return { time: (c.perFront * T.tileCost * mult) / speed, loss: T.mag * c.attackerLossPerMag * mult * lossMul, defLoss: c.defenderLoss };
   }
 
   /** Multiplicador defensivo si `t` está en el radio de una fortaleza del defensor. */
@@ -971,21 +873,19 @@ export class Game {
 
   /**
    * Estimación (aproximada) de un ataque de `p` con `troops` contra `targetId`:
-   * casillas que puede ganar y riesgo. No cuenta fortalezas ni pasos (por eso
-   * se avisa de que es incierta si los tiene).
+   * casillas que puede ganar (en llanura, con las bajas del documento) y
+   * riesgo. No cuenta puestos defensivos ni pasos (por eso se avisa de que es
+   * incierta si los tiene).
    */
   estimateAttack(p, targetId, troops) {
     const target = targetId ? this.players[targetId] : null;
-    const order = CONFIG.attackModes[p.attackMode] || CONFIG.attackModes.normal;
-    const costMul = Math.max(0.3, 1 + p.mods.attackCost) * order.cost;
+    const lossMul = Math.max(0.3, 1 + p.mods.attackCost);
+    const plain = MECH.terrain[1];
     let perTile;
-    if (!target) perTile = CONFIG.wildTileCost * 1.15 * costMul;
+    if (!target) perTile = (plain.mag / MECH.neutralLossDiv) * lossMul;
     else {
-      const density = (target.troops + target.workers * target.mods.militia) / Math.max(1, target.tiles);
-      let fort = 1 + target.mods.defense;
-      if (this.isTraitor(target)) fort *= CONFIG.traitorDefenseMult;
-      if (target.weak) fort *= CONFIG.colonyDefenseMult;
-      perTile = (CONFIG.playerTileBaseCost + density * CONFIG.defenseDensityMult) * 1.15 * fort * costMul;
+      const c = pvpTile(this.defenders(target), troops, target.tiles, 1, { traitor: this.isTraitor(target) });
+      perTile = plain.mag * c.attackerLossPerMag * Math.max(0.2, 1 + target.mods.defense) * lossMul;
     }
     let tiles = Math.floor(troops / Math.max(0.01, perTile));
     if (target) tiles = Math.min(tiles, target.tiles);
@@ -1160,21 +1060,21 @@ export class Game {
     const s = r.station;
     // Si alguno de los dos edificios ya no existe, el raíl caerá en el próximo recálculo
     if (this.buildingAt.get(f.tile) !== f || this.buildingAt.get(s.tile) !== s) return;
-    const value = Math.round((CONFIG.trainGoldBase + CONFIG.trainGoldPerTile * r.len) * (1 + CONFIG.trainLevelBonus * (f.level - 1)));
+    // Documento (04.4): oro al llegar a cada estación según la relación entre
+    // el dueño del tren y el de la estación (propia 10k, neutral 10k, aliada
+    // 35k, enemiga 0)
     const owner = this.players[f.owner];
     if (!owner || !owner.alive) return;
+    const stationOwner = this.players[at.owner];
+    const rel = at.owner === f.owner ? 'self' : this.isAllied(f.owner, at.owner) ? 'ally' : stationOwner && this.atWar(owner, stationOwner) ? 'enemy' : 'neutral';
+    const value = MECH.trainRewards[rel];
+    if (!value) return;
     const earned = value * owner.goldMult * (1 + owner.mods.trade);
     owner.gold += earned;
     owner.income.trade += earned;
-    owner.stats.trainGold = (owner.stats.trainGold || 0) + value;
-    const so = this.players[s.owner];
-    if (s.owner !== f.owner && so && so.alive) {
-      const share = Math.round(value * CONFIG.trainReceiverShare * (1 + so.mods.trade));
-      so.gold += share;
-      so.income.trade += share;
-    }
+    owner.stats.trainGold = (owner.stats.trainGold || 0) + earned;
     const map = this.map;
-    this.effects.push({ kind: 'train', x: map.x(at.tile) + 0.5, y: map.y(at.tile) + 0.5, gold: value, owner: f.owner, other: s.owner, tick: this.ticks });
+    this.effects.push({ kind: 'train', x: map.x(at.tile) + 0.5, y: map.y(at.tile) + 0.5, gold: earned, owner: f.owner, other: s.owner, tick: this.ticks });
   }
 
   /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
@@ -1182,57 +1082,139 @@ export class Game {
     return CONFIG.samRange + CONFIG.samRangePerLevel * (lvl - 1);
   }
 
+  /**
+   * Un tick de un ataque (documento, 05). El presupuesto del tick es 2 ×
+   * longitud del frente contra tierra libre y 1 tick contra otro país; cada
+   * casilla del frente (en el orden del montículo) se conquista si el
+   * presupuesto acumulado alcanza su coste de tiempo, pagando sus bajas.
+   */
   _processAttack(atk) {
     if (atk.done) return;
     const A = atk.attacker;
     const tid = atk.targetId;
     const target = tid ? this.players[tid] : null;
+    // Retirada: las tropas no avanzan y vuelven a los 20 ticks
+    if (atk.retreatAt) {
+      if (this.ticks >= atk.retreatAt || !A.alive) this._endAttack(atk, target && target.alive ? 1 - MECH.retreatPenalty : 1);
+      return;
+    }
     if (!A.alive || (target && !target.alive) || atk.troops < 1 || atk.inFrontier.size === 0) {
       this._endAttack(atk);
       return;
     }
-    // Ataque preparado: las tropas esperan en la frontera hasta estar listas
-    if (atk.readyAt > this.ticks) return;
     atk.step++;
-    const order = CONFIG.attackModes[atk.mode] || CONFIG.attackModes.normal;
-    const costMul = Math.max(0.3, 1 + A.mods.attackCost) * order.cost;
-
-    let rate;
-    if (!target) {
-      // Tierra libre: con muchas tropas por casilla de frente, mucho más rápido
-      const per = atk.troops / Math.max(1, atk.inFrontier.size);
-      rate = CONFIG.attackRateWild * clamp(Math.sqrt(per / CONFIG.wildTroopsRef), 1, CONFIG.attackSpeedMax);
-    } else {
-      // Cuanto mayor la superioridad local (más tropas), más rápido avanza el frente
-      const density = target.troops / Math.max(1, target.tiles);
-      const ratio = atk.troops / (density * atk.inFrontier.size * RES + 1);
-      rate = CONFIG.attackRatePlayer * clamp(Math.sqrt(ratio), 0.2, CONFIG.attackSpeedMax);
-    }
-    rate *= Math.max(0.2, 1 + A.mods.attackSpeed) * order.speed;
-    atk.budget += Math.max(CONFIG.minAttackBudget, atk.inFrontier.size * rate);
+    const front = atk.inFrontier.size;
+    atk.budget += target ? 1 : MECH.neutralBudgetPerFront * front;
 
     const owner = this.owner;
     const aid = A.id;
-    while (atk.budget > 0 && atk.heap.size > 0) {
-      const t = atk.heap.pop();
-      atk.inFrontier.delete(t);
-      if (owner[t] !== tid || this._countOwnedNeighbors(t, aid) === 0) continue;
-      const tc = this.tileCost(t, target);
-      const cost = tc.cost * costMul;
-      const { loss, slow } = tc;
-      if (atk.troops < cost) {
-        // El asalto se agota contra esta casilla
-        if (target) target.troops = Math.max(0, target.troops - atk.troops * 0.5);
+    const heap = atk.heap;
+    while (heap.size > 0) {
+      const t = heap.peek();
+      if (owner[t] !== tid || this._countOwnedNeighbors(t, aid) === 0) {
+        heap.pop();
+        atk.inFrontier.delete(t);
+        continue;
+      }
+      const c = this.conquestCost(t, target, atk.troops, front, A);
+      if (atk.budget < c.time) break;
+      if (atk.troops < c.loss) {
+        // La ofensiva se agota contra esta casilla
         atk.troops = 0;
         break;
       }
-      atk.troops -= cost;
-      atk.budget -= slow;
-      if (target) target.troops -= loss;
+      heap.pop();
+      atk.inFrontier.delete(t);
+      atk.budget -= c.time;
+      atk.troops -= c.loss;
+      if (target) target.troops = Math.max(0, target.troops - c.defLoss);
       this.setOwner(t, aid);
-      if (!target) this._fillPockets(t, aid);
+      this._annexAround(t, aid, tid);
     }
     if (atk.inFrontier.size === 0 || atk.troops < 1) this._endAttack(atk);
+  }
+
+  /**
+   * Retirada (documento, 05.3): se hace efectiva a los 20 ticks (unos 2 s);
+   * si es contra otro país, se pierde el 25 % de las tropas que sobreviven.
+   */
+  retreat(atk) {
+    if (atk.done || atk.retreatAt) return false;
+    atk.retreatAt = this.ticks + MECH.retreatTicks;
+    const A = atk.attacker;
+    if (A === this.human) this._emit(atk.targetId ? `Retirada en 2 s: se pierde el ${Math.round(MECH.retreatPenalty * 100)} % de las tropas` : 'Retirada en 2 s', 'info', { feedback: true });
+    return true;
+  }
+
+  /**
+   * Cerco (documento, 05.3): tras conquistar `t`, las bolsas vecinas de
+   * tierra sin dueño o del defensor que han quedado rodeadas por el atacante,
+   * sin costa (y no muy grandes), pasan a ser suyas al momento y sin bajas.
+   */
+  _annexAround(t, aid, tid) {
+    if (this._annexBudget <= 0) return;
+    const map = this.map;
+    const nb = (this._annexNb ??= new Int32Array(4));
+    const c = map.neighbors(t, nb);
+    for (let k = 0; k < c; k++) {
+      const n = nb[k];
+      const o = this.owner[n];
+      if (o === aid || map.terrain[n] === 0 || (o !== tid && o !== 0)) continue;
+      if (this._annexFail[n] === this.ticks) continue;
+      this._tryAnnex(n, aid);
+      if (this._annexBudget <= 0) return;
+    }
+  }
+
+  /** ¿Es la bolsa de `start` una zona cercada por `aid`? Si lo es, la anexiona. */
+  _tryAnnex(start, aid) {
+    const map = this.map;
+    const owner = this.owner;
+    const terrain = map.terrain;
+    const o = owner[start];
+    const stamp = this._nextStamp();
+    const seen = this._stampArr;
+    const queue = this._queue;
+    const fail = this._annexFail;
+    const nb = (this._annexNb2 ??= new Int32Array(4));
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = start;
+    seen[start] = stamp;
+    let ok = true;
+    while (ok && head < tail) {
+      const u = queue[head++];
+      const cnt = map.neighbors(u, nb);
+      if (cnt < 4) {
+        ok = false; // toca el borde del mapa
+        break;
+      }
+      for (let k = 0; k < cnt; k++) {
+        const v = nb[k];
+        if (terrain[v] === 0) {
+          ok = false; // tiene costa: no es un cerco
+          break;
+        }
+        const ov = owner[v];
+        if (ov === aid) continue;
+        if (ov !== o || fail[v] === this.ticks || (seen[v] !== stamp && tail >= MECH.annexMaxTiles)) {
+          ok = false; // toca a otro, ya se vio que escapa o es demasiado grande
+          break;
+        }
+        if (seen[v] !== stamp) {
+          seen[v] = stamp;
+          queue[tail++] = v;
+        }
+      }
+    }
+    this._annexBudget -= tail;
+    if (!ok) {
+      for (let i = 0; i < tail; i++) fail[queue[i]] = this.ticks;
+      return false;
+    }
+    const tiles = Array.from(queue.subarray(0, tail));
+    for (const u of tiles) this.setOwner(u, aid);
+    return true;
   }
 
   /** Termina un ataque; las tropas sobrantes (× refund) vuelven a casa. */
@@ -1282,22 +1264,26 @@ export class Game {
   }
 
   /**
-   * Precio actual: cada compra con inflación (edificio, mejora o buque)
-   * encarece un CONFIG.inflation todo lo demás. Antimisiles y misiles, fijos.
+   * Precio del siguiente (documento, 04.2): ciudades min(1M, 125k × 2^n);
+   * puertos y fábricas comparten escalera min(1M, 125k × 2^(nPuerto + nFábrica));
+   * puesto defensivo min(250k, 50k × (n + 1)); buque min(1M, 250k × (n + 1));
+   * antimisiles min(3M, 1,5M × (n + 1)); silo 1M; bomba atómica 750k; bomba
+   * H 5M; MIRV 25M. `n` cuenta también los niveles subidos con mejoras.
    */
   buildCost(p, kind) {
-    const def = BUILDINGS[kind];
-    let base = def.base * this.rules.priceMult;
-    if (kind === 'city') base *= 1 + p.mods.cityCost;
-    else if (kind === 'factory') base *= 1 + p.mods.factoryCost;
-    else if (kind === 'missile') base *= 1 + p.mods.missileCost;
-    if (def.fixed) return Math.round(base);
-    return Math.round(base * (1 + CONFIG.inflation * p.purchases));
+    const n = p.owned;
+    n.warship = 0;
+    for (const ws of this.warships) if (ws.owner === p.id && !ws.dead) n.warship++;
+    let price = priceFor(kind, n) * this.rules.priceMult;
+    if (kind === 'city') price *= 1 + p.mods.cityCost;
+    else if (kind === 'factory') price *= 1 + p.mods.factoryCost;
+    else if (BUILDINGS[kind] && BUILDINGS[kind].unit === 'missile') price *= 1 + p.mods.missileCost;
+    return Math.round(price);
   }
 
-  /** Precio de subir `b` un nivel. */
+  /** Subir `b` un nivel cuesta lo mismo que uno nuevo de su tipo (el nivel cuenta en la escalera). */
   upgradeCost(p, b) {
-    return Math.round(this.buildCost(p, b.kind) * CONFIG.upgradeCostMult * b.level);
+    return this.buildCost(p, b.kind);
   }
 
   /** Edificio propio del tipo `kind` en el clic (o a 2 casillas): se mejoraría. */
@@ -1325,7 +1311,7 @@ export class Game {
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
     if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
     if (def.unit === 'ship') return this._canBuildWarship(p, tile);
-    if (def.unit === 'missile') return this._canLaunchMissile(p, tile);
+    if (def.unit === 'missile') return this._canLaunchMissile(p, tile, kind);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
       return { ok: false, reason: 'Solo puedes construir en tu territorio' };
     }
@@ -1386,9 +1372,8 @@ export class Game {
     const price = this.buildCost(p, kind);
     p.gold -= price;
     p.spent.buildings += price;
-    if (!def.fixed) p.purchases++;
     if (def.unit === 'ship') return this._launchWarship(p, check.water, check.zone);
-    if (def.unit === 'missile') return this._launchMissile(p, check.silo, tile);
+    if (def.unit === 'missile') return this._launchMissile(p, check.silo, tile, kind);
     p.stats.built++;
     // Empieza la obra: nivel 0 (sin efecto) hasta que termine
     const time = Math.max(1, Math.round(def.build * (1 - p.mods.buildSpeed)));
@@ -1398,8 +1383,7 @@ export class Game {
       b.hp = CONFIG.portHp;
       b.hitTick = -Infinity;
       b.water = this._waterNextTo(tile);
-      b.nextFish = this.ticks + 30;
-      b.nextTrade = this.ticks + this.rng.int(CONFIG.tradeEveryMin, CONFIG.tradeEveryMax);
+      b.rejections = 0;
     }
     if (kind === 'silo' || kind === 'sam') b.readyAt = this.ticks; // listo desde ya
     this.buildings.push(b);
@@ -1413,13 +1397,13 @@ export class Game {
     const price = this.upgradeCost(p, b);
     p.gold -= price;
     p.spent.buildings += price;
-    if (!def.fixed) p.purchases++;
     p.stats.built++;
     const time = Math.max(1, Math.round(def.build * CONFIG.upgradeTimeMult * (1 - p.mods.buildSpeed)));
     b.target = b.level + 1;
     b.buildEnd = this.ticks + time;
     b.buildTime = time;
     this.sites.push(b);
+    this._recount(p); // el nivel en obras ya cuenta para los precios
     if (p === this.human) this._emit(`Mejorando ${def.name.toLowerCase()} a nivel ${b.target} (${Math.round(time / 10)} s)`, 'info');
     return true;
   }
@@ -1440,7 +1424,6 @@ export class Game {
       changed = true;
       const p = this.players[b.owner];
       this._recount(p);
-      if (b.kind === 'port' && !upgraded) b.nextFish = this.ticks + 10;
       if (p === this.human) {
         const def = BUILDINGS[b.kind];
         this._emit(upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`, 'good');
@@ -1456,11 +1439,13 @@ export class Game {
       p.buildings[k] = 0;
       p.active[k] = 0;
       p.levels[k] = 0;
+      p.owned[k] = 0;
     }
     p.forts.clear();
     for (const b of this.buildings) {
       if (b.owner !== p.id) continue;
       p.buildings[b.kind]++;
+      p.owned[b.kind] += Math.max(b.level, b.target || 0);
       if (b.level > 0) {
         p.active[b.kind]++;
         p.levels[b.kind] += b.level;
@@ -1518,33 +1503,42 @@ export class Game {
     return -1;
   }
 
-  /** Lanza pesqueros y mercantes desde los puertos y los mueve. */
+  /**
+   * Mercantes (documento, 04.3): cada puerto consulta cada 10 ticks si sale
+   * uno, con probabilidad 1 / max(1, floor(100 / boost² / (rechazos + 1) /
+   * saturación)) (PROPUESTA: boost = nivel del puerto; saturación según los
+   * mercantes que ya navegan). Va a un puerto de otro jugador del mismo mar
+   * con el que no esté en guerra y, al llegar, los dos dueños reciben
+   * floor((75 000 / (1 + e^(−0,03 (d − 300))) + 50 d) × multiplicador), con
+   * d = casillas de agua recorridas.
+   */
   _updateMerchants() {
     const map = this.map;
-    // Nuevos barcos (cada 10 ticks basta)
-    if (this.ticks % 10 === 0) {
+    if (this.ticks % MECH.trade.checkEvery === 0) {
       const ports = this.buildings.filter((b) => b.kind === 'port' && b.water >= 0 && b.level > 0);
+      let afloat = 0;
+      for (const m of this.merchants) if (m.kind === 'trade') afloat++;
       for (const b of ports) {
-        if (this.ticks >= b.nextFish) {
-          b.nextFish = this.ticks + 100;
-          const fleet = this.merchants.filter((m) => m.kind === 'fish' && m.port === b.id).length;
-          if (fleet < CONFIG.fishPerPort + b.level - 1) this._spawnMerchant(b, 'fish', null, 0);
+        const chance = tradeSpawnChance(b.level, b.rejections || 0, afloat);
+        if (this.rng.float() >= chance) {
+          b.rejections = (b.rejections || 0) + 1;
+          continue;
         }
-        if (this.ticks >= b.nextTrade) {
-          b.nextTrade = this.ticks + this.rng.int(CONFIG.tradeEveryMin, CONFIG.tradeEveryMax);
-          const owner = this.players[b.owner];
-          // Destino: un puerto de otra nación del mismo mar con la que no esté en guerra
-          const options = ports.filter((o) => {
-            if (o.owner === b.owner || map.waterBody[o.water] !== map.waterBody[b.water]) return false;
-            const other = this.players[o.owner];
-            return !owner.attacks.has(o.owner) && !other.attacks.has(b.owner);
-          });
-          if (options.length) {
-            const dest = options[this.rng.int(0, options.length - 1)];
-            const path = this._waterPath(b.water, dest.water, SEARCH.trade);
-            if (path) this._spawnMerchant(b, 'trade', dest, path.length * CONFIG.tradeGoldPerTile, path);
-          }
+        const owner = this.players[b.owner];
+        const options = ports.filter((o) => o.owner !== b.owner && map.waterBody[o.water] === map.waterBody[b.water] && !this.atWar(owner, this.players[o.owner]));
+        if (!options.length) {
+          b.rejections = (b.rejections || 0) + 1;
+          continue;
         }
+        const dest = options[this.rng.int(0, options.length - 1)];
+        const path = this._waterPath(b.water, dest.water, SEARCH.trade);
+        if (!path) {
+          b.rejections = (b.rejections || 0) + 1;
+          continue;
+        }
+        b.rejections = 0;
+        this._spawnMerchant(b, 'trade', dest, path.length - 1, path);
+        afloat++;
       }
     }
     for (const m of this.merchants) {
@@ -1553,12 +1547,8 @@ export class Game {
         m.done = true;
         continue;
       }
-      if (m.kind === 'fish') {
-        owner.gold += CONFIG.fishGold;
-        owner.income.trade += CONFIG.fishGold;
-      }
       if (m.path) {
-        m.progress += m.kind === 'fish' ? CONFIG.fishSpeed : CONFIG.tradeSpeed;
+        m.progress += CONFIG.tradeSpeed;
         while (m.progress >= 1 && m.pos < m.path.length - 1) {
           m.pos++;
           m.progress -= 1;
@@ -1568,7 +1558,6 @@ export class Game {
         m.path = null;
       }
       if (m.kind === 'trade') this._arriveTrade(m);
-      else if (this.ticks >= (m.retryAt || 0)) this._nextFishingSpot(m);
     }
     if (this.merchants.some((m) => m.done)) this.merchants = this.merchants.filter((m) => !m.done);
   }
@@ -1589,92 +1578,23 @@ export class Game {
     });
   }
 
-  /**
-   * El pesquero busca otro caladero: una búsqueda corta por el agua desde
-   * donde está (nunca falla y cuesta poco). Elige un punto al azar cerca de su
-   * puerto; si se ha alejado, el que más le acerque a él.
-   */
-  _nextFishingSpot(m) {
-    const map = this.map;
-    const W = map.width;
-    let home = this.buildings.find((b) => b.id === m.port && b.owner === m.owner);
-    if (!home) {
-      // Su puerto ya no es de su dueño: se busca otro del mismo mar
-      home = this.buildings.find((b) => b.kind === 'port' && b.owner === m.owner && b.water >= 0 &&
-        map.waterBody[b.water] === map.waterBody[m.tile]);
-      if (home) m.port = home.id;
-    }
-    const hx = map.x(home ? home.water : m.tile);
-    const hy = map.y(home ? home.water : m.tile);
-    const R = CONFIG.fishRange;
-    m.retryAt = this.ticks + 25;
-    // Anchura limitada a R pasos desde el barco
-    const terrain = map.terrain;
-    const stamp = this._nextStamp();
-    const seen = this._stampArr;
-    const parent = this._parent;
-    const depth = this._gcost;
-    const queue = this._queue;
-    const nb = NB_BFS;
-    let head = 0;
-    let tail = 0;
-    queue[tail++] = m.tile;
-    seen[m.tile] = stamp;
-    parent[m.tile] = -1;
-    depth[m.tile] = 0;
-    const near = [];
-    let closest = -1;
-    let closestD = Infinity;
-    while (head < tail) {
-      const t = queue[head++];
-      const d = depth[t];
-      if (d >= R / 3) {
-        const dx = (t % W) - hx;
-        const dy = ((t / W) | 0) - hy;
-        const dh = dx * dx + dy * dy;
-        if (dh <= R * R) near.push(t);
-        if (dh < closestD) {
-          closestD = dh;
-          closest = t;
-        }
-      }
-      if (d >= R) continue;
-      const c = map.neighbors(t, nb);
-      for (let k = 0; k < c; k++) {
-        const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp) continue;
-        seen[n] = stamp;
-        parent[n] = t;
-        depth[n] = d + 1;
-        queue[tail++] = n;
-      }
-    }
-    const goal = near.length ? near[this.rng.int(0, near.length - 1)] : closest;
-    if (goal < 0) return;
-    const back = [];
-    for (let t = goal; t !== -1; t = parent[t]) back.push(t);
-    back.reverse();
-    if (back.length < 2) return;
-    m.path = Int32Array.from(back);
-    m.pos = 0;
-    m.progress = 0;
-  }
-
+  /** Llega un mercante: los dos dueños cobran según la distancia recorrida por el agua (`m.value`). */
   _arriveTrade(m) {
     m.done = true;
     const dest = this.buildings.find((b) => b.id === m.dest);
     if (!dest) return; // el puerto de destino ya no existe
     const owner = this.players[m.owner];
-    const earned = m.value * (1 + owner.mods.trade);
+    const earned = tradeGold(m.value, owner.goldMult) * (1 + owner.mods.trade);
     owner.gold += earned;
     owner.income.trade += earned;
     const partner = this.players[dest.owner];
     if (partner && partner.alive && partner !== owner) {
-      const share = m.value * CONFIG.tradeReceiverShare * (1 + partner.mods.trade);
+      const share = tradeGold(m.value, partner.goldMult) * (1 + partner.mods.trade);
       partner.gold += share;
       partner.income.trade += share;
+      if (partner === this.human) this._emit(`⚓ Un mercante de ${owner.name} llega a tu puerto: +${formatNumber(share)} de oro`, 'good', { sfx: 'coin' });
     }
-    if (owner === this.human) this._emit(`⚓ Un mercante vuelve con ${formatNumber(m.value)} de oro`, 'good', { sfx: 'coin' });
+    if (owner === this.human) this._emit(`⚓ Tu mercante llega a su destino: +${formatNumber(earned)} de oro`, 'good', { sfx: 'coin' });
   }
 
   /** Un buque se queda con un barco automático enemigo: ahora produce para su nuevo dueño. */
@@ -1715,7 +1635,7 @@ export class Game {
     return best;
   }
 
-  _canLaunchMissile(p, tile) {
+  _canLaunchMissile(p, tile, kind = 'missile') {
     const map = this.map;
     if (this.inTruce()) return { ok: false, reason: `Tregua: aún no se pueden lanzar misiles (quedan ${Math.ceil((this.truceUntil() - this.ticks) / 10)} s)` };
     if (!p.active.silo) return { ok: false, reason: p.buildings.silo ? 'Tu silo aún está en obras' : 'Necesitas un silo para lanzar misiles' };
@@ -1724,8 +1644,8 @@ export class Game {
     if (!o) return { ok: false, reason: 'Ahí no hay nadie: apunta a territorio enemigo' };
     if (o === p.id || this.isAllied(p.id, o)) return { ok: false, reason: 'No puedes atacar tu territorio ni el de tus aliados' };
     if (this.pactBetween(p.id, o)) return { ok: false, reason: 'Tenéis un pacto: no puedes lanzarle misiles' };
-    const cost = this.buildCost(p, 'missile');
-    if (p.gold < cost) return { ok: false, reason: `Te falta oro: un misil cuesta ${formatNumber(cost)}` };
+    const cost = this.buildCost(p, kind);
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: ${BUILDINGS[kind].name.toLowerCase()} cuesta ${formatNumber(cost)}` };
     const silo = this.readySilo(p, tile);
     if (!silo) {
       const any = this.buildings.some((b) => b.owner === p.id && b.kind === 'silo' && b.level > 0 && b.readyAt <= this.ticks);
@@ -1734,26 +1654,35 @@ export class Game {
     return { ok: true, reason: '', silo };
   }
 
-  _launchMissile(p, silo, tile) {
+  /**
+   * Lanza desde `silo`: bomba atómica (un impacto), bomba H (un impacto mucho
+   * mayor) o MIRV (se divide en muchas cabezas que caen repartidas por el
+   * territorio del país atacado; cada una se puede derribar).
+   */
+  _launchMissile(p, silo, tile, kind = 'missile') {
     const map = this.map;
     silo.readyAt = this.ticks + Math.round(CONFIG.siloReload * (1 - CONFIG.siloReloadPerLevel * (silo.level - 1)) * (1 + (this.players[silo.owner]?.mods.reload || 0)));
     silo.reloadFrom = this.ticks;
-    const dx = map.x(tile) - map.x(silo.tile);
-    const dy = map.y(tile) - map.y(silo.tile);
     const targetId = this.owner[tile];
-    this.missiles.push({
-      id: this._nextMissileId++,
-      owner: p.id,
-      from: silo.tile,
-      to: tile,
-      dist: Math.max(1, Math.sqrt(dx * dx + dy * dy)),
-      progress: 0,
-      targetId,
-    });
+    const shoot = (to, radius) => {
+      const dx = map.x(to) - map.x(silo.tile);
+      const dy = map.y(to) - map.y(silo.tile);
+      this.missiles.push({ id: this._nextMissileId++, owner: p.id, kind, radius, from: silo.tile, to, dist: Math.max(1, Math.sqrt(dx * dx + dy * dy)), progress: 0, targetId });
+    };
+    if (kind === 'mirv') {
+      // Casillas del objetivo, elegidas al azar (con la semilla) entre todas las suyas
+      const mine = [];
+      const owner = this.owner;
+      for (let i = 0; i < owner.length; i++) if (owner[i] === targetId) mine.push(i);
+      for (let k = 0; k < CONFIG.mirvWarheads && mine.length; k++) shoot(mine[this.rng.int(0, mine.length - 1)], Math.max(2, Math.round(CONFIG.missileRadius * CONFIG.mirvRadius)));
+    } else {
+      shoot(tile, Math.round(CONFIG.missileRadius * (kind === 'hbomb' ? CONFIG.hbombRadius : 1)));
+    }
     p.stats.missiles++;
     const target = this.players[targetId];
-    if (target === this.human) this._emit(`🚀 ¡${p.name} ha lanzado un misil contra ti!`, 'danger');
-    else if (p === this.human) this._emit(`🚀 Misil lanzado contra ${target.name}`, 'info');
+    const what = BUILDINGS[kind].name;
+    if (target === this.human) this._emit(`🚀 ¡${p.name} ha lanzado ${kind === 'missile' ? 'una bomba atómica' : kind === 'hbomb' ? 'una bomba H' : 'un MIRV'} contra ti!`, 'danger');
+    else if (p === this.human) this._emit(`🚀 ${what} lanzad${kind === 'mirv' ? 'o' : 'a'} contra ${target.name}`, 'info');
     return true;
   }
 
@@ -1805,7 +1734,7 @@ export class Game {
   /** Impacto: las casillas enemigas del radio quedan libres y sus defensores pierden tropas. */
   _detonate(m) {
     const map = this.map;
-    const R = CONFIG.missileRadius;
+    const R = m.radius || CONFIG.missileRadius;
     const cx = map.x(m.to);
     const cy = map.y(m.to);
     const before = new Map(); // id → { tiles, troops } antes del impacto
@@ -1849,7 +1778,7 @@ export class Game {
       if (!ws.dead && this._isEnemy(m.owner, ws.owner) && inBlast(ws.tile)) ws.hp -= 60;
       if (ws.hp <= 0) ws.dead = true;
     }
-    this.effects.push({ kind: 'boom', x: cx + 0.5, y: cy + 0.5, tick: this.ticks });
+    this.effects.push({ kind: 'boom', x: cx + 0.5, y: cy + 0.5, r: R, tick: this.ticks });
 
     const attacker = this.players[m.owner];
     const total = [...lost.values()].reduce((a, b) => a + b, 0);
@@ -2506,14 +2435,15 @@ export class Game {
       return;
     }
     const target = o ? this.players[o] : null;
-    const { cost, loss } = this.tileCost(dest, target);
-    if (boat.troops <= cost) {
+    // La casilla de desembarco se toma como cualquier otra (documento, 05)
+    const c = this.conquestCost(dest, target, boat.troops, 1, p);
+    if (boat.troops <= c.loss) {
       if (target) target.troops = Math.max(0, target.troops - boat.troops * 0.5);
       this._notify(p, 'Desembarco rechazado', 'warn');
       return;
     }
-    boat.troops -= cost;
-    if (target) target.troops -= loss;
+    boat.troops -= c.loss;
+    if (target) target.troops = Math.max(0, target.troops - c.defLoss);
     this.setOwner(dest, p.id);
     p.stats.landings++;
     if (!this.launchAttack(p, o, boat.troops, { deduct: false })) p.troops += boat.troops;
@@ -2532,23 +2462,27 @@ export class Game {
       return;
     }
 
+    // Orden del tick (documento, 06.3): 1) órdenes (arriba); 2) oro pasivo;
+    // 3) límites (el techo se calcula al momento con el territorio y las
+    // ciudades terminadas); 4) tropas, con acumulador decimal; 5) ataques en
+    // orden estable con su presupuesto y costes; 6) cercos y eliminaciones;
+    // después, obras, barcos, comercio, misiles y trenes (oro de eventos)
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive) continue;
-      this._growPopulation(p);
       const gpt = p.goldPerTick();
       p.gold += gpt;
       p.income.workers += gpt;
+      this._growPopulation(p);
       if (p.research && this.ticks >= p.research.end) this._finishResearch(p);
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }
 
-    if (this.ticks % CONFIG.autoEveryTicks === 0) this._autoReinforce();
+    this._annexBudget = MECH.annexVisitsPerTick;
     for (let i = 0; i < this.attacks.length; i++) this._processAttack(this.attacks[i]);
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateSites();
-    this._flushLoot();
     this._updateBoats();
     this._updateMerchants();
     this._updateWarships();
@@ -2603,7 +2537,8 @@ export class Game {
       const ly = lt >= 0 ? this.map.y(lt) + 0.5 : 0;
       if (killer && killer.alive) {
         killer.stats.kills++;
-        loot = Math.max(0, p.gold) * CONFIG.plunderShare + (p.weak ? CONFIG.killGoldColony : CONFIG.killGoldNation) * killer.goldMult;
+        // Documento (04.1, 05.3): quien conquista por completo a un rival se queda con todo su oro
+        loot = Math.max(0, p.gold);
         killer.gold += loot;
         killer.income.loot += loot;
         if (lt >= 0) this.effects.push({ kind: 'loot', x: lx, y: ly, gold: loot, owner: killer.id, weak: p.weak, tick: this.ticks });

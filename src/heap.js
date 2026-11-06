@@ -24,6 +24,11 @@ export class MinHeap {
     vals[i] = val;
   }
 
+  /** Valor con la menor clave, sin sacarlo (el montículo no puede estar vacío). */
+  peek() {
+    return this.vals[0];
+  }
+
   pop() {
     const keys = this.keys;
     const vals = this.vals;

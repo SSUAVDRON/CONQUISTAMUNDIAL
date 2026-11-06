@@ -93,11 +93,12 @@ test('ríos: solo sobre tierra, sin huecos en diagonal y iguales con la misma se
     assert.notEqual(a.terrain[i], 0);
   }
   assert.ok(n > 0, 'el mapa aleatorio debería tener algún río');
-  // Mapas reales: hay ríos, y cruzarlos cuesta más
+  // Mapas reales: hay ríos; son solo visuales (el documento de mecánicas no los tiene)
   const { map } = loadRealMap('europa');
   const t = map.river.findIndex((v, i) => v && map.terrain[i] === 1);
   assert.ok(t >= 0);
   const g = new Game({ map, seed: 1 });
   const plain = map.landTiles.find((i) => !map.river[i] && map.terrain[i] === 1);
-  assert.ok(Math.abs(g.tileCost(t, null).cost / g.tileCost(plain, null).cost - CONFIG.riverCost) < 1e-9);
+  assert.deepEqual(g.conquestCost(t, null, 5000, 10), g.conquestCost(plain, null, 5000, 10));
+  void CONFIG;
 });

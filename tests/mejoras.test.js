@@ -73,47 +73,72 @@ test('capitales al empezar y efectos de tomar puntos: oro, barcos, pasos y capit
   }
 });
 
-test('órdenes: el ataque preparado espera y cuesta menos; el rápido avanza más deprisa', () => {
-  const run = (mode) => {
-    const { game, a, b } = twoNeighbors();
-    a.attackMode = mode;
-    a.troops = 30000;
-    b.troops = 3000;
-    game.launchAttack(a, b.id, 20000);
-    const atk = a.attacks.get(b.id);
-    const t0 = a.tiles;
-    for (let i = 0; i < 20; i++) game.tick();
-    return { atk, gained: a.tiles - t0 };
+test('sin órdenes de ataque: ni modos, ni defensa fortificada, ni avance continuo', () => {
+  const { game, a } = twoNeighbors();
+  for (const it of ['mode', 'stance', 'auto']) game.queueIntent({ type: it, playerId: a.id, mode: 'rapido', on: true, targetId: 0 });
+  game.tick();
+  assert.equal(a.attackMode, undefined);
+  assert.equal(a.fortified, undefined);
+  assert.equal(game.setStance, undefined);
+  assert.equal(game.setAuto, undefined);
+});
+
+test('retirada (documento, 05.3): a los 20 ticks y, contra otro país, se pierde el 25 %', () => {
+  const { game, a, b } = twoNeighbors();
+  a.troops = 30000;
+  a.regenMult = 0; // sin regenerar, para medir exacto
+  b.troops = 1e6; // que el ataque no acabe solo
+  game.launchAttack(a, b.id, 10000);
+  const atk = a.attacks.get(b.id);
+  game.queueIntent({ type: 'cancelAttack', playerId: a.id, targetId: b.id });
+  game.tick();
+  assert.ok(atk.retreatAt > 0 && !atk.done, 'la retirada no es inmediata');
+  const left = atk.troops;
+  const home = a.troops;
+  for (let i = 0; i < 25 && !atk.done; i++) game.tick();
+  assert.ok(atk.done, 'a los ~2 s vuelven');
+  assert.ok(Math.abs(a.troops - home - left * 0.75) < 1e-6, 'vuelve el 75 %');
+  // Contra tierra libre, sin pérdida
+  const solo = twoNeighbors();
+  solo.a.troops = 20000;
+  solo.a.regenMult = 0;
+  if (solo.game.hasWildNeighbor(solo.a)) {
+    solo.game.launchAttack(solo.a, 0, 5000);
+    const w = solo.a.attacks.get(0);
+    solo.game.retreat(w);
+    const before = solo.a.troops + w.troops;
+    for (let i = 0; i < 25 && !w.done; i++) solo.game.tick();
+    assert.ok(w.done && Math.abs(solo.a.troops - before) < 1e-6, 'de tierra libre vuelven todas');
+  }
+});
+
+test('cerco (documento, 05.3): una bolsa sin costa rodeada por el atacante se anexiona al momento', () => {
+  const { map, game, a, b } = twoNeighbors();
+  // Un anillo de A rodeando un bloque de 5×5 de B tierra adentro
+  const land = [...map.landTiles].filter((t) => !map.coastal[t]);
+  const ok = (cx, cy) => {
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      if (!map.inBounds(cx + dx, cy + dy) || !map.isLand(map.index(cx + dx, cy + dy)) || map.coastal[map.index(cx + dx, cy + dy)]) return false;
+    }
+    return true;
   };
-  const prepared = run('preparado');
-  assert.equal(prepared.atk.mode, 'preparado');
-  assert.ok(prepared.gained <= 2, `el preparado aún no avanza a los 2 s (${prepared.gained})`);
-  const fast = run('rapido');
-  const normal = run('normal');
-  assert.ok(fast.gained > normal.gained, `rápido ${fast.gained} > normal ${normal.gained}`);
-});
-
-test('defensa fortificada: cuesta más conquistarte y tiene espera para cambiar', () => {
-  const { game, a, b } = twoNeighbors();
-  const t = [...b.border][0];
-  const before = game.tileCost(t, b).cost;
-  assert.ok(game.setStance(b, true));
-  assert.ok(game.tileCost(t, b).cost > before * 1.3);
-  assert.equal(game.setStance(b, false), false, 'no se puede cambiar enseguida');
-  game.ticks += CONFIG.stanceCooldownTicks;
-  assert.ok(game.setStance(b, false));
-  void a;
-});
-
-test('avance continuo: refuerza el ataque cada pocos segundos', () => {
-  const { game, a, b } = twoNeighbors();
-  a.troops = 40000;
-  b.troops = 1e6; // que el ataque no acabe
-  game.launchAttack(a, b.id, 1000);
-  assert.ok(game.setAuto(a, b.id, true, 0.1));
-  const before = a.troops;
-  for (let i = 0; i < CONFIG.autoEveryTicks + 1; i++) game.tick();
-  assert.ok(a.troops < before * 0.95, 'ha enviado refuerzos');
+  const c = land.find((t) => ok(map.x(t), map.y(t)));
+  assert.ok(c !== undefined);
+  const cx = map.x(c);
+  const cy = map.y(c);
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+    const t = map.index(cx + dx, cy + dy);
+    game.setOwner(t, Math.max(Math.abs(dx), Math.abs(dy)) === 3 ? a.id : b.id);
+  }
+  // Abrimos un hueco en el anillo con una casilla de B y la conquistamos: el bloque queda cercado
+  const gap = map.index(cx + 3, cy);
+  game.setOwner(gap, b.id);
+  const tilesA = a.tiles;
+  game._annexBudget = 1e9;
+  game.setOwner(gap, a.id);
+  game._annexAround(gap, a.id, b.id);
+  assert.equal(game.owner[c], a.id, 'el centro de la bolsa es de A');
+  assert.equal(a.tiles, tilesA + 1 + 25, 'conquista 1 y anexiona las 25 de dentro');
 });
 
 test('tecnologías: coste creciente, requisitos de rama y efecto al terminar', () => {

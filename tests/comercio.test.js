@@ -1,10 +1,11 @@
-// Tests de la economía naval: pesqueros, mercantes y capturas.
+// Tests de la economía naval (documento, 04.3): mercantes y capturas.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras } from './ayuda.js';
 import { CONFIG, RES } from '../src/config.js';
+import { tradeGold, tradeSpawnChance } from '../src/mecanicas.js';
 
 /** Dos naciones con puerto en el mismo mar y un tercero neutral. */
 function setup() {
@@ -35,22 +36,21 @@ function setup() {
   throw new Error('sin semilla válida');
 }
 
-test('cada puerto saca pesqueros que faenan cerca y dan oro', () => {
-  const { map, game, a } = setup();
-  const port = game.buildings.find((x) => x.kind === 'port' && x.owner === a.id);
+test('los puertos solo dan oro con mercantes: sin pesqueros, y la salida es probabilística', () => {
+  const { game, a } = setup();
   for (let i = 0; i < 300; i++) game.tick();
-  const fleet = game.merchants.filter((m) => m.kind === 'fish' && m.owner === a.id);
-  assert.equal(fleet.length, CONFIG.fishPerPort);
-  for (const m of fleet) {
-    assert.equal(map.isLand(m.tile), false, 'los barcos van por el agua');
-    const d = Math.hypot(map.x(m.tile) - map.x(port.water), map.y(m.tile) - map.y(port.water));
-    assert.ok(d <= CONFIG.fishRange * 1.5, `faena cerca del puerto (${d.toFixed(1)})`);
-  }
-  // El oro sube lo del territorio más lo que pescan
-  const territory = a.goldPerTick();
+  assert.equal(game.merchants.filter((m) => m.kind === 'fish').length, 0, 'no hay pesqueros');
+  // El oro de cada turno es el pasivo (100) y nada más por tener puerto
   const g0 = a.gold;
+  const m0 = game.merchants.length;
   game.tick();
-  assert.ok(a.gold - g0 >= territory + CONFIG.fishPerPort * CONFIG.fishGold - 1e-6);
+  assert.equal(a.baseGold(), 100);
+  if (game.merchants.length === m0 && !game.merchants.some((m) => m.done)) assert.ok(Math.abs(a.gold - g0 - a.goldPerTick()) < 1e-6);
+  // Probabilidad (PROPUESTA del documento): 1 / max(1, floor(100 / boost² / (rechazos + 1) / saturación))
+  assert.equal(tradeSpawnChance(1, 0, 0), 1 / 100);
+  assert.equal(tradeSpawnChance(2, 0, 0), 1 / 25);
+  assert.equal(tradeSpawnChance(1, 9, 0), 1 / 10);
+  assert.ok(tradeSpawnChance(1, 0, 140) < tradeSpawnChance(1, 0, 0), 'con muchos mercantes navegando salen menos');
 });
 
 test('los mercantes viajan a otro puerto y pagan a los dos dueños', () => {
@@ -62,23 +62,27 @@ test('los mercantes viajan a otro puerto y pagan a los dos dueños', () => {
     game.tick();
     const trade = trades.find((m) => m.done);
     if (trade) {
-      assert.ok(a.gold - before[0] >= trade.value, 'el dueño cobra el viaje');
-      assert.ok(b.gold - before[1] >= trade.value * CONFIG.tradeReceiverShare, 'el puerto de destino cobra su parte');
+      // Los dos cobran floor((75 000 / (1 + e^(−0,03 (d − 300))) + 50 d) × mult), d = casillas de agua recorridas
+      const v = tradeGold(trade.value);
+      assert.ok(v > 0);
+      assert.ok(a.gold - before[0] >= v - 1e-6, 'el dueño cobra el viaje');
+      assert.ok(b.gold - before[1] >= v - 1e-6, 'el puerto de destino cobra lo mismo');
       paid = true;
     }
   }
   assert.ok(paid, 'algún mercante de A debería haber llegado a B');
 });
 
-test('un buque de guerra captura los barcos automáticos enemigos', () => {
-  const { game, a, b, ta, tb, water } = setup();
-  for (let i = 0; i < 200; i++) game.tick(); // B ya tiene pesqueros
-  assert.ok(game.merchants.some((m) => m.owner === b.id && m.kind === 'fish'));
+test('un buque de guerra captura los mercantes enemigos', () => {
+  const { game, a, b, tb, water } = setup();
   buildNow(game, a, 'warship', water(tb)); // su zona: el mar junto al puerto de B
-  for (let i = 0; i < 1500 && !game.merchants.some((m) => m.kind === 'fish' && m.owner === a.id && m.port !== game.buildings.find((x) => x.owner === a.id && x.kind === 'port')?.id); i++) game.tick();
-  assert.ok(a.stats.captured >= 1, 'A debería haber capturado algún barco');
-  assert.ok(game.merchants.filter((m) => m.owner === a.id).length > 0);
-  void tb;
+  // Un mercante de B que sale de su puerto hacia el de A (creado a mano: la salida es al azar)
+  const port = game.buildings.find((x) => x.kind === 'port' && x.owner === b.id);
+  const dest = game.buildings.find((x) => x.kind === 'port' && x.owner === a.id);
+  const path = game._waterPath(port.water, dest.water, 1e9);
+  game._spawnMerchant(port, 'trade', dest, path.length - 1, path);
+  for (let i = 0; i < 1500 && !(a.stats.captured >= 1); i++) game.tick();
+  assert.ok(a.stats.captured >= 1, 'A debería haber capturado el mercante');
 });
 
 test('los barcos de tropas salen de cualquier costa, sin necesidad de puerto', () => {

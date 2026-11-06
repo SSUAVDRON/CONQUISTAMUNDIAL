@@ -5,6 +5,7 @@ import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
+import { regenPerTick } from '../src/mecanicas.js';
 
 /** Partida con un humano ya desplegado en la mayor masa de tierra. */
 function setup(seed = 21) {
@@ -25,34 +26,34 @@ function ownTiles(game, p) {
   return out;
 }
 
-test('oro: lo producen los trabajadores, nada por expandirse y botín al eliminar', () => {
+test('oro: pasivo fijo (100 por tick), nada por expandirse y todo el oro del eliminado', () => {
   const { map, game, human } = setup();
   assert.equal(human.gold, CONFIG.startGold);
   for (let i = 0; i < 50; i++) game.tick();
   assert.ok(human.gold > 0, 'debería haber ganado oro');
-  // Más trabajadores, más oro; el territorio por sí solo no cambia nada
-  human.workers = 1000;
-  const g1 = human.goldPerTick();
-  human.workers = 16000; // 16^0,75 = 8: más trabajadores, más oro (con rendimiento decreciente)
-  assert.ok(Math.abs(human.goldPerTick() - 8 * g1) < 1e-9, 'el oro va con los trabajadores');
+  // Documento (04.1): no depende del territorio ni de las tropas
+  human.mods.gold = 0;
+  assert.equal(human.goldPerTick(), 100);
   human.tiles *= 10;
-  assert.ok(Math.abs(human.goldPerTick() - 8 * g1) < 1e-9, 'más territorio sin más trabajadores no da más oro');
+  human.troops *= 10;
+  assert.equal(human.goldPerTick(), 100, 'más territorio o tropas no dan más oro');
   human.tiles /= 10;
+  human.troops /= 10;
 
-  // Expandirse por tierra libre no da oro: solo lo que producen los trabajadores
+  // Expandirse por tierra libre no da oro
+  game._refreshMods(human);
   human.troops = 5000;
   game.launchAttack(human, 0, 3000);
   const tiles0 = human.tiles;
   let expected = human.gold;
   for (let i = 0; i < 20; i++) {
-    // El oro del turno se calcula con los trabajadores tras crecer la población
-    game.tick();
     expected += human.goldPerTick();
+    game.tick();
   }
   assert.ok(human.tiles > tiles0, 'se ha expandido');
-  assert.ok(Math.abs(human.gold - expected) < expected * 0.02, `expandirse no da oro extra (${human.gold.toFixed(0)} frente a ${expected.toFixed(0)})`);
+  assert.ok(Math.abs(human.gold - expected) < 1e-6, `expandirse no da oro extra (${human.gold.toFixed(0)} frente a ${expected.toFixed(0)})`);
 
-  // Eliminar a alguien: su oro + la recompensa, y un efecto de botín donde cayó
+  // Conquistar casillas de otro no da oro; eliminarlo, todo el suyo (y un efecto donde cayó)
   const colony = game.addPlayer('Colonia de prueba', [200, 200, 200], false);
   colony.weak = true;
   const t = map.landTiles.find((x) => game.owner[x] === 0);
@@ -61,48 +62,62 @@ test('oro: lo producen los trabajadores, nada por expandirse y botín al elimina
   colony.gold = 5000;
   const g0 = human.gold;
   game.setOwner(t, human.id);
+  assert.equal(human.gold, g0, 'la casilla no trae oro');
   game._checkEliminations();
   assert.equal(colony.alive, false);
-  assert.ok(Math.abs(human.gold - g0 - (5000 + CONFIG.killGoldColony)) < 1e-6, 'botín = su oro + recompensa');
+  assert.ok(Math.abs(human.gold - g0 - 5000) < 1e-6, 'se queda con todo su oro y nada más');
   const fx = game.effects.find((e) => e.kind === 'loot');
   assert.ok(fx && fx.owner === human.id && fx.x === map.x(t) + 0.5, 'efecto de botín en su última casilla');
 });
 
-test('población: crece más rápido hacia el 43 % del máximo y se reparte en soldados y trabajadores', () => {
+test('tropas: techo y regeneración del documento; con trabajadores, la población se reparte al momento', async () => {
+  const { MECH, maxTroopsFor, regenPerTick } = await import('../src/mecanicas.js');
   const { game, human } = setup();
+  human.mods.cap = 0;
+  human.mods.growth = 0;
+  assert.equal(human.maxTroops(), maxTroopsFor(human.tiles, 0));
   const max = human.maxTroops();
   const at = (x) => {
-    human.troops = max * x * human.soldierShare;
-    human.workers = max * x - human.troops;
+    human.troops = max * x;
     return human.growthPerTick();
   };
+  assert.ok(Math.abs(at(0.3) - regenPerTick(max * 0.3, max)) < 1e-9);
   const g20 = at(0.2);
-  const g43 = at(0.43);
+  const g42 = at(0.42);
   const g70 = at(0.7);
   const g95 = at(0.95);
-  assert.ok(g43 > g20 && g43 > g70 && g70 > g95, `pico hacia el 43 %: ${g20.toFixed(1)} ${g43.toFixed(1)} ${g70.toFixed(1)} ${g95.toFixed(1)}`);
-  assert.ok(at(1) === 0, 'en el tope no crece');
-  assert.ok(at(1.2) < 0, 'por encima del tope, decrece');
+  assert.ok(g42 > g20 && g42 > g70 && g70 > g95, `pico hacia el 42 %: ${g20.toFixed(1)} ${g42.toFixed(1)} ${g70.toFixed(1)} ${g95.toFixed(1)}`);
+  assert.equal(at(1), 0, 'en el techo no crece');
+  assert.equal(at(1.2), 0, 'por encima del techo tampoco (nunca negativo)');
 
-  // Reparto: al empezar, 70 % soldados; al cambiarlo, la gente cambia de oficio poco a poco
-  at(0.4);
-  const P = human.population();
-  assert.ok(Math.abs(human.troops / P - CONFIG.soldierShare) < 1e-9);
-  game.queueIntent({ type: 'share', playerId: human.id, share: 0.3 });
-  game.tick();
-  assert.equal(human.soldierShare, 0.3);
-  const after1 = human.troops / human.population();
-  assert.ok(after1 < CONFIG.soldierShare && after1 > 0.3, `cambia poco a poco: ${after1.toFixed(2)}`);
-  for (let i = 0; i < 60; i++) game.tick();
-  assert.ok(Math.abs(human.troops / human.population() - 0.3) < 0.01, 'acaba en el reparto elegido');
+  // Variante con trabajadores (sección 07): P = soldados + trabajadores
+  const map = generateMap(220 * RES, 130 * RES, 21);
+  const g = new Game({ map, seed: 21, rules: { economy: 'workers' } });
+  const w = g.addPlayer('W', [0, 0, 255], true);
+  g.start();
+  g.spawnPlayer(w, g.findSpawnTile());
+  while (g.phase === 'spawn') g.tick();
+  assert.ok(Math.abs(w.troops / w.population() - CONFIG.soldierShare) < 0.01);
+  const P = w.population();
+  // Cambiar el reparto no crea ni destruye población y se aplica al momento
+  g.setSoldierShare(w, 0.5);
+  g._growPopulation(w);
+  const grown = w.growthPerTick();
+  assert.ok(Math.abs(w.workers - Math.round(w.population() * 0.5)) < 1);
+  assert.ok(w.population() >= P && w.population() <= P + grown + regenPerTick(P, w.maxTroops()) + 1);
+  // Oro: 100 + 1 por cada 100 trabajadores
+  w.mods.gold = 0;
+  w.workers = 20000;
+  assert.equal(w.goldPerTick(), 100 + 200);
+  assert.equal(MECH.workersPerGold, 100);
   // Valores fuera de rango se recortan
-  game.setSoldierShare(human, 2);
-  assert.equal(human.soldierShare, 1);
-  game.setSoldierShare(human, -1);
-  assert.equal(human.soldierShare, CONFIG.minSoldierShare);
+  g.setSoldierShare(w, 2);
+  assert.equal(w.soldierShare, 1);
+  g.setSoldierShare(w, -1);
+  assert.equal(w.soldierShare, CONFIG.minSoldierShare);
 });
 
-test('reglas de construcción: territorio propio, oro, distancia y coste creciente', () => {
+test('reglas de construcción: territorio propio, oro, distancia y precios del documento', () => {
   const { map, game, human } = setup();
   const mine = ownTiles(game, human);
   const center = human.spawnTile;
@@ -110,31 +125,35 @@ test('reglas de construcción: territorio propio, oro, distancia y coste crecien
   human.gold = 0;
   assert.equal(game.canBuild(human, 'city', center).ok, false, 'sin oro no se construye');
 
-  human.gold = 1e6;
+  human.gold = 1e7;
   const enemyOrWild = map.landTiles.find((t) => game.owner[t] !== human.id);
   assert.equal(game.canBuild(human, 'city', enemyOrWild).ok, false, 'fuera del territorio no');
   assert.equal(game.canBuild(human, 'port', center).ok, false, 'puerto tierra adentro no');
 
+  human.mods.cityCost = 0;
   const goldBefore = human.gold;
+  assert.equal(game.buildCost(human, 'city'), 125000);
   assert.ok(buildNow(game, human, 'city', center));
-  assert.equal(human.gold, goldBefore - BUILDINGS.city.base);
+  assert.equal(human.gold, goldBefore - 125000);
   assert.equal(human.buildings.city, 1);
-  assert.equal(game.buildCost(human, 'city'), Math.round(BUILDINGS.city.base * (1 + CONFIG.inflation)), 'inflación');
-  assert.equal(game.buildCost(human, 'fort'), Math.round(BUILDINGS.fort.base * (1 + CONFIG.inflation)), 'encarece también lo demás');
-  assert.equal(game.buildCost(human, 'sam'), BUILDINGS.sam.base, 'los antimisiles no se inflan');
-  assert.equal(game.buildCost(human, 'missile'), BUILDINGS.missile.base, 'los misiles tampoco');
-  assert.equal(game.buildCost(human, 'silo'), BUILDINGS.silo.base, 'ni los silos');
+  assert.equal(game.buildCost(human, 'city'), 250000, 'la siguiente ciudad, el doble');
+  assert.equal(game.buildCost(human, 'fort'), 50000, 'las demás familias no cambian');
+  assert.equal(game.buildCost(human, 'sam'), 1500000);
+  assert.equal(game.buildCost(human, 'missile'), 750000);
+  assert.equal(game.buildCost(human, 'hbomb'), 5000000);
+  assert.equal(game.buildCost(human, 'mirv'), 25000000);
+  assert.equal(game.buildCost(human, 'silo'), 1000000);
 
   const neighbor = mine.find((t) => t !== center && Math.abs(map.x(t) - map.x(center)) + Math.abs(map.y(t) - map.y(center)) <= 2);
   assert.equal(game.canBuild(human, 'fort', neighbor).ok, false, 'demasiado cerca de otro edificio');
 });
 
-test('la ciudad sube el máximo de tropas; el puerto, el oro (no los barcos)', () => {
+test('la ciudad sube el techo de tropas 250 000; el puerto no da oro por turno', () => {
   const { map, game, human } = setup();
-  human.gold = 1e6;
+  human.gold = 1e7;
   const maxBefore = human.maxTroops();
   assert.ok(buildNow(game, human, 'city', human.spawnTile));
-  assert.equal(human.maxTroops(), maxBefore + CONFIG.cityMaxTroops);
+  assert.ok(Math.abs(human.maxTroops() - maxBefore - 250000 * (1 + human.mods.cap)) < 1e-6);
 
   // Expandimos hasta tener costa y construimos un puerto
   for (let i = 0; i < 60 && !ownTiles(game, human).some((t) => map.coastal[t] && game.canBuild(human, 'port', t).ok); i++) {
@@ -149,7 +168,7 @@ test('la ciudad sube el máximo de tropas; el puerto, el oro (no los barcos)', (
   assert.ok(buildNow(game, human, 'port', coast));
   assert.equal(human.maxBoats(), boatsBefore, 'el límite de transportes es fijo');
   assert.equal(human.maxBoats(), CONFIG.maxBoats);
-  assert.ok(human.goldPerTick() > goldRate);
+  assert.equal(human.goldPerTick(), goldRate, 'el puerto da oro con sus mercantes, no por turno');
 });
 
 test('el puerto se ajusta a la orilla propia más cercana al clic', () => {
@@ -176,15 +195,18 @@ test('el puerto se ajusta a la orilla propia más cercana al clic', () => {
   assert.equal(game.snapBuildTile(human, 'city', water), water);
 });
 
-test('la fortaleza encarece conquistar las casillas de alrededor', () => {
+test('el puesto defensivo multiplica el tiempo y las bajas de quien ataca alrededor', () => {
   const { map, game, human } = setup();
+  const rival = game.addPlayer('Rival', [255, 0, 0], false);
   const t = human.spawnTile;
   const near = map.index(map.x(t) + 2, map.y(t));
-  const plainCost = game.tileCost(near, human).cost;
+  human.troops = 30000;
+  const plain = game.conquestCost(near, human, 10000, 10, rival);
   human.gold = 1e6;
   assert.ok(buildNow(game, human, 'fort', t));
-  const fortCost = game.tileCost(near, human).cost;
-  assert.ok(Math.abs(fortCost - plainCost * CONFIG.fortDefenseMult) < 1e-6);
+  const fort = game.conquestCost(near, human, 10000, 10, rival);
+  assert.ok(Math.abs(fort.time - plain.time * CONFIG.fortDefenseMult) < 1e-9);
+  assert.ok(Math.abs(fort.loss - plain.loss * CONFIG.fortDefenseMult) < 1e-9);
   const far = map.landTiles.find((x) => Math.hypot(map.x(x) - map.x(t), map.y(x) - map.y(t)) > CONFIG.fortRadius + 2);
   assert.equal(game.fortMultiplier(human, far), 1);
 });
@@ -256,21 +278,23 @@ test('las obras tardan: sin efecto hasta terminar; los antimisiles son lo que m�
   const maxBefore = human.maxTroops();
   assert.ok(game.build(human, 'city', human.spawnTile));
   assert.equal(human.buildings.city, 1, 'la obra ya cuenta como edificio');
-  assert.equal(human.maxTroops(), maxBefore, 'pero aún no da tropas');
+  assert.equal(human.maxTroops(), maxBefore, 'pero aún no sube el techo');
+  assert.equal(game.buildCost(human, 'city'), 250000, 'aunque ya cuenta para el precio');
   assert.ok(game.isBuilding(game.buildingAt.get(human.spawnTile)));
   for (let i = 0; i < BUILDINGS.city.build - 1; i++) game.tick();
   assert.equal(human.levels.city, 0, 'todavía en obras');
   game.tick();
   game.tick();
   assert.equal(human.levels.city, 1);
-  assert.equal(human.maxTroops(), maxBefore + CONFIG.cityMaxTroops);
+  assert.ok(Math.abs(human.maxTroops() - maxBefore - 250000 * (1 + human.mods.cap)) < 1e-6);
   const slowest = Math.max(...['city', 'port', 'fort', 'factory', 'silo', 'sam'].map((k) => BUILDINGS[k].build));
   assert.equal(BUILDINGS.sam.build, slowest);
 });
 
-test('subir de nivel: cuesta más cada vez, tarda y suma su efecto; tope de nivel', () => {
+test('subir de nivel: cuesta lo mismo que el siguiente de su tipo, tarda y suma su efecto; tope de nivel', () => {
   const { game, human } = setup();
   human.gold = 1e9;
+  human.mods.cityCost = 0;
   const t = human.spawnTile;
   assert.ok(buildNow(game, human, 'city', t));
   const b = game.buildingAt.get(t);
@@ -278,20 +302,21 @@ test('subir de nivel: cuesta más cada vez, tarda y suma su efecto; tope de nive
   const base = human.maxTroops();
   const check = game.canBuild(human, 'city', t);
   assert.ok(check.ok && check.upgrade === b, 'clic sobre la ciudad = mejora');
-  const cost1 = game.upgradeCost(human, b);
+  assert.equal(game.upgradeCost(human, b), 250000, 'el nivel 2 cuesta como la segunda ciudad');
   assert.ok(game.build(human, 'city', t));
   assert.equal(b.target, 2);
   assert.equal(game.canBuild(human, 'city', t).ok, false, 'no se mejora dos veces a la vez');
   terminarObras(game);
   assert.equal(b.level, 2);
-  assert.equal(human.maxTroops(), base + CONFIG.cityMaxTroops);
-  assert.ok(game.upgradeCost(human, b) > cost1, 'el siguiente nivel cuesta más');
+  assert.ok(Math.abs(human.maxTroops() - base - 250000 * (1 + human.mods.cap)) < 1e-6);
+  assert.equal(game.upgradeCost(human, b), 500000, 'el nivel 3, como la tercera');
   while (b.level < CONFIG.maxLevel) assert.ok(buildNow(game, human, 'city', t));
   assert.equal(game.canBuild(human, 'city', t).ok, false, 'nivel máximo');
   assert.equal(human.levels.city, CONFIG.maxLevel);
+  assert.equal(game.buildCost(human, 'city'), 1000000, 'tope de 1M');
 });
 
-test('colonias: débiles, sin alianzas y con oro que saquear casilla a casilla', () => {
+test('colonias (los bots del documento): un tercio del techo, mitad de regeneración, 50 de oro y sin oro por casilla', () => {
   const map = generateMap(220 * RES, 130 * RES, 21);
   const game = new Game({ map, seed: 21 });
   const a = game.addPlayer('A', [255, 0, 0], true);
@@ -308,18 +333,22 @@ test('colonias: débiles, sin alianzas y con oro que saquear casilla a casilla',
     assert.ok(c.spawned, 'la colonia aparece en el mapa');
   }
   const c = colonies[0];
-  // Más débil que una nación del mismo tamaño
   c.tiles = a.tiles;
-  assert.ok(c.maxTroops() < a.maxTroops());
+  c.mods.cap = a.mods.cap = 0;
+  c.mods.gold = 0;
+  assert.ok(Math.abs(c.maxTroops() - a.maxTroops() / 3) < 1e-6, 'un tercio del techo');
+  c.troops = a.troops = 20000;
+  c.mods.growth = a.mods.growth = 0;
+  assert.ok(Math.abs(c.growthPerTick() - regenPerTick(20000, c.maxTroops()) * 0.5) < 1e-9, 'la mitad de regeneración');
+  assert.equal(c.goldPerTick(), 50);
   assert.equal(game.canPropose(a, c).ok, false, 'las colonias no firman alianzas');
-  // Conquistar una casilla de la colonia se lleva su parte del oro
+  // Conquistar una casilla de la colonia no trae oro
   c.gold = 1000;
   const t = game.owner.findIndex((o) => o === c.id);
-  const share = c.gold / c.tiles;
   const before = a.gold;
   game.setOwner(t, a.id);
-  assert.ok(Math.abs(a.gold - before - share) < 1e-6);
-  assert.ok(Math.abs(c.gold - (1000 - share)) < 1e-6);
+  assert.equal(a.gold, before);
+  assert.equal(c.gold, 1000);
 });
 
 test('reglas personalizadas: cualquier oro inicial y número de colonias', async () => {

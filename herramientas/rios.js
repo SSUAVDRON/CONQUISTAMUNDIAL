@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Los mismos recortes que herramientas/mapas.js
 const DEFS = [
-  { id: 'mundo', lon: [-180, 180], lat: [-56, 78], w: 880 * RES, maxRank: 4 },
+  { id: 'mundo', lon: [-180, 180], lat: [-60, 82.72], w: 2000, maxRank: 4 },
   { id: 'europa', lon: [-25, 45], lat: [34, 71], w: 640 * RES, maxRank: 6 },
   { id: 'norteamerica', lon: [-170, -50], lat: [7, 72], w: 720 * RES, maxRank: 6 },
   { id: 'sudamerica', lon: [-92, -30], lat: [-56, 14], w: 480 * RES, maxRank: 6 },

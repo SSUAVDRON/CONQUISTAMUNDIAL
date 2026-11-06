@@ -21,10 +21,7 @@ export class Attack {
     this.step = 0;
     this.budget = 0;
     this.done = false;
-    /** Orden: 'rapido' | 'normal' | 'preparado'; el preparado no avanza hasta readyAt. */
-    this.mode = 'normal';
-    this.readyAt = 0;
-    /** Avance continuo: fracción de soldados con la que se refuerza cada pocos segundos (0 = no). */
-    this.auto = 0;
+    /** Retirada en curso: tick en el que las tropas vuelven a casa (0 = no se retira). */
+    this.retreatAt = 0;
   }
 }

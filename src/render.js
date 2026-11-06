@@ -1397,9 +1397,9 @@ export class Renderer {
         const h = game.human;
         if (!h || !visible) continue;
         const mine = e.owner === h.id;
-        if (!mine && e.other !== h.id) continue;
-        const amount = mine ? e.gold : Math.round(e.gold * CONFIG.trainReceiverShare);
-        fx.label(e.x, e.y - 1.5 * RES, `+${formatNumber(amount)}`, '#ffd76a', 12, 1.3);
+        // El oro del tren es para el dueño de la fábrica (documento, 04.4)
+        if (!mine) continue;
+        fx.label(e.x, e.y - 1.5 * RES, `+${formatNumber(e.gold)}`, '#ffd76a', 12, 1.3);
         continue;
       }
       if (e.kind === 'order') {
@@ -1421,7 +1421,7 @@ export class Renderer {
         continue;
       }
       if (e.kind === 'boom') {
-        fx.explosion(e.x, e.y, CONFIG.missileRadius / RES);
+        fx.explosion(e.x, e.y, (e.r || CONFIG.missileRadius) / RES);
       } else {
         // Busca el misil: el derribado ya no está en la simulación; el que se salva, sí
         live ??= new Set(game.missiles.map((m) => m.id));
@@ -1484,7 +1484,7 @@ export class Renderer {
         if (involved) {
           const pulse = (Math.sin(now / 120) + 1) / 2;
           ctx.beginPath();
-          ctx.arc(sx1, sy1, CONFIG.missileRadius * z, 0, Math.PI * 2);
+          ctx.arc(sx1, sy1, (m.radius || CONFIG.missileRadius) * z, 0, Math.PI * 2);
           ctx.fillStyle = m.targetId === human.id ? `rgba(255, 60, 60, ${0.06 + pulse * 0.08})` : 'rgba(255, 190, 120, 0.06)';
           ctx.fill();
           ctx.setLineDash([5, 5]);
@@ -1635,10 +1635,10 @@ export class Renderer {
       [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
     }
     const color = ok ? '#5fd38d' : '#ff6b6b';
-    if (kind === 'missile') {
-      // Zona que arrasará y trayectoria desde el silo elegido
+    if (BUILDINGS[kind]?.unit === 'missile') {
+      // Zona que arrasará y trayectoria desde el silo elegido (el MIRV cae por todo el país)
       ctx.beginPath();
-      ctx.arc(sx, sy, CONFIG.missileRadius * camera.zoom, 0, Math.PI * 2);
+      ctx.arc(sx, sy, CONFIG.missileRadius * (kind === 'hbomb' ? CONFIG.hbombRadius : 1) * camera.zoom, 0, Math.PI * 2);
       ctx.fillStyle = ok ? 'rgba(255, 90, 60, 0.18)' : 'rgba(255, 107, 107, 0.08)';
       ctx.fill();
       ctx.lineWidth = 2;

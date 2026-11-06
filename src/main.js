@@ -13,12 +13,6 @@ import { installFlagSprite } from './icons.js';
 import { hashString } from './rng.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 
-/** Qué hace cada orden de ataque (pista al elegirla). */
-const ORDER_HINT = {
-  rapido: '⚡ Ataque rápido: avanza un 40 % más deprisa, con un 25 % más de bajas',
-  normal: '● Ataque normal',
-  preparado: '⏳ Ataque preparado: espera 3 s en la frontera y luego cuesta un 20 % menos',
-};
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { withLoading } from './loading.js';
 import { Tutorial } from './tutorial.js';
@@ -714,10 +708,10 @@ function coopGroups(n, coop) {
 
 /** Con roles en el cooperativo: qué decide cada uno (para evitar compras o ataques por accidente). */
 const ROLE_TYPES = {
-  militar: new Set(['action', 'cancelAttack', 'mode', 'stance', 'auto', 'moveWarship']),
+  militar: new Set(['action', 'cancelAttack', 'moveWarship']),
   economia: new Set(['share', 'research', 'spec', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']),
 };
-const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'silo', 'sam']);
+const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'hbomb', 'mirv', 'silo', 'sam']);
 const ROLE_NAMES = { militar: 'mando militar', economia: 'economía y diplomacia' };
 
 function roleAllows(role, intent) {
@@ -808,38 +802,9 @@ const input = new Input(canvas, camera, {
 ui.on({
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
-  // Desarrollo, órdenes y diplomacia ampliada
+  // Desarrollo y diplomacia ampliada
   onSpec: (spec) => humanIntent({ type: 'spec', spec }),
   onResearch: (tech) => humanIntent({ type: 'research', tech }),
-  onMode: (mode) => {
-    humanIntent({ type: 'mode', mode });
-    ui.hint(ORDER_HINT[mode] || '', 'info');
-  },
-  onCycleMode: () => {
-    const order = ['rapido', 'normal', 'preparado'];
-    const cur = state.human?.attackMode || 'normal';
-    const next = order[(order.indexOf(cur) + 1) % order.length];
-    humanIntent({ type: 'mode', mode: next });
-    ui.hint(ORDER_HINT[next], 'info');
-  },
-  onStance: () => {
-    if (state.human) humanIntent({ type: 'stance', on: !state.human.fortified });
-  },
-  onAuto: (targetId) => {
-    const h = state.human;
-    if (!h) return;
-    // -1 (tecla L): el último ataque a una nación
-    let id = targetId;
-    if (id < 0) for (const [t, atk] of h.attacks) if (t && !atk.done) id = t;
-    const atk = h.attacks.get(id);
-    if (!atk || atk.done) {
-      ui.hint('No tienes ningún ataque en marcha contra una nación', 'warn');
-      return;
-    }
-    const on = !(atk.auto > 0);
-    humanIntent({ type: 'auto', targetId: id, on, ratio: state.ratio });
-    ui.hint(on ? `↻ Avance continuo: cada 3 s se refuerza con el ${Math.round(state.ratio * 100)} % de tus soldados` : 'Avance continuo desactivado', 'info');
-  },
   onPact: (id, on) => humanIntent({ type: 'proposePact', targetId: id, on }),
   onPeace: (id, tribute) => humanIntent({ type: 'offerPeace', targetId: id, tribute }),
   onAskHelp: () => humanIntent({ type: 'askHelp' }),

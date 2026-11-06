@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { CONFIG, RES } from '../src/config.js';
+import { RES } from '../src/config.js';
+import { MECH } from '../src/mecanicas.js';
 
 /** Una sola nación en mitad de la mayor masa de tierra, ya en juego. */
 function solo(seed = 5) {
@@ -36,7 +37,7 @@ function expand(game, a, focus, troops) {
 test('la expansión avanza hacia el punto del clic', () => {
   const { map, game, a, ta } = solo();
   const focus = ta + 50 * RES; // a la derecha
-  const gained = expand(game, a, focus, 1500);
+  const gained = expand(game, a, focus, 5000);
   assert.ok(gained.length > 50, `gana casillas: ${gained.length}`);
   const cx = gained.reduce((s, t) => s + map.x(t), 0) / gained.length;
   // Sesgo suave (crece en todas direcciones, algo más hacia el clic)
@@ -50,6 +51,9 @@ test('con pocas tropas se expande poco y con muchas, mucho más', () => {
   const few = expand(small.game, small.a, focus, 300).length;
   const many = expand(big.game, big.a, focus, 1500).length;
   assert.ok(many > few * 3, `${few} casillas con 300 tropas frente a ${many} con 1500`);
-  // Cada casilla libre cuesta tropas: lo conquistado va con lo enviado
-  assert.ok(few <= 300 / CONFIG.wildTileCost + 1);
+  // Documento (05.1): cada casilla libre cuesta magnitud / 5 tropas (16 en llanura, más en altura)
+  const plainLoss = MECH.terrain[1].mag / MECH.neutralLossDiv;
+  assert.equal(plainLoss, 16);
+  assert.ok(few <= 300 / plainLoss + 1, `${few} casillas con 300 tropas`);
+  assert.ok(many <= 1500 / plainLoss + 1);
 });

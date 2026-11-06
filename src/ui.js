@@ -6,7 +6,7 @@ import { formatCount, formatNumber, formatPercent, formatTime } from './format.j
 import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
-import { goldBonus, pow34 } from './player.js';
+import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -204,14 +204,6 @@ export class UI {
     $('pn-paz').addEventListener('click', () => this.handlers.onPeace?.(this.nationId, Number($('pn-tributo').value)));
     $('pn-ayuda').addEventListener('click', () => this.handlers.onAskHelp?.());
 
-    // Órdenes militares y defensa fortificada
-    $('ordenes').addEventListener('click', (e) => {
-      const b = e.target.closest('button');
-      if (!b) return;
-      if (b.dataset.modo) this.handlers.onMode?.(b.dataset.modo);
-      else if (b.id === 'btn-fortificar') this.handlers.onStance?.();
-    });
-
     // Panel de desarrollo
     $('btn-desarrollo').addEventListener('click', () => this.toggleDev());
     $('pd-cerrar').addEventListener('click', () => this.toggleDev(false));
@@ -302,12 +294,9 @@ export class UI {
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || $('hud').hidden) return;
       if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
-      // Atajos: V panel, I desarrollo, Z orden de ataque, B defensa fortificada, L avance continuo
+      // Atajos: V panel, I desarrollo
       if (e.code === 'KeyV') setFolded(!panel.classList.contains('plegado'));
       else if (e.code === 'KeyI') this.toggleDev();
-      else if (e.code === 'KeyZ') this.handlers.onCycleMode?.();
-      else if (e.code === 'KeyB') this.handlers.onStance?.();
-      else if (e.code === 'KeyL') this.handlers.onAuto?.(-1);
     });
     // En el ordenador (pantalla ancha y ratón): edificios en una barra propia
     // abajo en el centro y el resto del panel abajo a la izquierda. En el
@@ -340,11 +329,6 @@ export class UI {
       const retreat = e.target.closest('button[data-target]');
       if (retreat) {
         this.handlers.onCancelAttack?.(Number(retreat.dataset.target));
-        return;
-      }
-      const auto = e.target.closest('button[data-auto]');
-      if (auto) {
-        this.handlers.onAuto?.(Number(auto.dataset.auto));
         return;
       }
       const card = e.target.closest('[data-key]');
@@ -843,6 +827,11 @@ export class UI {
     const coop = this.coop;
     const roleName = coop?.role === 'militar' ? 'Mando militar' : coop?.role === 'economia' ? 'Economía y diplomacia' : '';
     $('pj-estado').textContent = !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '';
+    // Economía fija (la del documento): solo tropas, sin reparto ni trabajadores
+    const workersMode = human.economy === 'workers';
+    $('panel-jugador').classList.toggle('economia-fija', !workersMode);
+    const label = workersMode ? 'Población' : 'Tropas';
+    if ($('pj-pob-etq').textContent !== label) $('pj-pob-etq').textContent = label;
     const pop = human.population();
     const fill = Math.min(1, pop / max);
     $('pj-barra').style.width = `${fill * 100}%`;
@@ -882,7 +871,7 @@ export class UI {
       // Lo que falta para poder pagarlo, como relleno del botón
       btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
       btn.classList.toggle('en-obras', !!works[kind]);
-      if (kind === 'missile') {
+      if (BUILDINGS[kind].unit === 'missile') {
         // Coste y silos listos
         const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
         const ready = silos.filter((b) => b.readyAt <= game.ticks).length;
@@ -919,15 +908,6 @@ export class UI {
   // ---------------------------------------------------- órdenes y desarrollo
 
   _updateOrders(game, human) {
-    for (const b of document.querySelectorAll('#ordenes [data-modo]')) b.setAttribute('aria-pressed', String(human.attackMode === b.dataset.modo));
-    const names = { rapido: 'rápido', normal: 'normal', preparado: 'preparado' };
-    const title = `Ataque ${names[human.attackMode] || 'normal'}${human.fortified ? ' · fortificado' : ''}`;
-    const t = document.querySelector('.pj-ataque .ratio:not(.reparto) .ratio-titulo');
-    if (t && t.textContent !== title) t.textContent = title;
-    const f = $('btn-fortificar');
-    f.setAttribute('aria-pressed', String(human.fortified));
-    const wait = Math.ceil((human.stanceAt + CONFIG.stanceCooldownTicks - game.ticks) / 10);
-    f.classList.toggle('espera', wait > 0);
     // Aviso en el botón de desarrollo: hay oro para investigar y nada en marcha
     const can = game.phase === 'playing' && human.alive && !human.research && human.gold >= game.techCost(human);
     $('btn-desarrollo').querySelector('.punto-aviso').hidden = !can;
@@ -975,30 +955,20 @@ export class UI {
   }
 
   /**
-   * Retorno estimado de comprar una ciudad, fábrica o puerto ahora mismo:
-   * oro por minuto extra (solo lo que producen los trabajadores; trenes y
-   * mercantes, aparte) y minutos para recuperar lo invertido.
+   * Qué daría comprar ahora una ciudad, una fábrica o un puerto (con las
+   * reglas del documento de mecánicas): la ciudad sube el techo de tropas y,
+   * con él, la regeneración; fábricas y puertos dan oro con trenes y mercantes.
    */
   _roi(game, h) {
-    const perMin = 600;
-    const m = h.mods;
-    const bonusNow = 1 + goldBonus(h.levels.port, CONFIG.portGoldBonus) + goldBonus(h.levels.factory, CONFIG.factoryGoldBonus) * (1 + m.factoryBonus);
-    const k = CONFIG.goldPerWorker * (1 + m.gold) * h.goldMult;
-    const base = pow34(Math.max(0, h.workers)) * k;
-    const dw = CONFIG.cityMaxTroops * h.strength * (1 + m.cap) * 0.43 * (1 - h.soldierShare);
-    const gains = {
-      city: (pow34(h.workers + dw) - pow34(Math.max(0, h.workers))) * k * bonusNow * perMin,
-      factory: base * (goldBonus(h.levels.factory + 1, CONFIG.factoryGoldBonus) - goldBonus(h.levels.factory, CONFIG.factoryGoldBonus)) * (1 + m.factoryBonus) * perMin,
-      port: base * (goldBonus(h.levels.port + 1, CONFIG.portGoldBonus) - goldBonus(h.levels.port, CONFIG.portGoldBonus)) * perMin,
-    };
-    const what = { city: '+25k de población máxima', factory: '+35 % de oro (y trenes)', port: '+15 % de oro (y mercantes)' };
     const out = {};
-    for (const kind of ['city', 'factory', 'port']) {
-      const cost = game.buildCost(h, kind);
-      const g = gains[kind];
-      const mins = g > 1 ? cost / g : Infinity;
-      out[kind] = `${BUILDINGS[kind].name}: ${what[kind]} → ~+${formatNumber(g)} oro/min${Number.isFinite(mins) && mins < 600 ? ` · se paga en ~${Math.max(1, Math.round(mins))} min` : ''} (estimación)`;
-    }
+    const cap = h.maxTroops();
+    const extra = MECH.cityCapBonus * h.capMult * (1 + h.mods.cap);
+    const P = h.economy === 'workers' ? h.troops + h.workers : h.troops;
+    const k = h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
+    const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
+    out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${formatNumber(extra)} de techo de tropas → ~+${formatNumber(Math.max(0, gain))} tropas/s ahora`;
+    out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
+    out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} a 100 casillas, ~${formatNumber(tradeGold(300))} a 300)`;
     return out;
   }
 
@@ -1083,7 +1053,7 @@ export class UI {
     for (const id of nbs.keys()) {
       const t = game.players[id];
       if (!t || t.weak || h.allies.has(id) || game.pactBetween(h.id, id)) continue;
-      if (t.troops > Math.max(500, h.troops * 2.5) && say(`fuerte${id}`, `${t.name} tiene ${Math.round(t.troops / Math.max(1, h.troops))} veces tus soldados en tu frontera: fortifícate (B), propón un pacto o pide ayuda`, 120000)) return;
+      if (t.troops > Math.max(500, h.troops * 2.5) && say(`fuerte${id}`, `${t.name} tiene ${Math.round(t.troops / Math.max(1, h.troops))} veces tus soldados en tu frontera: construye puestos defensivos (R), propón un pacto o pide ayuda`, 120000)) return;
     }
     let attacking = false;
     for (const [id, atk] of h.attacks) if (id && !atk.done) attacking = true;
@@ -1172,9 +1142,8 @@ export class UI {
         captions: incoming
           ? ['te ataca con', 'tus tropas']
           : target ? ['atacas con', 'sus tropas'] : ['expandes con', ''],
-        retreat: mine ? atk.targetId : null,
-        auto: mine && target ? atk.auto > 0 : null,
-        prep: atk.readyAt > game.ticks,
+        retreat: mine && !atk.retreatAt ? atk.targetId : null,
+        prep: atk.retreatAt > 0,
       });
     }
     for (const b of game.boats) {
@@ -1230,9 +1199,8 @@ export class UI {
         f.gone = 0;
         f.li.classList.remove('saliendo');
       }
-      const mid = c.prep ? 'Preparando' : c.middle;
+      const mid = c.prep ? 'Retirada' : c.middle;
       if (f.vs.textContent !== mid) f.vs.textContent = mid;
-      f.li._auto?.classList.toggle('activo', !!c.auto);
       // Cifras (animadas) y barra de fuerzas
       if (c.a === null) f.aEl.textContent = c.aText;
       else f.a.set(c.a);
@@ -1354,18 +1322,6 @@ export class UI {
     bar.append(barA, barD);
     li.append(top, mid, legend, bar);
     li.setAttribute('aria-label', c.incoming ? `Te atacan: ${c.left.name}` : `Atacas: ${c.right.name}`);
-    if (c.auto !== null && c.auto !== undefined) {
-      // Avance continuo: refuerza el ataque cada pocos segundos (tecla L)
-      const auto = document.createElement('button');
-      auto.type = 'button';
-      auto.className = 'f-auto';
-      auto.dataset.auto = c.retreat;
-      auto.title = 'Avance continuo: refuerza este ataque cada 3 s con tu fuerza de ataque (tecla L)';
-      auto.setAttribute('aria-label', 'Avance continuo');
-      auto.textContent = '↻';
-      li.append(auto);
-      li._auto = auto;
-    }
     if (c.retreat !== null && c.retreat !== undefined) {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1531,7 +1487,7 @@ export class UI {
       return;
     }
     const map = game.map;
-    const terrain = map.river[tile] ? `Río (cruzarlo cuesta ×${CONFIG.riverCost} tropas)` : TERRAIN_NAMES[map.terrain[tile]];
+    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
     if (!map.isLand(tile)) {
       tip.hidden = true;
       return;
@@ -1546,7 +1502,7 @@ export class UI {
         const work = b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : '';
         extra.push(`${BUILDINGS[b.kind].name}${lvl}${work}`);
       }
-      if (game.fortMultiplier(p, tile) > 1) extra.push('zona fortificada');
+      if (game.fortMultiplier(p, tile) > 1) extra.push('puesto defensivo cerca');
       extra.push(terrain);
       const human = game.human;
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';

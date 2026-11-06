@@ -359,6 +359,14 @@ function glyphs() {
   const missile = new Path2D();
   const m = new DOMMatrix().rotate(45);
   missile.addPath(silo, m);
+  // Bomba H: el misil más grande, con un anillo (la explosión mayor)
+  const hbomb = new Path2D();
+  hbomb.addPath(silo, new DOMMatrix().rotate(45).scale(1.1));
+  const hring = new Path2D();
+  hring.arc(0, 0, 8.6, 0, Math.PI * 2);
+  // MIRV: tres cabezas pequeñas que se separan
+  const mirv = new Path2D();
+  for (const [x, y] of [[-4.5, 3], [0, -1.5], [4.5, 3]]) mirv.addPath(silo, new DOMMatrix().translate(x, y).rotate(45).scale(0.55));
 
   GLYPHS = {
     city: { fill: city, rule: 'evenodd' },
@@ -369,6 +377,8 @@ function glyphs() {
     sam: { fill: sam, rule: 'nonzero' },
     warship: { fill: warship, rule: 'nonzero' },
     missile: { fill: missile, rule: 'nonzero' },
+    hbomb: { fill: hbomb, rule: 'nonzero', stroke: hring, lw: 1.4 },
+    mirv: { fill: mirv, rule: 'nonzero' },
   };
   return GLYPHS;
 }

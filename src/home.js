@@ -36,7 +36,7 @@ const ARSENAL = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' };
+const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -183,6 +183,7 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   const box = el('div', { class: 'reglas-rejilla' },
     el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
     el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
+    seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
     seg('Modo de victoria', 'victory', [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]),
     seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
     seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
@@ -243,6 +244,7 @@ export function rulesSummary(r) {
   if (!r) return '';
   const modes = { capitales: 'victoria por capitales', economia: 'victoria económica', supervivencia: 'supervivencia' };
   const parts = [modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
+  if (r.economy === 'workers') parts.push('economía con trabajadores');
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
   const mult = (v) => (v === 0.5 ? '×0,5' : `×${v}`);
@@ -346,7 +348,7 @@ export class Home {
         if (id) card.style.setProperty('--fondo-mapa', `url(${mapThumb(id, 360).toDataURL()})`);
       }
     }, 120);
-    segmented($('seg-dificultad'), [['facil', 'Fácil'], ['normal', 'Normal'], ['dificil', 'Difícil']], this.choice.difficulty, (v) => {
+    segmented($('seg-dificultad'), Object.entries(DIFFICULTY), this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
     });
     // Reglas (las mismas que en la sala multijugador)

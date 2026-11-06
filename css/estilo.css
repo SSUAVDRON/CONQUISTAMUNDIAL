@@ -209,7 +209,7 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .ratio { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--texto-suave); }
 .ratio strong { color: var(--texto); }
 
-#construir { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+#construir { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
 #construir button {
   display: flex;
   align-items: center;
@@ -1837,7 +1837,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #ratio { margin: 0; height: 8px; }
   #ratio::-webkit-slider-thumb { width: 22px; height: 22px; }
   /* Los 8 edificios a la vez: icono encima y precio debajo */
-  #construir { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; overflow: visible; padding: 0; }
+  #construir { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; overflow: visible; padding: 0; }
   #construir button { flex-direction: column; justify-content: center; gap: 0; height: 44px; min-width: 0; padding: 2px 1px; }
   #construir canvas { width: 22px; height: 22px; }
   #construir .b-coste { font-size: 9.5px; }
@@ -2222,7 +2222,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #hud.escritorio #barra-obras {
   position: fixed;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  left: max(356px, calc(50% - 238px));
+  left: max(356px, calc(50% - 260px));
   z-index: 5;
   padding: 8px;
   border-radius: 14px;
@@ -2232,7 +2232,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   animation: hudSube 0.5s 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 #hud.escritorio #barra-obras .pj-obras { flex: none; opacity: 1; margin: 0; height: auto; pointer-events: auto; }
-#hud.escritorio #construir { display: grid; grid-template-columns: repeat(4, 112px); gap: 6px; margin: 0; }
+#hud.escritorio #construir { display: grid; grid-template-columns: repeat(5, 96px); gap: 6px; margin: 0; }
 #hud.escritorio #construir button { height: 44px; }
 #hud.escritorio #construir canvas { width: 28px; height: 28px; }
 #hud.escritorio #construir .b-num { font-size: 11px; font-weight: 800; color: #fff; }
@@ -2252,3 +2252,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #hud.escritorio #panel-jugador .cifras { row-gap: 4px; }
   #hud.escritorio .pj-ataque { padding-top: 7px; }
 }
+
+/* Economía fija (documento de mecánicas): solo tropas; sin soldados/trabajadores ni reparto */
+#panel-jugador.economia-fija .cifra-soldados, #panel-jugador.economia-fija .reparto { display: none; }
+#panel-jugador.economia-fija .cifras { grid-template-columns: repeat(3, 1fr); }
+#hud.escritorio #panel-jugador.economia-fija .cifras { grid-template-columns: 1fr 1fr; }
+#hud.escritorio #panel-jugador.economia-fija .cifra-pob { grid-column: 1 / -1; }

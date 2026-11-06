@@ -172,7 +172,7 @@ export class Sala {
       settings: {
         mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
         bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
-        difficulty: ['facil', 'normal', 'dificil'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
+        difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
         rules: cleanRules(d.settings.rules),
       },
       players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
@@ -193,7 +193,7 @@ export class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share', 'research', 'spec', 'stance', 'mode', 'auto', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
 const SAFE_ID = /^[a-z]{2,16}$/;
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */

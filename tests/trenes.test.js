@@ -50,20 +50,25 @@ test('la fábrica une con raíles las ciudades cercanas, también las enemigas',
   assert.ok(rails.every((r) => r.len <= game.railRange(factory.level) + 1e-9));
 });
 
-test('los trenes dan oro al llegar: al dueño de la fábrica y una parte al de la estación', () => {
+test('los trenes dan oro al llegar según la relación (10k propia o neutral, 35k aliada)', async () => {
+  const { MECH } = await import('../src/mecanicas.js');
   const { game, a, b } = setup();
-  let bShare = 0;
-  for (let i = 0; i < 1200 && !bShare; i++) {
-    const before = b.gold;
-    const income = b.goldPerTick();
+  assert.deepEqual(MECH.trainRewards, { self: 10000, neutral: 10000, ally: 35000, enemy: 0 });
+  let neutral = 0;
+  for (let i = 0; i < 1500 && !neutral; i++) {
+    const before = a.gold;
+    const income = a.goldPerTick();
     const t0 = game.ticks;
     game.tick();
-    const arrivals = game.effects.filter((e) => e.kind === 'train' && e.tick === t0 + 1 && e.other === b.id);
-    if (arrivals.length) bShare = b.gold - before - income;
+    const arrivals = game.effects.filter((e) => e.kind === 'train' && e.tick === t0 + 1 && e.owner === a.id);
+    if (arrivals.length === 1 && arrivals[0].other === b.id && game.owner[game.rails.find((r) => r.station.owner === b.id)?.station.tile] === b.id) {
+      const gained = a.gold - before - income;
+      if (Math.abs(gained - 10000 * a.goldMult * (1 + a.mods.trade)) < 1e-6 || Math.abs(gained - 10000 * (1 + a.mods.trade)) < 1e-6) neutral = gained;
+    }
   }
   assert.ok(a.stats.trainGold > 0, 'A cobra sus trenes');
-  assert.ok(bShare > 0, 'B cobra una parte cuando el tren de A pasa por su ciudad');
-  assert.ok(game.trains.length <= game.rails.length, 'como mucho un tren por raíl');
+  assert.ok(neutral > 0, 'un tren de A llega a una ciudad neutral de B: 10 000');
+  assert.ok(game.trains.length <= game.rails.length, 'como mucho un tren por vía');
 });
 
 test('si la estación desaparece, su raíl también', () => {

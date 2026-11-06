@@ -50,11 +50,12 @@ test('construir un buque exige puerto y oro, y su coste sube', () => {
   const { game: g2, a, ta } = navalSetup();
   const before = a.gold;
   const cost = g2.buildCost(a, 'warship');
-  assert.equal(cost, Math.round(BUILDINGS.warship.base * (1 + CONFIG.inflation * a.purchases)), 'el puerto ya encareció el buque');
+  // Documento (04.2): min(1M, 250k × (n + 1))
+  assert.equal(cost, BUILDINGS.warship.base, 'el primero cuesta 250k');
   assert.ok(buildNow(g2, a, 'warship', ta));
   assert.equal(a.buildings.warship, 1);
   assert.equal(a.gold, before - cost);
-  assert.ok(g2.buildCost(a, 'warship') > cost, 'cada compra encarece la siguiente');
+  assert.equal(g2.buildCost(a, 'warship'), 500000, 'el segundo, 500k');
 });
 
 test('la zona de un buque se elige al botarlo, no cambia y la patrulla solo', () => {

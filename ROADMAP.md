@@ -191,6 +191,17 @@ contra quién lucha cada aliado, alianzas que caducan y se renuevan.
   contorno oscuro y mar azul marino), territorios en pastel con borde del
   mismo tono, zonas iniciales más grandes y redondas y la cámara en tu región
   al empezar
+- Mecánicas del documento «Especificación técnica: economía, tropas y
+  expansión territorial»: mundo de 2000 × 1000 casillas, 52 casillas y
+  25 000 tropas al empezar, techo 2 × (casillas^0,6 × 1000 + 50 000) +
+  250 000 por nivel de ciudad, regeneración (10 + T^0,73 / 4)(1 − T/techo),
+  oro pasivo fijo (100/50 por turno), precios por familia (puerto y fábrica
+  comparten escalera), mercantes con pago sigmoide a los dos dueños, trenes
+  10k/10k/35k/0, combate neutral y entre países con sus fórmulas, retirada a
+  los 20 turnos (−25 %), cerco de bolsas sin costa, bomba H y MIRV, regla de
+  economía con trabajadores y dificultad imposible; casos de prueba T01-T14.
+  Fuera: órdenes de ataque, fortificar, avance continuo, botín por casilla,
+  inflación, pesqueros y bonus de oro de puertos y fábricas
 - Interfaz de escritorio: clasificación en tabla con oro, cifras y ataque
   abajo a la izquierda, barra de edificios abajo en el centro y avisos
   abajo a la derecha (en el móvil, como antes)

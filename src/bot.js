@@ -17,7 +17,7 @@ export class BotBrain {
     this.nextThink = 0;
     // Dificultad: cada cuánto piensan y cuánto les gusta atacar
     // (piensan cada x, agresividad, cuánto se defienden con contraataques)
-    const level = { facil: [1.6, 0.65, 0.25], normal: [0.85, 1, 0.7], dificil: [0.6, 1.2, 1] }[difficulty] || [0.85, 1, 0.7];
+    const level = { facil: [1.6, 0.65, 0.25], normal: [0.85, 1, 0.7], dificil: [0.6, 1.2, 1], imposible: [0.45, 1.35, 1] }[difficulty] || [0.85, 1, 0.7];
     this.thinkScale = level[0];
     this.aggression = Math.min(1, (0.4 + r.float() * 0.5) * level[1]);
     this.cunning = level[2];
@@ -45,8 +45,8 @@ export class BotBrain {
       this.nextDiplomacy = g.ticks + r.int(250, 600);
       this._diplomacyTurn(summary.counts);
     }
-    this._chooseShare(wild, counts, max);
-    this._stance(counts);
+    // Solo con la economía de trabajadores hay reparto que elegir
+    if (p.economy === 'workers') this._chooseShare(wild, counts, max);
     if (this._helpAllies(max)) return;
     this._develop();
     this._maybeBuild(counts, coastal);
@@ -59,7 +59,6 @@ export class BotBrain {
     // 1. Expandirse por tierra libre mientras la haya
     if (wild > 0 && !p.attacks.has(0) && p.population() > max * 0.15) {
       // Si hay un punto estratégico libre cerca, se expande hacia él
-      p.attackMode = 'normal';
       g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio), { focus: this._freePointNear() });
       // Los agresivos no esperan a acabar: atacan a la vez a un vecino débil
       if (!(counts.size && r.chance(this.aggression - 0.35))) return;
@@ -138,19 +137,6 @@ export class BotBrain {
     return best;
   }
 
-  /** Defensa fortificada si un vecino le supera claramente y no está atacando. */
-  _stance(counts) {
-    const g = this.game;
-    const p = this.player;
-    if (g.ticks - p.stanceAt < CONFIG.stanceCooldownTicks) return;
-    let threat = false;
-    for (const id of counts.keys()) if (g.players[id].troops > p.troops * 1.6) threat = true;
-    let attacking = false;
-    for (const [id, atk] of p.attacks) if (id && !atk.done) attacking = true;
-    const want = threat && !attacking && g.rng.chance(0.6 - this.aggression * 0.3);
-    if (want !== p.fortified) g.setStance(p, want);
-  }
-
   /**
    * Tecnologías y especialización según su carácter: los agresivos van a
    * ejército, los diplomáticos a infraestructura y el resto a economía o
@@ -206,7 +192,6 @@ export class BotBrain {
     const p = this.player;
     if (!g.rng.chance(0.4 + this.loyalty * 0.5)) return false;
     if (enemy && enemy.alive && !p.allies.has(enemy.id) && !g.pactBetween(p.id, enemy.id) && g.hasLandBorder(p, enemy.id) && p.troops > 200) {
-      p.attackMode = 'normal';
       return g.launchAttack(p, enemy.id, Math.floor(p.troops * (0.25 + this.aggression * 0.2)));
     }
     if (p.population() < p.maxTroops() * 0.3) return false;
@@ -270,7 +255,8 @@ export class BotBrain {
       const defense = Math.max(1, t.troops - (pressed.get(id) || 0) * 0.5);
       const odds = spare / defense;
       const density = t.troops / Math.max(1, t.tiles);
-      let score = Math.min(odds, 4) * 0.6 - Math.min(density / (CONFIG.maxTroopsPerTile * 1.5), 1) * 0.4;
+      // Mucha tropa por casilla = cada casilla cuesta más bajas (documento, 05.2)
+      let score = Math.min(odds, 4) * 0.6 - Math.min(density / 600, 1) * 0.4;
       score += Math.min(shared, 300) / 600;
       if (t.weak) score += 0.45; // colonias: presa fácil y con oro
       if (pressed.has(id)) score += 0.3;
@@ -289,9 +275,6 @@ export class BotBrain {
     }
     if (!best) return false;
     const send = Math.floor(Math.min(spare, Math.max(spare * (0.55 + this.aggression * 0.4), best.troops * 1.4)));
-    // Orden: rápido contra colonias o rivales mucho más débiles; preparado
-    // contra los fuertes (espera unos segundos pero le cuesta menos); si no, normal
-    p.attackMode = best.weak || best.troops < send * 0.3 ? 'rapido' : best.troops > send * 0.6 && !p.attacks.has(best.id) ? 'preparado' : 'normal';
     return send >= 1 && g.launchAttack(p, best.id, send);
   }
 
@@ -321,7 +304,7 @@ export class BotBrain {
       return dx * dx + dy * dy <= reach;
     });
 
-    // Ciudades: con tope (los precios se inflan con cada compra); pasado el tope, mejora
+    // Ciudades: con tope (cada una cuesta el doble que la anterior); pasado el tope, mejora
     let want = 'city';
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
     else if (this.saveFor) want = this.saveFor;

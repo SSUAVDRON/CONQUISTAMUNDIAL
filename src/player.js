@@ -1,6 +1,7 @@
 // Estado de una nación (humana o bot).
 import { CONFIG } from './config.js';
 import { emptyMods } from './tecnologias.js';
+import { MECH, maxTroopsFor, regenPerTick } from './mecanicas.js';
 
 /**
  * x^0,75 solo con raíces cuadradas: a diferencia de Math.pow, da el mismo
@@ -11,20 +12,19 @@ export function pow34(x) {
   return s * Math.sqrt(s);
 }
 
-/** Bonus de oro de `levels` niveles de puerto o fábrica, con rendimiento decreciente. */
-export function goldBonus(levels, per) {
-  return (per * levels) / (1 + CONFIG.bonusFalloff * levels);
-}
-
 export class Player {
   constructor(id, name, color, isHuman) {
     this.id = id;
     this.name = name;
     this.color = color; // [r, g, b]
     this.isHuman = isHuman;
-    /** Colonia: bot débil que no es una nación (ni construye ni firma alianzas). */
+    /** Colonia: bot débil que no es una nación (ni construye ni firma alianzas). Es el «bot» del documento de mecánicas. */
     this.weak = false;
-    this.strength = 1;
+    /** Multiplicadores del techo de tropas y de la regeneración (bots: 1/3 y ×0,5; naciones según la dificultad). */
+    this.capMult = 1;
+    this.regenMult = 1;
+    /** Economía de la partida: 'fixed' (oro pasivo fijo) o 'workers' (población = tropas + trabajadores). */
+    this.economy = MECH.economyMode;
     // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
     this.troopMult = 1;
     this.goldMult = 1;
@@ -33,28 +33,25 @@ export class Player {
     /** Última casilla que perdió (donde sale el botín al ser eliminado). */
     this.lastTile = -1;
 
-    // Desarrollo: tecnologías, especialización, postura y órdenes
+    // Desarrollo: tecnologías y especialización
     this.techs = new Set();
     this.research = null; // { id, end, start }
     this.spec = '';
     this.mods = emptyMods();
-    this.fortified = false;
-    this.stanceAt = -Infinity;
-    this.attackMode = 'normal';
     this.capitalTile = -1;
     this.passes = 0; // pasos de montaña que controla
     this.helpAt = -Infinity; // última vez que pidió ayuda a sus aliados
-    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). */
+    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). `workers` = oro pasivo de cada turno. */
     this.income = { workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
     this.spent = { buildings: 0, research: 0 };
     /** Total ingresado cada 10 s (último minuto), para el ritmo de oro y la victoria económica. */
     this.incomeHist = [];
 
-    /** Soldados: atacan y defienden (es la cifra de «tropas» de todo el juego). */
+    /** Tropas: la reserva militar disponible (sin las desplegadas en ataques). */
     this.troops = 0;
-    /** Trabajadores: producen el oro de cada turno. */
+    /** Trabajadores (solo con la economía de trabajadores): producen oro extra. */
     this.workers = 0;
-    /** Fracción de la población que quiere como soldados (el resto, trabajadores). */
+    /** Economía de trabajadores: fracción de la población como soldados (el resto, trabajadores). */
     this.soldierShare = CONFIG.soldierShare;
     this.gold = CONFIG.startGold;
     this.tiles = 0;
@@ -74,8 +71,8 @@ export class Player {
     /** Edificios terminados por tipo y suma de sus niveles (los que están en obras no cuentan). */
     this.active = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
     this.levels = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
-    /** Compras con inflación hechas en la partida (encarecen las siguientes). */
-    this.purchases = 0;
+    /** Para los precios: niveles que tiene de cada edificio, contando los que están en obras o mejorándose. */
+    this.owned = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0 };
     /** Fortalezas propias terminadas (casillas), para calcular la defensa. */
     this.forts = new Set();
 
@@ -100,36 +97,44 @@ export class Player {
     this.requestCooldown = new Map();
   }
 
-  /** Población total: soldados + trabajadores. */
+  /** Población: con la economía fija, las tropas; con trabajadores, tropas + trabajadores. */
   population() {
     return this.troops + this.workers;
   }
 
-  /** Capacidad máxima de población: base + territorio + ciudades. */
+  /**
+   * Techo de tropas (documento, 03.1): 2 × (casillas^0,6 × 1000 + 50 000) +
+   * 250 000 por nivel de ciudad terminado; los bots, un tercio; las naciones,
+   * según la dificultad. No añade tropas: solo fija el límite.
+   */
   maxTroops() {
-    return (CONFIG.maxTroopsBase + this.tiles * CONFIG.maxTroopsPerTile + this.levels.city * CONFIG.cityMaxTroops) * this.strength * (1 + this.mods.cap);
+    return maxTroopsFor(this.tiles, this.levels.city) * this.capMult * (1 + this.mods.cap);
   }
 
   /**
-   * Crecimiento de la población por turno: k × (10 + P^0,75 / 4) × (1 − P / Pmáx).
-   * Lo más rápido hacia el 43 % del máximo; 0 en el tope y negativo por
-   * encima (al perder territorio, la población sobrante se va).
+   * Tropas (o población, con trabajadores) que se generan este turno
+   * (documento, 03.2): (10 + T^0,73 / 4) × (1 − T / techo), nunca negativo.
+   * Lo más rápido hacia el 42 % del techo y 0 al llegar a él.
    */
   growthPerTick() {
-    const max = this.maxTroops();
-    const P = Math.max(0, this.troops + this.workers);
-    const raw = CONFIG.popGrowthBase + pow34(P) / CONFIG.popGrowthDiv;
-    const free = 1 - P / max;
-    // Las mejoras de crecimiento solo aceleran (no la pérdida por encima del máximo)
-    const boost = free > 0 ? Math.max(0.1, 1 + this.mods.growth) : 1;
-    return CONFIG.popGrowthScale * raw * free * this.strength * this.troopMult * boost;
+    const P = this.economy === 'workers' ? this.troops + this.workers : this.troops;
+    return regenPerTick(P, this.maxTroops()) * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
   }
 
-  /** Oro por turno: lo producen los trabajadores (más con puertos y fábricas). */
+  /** Oro pasivo base por turno: humano 100, nación 100, bot (colonia) 50. */
+  baseGold() {
+    return this.isHuman ? MECH.baseGoldPerTickHuman : this.weak ? MECH.baseGoldPerTickBot : MECH.baseGoldPerTickNation;
+  }
+
+  /**
+   * Oro pasivo por turno (documento, 04.1): fijo, no depende del territorio
+   * ni de las tropas. Con la economía de trabajadores (07.2): +1 por cada 100.
+   */
   goldPerTick() {
     if (!this.tiles) return 0;
-    const bonus = goldBonus(this.levels.port, CONFIG.portGoldBonus) + goldBonus(this.levels.factory, CONFIG.factoryGoldBonus) * (1 + this.mods.factoryBonus);
-    return (CONFIG.goldBase + pow34(Math.max(0, this.workers)) * CONFIG.goldPerWorker) * (1 + bonus) * (1 + this.mods.gold) * this.goldMult;
+    let g = this.baseGold();
+    if (this.economy === 'workers') g += Math.floor(this.workers / MECH.workersPerGold);
+    return g * this.goldMult * (1 + this.mods.gold);
   }
 
   maxBoats() {

@@ -39,7 +39,8 @@ const RELIEF_STEP = { mundo: 2 };
 const RELIEF_MAX_M = 6500;
 
 export const DEFS = [
-  { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-56, 78], w: 880 * RES },
+  // El mundo, de 2000 × 1000 casillas lógicas (la referencia del documento de mecánicas)
+  { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-60, 82.72], w: 2000 },
   { id: 'europa', name: 'Europa', lon: [-25, 45], lat: [34, 71], w: 640 * RES },
   { id: 'norteamerica', name: 'Norteamérica', lon: [-170, -50], lat: [7, 72], w: 720 * RES },
   { id: 'sudamerica', name: 'Sudamérica', lon: [-92, -30], lat: [-56, 14], w: 480 * RES },

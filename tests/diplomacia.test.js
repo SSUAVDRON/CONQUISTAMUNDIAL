@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
+import { MECH } from '../src/mecanicas.js';
 import { CONFIG, RES } from '../src/config.js';
 
 /** Dos naciones humanas pegadas (A y B) en la mayor masa de tierra, ya en juego. */
@@ -86,12 +87,13 @@ test('romper una alianza marca como traidor y abarata conquistarle', () => {
   game.proposeAlliance(a, b);
   game.proposeAlliance(b, a);
   const t = [...a.border][0];
-  const before = game.tileCost(t, a).cost;
+  const before = game.conquestCost(t, a, 5000, 10, b).loss;
   assert.ok(game.breakAlliance(a, b));
   assert.equal(game.isAllied(a.id, b.id), false);
   assert.ok(game.isTraitor(a));
   assert.equal(a.betrayals, 1);
-  assert.ok(Math.abs(game.tileCost(t, a).cost - before * CONFIG.traitorDefenseMult) < 1e-6);
+  // Documento (05.2): las bajas de quien ataca a un traidor llevan el «debuff» de traidor
+  assert.ok(Math.abs(game.conquestCost(t, a, 5000, 10, b).loss - before * MECH.pvp.traitorDebuff) < 1e-6);
   for (let i = 0; i < CONFIG.traitorTicks + 1; i++) game.tick();
   assert.equal(game.isTraitor(a), false, 'la marca de traidor caduca');
 });

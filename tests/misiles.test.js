@@ -3,7 +3,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { goldBonus } from '../src/player.js';
 import { buildNow, terminarObras } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
@@ -38,17 +37,18 @@ function setup(seed = 11) {
   return { map, game, a, b, c, ta, tb };
 }
 
-test('la fábrica sube el oro (cada nivel algo menos)', () => {
+test('la fábrica no da oro por turno y comparte escalera de precio con los puertos', () => {
   const { game, a, ta } = setup();
+  a.mods.factoryCost = 0;
   const before = a.goldPerTick();
+  assert.equal(game.buildCost(a, 'factory'), BUILDINGS.factory.base);
   assert.ok(buildNow(game, a, 'factory', ta));
-  assert.ok(Math.abs(a.goldPerTick() - before * (1 + goldBonus(1, CONFIG.factoryGoldBonus))) < 1e-9);
-  assert.equal(game.buildCost(a, 'factory'), Math.round(BUILDINGS.factory.base * (1 + CONFIG.inflation)));
-  // Nivel 2: otro 25 %
+  assert.equal(a.goldPerTick(), before, 'su oro llega con los trenes');
+  // Documento (04.2): min(1M, 125k × 2^(nPuerto + nFábrica))
+  assert.equal(game.buildCost(a, 'factory'), 250000);
+  assert.equal(game.buildCost(a, 'port'), 250000, 'el puerto sube con ella');
   assert.ok(buildNow(game, a, 'factory', ta), 'clic sobre la fábrica = mejorarla');
-  assert.ok(Math.abs(a.goldPerTick() - before * (1 + goldBonus(2, CONFIG.factoryGoldBonus))) < 1e-9);
-  // Rendimiento decreciente: el segundo nivel suma menos que el primero
-  assert.ok(goldBonus(2, CONFIG.factoryGoldBonus) < 2 * goldBonus(1, CONFIG.factoryGoldBonus));
+  assert.equal(game.buildCost(a, 'port'), 500000, 'el nivel también cuenta');
   assert.equal(a.buildings.factory, 1, 'sigue siendo una fábrica');
 });
 
@@ -60,6 +60,7 @@ test('sin silo no hay misiles; con silo, el misil arrasa la zona y quita tropas'
 
   // B deja de expandirse para medir solo el efecto del misil
   for (const atk of [...b.attacks.values()]) game._endAttack(atk);
+  b.regenMult = 0; // sin regenerar mientras vuela, para medir solo las bajas
   const tilesBefore = b.tiles;
   const troopsBefore = b.troops;
   const goldBefore = a.gold;
