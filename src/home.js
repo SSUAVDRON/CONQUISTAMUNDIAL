@@ -25,7 +25,7 @@ const SWATCHES = [
 
 /** Lo que se muestra en el arsenal: dibujo del juego, nombre y para qué sirve (según las reglas). */
 const ARSENAL = {
-  city: { text: '+250 000 de techo de tropas por nivel' },
+  city: { text: '+25 000 de techo de tropas por nivel' },
   port: { text: 'Mercantes: oro para ti y para el puerto de destino' },
   factory: { text: 'Vías y trenes: 10 000 de oro por tren (35 000 si es aliado)' },
   fort: { text: 'Conquistar a su alrededor cuesta ×3 de tiempo y bajas' },

@@ -35,18 +35,15 @@ export const CONFIG = {
   // Forma de la expansión (solo cambia el orden, no la velocidad): retraso en
   // «pasos» de cada casilla del frente. Lóbulos de ruido, terreno difícil y
   // azar hacen que los países crezcan irregulares y no como círculos.
-  growCell: 7 * RES, // tamaño de los lóbulos
-  growNoise: 10, // retraso máximo por lóbulos grandes
-  growNoiseFine: 4, // y por los pequeños
-  growRandom: 2.5, // azar por casilla (poco: si no, quedan casillas sueltas)
-  growTerrain: 10, // por cada punto de coste de terreno por encima de la llanura
-  growSmooth: 3, // prioridad a las casillas ya rodeadas: rellena huecos y esquinas antes que alargar puntas (sin brazos finos)
-  // Expansión dirigida: el lado del país que mira al clic avanza antes y el de
-  // detrás se retrasa hasta 2 × growFocus pasos; con algo de ruido, para que
-  // el frente no salga perfecto. Poco: si no, todo el avance se iba a la punta
-  // y salían brazos finos; así crece en todas direcciones, algo más hacia el clic
+  // Orden de conquista de la tierra libre: por distancia al centro del país
+  // (en casillas), así crece parejo, en círculo, sin manchas ni brazos
+  growRandom: 1.6, // azar por casilla: el borde sale algo irregular, no una regla
+  growTerrain: 6, // retraso por cada punto de coste de terreno sobre la llanura
+  growSmooth: 1.2, // las casillas con más vecinas propias antes: rellena huecos y esquinas
+  // Hacia un clic, el lado que mira allí avanza antes: al de detrás le pesa la
+  // distancia × (1 + 2 × growFocusStretch); contra países, growFocus pasos
+  growFocusStretch: 0.6,
   growFocus: 8,
-  growFocusNoise: 0.7,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
   // Barcos de transporte
@@ -219,7 +216,7 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
  * (100 ms cada uno); `fixed`: precio fijo, sin inflación.
  */
 export const BUILDINGS = {
-  city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+250.000 de techo de tropas por nivel' },
+  city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+25.000 de techo de tropas por nivel' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
   fort: { name: 'Puesto defensivo', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },

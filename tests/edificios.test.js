@@ -5,7 +5,7 @@ import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
-import { regenPerTick } from '../src/mecanicas.js';
+import { MECH, regenPerTick } from '../src/mecanicas.js';
 
 /** Partida con un humano ya desplegado en la mayor masa de tierra. */
 function setup(seed = 21) {
@@ -81,7 +81,7 @@ test('tropas: techo y regeneración del documento; con trabajadores, la poblaci�
     human.troops = max * x;
     return human.growthPerTick();
   };
-  assert.ok(Math.abs(at(0.3) - regenPerTick(max * 0.3, max)) < 1e-9);
+  assert.ok(Math.abs(at(0.3) - regenPerTick(max * 0.3, max) * MECH.paceRegen) < 1e-9);
   const g20 = at(0.2);
   const g42 = at(0.42);
   const g70 = at(0.7);
@@ -339,7 +339,7 @@ test('colonias (los bots del documento): un tercio del techo, mitad de regenerac
   assert.ok(Math.abs(c.maxTroops() - a.maxTroops() / 3) < 1e-6, 'un tercio del techo');
   c.troops = a.troops = 20000;
   c.mods.growth = a.mods.growth = 0;
-  assert.ok(Math.abs(c.growthPerTick() - regenPerTick(20000, c.maxTroops()) * 0.5) < 1e-9, 'la mitad de regeneración');
+  assert.ok(Math.abs(c.growthPerTick() - regenPerTick(20000, c.maxTroops()) * 0.5 * MECH.paceRegen) < 1e-9, 'la mitad de regeneración');
   assert.equal(c.goldPerTick(), 50);
   assert.equal(game.canPropose(a, c).ok, false, 'las colonias no firman alianzas');
   // Conquistar una casilla de la colonia no trae oro

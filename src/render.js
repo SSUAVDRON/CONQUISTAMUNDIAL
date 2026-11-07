@@ -5,7 +5,7 @@
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
 import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb, vividRgb } from './colors.js';
-import { formatCount, formatNumber, formatTroops } from './format.js';
+import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
@@ -1233,7 +1233,7 @@ export class Renderer {
       this._maybeWake(s, len, 8);
       const mine = human && (b.owner === human.id || b.targetId === human.id);
       if (z * RES >= 4 || mine) {
-        const text = formatNumber(b.troops);
+        const text = fmtTroops(b.troops);
         ctx.font = '700 11px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1767,7 +1767,7 @@ export class Renderer {
       // En píxeles enteros del lienzo: copia directa, sin remuestrear
       const d = this.dpr;
       ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
-      this._drawTroops((me ? formatCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, s2, me);
+      this._drawTroops((me ? fmtTroopsCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, s2, me);
     }
   }
 

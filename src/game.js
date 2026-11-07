@@ -1,7 +1,7 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
 import { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, cleanRules } from './config.js';
-import { formatNumber } from './format.js';
+import { fmtTroops, formatNumber } from './format.js';
 import { Rng } from './rng.js';
 import { MinHeap } from './heap.js';
 import { Player } from './player.js';
@@ -9,7 +9,6 @@ import { Attack } from './attack.js';
 import { BotBrain, ColonyBrain } from './bot.js';
 import { generateColonyNames, generateNames } from './names.js';
 import { botColor } from './colors.js';
-import { valueNoise } from './noise.js';
 import { POI, POI_TYPES, placePoints } from './estrategia.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
 import { MECH, bigEmpireBonus, neutralTimeCost, priceFor, pvpTile, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
@@ -681,8 +680,8 @@ export class Game {
       if (atk.inFrontier.size === 0) return false;
       p.attacks.set(targetId, atk);
       this.attacks.push(atk);
-      if (target && target === this.human) this._emit(`⚔ ${p.name} te ataca con ${formatNumber(troops)} tropas`, 'danger', { sfx: 'war' });
-      else if (p === this.human && target) this._emit(`⚔ Atacas a ${target.name} con ${formatNumber(troops)} tropas`, 'info');
+      if (target && target === this.human) this._emit(`⚔ ${p.name} te ataca con ${fmtTroops(troops)} tropas`, 'danger', { sfx: 'war' });
+      else if (p === this.human && target) this._emit(`⚔ Atacas a ${target.name} con ${fmtTroops(troops)} tropas`, 'info');
     }
     if (deduct) p.troops -= troops;
 
@@ -713,11 +712,11 @@ export class Game {
 
   /**
    * Apunta el ataque hacia `tile` (el clic): guarda el centro de la frontera
-   * del atacante y la dirección hacia el clic. Sin clic (bots), en todas direcciones.
+   * del atacante (el origen del crecimiento) y la dirección hacia el clic.
+   * Sin clic (bots), en todas direcciones.
    */
   _aim(atk, tile) {
     atk.focus = tile;
-    if (tile < 0) return;
     const map = this.map;
     const W = map.width;
     let sx = 0;
@@ -728,9 +727,13 @@ export class Game {
       sy += (t / W) | 0;
       n++;
     }
-    if (!n) return;
+    if (!n) {
+      atk.focus = -1;
+      return;
+    }
     atk.cx = sx / n;
     atk.cy = sy / n;
+    if (tile < 0) return;
     const vx = (tile % W) - atk.cx;
     const vy = ((tile / W) | 0) - atk.cy;
     const len = Math.sqrt(vx * vx + vy * vy);
@@ -754,32 +757,42 @@ export class Game {
   _addCandidate(atk, t) {
     if (atk.inFrontier.has(t)) return;
     atk.inFrontier.add(t);
-    // Orden de conquista: primero las casillas más rodeadas (frontera sin
-    // huecos), después según lóbulos de ruido propios de cada nación, terreno
-    // difícil y algo de azar → crecimiento irregular, no en círculos
     const map = this.map;
     const n = this._countOwnedNeighbors(t, atk.attacker.id);
-    const x = t % map.width;
-    const y = (t / map.width) | 0;
-    const s = (atk.attacker.id * 7919 + this.seed) | 0;
-    const lobes = valueNoise(x, y, CONFIG.growCell, s) * CONFIG.growNoise + valueNoise(x, y, CONFIG.growCell / 3, s + 1) * CONFIG.growNoiseFine;
-    // Terreno más caro (documento: coste 16,5 / 20 / 25), algo más tarde
-    const terr = (MECH.terrain[map.terrain[t]].tileCost / MECH.terrain[1].tileCost - 1) * CONFIG.growTerrain;
-    let k = atk.targetId ? CONFIG.growPlayerMult : 1;
-    let focus = 0;
-    if (atk.focus >= 0) {
-      // Hacia el clic: el lado que mira hacia allí va antes (según el ángulo,
-      // no la distancia: avanza todo ese frente a la vez), y con poco ruido
-      const vx = x - atk.cx;
-      const vy = y - atk.cy;
-      const len = Math.sqrt(vx * vx + vy * vy);
-      const cos = len > 0 ? (vx * atk.dx + vy * atk.dy) / len : 1;
-      focus = (1 - cos) * CONFIG.growFocus * (atk.targetId ? 0.6 : 1);
-      k *= CONFIG.growFocusNoise;
-    }
     // Una casilla ya casi rodeada (3 o 4 vecinas propias) va la primera: así no
     // quedan casillas sueltas sin conquistar dentro o en el borde del país
-    const key = n >= 3 ? atk.step - 100 : atk.step + (this.rng.float() * CONFIG.growRandom + lobes + terr) * k - n * CONFIG.growSmooth + focus;
+    if (n >= 3) {
+      atk.heap.push(-1e9 + atk.step, t);
+      return;
+    }
+    const x = t % map.width;
+    const y = (t / map.width) | 0;
+    // Terreno más caro (documento: coste 16,5 / 20 / 25), algo más tarde
+    const terr = (MECH.terrain[map.terrain[t]].tileCost / MECH.terrain[1].tileCost - 1) * CONFIG.growTerrain;
+    let key;
+    if (!atk.targetId && atk.cx !== undefined) {
+      // Tierra libre: en orden de distancia al centro del país (crece en
+      // círculo, parejo por todos lados) con un poco de azar para que el borde
+      // no sea una regla. Hacia un clic, ese lado avanza antes.
+      const vx = x - atk.cx;
+      const vy = y - atk.cy;
+      const d = Math.sqrt(vx * vx + vy * vy);
+      let stretch = 1;
+      if (atk.focus >= 0 && d > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / d) * CONFIG.growFocusStretch;
+      key = d * stretch + this.rng.float() * CONFIG.growRandom + terr - n * CONFIG.growSmooth;
+    } else {
+      // Contra otro país: el frente entero avanza a la vez (por turnos de
+      // llegada), casi sin azar; hacia el clic, ese lado algo antes
+      let focus = 0;
+      if (atk.focus >= 0) {
+        const vx = x - atk.cx;
+        const vy = y - atk.cy;
+        const len = Math.sqrt(vx * vx + vy * vy);
+        const cos = len > 0 ? (vx * atk.dx + vy * atk.dy) / len : 1;
+        focus = (1 - cos) * CONFIG.growFocus * 0.6;
+      }
+      key = atk.step + (this.rng.float() * CONFIG.growRandom + terr) * CONFIG.growPlayerMult - n * CONFIG.growSmooth + focus;
+    }
     atk.heap.push(key, t);
   }
 
@@ -1104,7 +1117,8 @@ export class Game {
     }
     atk.step++;
     const front = atk.inFrontier.size;
-    atk.budget += target ? 1 : MECH.neutralBudgetPerFront * front;
+    // Ritmo (más lento que el documento, a petición): × paceNeutral / × pacePvp
+    atk.budget += target ? MECH.pacePvp : MECH.neutralBudgetPerFront * front * MECH.paceNeutral;
 
     const owner = this.owner;
     const aid = A.id;
@@ -2137,8 +2151,8 @@ export class Game {
         const victim = this.players[target.owner];
         victim.boatCount--;
         me.stats.sunk++;
-        if (me === this.human) this._emit(`Has hundido un barco de ${victim.name} con ${formatNumber(target.troops)} tropas`, 'good', { sfx: 'sink' });
-        else if (victim === this.human) this._emit(`${me.name} ha hundido tu barco (${formatNumber(target.troops)} tropas)`, 'danger');
+        if (me === this.human) this._emit(`Has hundido un barco de ${victim.name} con ${fmtTroops(target.troops)} tropas`, 'good', { sfx: 'sink' });
+        else if (victim === this.human) this._emit(`${me.name} ha hundido tu barco (${fmtTroops(target.troops)} tropas)`, 'danger');
       }
     }
     // Hundidos y buques de naciones eliminadas
@@ -2294,8 +2308,8 @@ export class Game {
       done: false,
     });
     const target = targetId ? this.players[targetId] : null;
-    if (target && target === this.human) this._emit(`🚢 ${p.name} envía un barco con ${formatNumber(troops)} tropas contra ti`, 'danger');
-    else if (p === this.human) this._emit(`🚢 Barco en camino con ${formatNumber(troops)} tropas`, 'info');
+    if (target && target === this.human) this._emit(`🚢 ${p.name} envía un barco con ${fmtTroops(troops)} tropas contra ti`, 'danger');
+    else if (p === this.human) this._emit(`🚢 Barco en camino con ${fmtTroops(troops)} tropas`, 'info');
     return true;
   }
 
@@ -2854,9 +2868,9 @@ export class Game {
     p[key] -= amount;
     target[key] += amount;
     if (key === 'gold') target.income.gifts += amount;
-    const what = key === 'gold' ? 'de oro' : 'tropas';
-    if (p === this.human) this._emit(`Has enviado ${amount} ${what} a ${target.name}`, 'info');
-    if (target === this.human) this._emit(`${p.name} te envía ${amount} ${what}`, 'good', { sfx: 'coin' });
+    const what = key === 'gold' ? `${formatNumber(amount)} de oro` : `${fmtTroops(amount)} tropas`;
+    if (p === this.human) this._emit(`Has enviado ${what} a ${target.name}`, 'info');
+    if (target === this.human) this._emit(`${p.name} te envía ${what}`, 'good', { sfx: 'coin' });
     return true;
   }
 

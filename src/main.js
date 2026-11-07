@@ -11,7 +11,7 @@ import { Home } from './home.js';
 import { hexToRgb } from './colors.js';
 import { installFlagSprite } from './icons.js';
 import { hashString } from './rng.js';
-import { formatNumber, formatPercent, formatTime } from './format.js';
+import { fmtTroops, formatNumber, formatPercent, formatTime } from './format.js';
 
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { withLoading } from './loading.js';
@@ -768,7 +768,7 @@ const input = new Input(canvas, camera, {
       if (troops >= 1) {
         const e = g.estimateAttack(h, o, troops);
         const who = o ? g.players[o].name : 'tierra libre';
-        ui.hint(`${who}: ~${formatNumber(e.tiles)} casillas con ${formatNumber(troops)} soldados${o ? ` · riesgo ${e.risk}` : ''}${e.uncertain ? ' (incierto)' : ''}`, o && e.risk === 'alto' ? 'warn' : 'info');
+        ui.hint(`${who}: ~${formatNumber(e.tiles)} casillas con ${fmtTroops(troops)} soldados${o ? ` · riesgo ${e.risk}` : ''}${e.uncertain ? ' (incierto)' : ''}`, o && e.risk === 'alto' ? 'warn' : 'info');
       }
     }
   },

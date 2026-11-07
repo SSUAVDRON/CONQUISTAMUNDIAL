@@ -84,7 +84,8 @@ test('T04: 52 casillas y 25 000 tropas → ≈ 330,27 por tick, ≈ 3302,74 por 
   const { human } = setup();
   human.mods.growth = 0;
   human.mods.cap = 0;
-  assert.ok(near(human.growthPerTick(), 330.27));
+  // En juego se aplica el ritmo (MECH.paceRegen) sobre la fórmula del documento
+  assert.ok(near(human.growthPerTick(), 330.27 * MECH.paceRegen));
   // Tabla de la sección 03.2 (por segundo, según la ocupación del techo)
   for (const [f, v] of [[0.2, 3259], [0.4, 4015], [0.42, 4019], [0.6, 3585], [0.8, 2206]]) {
     assert.ok(Math.abs(10 * regenPerTick(cap * f, cap) - v) < 1, `${f}: ${10 * regenPerTick(cap * f, cap)}`);

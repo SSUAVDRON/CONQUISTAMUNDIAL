@@ -46,9 +46,9 @@ test('los bots de un mapa real son países y aparecen en su ubicación', () => {
     const d = Math.hypot(map.x(p.spawnTile) - map.x(c.tile), map.y(p.spawnTile) - map.y(c.tile));
     assert.ok(d <= 15 * RES, `${p.name} aparece a ${d.toFixed(1)} casillas de su país`);
   }
-  // Y la partida avanza con normalidad (la expansión inicial es gradual: en
-  // 50 s de juego algún bot ya pasa de 200 casillas de la rejilla original)
-  for (let i = 0; i < 600; i++) game.tick();
+  // Y la partida avanza con normalidad (la expansión inicial es gradual, al
+  // ritmo del juego: en 2 min algún bot ya pasa de 200 casillas de la rejilla original)
+  for (let i = 0; i < 1200; i++) game.tick();
   assert.ok(game.bots.some((b) => b.player.tiles > 200 * AREA));
 });
 

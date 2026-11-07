@@ -2,7 +2,7 @@
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
 import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
-import { formatCount, formatNumber, formatPercent, formatTime } from './format.js';
+import { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatTime } from './format.js';
 import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
@@ -123,9 +123,9 @@ export class UI {
     this._counters = new Set();
     this._lastEvent = null;
     // Las del panel cambian a cada turno (cada 100 ms): se animan en lo que dura uno
-    this._troops = this._counter($('pj-tropas'), formatCount, 115);
-    this._pop = this._counter($('pj-pob'), formatCount, 115);
-    this._troopsMax = this._counter($('pj-tropas-max'), undefined, 115);
+    this._troops = this._counter($('pj-tropas'), fmtTroopsCount, 115);
+    this._pop = this._counter($('pj-pob'), fmtTroopsCount, 115);
+    this._troopsMax = this._counter($('pj-tropas-max'), fmtTroops, 115);
     this._gold = this._counter($('pj-oro'), formatCount, 115);
     this._liveTick = -1;
 
@@ -417,7 +417,7 @@ export class UI {
       swatch.style.cssText = `background:${rgbToCss(p.color)}`;
     }
     $('pn-nombre').textContent = p.name;
-    $('pn-tropas').textContent = formatNumber(p.troops);
+    $('pn-tropas').textContent = fmtTroops(p.troops);
     $('pn-terr').textContent = formatPercent(p.tiles / game.map.landCount);
     $('pn-aliados').textContent = p.allies.size
       ? [...p.allies].map((id) => game.players[id].name).join(', ')
@@ -452,7 +452,7 @@ export class UI {
       if (game.isTraitor(p)) note = 'Ha traicionado una alianza hace poco.';
     }
     const pct = Math.round(ratio * 100);
-    $('pn-env-tropas').textContent = `Enviar ${pct}% tropas (${formatNumber(human.troops * ratio)})`;
+    $('pn-env-tropas').textContent = `Enviar ${pct}% tropas (${fmtTroops(human.troops * ratio)})`;
     $('pn-env-oro').textContent = `Enviar ${pct}% oro (${formatNumber(human.gold * ratio)})`;
     $('pn-env-tropas').disabled = $('pn-env-oro').disabled = !allied || !playing;
     if (!allied && !note) note = 'Solo puedes enviar tropas y oro a tus aliados. La cantidad sigue la fuerza de ataque.';
@@ -845,9 +845,9 @@ export class UI {
     this._pop.set(pop);
     this._troopsMax.set(max);
     const growth = human.growthPerTick() * perSecond;
-    $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${formatNumber(Math.abs(growth))}/s` : '';
+    $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '';
     $('pj-crec').classList.toggle('baja', growth < 0);
-    $('pj-trab').textContent = `${formatNumber(human.workers)} trab.`;
+    $('pj-trab').textContent = `${fmtTroops(human.workers)} trab.`;
     // El deslizador sigue al reparto real salvo mientras lo estás moviendo
     if (!(performance.now() - (this._shareDragAt || 0) < 1500)) {
       $('reparto').value = Math.round(human.soldierShare * 100);
@@ -860,7 +860,7 @@ export class UI {
     $('pj-buques').textContent = human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
     // El ataque sale de los soldados (no de toda la población)
-    $('ratio-tropas').textContent = `${formatNumber(human.troops * ratio)} soldados`;
+    $('ratio-tropas').textContent = `${fmtTroops(human.troops * ratio)} soldados`;
     $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
 
     const works = {};
@@ -966,7 +966,7 @@ export class UI {
     const P = h.economy === 'workers' ? h.troops + h.workers : h.troops;
     const k = h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
     const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
-    out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${formatNumber(extra)} de techo de tropas → ~+${formatNumber(Math.max(0, gain))} tropas/s ahora`;
+    out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
     out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
     out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} a 100 casillas, ~${formatNumber(tradeGold(300))} a 300)`;
     return out;
@@ -1333,7 +1333,7 @@ export class UI {
       li.append(btn);
     }
     $('frentes').append(li);
-    return { li, vs, aEl, dEl, barA, barD, a: this._counter(aEl), d: this._counter(dEl), gone: 0 };
+    return { li, vs, aEl, dEl, barA, barD, a: this._counter(aEl, fmtTroops), d: this._counter(dEl, fmtTroops), gone: 0 };
   }
 
   /** Barra superior: tu puesto y el líder frente a la meta de victoria. */
@@ -1420,7 +1420,7 @@ export class UI {
       set('.pos', String(rank));
       set('.pct', formatPercent(p.tiles / landCount));
       set('.oro', formatNumber(p.gold));
-      set('.tro', formatNumber(p.troops));
+      set('.tro', fmtTroops(p.troops));
       set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
       li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;
       li.classList.toggle('yo', p === human);
@@ -1477,7 +1477,7 @@ export class UI {
     if (troops < 1) return '';
     const e = game.estimateAttack(h, targetId, troops);
     const risk = targetId ? ` · riesgo ${e.risk}` : '';
-    return `<div class="tip-estim">Con ${formatNumber(troops)} soldados: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
+    return `<div class="tip-estim">Con ${fmtTroops(troops)} soldados: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
   }
 
   updateTooltip(game, tile, sx, sy) {
@@ -1507,7 +1507,7 @@ export class UI {
       const human = game.human;
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
-        ${formatNumber(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
+        ${fmtTroops(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
     } else {
       tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;

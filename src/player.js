@@ -118,7 +118,8 @@ export class Player {
    */
   growthPerTick() {
     const P = this.economy === 'workers' ? this.troops + this.workers : this.troops;
-    return regenPerTick(P, this.maxTroops()) * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
+    // × paceRegen: ritmo de juego algo más lento que el documento (ver mecanicas.js)
+    return regenPerTick(P, this.maxTroops()) * MECH.paceRegen * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
   }
 
   /** Oro pasivo base por turno: humano 100, nación 100, bot (colonia) 50. */

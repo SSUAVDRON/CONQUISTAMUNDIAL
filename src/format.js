@@ -23,8 +23,25 @@ export function formatCount(n) {
 
 /** Tropas en el mapa: exactas hasta 9999 (caben igual que «3.6k»), luego como formatNumber. */
 export function formatTroops(n) {
-  n = Math.max(0, Math.floor(n));
+  n = Math.max(0, Math.floor(n / TROOP_SCALE));
   return n < 10000 ? String(n) : formatNumber(n);
+}
+
+/**
+ * Escala de las tropas en pantalla. Por dentro siguen el documento (25 000 al
+ * empezar, techo de 121 410…); en pantalla se muestran ÷ 10, como en el juego
+ * de referencia, para que las cifras no salgan hinchadas: 2500, 12.1k…
+ */
+export const TROOP_SCALE = 10;
+
+/** Tropas (o población) en texto: formatNumber de la cifra en pantalla. */
+export function fmtTroops(n) {
+  return formatNumber(n / TROOP_SCALE);
+}
+
+/** Tropas en los contadores que se ven contar (formatCount de la cifra en pantalla). */
+export function fmtTroopsCount(n) {
+  return formatCount(n / TROOP_SCALE);
 }
 
 export function formatPercent(x) {

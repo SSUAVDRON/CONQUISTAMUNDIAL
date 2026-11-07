@@ -51,6 +51,12 @@ export const MECH = {
   neutralTimeMin: 5,
   neutralTimeMax: 100,
   neutralBudgetPerFront: 2, // presupuesto por tick = 2 × longitud del frente
+  // Ritmo de juego (no está en el documento: se pidió más lento). Multiplica el
+  // presupuesto por tick de los ataques: contra tierra libre y contra países.
+  // Y la regeneración de tropas.
+  paceNeutral: 0.07,
+  pacePvp: 0.5,
+  paceRegen: 0.6,
   neutralLossDiv: 5, // bajas por casilla = magnitud / 5
   // Guerra entre países (sección 05.2)
   pvp: {

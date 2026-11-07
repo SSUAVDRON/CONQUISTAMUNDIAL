@@ -21,7 +21,7 @@ export class BotBrain {
     this.thinkScale = level[0];
     this.aggression = Math.min(1, (0.4 + r.float() * 0.5) * level[1]);
     this.cunning = level[2];
-    this.expandRatio = 0.2 + r.float() * 0.3;
+    this.expandRatio = 0.3 + r.float() * 0.06;
     this.saveFor = null; // edificio caro para el que está ahorrando (no gasta en otra cosa)
     this.diplomacy = r.float(); // 0 = lobo solitario, 1 = diplomático
     this.loyalty = r.float(); // probabilidad de no traicionar por oportunismo
@@ -57,9 +57,14 @@ export class BotBrain {
     if (this._counterAttack()) return;
 
     // 1. Expandirse por tierra libre mientras la haya
-    if (wild > 0 && !p.attacks.has(0) && p.population() > max * 0.15) {
-      // Si hay un punto estratégico libre cerca, se expande hacia él
-      g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio), { focus: this._freePointNear() });
+    // (si la ofensiva sigue pero le quedan pocas tropas, la refuerza: con pocas
+    // tropas avanza muy despacio y el crecimiento iría a tirones)
+    const wildAtk = p.attacks.get(0);
+    const starving = wildAtk && !wildAtk.done && wildAtk.troops < Math.max(2000, max * 0.04);
+    if (wild > 0 && (!wildAtk || wildAtk.done || starving) && p.population() > max * 0.15) {
+      // En todas direcciones y con la misma parte de las tropas: todas las
+      // naciones crecen parejas, en círculo, al empezar
+      g.launchAttack(p, 0, Math.floor(p.troops * this.expandRatio));
       // Los agresivos no esperan a acabar: atacan a la vez a un vecino débil
       if (!(counts.size && r.chance(this.aggression - 0.35))) return;
     }
@@ -114,27 +119,6 @@ export class BotBrain {
       v += pt.kind === 'capital' ? 0.3 : 0.15;
     }
     return Math.min(0.9, v);
-  }
-
-  /** Punto estratégico sin dueño a menos de ~60 casillas de su capital: hacia él se expande. */
-  _freePointNear() {
-    const g = this.game;
-    const p = this.player;
-    const home = p.capitalTile >= 0 ? p.capitalTile : p.spawnTile;
-    if (home < 0) return -1;
-    const hx = g.map.x(home);
-    const hy = g.map.y(home);
-    let best = -1;
-    let bd = (60 * RES) ** 2;
-    for (const pt of g.points) {
-      if (g.owner[pt.tile] !== 0) continue;
-      const d = (pt.x - hx) ** 2 + (pt.y - hy) ** 2;
-      if (d < bd) {
-        bd = d;
-        best = pt.tile;
-      }
-    }
-    return best;
   }
 
   /**
