@@ -1,0 +1,19 @@
+# Trinchera en Hostinger (LiteSpeed). Lo copia herramientas/hostinger.sh a las ramas
+# «hostinger-prueba» (…/prueba/) y «hostinger» (la raíz de la web).
+DirectoryIndex index.html
+
+# Hostinger despliega con Git y deja la carpeta .git junto a la web: que no se pueda leer
+RedirectMatch 404 /\.git
+
+# El juego cambia a menudo: el navegador y la CDN comprueban siempre si hay
+# versión nueva (es un único archivo con todo dentro: no puede mezclar versiones)
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Comprimido viaja mucho menos (el juego es un único HTML de ~2,6 MB)
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
