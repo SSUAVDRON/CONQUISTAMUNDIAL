@@ -4,15 +4,14 @@
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
 import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
-import { rgbToCss, shadeRgb, vividRgb } from './colors.js';
+import { mutedRgb, rgbToCss, shadeRgb, vividRgb } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 
-const FILL_ALPHA = 120; // territorio semitransparente: se ve el terreno debajo
-const PASTEL = 0.3; // los colores de las naciones, en tonos pastel
+const FILL_ALPHA = 140; // territorio semitransparente: se ve el terreno debajo
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
@@ -172,18 +171,20 @@ export class Renderer {
     this.fill = new Uint32Array(n);
     this.inner = new Uint32Array(n);
     this.alt = new Uint32Array(n);
-    this.border = new Uint32Array(n); // franja exterior de la frontera (opaca, color vivo)
-    this.border2 = new Uint32Array(n); // franja interior (el color del país, casi opaco)
+    this.border = new Uint32Array(n); // frontera: una casilla, opaca
+    this.border2 = new Uint32Array(n); // segunda franja: solo la tuya (resaltado)
+    this.ring2 = new Uint8Array(n);
     this.patterns = new Array(n).fill(null);
     this.allied = new Uint8Array(n);
     this.glowCol = GLOW_MIX.map(() => [new Uint32Array(n), new Uint32Array(n)]);
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
-      // Relleno: el color de la nación, apenas aclarado y semitransparente.
-      // Frontera de dos casillas: fuera, su tono más vivo y oscuro; dentro, su
-      // color vivo algo transparente (se lee como un borde grueso con relieve)
-      const [r, g, b] = shadeRgb(p.color, 1 + PASTEL);
+      // Relleno: el color de la nación en un tono apagado y semitransparente
+      // (se ve el terreno debajo). Frontera de una sola casilla, opaca, en el
+      // mismo tono más oscuro
+      const muted = mutedRgb(p.color);
+      const [r, g, b] = muted;
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
       this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
@@ -191,14 +192,19 @@ export class Renderer {
       // Patrón del perfil: algunas casillas con un tono más oscuro.
       // Los aliados llevan franjas verdes en diagonal: se reconocen de un vistazo.
       this.patterns[p.id] = PATTERN_FNS[p.pattern] || null;
-      const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(p.color, 0.72);
+      const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(muted, 0.72);
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
-      // Frontera exterior blanca para el humano y verde para sus aliados
-      // Las demás: su mismo tono, más vivo y algo más oscuro que el relleno
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(p.color, 0.15, 0.9, 0.24, 0.58);
-      this.border[p.id] = pack(bc[0], bc[1], bc[2], 245);
-      const b2 = vividRgb(p.color, 0.1, 1.12, 0.36, 0.72);
-      this.border2[p.id] = pack(b2[0], b2[1], b2[2], p === human ? 210 : 165);
+      // Frontera blanca para ti y verde para tus aliados; las demás, su tono
+      // apagado más oscuro
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(muted, 0.62);
+      this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
+      // Tu nación, resaltada: por dentro de la frontera blanca, una franja en
+      // tu color vivo
+      if (p === human) {
+        const b2 = vividRgb(p.color, 0.1, 1.12, 0.36, 0.72);
+        this.border2[p.id] = pack(b2[0], b2[1], b2[2], 210);
+        this.ring2[p.id] = 1;
+      }
       GLOW_MIX.forEach((stages, kind) => stages.forEach(([gr, gg, gb, m], st) => {
         this.glowCol[kind][st][p.id] = pack(Math.round(lerp(r, gr, m)), Math.round(lerp(g, gg, m)), Math.round(lerp(b, gb, m)), 235);
       }));
@@ -228,8 +234,8 @@ export class Renderer {
       return;
     }
     const w = this.game.map.width;
-    // Segunda franja de la frontera (las vecinas existen: esta no es borde)
-    if (this._shownBorder(i - 1, o) || this._shownBorder(i + 1, o) || this._shownBorder(i - w, o) || this._shownBorder(i + w, o)) {
+    // Segunda franja de la frontera, solo en tu nación (las vecinas existen: esta no es borde)
+    if (this.ring2[o] && (this._shownBorder(i - 1, o) || this._shownBorder(i + 1, o) || this._shownBorder(i - w, o) || this._shownBorder(i + w, o))) {
       this.pixels[i] = this.border2[o];
       return;
     }
@@ -323,7 +329,7 @@ export class Renderer {
         px[i] = this.border[o];
         continue;
       }
-      if (m[i - 1] || m[i + 1] || m[i - W] || m[i + W]) {
+      if (this.ring2[o] && (m[i - 1] || m[i + 1] || m[i - W] || m[i + W])) {
         px[i] = this.border2[o];
         continue;
       }
@@ -1817,7 +1823,7 @@ export class Renderer {
   }
 
   /**
-   * Nombre de una nación ya dibujado (texto con halo e icono a la izquierda),
+   * Nombre de una nación ya dibujado (texto e icono a la izquierda),
    * guardado como imagen: dibujar texto con contorno cada fotograma es caro, y
    * en el móvil se nota. Solo se rehace si cambia algo de lo que se ve.
    */
@@ -1829,7 +1835,7 @@ export class Renderer {
     if (e.key === key) return e;
     e.key = key;
     const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
-    const font = `${me ? 800 : player ? 700 : 600} ${size}px system-ui, sans-serif`;
+    const font = `${me ? 800 : player ? 600 : 500} ${size}px system-ui, sans-serif`;
     const mc = this.ctx;
     mc.font = font;
     const w = mc.measureText(name).width;
@@ -1845,14 +1851,16 @@ export class Renderer {
     e.ty = pad + size * 0.85;
     const g = this._spriteCanvas(e.canvas, e.cw, e.ch);
     e.canvas = g.canvas;
-    // Nombres discretos: texto oscuro con un halo claro (el tuyo, en su color vivo)
+    // Nombres de mapa: texto gris oscuro con un halo claro muy tenue (solo
+    // se nota si el nombre se sale sobre el mar); aliados en verde y traidores
+    // en rojo, oscuros. El tuyo, en su color vivo, con contorno y un halo para
+    // encontrarlo de un vistazo
     g.font = font;
-    g.lineWidth = lw;
-    g.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.55)';
-    g.fillStyle = me ? color : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(28, 32, 40, 0.92)';
+    g.fillStyle = me ? color : allied ? '#0e4d28' : traitor ? '#7a1d12' : 'rgba(48, 48, 48, 0.92)';
+    g.lineWidth = me ? lw : Math.max(2, size / 7);
+    g.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.3)';
     g.strokeText(name, e.tx, e.ty);
     if (me) {
-      // Tu nombre, en color vivo y con un halo para encontrarlo de un vistazo
       g.shadowColor = color;
       g.shadowBlur = blur;
     }
@@ -1878,8 +1886,8 @@ export class Renderer {
 
   /**
    * Juego de caracteres de las cifras de tropas (0-9 . k M) ya dibujados para
-   * un tamaño: las tuyas en tu color; las de los rivales en blanco con un
-   * contorno oscuro suave. Las cifras cambian casi a cada turno, así que se
+   * un tamaño: las tuyas en tu color, con contorno; las de los rivales en gris
+   * oscuro con un halo claro muy tenue (como sus nombres). Las cifras cambian casi a cada turno, así que se
    * componen carácter a carácter en vez de dibujar texto cada fotograma.
    */
   _digitFont(s2, me) {
@@ -1890,8 +1898,8 @@ export class Renderer {
     if (f) return f;
     if (fonts.size > 48) fonts.clear();
     const chars = '0123456789.kM';
-    const font = `600 ${s2}px system-ui, sans-serif`;
-    const lw = Math.max(2.5, s2 / (me ? 5 : 4.5));
+    const font = `${me ? 600 : 500} ${s2}px system-ui, sans-serif`;
+    const lw = Math.max(2.5, s2 / 5);
     const pad = Math.ceil(lw / 2 + 1);
     const mc = this.ctx;
     mc.font = font;
@@ -1909,9 +1917,9 @@ export class Renderer {
     const g = this._spriteCanvas(null, x, cellH * 2 + 2);
     g.font = font;
     g.textAlign = 'left';
-    g.lineWidth = lw;
-    g.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(22, 28, 40, 0.5)';
-    g.fillStyle = me ? color : 'rgba(255, 255, 255, 0.96)';
+    g.lineWidth = me ? lw : Math.max(2, s2 / 6);
+    g.strokeStyle = me ? 'rgba(20, 12, 0, 0.85)' : 'rgba(255, 255, 255, 0.3)';
+    g.fillStyle = me ? color : 'rgba(48, 48, 48, 0.92)';
     const ty = pad + s2 * 0.7;
     for (const ch of chars) {
       g.strokeText(ch, xs[ch] + pad, ty);

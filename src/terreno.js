@@ -1,9 +1,11 @@
 // Terreno del mapa, pintado una sola vez al empezar la partida:
-// - el mar, azul marino plano con manchas muy suaves;
-// - la tierra en colores planos de mapa de juego según la altura y el clima:
-//   llanura verde oliva, meseta y desierto color arena, montaña gris claro y
-//   cumbres casi blancas, mezcladas en los bordes con un moteado de píxeles;
-//   la costa, con un contorno oscuro; los ríos, en azul;
+// - el mar, azul marino liso: algo más claro junto a la costa y más hondo mar
+//   adentro, sin grano;
+// - la tierra en manchas de color planas y limpias según la altura y el clima:
+//   llanura verde oliva, llanura seca, desierto tostado con claros de arena,
+//   montaña parda y cumbres claras. Sin moteado por casilla: las zonas tienen
+//   bordes de bloque y apenas varían de tono;
+// - la costa, con un contorno oscuro de una casilla; los ríos, en azul.
 // Mar y tierra se juntan en una sola imagen opaca (barata de dibujar).
 // Todo esto es solo visual: no afecta a la simulación.
 import { RES, TERRAIN } from './config.js';
@@ -12,6 +14,7 @@ import { hash2, valueNoise } from './noise.js';
 const { WATER } = TERRAIN;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (a, b, v) => {
   const t = clamp((v - a) / (b - a), 0, 1);
   return t * t * (3 - 2 * t);
@@ -53,29 +56,37 @@ let cr = 0;
 let cg = 0;
 let cb = 0;
 
-// Paleta plana de mapa de juego: llanura verde oliva, meseta color arena,
-// montaña gris claro y cumbres casi blancas. Las zonas se mezclan en los
-// bordes con un moteado de píxeles (sin degradados ni sombreado).
-const TERRAIN_COLORS = [
-  [118, 146, 74], // llanura
-  [192, 170, 122], // meseta / desierto
-  [174, 174, 170], // montaña
-  [214, 214, 210], // cumbre
-];
-const COAST = [46, 49, 55]; // contorno de la costa
-const SEA = [27, 45, 82]; // mar
+// Paleta plana de mapa de juego, en tonos apagados: llanura verde oliva,
+// llanura seca, desierto tostado (con claros de arena), montaña parda y
+// cumbres claras. Zonas limpias, sin moteado ni degradados.
+const PLAIN = [141, 166, 92];
+const DRY_PLAIN = [164, 164, 104];
+const DESERT = [183, 163, 118];
+const SAND = [198, 180, 136];
+const MOUNTAIN = [158, 146, 122];
+const PEAK = [212, 208, 198];
+const COAST = [38, 38, 40]; // contorno de la costa
+const SEA_NEAR = [24, 56, 104]; // mar junto a la costa
+const SEA_DEEP = [14, 38, 80]; // mar adentro
+const SEA = [19, 47, 92]; // mar de las vistas previas (un tono medio)
 
 /**
  * Color plano de una casilla en (cr, cg, cb): según su altura `e` (m), lo
- * seca que es la zona (0-1) y dos ruidos: `speck` (por casilla, para el
- * moteado de los bordes entre zonas) y `patch` (manchas grandes).
+ * seca que es la zona (0-1) y tres ruidos: `speck` (por casilla: solo dentea
+ * un poco el borde entre zonas y da ±1 % de brillo), `patch` (manchas: deciden
+ * la forma de las zonas) y `sand` (manchas más grandes: claros de arena en el
+ * desierto).
  */
-function flatColor(e, dry, speck, patch) {
-  const v = e + dry * 650 + (speck - 0.5) * 520 + (patch - 0.5) * 260;
-  const k = v < 320 ? 0 : v < 1450 ? 1 : v < 2700 ? 2 : 3;
-  const c = TERRAIN_COLORS[k];
-  // Un pelín de variación de brillo por casilla (textura de píxel)
-  const b = 1 + (speck - 0.5) * 0.07;
+function flatColor(e, dry, speck, patch, sand = 0.5) {
+  const v = e + dry * 650 + (patch - 0.5) * 260 + (speck - 0.5) * 40;
+  let c;
+  if (v < 300) c = PLAIN;
+  else if (v < 430) c = DRY_PLAIN;
+  else if (v < 1450) c = sand > 0.62 && dry > 0.3 ? SAND : DESERT;
+  else if (v < 2700) c = MOUNTAIN;
+  else c = PEAK;
+  // Apenas variación de tono: ±3 % en manchas grandes y ±1 % por casilla
+  const b = 1 + (patch - 0.5) * 0.06 + (speck - 0.5) * 0.02;
   cr = c[0] * b;
   cg = c[1] * b;
   cb = c[2] * b;
@@ -177,7 +188,7 @@ function paintTerrainNow(map) {
       // aleatorios) las tierras bajas tiran a arena
       const moist = valueNoise(x, y, 30 * RES, seed);
       const dry = lat >= 0 ? clamp(sub * (1.3 - moist * 0.8), 0, 1) : smooth(0.34, 0.16, moist);
-      flatColor(e + ridge * 420, dry, hash2(x, y, seed + 17), valueNoise(x, y, 3 * RES, seed + 5));
+      flatColor(e + ridge * 300, dry, hash2(x, y, seed + 17), valueNoise(x, y, 3 * RES, seed + 5), valueNoise(x, y, 9 * RES, seed + 7));
       R[i] = cr;
       G[i] = cg;
       B[i] = cb;
@@ -323,19 +334,28 @@ function paintTerrainNow(map) {
       }
     }
   }
+  // Distancia suavizada (sin los rombos de la distancia por casillas)
+  const sd = new Float32Array(size);
+  for (let i = 0; i < size; i++) sd[i] = dist[i] === 255 ? 60 * RES : dist[i];
+  const sr = Math.max(2, 3 * RES);
+  boxBlur(sd, W, H, sr);
+  boxBlur(sd, W, H, sr);
   const water = makeCanvas(W, H);
   const wctx = water.getContext('2d');
   const wimg = wctx.createImageData(W, H);
   const wd = wimg.data;
+  const far = 26 * RES;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       const o = i * 4;
-      // Mar azul marino plano, con manchas muy suaves y algo de grano
-      const n = (valueNoise(x, y, 14 * RES, seed + 31) - 0.5) * 7 + (hash2(x, y, seed + 29) - 0.5) * 3;
-      wd[o] = clamp(SEA[0] + n * 0.6, 0, 255);
-      wd[o + 1] = clamp(SEA[1] + n * 0.8, 0, 255);
-      wd[o + 2] = clamp(SEA[2] + n, 0, 255);
+      // Mar liso: más claro junto a la costa y más hondo mar adentro, con
+      // manchas muy suaves de baja frecuencia (sin grano)
+      const t = smooth(0, far, sd[i]);
+      const n = (valueNoise(x, y, 18 * RES, seed + 31) - 0.5) * 4;
+      wd[o] = clamp(lerp(SEA_NEAR[0], SEA_DEEP[0], t) + n * 0.5, 0, 255);
+      wd[o + 1] = clamp(lerp(SEA_NEAR[1], SEA_DEEP[1], t) + n * 0.8, 0, 255);
+      wd[o + 2] = clamp(lerp(SEA_NEAR[2], SEA_DEEP[2], t) + n, 0, 255);
       wd[o + 3] = 255;
     }
   }
@@ -352,8 +372,8 @@ function paintTerrainNow(map) {
 
 /**
  * Vista previa ligera de un mapa (miniaturas y portada del inicio), con el
- * mismo estilo que la partida: color por altura, relieve sombreado, filo claro
- * en la costa y mar azul marino. Muestrea casillas en vez de pintarlas todas.
+ * mismo estilo que la partida: zonas de color planas por altura y clima,
+ * contorno oscuro en la costa y mar azul marino. Muestrea casillas en vez de pintarlas todas.
  * `data`: { w, h, terrain, relief, tileKm }; `crop`: [x0, y0, x1, y1] en casillas.
  */
 export function paintMapPreview(canvas, data, crop = null) {

@@ -1534,7 +1534,7 @@ export class Home {
     const k = Math.max(W / src.width, H / src.height);
     const w = src.width * k;
     const h = src.height * k;
-    ctx.fillStyle = '#1b2d52';
+    ctx.fillStyle = '#132f5c';
     ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(src, (W - w) / 2, (H - h) / 2, w, h);

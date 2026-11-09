@@ -54,7 +54,7 @@ export class CoverArt {
       const [x, y] = toScreen(tile);
       if (x < -W * 0.3 || y < -H * 0.5 || x > W * 1.3 || y > H * 1.5) return;
       const hue = (i * 137.508 + 20) % 360;
-      nations.push({ name, iso, x, y, area, w: (area / Math.PI) * k * k * 0.7, c: hslRgb(hue, 0.55, 0.62), e: hslRgb(hue, 0.5, 0.3) });
+      nations.push({ name, iso, x, y, area, w: (area / Math.PI) * k * k * 0.7, c: hslRgb(hue, 0.32, 0.56), e: hslRgb(hue, 0.3, 0.35) });
     });
     this.nations = nations;
     const img = ctx.getImageData(0, 0, W, H);
@@ -91,7 +91,8 @@ export class CoverArt {
       const x = i % W;
       const edge = (x > 0 && owner[i - 1] !== o) || (x < W - 1 && owner[i + 1] !== o) || (i >= W && owner[i - W] !== o) || (i < W * (H - 1) && owner[i + W] !== o);
       const [r, g, b] = edge ? nations[o].e : nations[o].c;
-      const a = edge ? 0.85 : 0.42;
+      // Como en la partida: relleno apagado y semitransparente, frontera opaca
+      const a = edge ? 1 : 0.55;
       const p = i * 4;
       d[p] = d[p] + (r - d[p]) * a;
       d[p + 1] = d[p + 1] + (g - d[p + 1]) * a;
@@ -104,7 +105,7 @@ export class CoverArt {
     const visible = nations.filter((n) => n.x > W * this.labelFrom && n.x < W - 20 && n.y > 20 && n.y < H - 16).sort((a, b) => b.area - a.area);
     // Rótulos sin pisarse: de mayor a menor, se salta el que choca con uno ya puesto
     const meas = document.createElement('canvas').getContext('2d');
-    meas.font = '800 15px system-ui, sans-serif';
+    meas.font = '600 15px system-ui, sans-serif';
     const boxes = [];
     this.labels = [];
     for (const n of visible) {
@@ -245,7 +246,7 @@ export class CoverArt {
     // Puntos estratégicos
     for (const [kind, [x, y]] of this.points) drawPointIcon(ctx, kind, x, y, 22);
     // Naciones: bandera, nombre y su capital
-    ctx.font = '800 15px system-ui, sans-serif';
+    ctx.font = '600 15px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     for (const n of this.labels) {
@@ -253,10 +254,10 @@ export class CoverArt {
       const tw = ctx.measureText(n.name).width;
       const x = n.x - (tw + (flag ? 26 : 0)) / 2;
       if (flag) drawFlag(ctx, n.iso, x + 10, n.y, 13);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.strokeText(n.name, x + (flag ? 24 : 0), n.y);
-      ctx.fillStyle = 'rgba(20, 24, 34, 0.95)';
+      ctx.fillStyle = 'rgba(48, 48, 48, 0.95)';
       ctx.fillText(n.name, x + (flag ? 24 : 0), n.y);
     }
     for (const n of this.labels.slice(0, 5)) {

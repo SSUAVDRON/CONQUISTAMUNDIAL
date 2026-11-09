@@ -17,11 +17,15 @@ export function hslToRgb(h, s, l) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
-/** Colores bien repartidos en el círculo cromático (ángulo áureo). */
+/**
+ * Colores bien repartidos en el círculo cromático (ángulo áureo), en tonos
+ * apagados de mapa: pizarra, salvia, malva, rosa viejo… (Dos tiradas de `rng`,
+ * siempre: el resto de la partida depende de esa secuencia.)
+ */
 export function botColor(index, rng) {
   const hue = (index * 137.508 + 20) % 360;
-  const sat = 0.5 + rng.float() * 0.35;
-  const light = 0.42 + rng.float() * 0.16;
+  const sat = 0.22 + rng.float() * 0.2;
+  const light = 0.48 + rng.float() * 0.14;
   return hslToRgb(hue, sat, light);
 }
 
@@ -58,6 +62,16 @@ export function rgbToHsl([r, g, b]) {
 export function vividRgb(rgb, ds, fl, lo = 0.12, hi = 0.8) {
   const [h, s, l] = rgbToHsl(rgb);
   return hslToRgb(h, Math.min(1, s + ds), Math.max(lo, Math.min(hi, l * fl)));
+}
+
+/**
+ * El mismo tono, apagado: saturación como mucho `maxS` y luz entre `lo` y
+ * `hi`. Para el relleno de los territorios (también el de un color vivo
+ * elegido por el jugador).
+ */
+export function mutedRgb(rgb, maxS = 0.42, lo = 0.5, hi = 0.62) {
+  const [h, s, l] = rgbToHsl(rgb);
+  return hslToRgb(h, Math.min(s, maxS), Math.max(lo, Math.min(hi, l)));
 }
 
 export function shadeRgb([r, g, b], f) {
