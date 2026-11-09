@@ -142,14 +142,14 @@
             <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
           </div>
           <div class="online-acciones">
-            <button type="button" id="btn-crear-sala" class="principal" disabled>Crear sala</button>
+            <button type="button" id="btn-crear-sala" class="principal" disabled>＋ Crear sala</button>
             <form id="form-unirse" class="unirse" autocomplete="off">
-              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false">
-              <button type="submit" disabled>Unirse</button>
+              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false" autocapitalize="characters">
+              <button type="submit" disabled>Unirse con código</button>
             </form>
           </div>
-          <h3>Salas abiertas</h3>
-          <ul id="lista-salas" class="lista-salas"></ul>
+          <h3>Salas públicas</h3>
+          <ul id="lista-salas" class="lista-salas salas-publicas" aria-live="polite"></ul>
           <p id="nota-red" class="nota"></p>
         </div>
 
@@ -377,20 +377,91 @@
   </div>
 
   <!-- Sala multijugador -->
-  <div id="sala" class="pantalla" hidden>
-    <div class="tarjeta sala-tarjeta">
-      <div class="sala-cabecera">
-        <h2>Sala <span id="sala-codigo" class="codigo"></span></h2>
+  <!-- Crear sala: mapa, nombre, visibilidad y plazas (las reglas, en «Reglas avanzadas») -->
+  <div id="crear-sala" class="pantalla pantalla-sala" hidden>
+    <header class="sala-barra">
+      <button type="button" class="sala-atras" id="crear-atras" aria-label="Volver a Multijugador">←</button>
+      <span class="sala-marca"><svg class="sala-logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="4"/><path d="M30 11 V37" stroke="#e9eef7" stroke-width="3" stroke-linecap="round"/><path d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/><path d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>TRINCHERA</span></span>
+      <span class="sala-seccion">Multijugador</span>
+    </header>
+    <main class="sala-cuerpo">
+      <div class="sala-encabezado">
+        <div>
+          <h1 class="sala-h1">Crear sala</h1>
+          <p class="sala-sub">Elige dónde vais a jugar y quién puede entrar.</p>
+        </div>
+      </div>
+      <div class="crear-rejilla">
+        <section class="sala-caja crear-mapa" aria-labelledby="crear-mapa-tit">
+          <h2 id="crear-mapa-tit">Mapa</h2>
+          <div class="mapa-vista"><canvas id="crear-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="crear-mapa-nombre"></span></div>
+          <div class="crear-mapas" id="crear-mapas" role="radiogroup" aria-label="Mapa"></div>
+        </section>
+        <section class="sala-caja crear-datos">
+          <label class="campo"><span class="campo-tit">Nombre de la sala</span><input id="crear-nombre" maxlength="28" autocomplete="off" spellcheck="false"></label>
+          <div class="campo"><span class="campo-tit">Visibilidad</span>
+            <div class="segmentos visibilidad" id="crear-visibilidad" role="radiogroup" aria-label="Visibilidad"></div>
+            <small class="nota" id="crear-vis-nota"></small>
+          </div>
+          <div class="campo"><span class="campo-tit">Plazas <small>jugadores humanos; los bots van aparte</small></span>
+            <div class="paso" role="group" aria-label="Plazas">
+              <button type="button" id="plazas-menos" aria-label="Una plaza menos">−</button><output id="plazas-valor">4</output><button type="button" id="plazas-mas" aria-label="Una plaza más">+</button>
+            </div>
+          </div>
+          <div class="chips-sala" id="crear-resumen"></div>
+          <details class="sala-avanzadas" id="crear-avanzadas"><summary>Reglas avanzadas</summary><div id="crear-reglas"></div></details>
+        </section>
+      </div>
+    </main>
+    <footer class="sala-pie">
+      <button type="button" id="crear-volver" class="secundario">← Volver</button>
+      <p class="sala-motivo" id="crear-error" role="status"></p>
+      <button type="button" id="crear-confirmar" class="principal grande">Crear sala</button>
+    </footer>
+  </div>
+
+  <!-- Sala: invitación, mapa y reglas, jugadores y preparación -->
+  <div id="sala" class="pantalla pantalla-sala" hidden>
+    <header class="sala-barra">
+      <button type="button" class="sala-atras" id="btn-salir-sala" aria-label="Salir de la sala">←</button>
+      <span class="sala-marca"><svg class="sala-logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="4"/><path d="M30 11 V37" stroke="#e9eef7" stroke-width="3" stroke-linecap="round"/><path d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/><path d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>TRINCHERA</span></span>
+      <span class="sala-seccion">Multijugador</span>
+      <span class="sala-red" id="sala-red"></span>
+    </header>
+    <main class="sala-cuerpo">
+      <div class="sala-encabezado">
+        <div class="sala-titulo"><h1 class="sala-h1" id="sala-nombre">Sala</h1><span class="chip-vis" id="sala-visibilidad"></span></div>
+        <div class="sala-invitar">
+          <small>Código de sala</small>
+          <strong id="sala-codigo" class="codigo"></strong>
+          <button type="button" id="btn-copiar-enlace" class="btn-enlace"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5 L9.5 6.5 M7 4.5 L8.5 3 a2.8 2.8 0 0 1 4 4 L11 8.5 M9 11.5 L7.5 13 a2.8 2.8 0 0 1 -4 -4 L5 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Copiar enlace</span></button>
+        </div>
+      </div>
+      <div class="sala-copia" id="sala-copia" hidden>
+        <input id="sala-enlace" readonly aria-label="Enlace de invitación">
         <button type="button" id="btn-copiar-codigo">Copiar código</button>
       </div>
-      <p id="sala-estado" class="nota"></p>
-      <ul id="sala-jugadores" class="sala-jugadores"></ul>
-      <div id="sala-ajustes" class="sala-ajustes"></div>
-      <div class="botones">
-        <button type="button" id="btn-salir-sala">Salir</button>
-        <button type="button" id="btn-empezar" class="principal">Empezar partida</button>
+      <p class="sala-aviso" id="sala-aviso" role="status" hidden></p>
+      <div class="sala-rejilla" id="sala-rejilla">
+        <section class="sala-caja sala-mapa">
+          <div class="mapa-vista"><canvas id="sala-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="sala-mapa-nombre"></span></div>
+          <div class="sala-mapa-pie"><div class="chips-sala" id="sala-chips"></div><button type="button" id="btn-editar-reglas" class="secundario" hidden aria-expanded="false">Editar reglas</button></div>
+          <div class="sala-ajustes" id="sala-ajustes" hidden></div>
+        </section>
+        <section class="sala-caja sala-gente" aria-labelledby="sala-gente-tit">
+          <h2 id="sala-gente-tit">Jugadores <span id="sala-cuenta"></span></h2>
+          <ul id="sala-jugadores" class="sala-jugadores"></ul>
+        </section>
       </div>
-    </div>
+      <section class="sala-caja sala-entrada" id="sala-entrada" hidden aria-live="polite"></section>
+    </main>
+    <footer class="sala-pie" id="sala-pie">
+      <span class="sala-preparados" id="sala-preparados"></span>
+      <span class="sala-motivo" id="sala-motivo"></span>
+      <button type="button" id="btn-listo" class="principal grande">Estoy listo</button>
+      <button type="button" id="btn-empezar" class="principal grande">Iniciar partida</button>
+    </footer>
+    <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
   </div>
 
   <!-- Interfaz de partida -->

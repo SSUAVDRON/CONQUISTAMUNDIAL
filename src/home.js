@@ -2,6 +2,7 @@
 // clasificación, y la sala de espera del multijugador.
 import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } from './config.js';
 import { PROFILES, rulesetId } from './mecanicas.js';
+import { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } from './multiplayer.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { decodeRelief, generateMap, markRivers } from './map.js';
 import { RIVERS } from './rios.js';
@@ -54,6 +55,9 @@ const NEWS = [
 
 const $ = (id) => document.getElementById(id);
 const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
+/** Naciones de la IA en una partida online (más cargan demasiado el lockstep). */
+const ONLINE_MAX_BOTS = 60;
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -474,15 +478,24 @@ export class Home {
     this._buildSwatches();
 
     // Multijugador
-    $('btn-crear-sala').addEventListener('click', () => this.h.onCreateRoom?.());
+    $('btn-crear-sala').addEventListener('click', () => this.showCreate());
     $('form-unirse').addEventListener('submit', (e) => {
       e.preventDefault();
       this.h.onJoinRoom?.($('in-codigo').value);
     });
     $('lista-salas').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-code]');
-      if (b) this.h.onJoinRoom?.(b.dataset.code);
+      if (b && !b.disabled) this.h.onJoinRoom?.(b.dataset.code);
+      if (e.target.closest('[data-crear]')) this.showCreate();
     });
+    // Crear sala
+    for (const id of ['crear-atras', 'crear-volver']) $(id).addEventListener('click', () => this.hideCreate());
+    $('crear-confirmar').addEventListener('click', () => this._submitCreate());
+    $('crear-nombre').addEventListener('input', () => {
+      this.create.name = $('crear-nombre').value;
+    });
+    $('plazas-menos').addEventListener('click', () => this._seats(-1));
+    $('plazas-mas').addEventListener('click', () => this._seats(1));
 
     // Perfil
     $('in-nombre').addEventListener('input', () => {
@@ -529,7 +542,15 @@ export class Home {
     // Sala
     $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
     $('btn-empezar').addEventListener('click', () => this.h.onStartRoom?.());
+    $('btn-listo').addEventListener('click', () => this.h.onReady?.());
+    $('btn-copiar-enlace').addEventListener('click', () => this.h.onCopyLink?.());
     $('btn-copiar-codigo').addEventListener('click', () => this.h.onCopyCode?.());
+    $('btn-editar-reglas').addEventListener('click', () => {
+      const box = $('sala-ajustes');
+      box.hidden = !box.hidden;
+      $('btn-editar-reglas').setAttribute('aria-expanded', String(!box.hidden));
+      $('btn-editar-reglas').textContent = box.hidden ? 'Editar reglas' : 'Cerrar reglas';
+    });
 
     $('in-bots').value = a.bots;
     this._syncBots();
@@ -1413,24 +1434,28 @@ export class Home {
 
   // ------------------------------------------------------------- en línea
 
-  /** kind: 'claude' | 'local' | null; detail: texto opcional. */
+  /** kind: 'claude' | 'mqtt' | 'local' | 'connecting' | null; detail: texto opcional. */
   setNetStatus(kind, detail = '') {
+    this.netKind = kind;
     const chip = $('estado-red');
-    const labels = { claude: 'En línea', local: 'Modo local', none: 'No disponible', connecting: 'Conectando…' };
+    const labels = { claude: 'En línea', mqtt: 'En línea', local: 'Prueba entre pestañas', none: 'No disponible', connecting: 'Conectando…' };
     chip.textContent = labels[kind || 'none'];
-    chip.className = `chip ${kind === 'claude' ? 'bien' : kind === 'local' ? 'aviso' : ''}`;
-    const usable = kind === 'claude' || kind === 'local';
+    chip.className = `chip ${kind === 'claude' || kind === 'mqtt' ? 'bien' : kind === 'local' ? 'aviso' : ''}`;
+    const usable = kind === 'claude' || kind === 'local' || kind === 'mqtt';
     $('btn-crear-sala').disabled = !usable;
     $('form-unirse').querySelector('button').disabled = !usable;
     $('nota-red').textContent =
       detail ||
       (kind === 'claude'
         ? 'Comparte el código con quien tenga este enlace. Para jugar necesitan permiso de colaborador.'
-        : kind === 'local'
-          ? 'Fuera de Claude solo pueden unirse otras pestañas de este navegador (útil para probar).'
-          : kind === 'connecting'
-            ? ''
-            : 'Este navegador no permite el modo multijugador.');
+        : kind === 'mqtt'
+          ? 'Las salas van por un servidor público: entra quien tenga el enlace o el código desde cualquier dispositivo. Las públicas salen aquí.'
+          : kind === 'local'
+            ? 'Prueba entre pestañas: sin conexión con el servidor de salas, solo pueden unirse otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.'
+            : kind === 'connecting'
+              ? ''
+              : 'Este navegador no permite el modo multijugador.');
+    this.renderRooms();
   }
 
   setRooms(rooms) {
@@ -1438,94 +1463,391 @@ export class Home {
     this.renderRooms();
   }
 
+  /** Vestíbulo público: tarjetas con miniatura, mapa, modo y plazas libres. */
   renderRooms() {
     const list = $('lista-salas');
     if (!this.rooms.length) {
-      list.replaceChildren(el('li', { class: 'vacia', text: 'No hay salas abiertas ahora mismo. Crea una.' }));
+      list.replaceChildren(
+        el('li', { class: 'vacia' }, el('span', { text: 'No hay salas públicas ahora mismo.' }), ' ', el('button', { type: 'button', class: 'enlace-ini', 'data-crear': '1', text: 'Crea una' })),
+      );
       return;
     }
     list.replaceChildren(
-      ...this.rooms.map((r) =>
-        el(
+      ...this.rooms.map((r) => {
+        const full = (r.jugadores || 1) >= (r.plazas || 8);
+        const P = PROFILES[r.perfil] || PROFILES.trinchera;
+        const blocked = full || r.otraVersion;
+        return el(
           'li',
           {},
           el(
-            'span',
-            { class: 'sala-info' },
-            el('strong', { text: `Sala de ${String(r.nombre || 'alguien').slice(0, 18)}` }),
-            el('small', { text: `${r.jugadores || 1} jugador${r.jugadores === 1 ? '' : 'es'} · ${mapLabel(r.mapa)} · ${Number(r.bots) || 0} bots` }),
+            'button',
+            { type: 'button', class: `sala-tarjeta-pub${blocked ? ' bloqueada' : ''}`, 'data-code': r.code, disabled: blocked, title: r.otraVersion ? 'Esta sala usa otra versión del juego' : full ? 'Sala llena' : `Entrar en ${r.nombre}` },
+            el('span', { class: 'sala-mini' }, this._thumb(r.mapa, 168)),
+            el(
+              'span',
+              { class: 'sala-info' },
+              el('strong', { text: String(r.nombre || 'Sala').slice(0, 28) }),
+              el('small', { text: `${mapLabel(r.mapa)} · ${P.name} · ${VICTORY_NAMES[r.victoria] || 'Dominación'}` }),
+              el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} bots` }),
+            ),
+            el('span', { class: 'sala-entrar', text: r.otraVersion ? 'Otra versión' : full ? 'Llena' : 'Entrar' }),
           ),
-          el('button', { type: 'button', 'data-code': r.code, text: 'Entrar' }),
-        ),
+        );
+      }),
+    );
+  }
+
+  /** Miniatura de un mapa, una sola vez por mapa y tamaño. */
+  _thumb(id, width) {
+    const key = `${id}:${width}`;
+    this._thumbs ??= new Map();
+    let src = this._thumbs.get(key);
+    if (!src) {
+      src = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', width);
+      this._thumbs.set(key, src);
+    }
+    const c = el('canvas', { width: src.width, height: src.height, 'aria-hidden': 'true' });
+    c.getContext('2d').drawImage(src, 0, 0);
+    return c;
+  }
+
+  /** Pinta el mapa `id` en un lienzo grande (recortado para llenarlo). */
+  _paintMapInto(canvas, id) {
+    if (canvas.dataset.mapa === id) return;
+    canvas.dataset.mapa = id;
+    const src = this._thumbs?.get(`${id}:640`) || (() => {
+      this._thumbs ??= new Map();
+      const c = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', 640);
+      this._thumbs.set(`${id}:640`, c);
+      return c;
+    })();
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const k = Math.max(W / src.width, H / src.height);
+    const w = src.width * k;
+    const h = src.height * k;
+    ctx.fillStyle = '#1b2d52';
+    ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(src, (W - w) / 2, (H - h) / 2, w, h);
+  }
+
+  /** Chips del resumen: perfil, bots y modo de victoria. */
+  _chips(box, settings) {
+    const s = settings || {};
+    const r = s.rules || {};
+    const P = PROFILES[r.profile] || PROFILES.trinchera;
+    box.replaceChildren(
+      el('span', { class: 'chip-sala', title: `Perfil de reglas ${P.id}` }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚙' }), P.name),
+      el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${Number(s.bots) || 0} bots`),
+      el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚑' }), VICTORY_NAMES[r.victory] || 'Dominación'),
+    );
+  }
+
+  // --------------------------------------------------------- crear sala
+
+  /** Pantalla «Crear sala»: mapa y quién entra; las reglas, en «Reglas avanzadas». */
+  showCreate() {
+    const a = this.profile.ajustes;
+    if (!this.create) {
+      this.create = {
+        map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'europa',
+        name: `Sala de ${this.profile.nombre || 'Trinchera'}`,
+        visibility: 'enlace',
+        seats: 4,
+        bots: Math.min(ONLINE_MAX_BOTS, a.bots || 40),
+        difficulty: a.dificultad || 'normal',
+        rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) },
+      };
+    }
+    $('inicio').hidden = true;
+    $('crear-sala').hidden = false;
+    $('crear-nombre').value = this.create.name;
+    $('crear-error').textContent = '';
+    this._busyCreate(false);
+    this._renderCreate();
+  }
+
+  hideCreate() {
+    $('crear-sala').hidden = true;
+    $('inicio').hidden = false;
+    this.openPanel('online');
+  }
+
+  _renderCreate() {
+    const c = this.create;
+    // Mapas: el grande y una tira con todos
+    this._paintMapInto($('crear-mapa-img'), c.map);
+    $('crear-mapa-nombre').textContent = mapLabel(c.map);
+    const maps = [...Object.keys(REAL_MAPS), ...Object.keys(MAP_SIZES)];
+    $('crear-mapas').replaceChildren(
+      ...maps.map((id) =>
+        el('button', {
+          type: 'button',
+          role: 'radio',
+          'aria-checked': String(id === c.map),
+          text: REAL_MAPS[id] || `Aleatorio ${MAP_SIZES[id].label.toLowerCase()}`,
+          onclick: () => {
+            c.map = id;
+            this._renderCreate();
+          },
+        }),
       ),
     );
+    segmented($('crear-visibilidad'), [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], c.visibility, (v) => {
+      c.visibility = v;
+      this._renderCreate();
+    });
+    $('crear-vis-nota').textContent = c.visibility === 'publica' ? 'Sale en la lista de salas públicas de Multijugador.' : 'No sale en la lista: se entra con el enlace o el código.';
+    $('plazas-valor').textContent = String(c.seats);
+    $('plazas-menos').disabled = c.seats <= MIN_HUMANS;
+    $('plazas-mas').disabled = c.seats >= MAX_HUMANS;
+    this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+    // Reglas avanzadas: naciones, dificultad y el editor de reglas
+    if (!this._createRules) {
+      const out = el('strong', { text: String(c.bots) });
+      const bots = el('input', { type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(c.bots) });
+      bots.addEventListener('input', () => {
+        c.bots = Number(bots.value);
+        out.textContent = bots.value;
+        this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+        this._createRules?.refresh();
+      });
+      const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
+      segmented(dif, Object.entries(DIFFICULTY), c.difficulty, (v) => {
+        c.difficulty = v;
+      });
+      this._createRules = rulesEditor('crear', c.rules, () => this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules }), {
+        autoColonies: () => colonyCount(landTilesOf(c.map), c.bots),
+      });
+      $('crear-reglas').replaceChildren(
+        el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', out), bots),
+        el('div', { class: 'campo' }, el('span', { text: 'Dificultad' }), dif),
+        this._createRules,
+      );
+    }
+    this._createRules.refresh();
+  }
+
+  _seats(d) {
+    this.create.seats = Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, this.create.seats + d));
+    this._renderCreate();
+  }
+
+  _busyCreate(on) {
+    this.creating = on;
+    const b = $('crear-confirmar');
+    b.disabled = on;
+    b.textContent = on ? 'Creando sala…' : 'Crear sala';
+  }
+
+  /** Crear: una sola sala aunque se pulse dos veces; si falla, se conserva todo y se puede reintentar. */
+  async _submitCreate() {
+    if (this.creating) return;
+    const c = this.create;
+    c.name = $('crear-nombre').value.trim() || `Sala de ${this.profile.nombre || 'Trinchera'}`;
+    this._busyCreate(true);
+    $('crear-error').textContent = '';
+    // Las reglas elegidas pasan a ser las del jugador
+    Object.assign(this.profile.ajustes, { mapa: c.map, dificultad: c.difficulty, reglas: { ...c.rules } });
+    this.h.onProfileChange?.(false);
+    try {
+      await this.h.onCreateRoom?.({
+        settings: { bots: c.bots, mapSize: c.map, difficulty: c.difficulty, rules: { ...c.rules } },
+        info: { nombre: c.name, visibilidad: c.visibility, plazas: c.seats },
+      });
+      $('crear-sala').hidden = true;
+    } catch (err) {
+      $('crear-error').textContent = `${err && err.message ? err.message : 'No se ha podido crear la sala.'} Revisa la conexión y vuelve a intentarlo.`;
+      $('crear-confirmar').textContent = 'Reintentar';
+      this.creating = false;
+      $('crear-confirmar').disabled = false;
+      return;
+    }
+    this._busyCreate(false);
   }
 
   // ---------------------------------------------------------------- sala
 
   showLobby() {
+    this._lobbyMode = null;
     $('inicio').hidden = true;
+    $('crear-sala').hidden = true;
     $('sala').hidden = false;
+    $('sala-ajustes').hidden = true;
+    $('btn-editar-reglas').textContent = 'Editar reglas';
+    $('sala-copia').hidden = true;
+    delete $('sala-ajustes').dataset.host;
   }
 
   hideLobby() {
     $('sala').hidden = true;
+    this.hideCountdown();
   }
 
-  renderLobby(sala, kind, status = '') {
+  /** Aviso bajo la cabecera (motivos, errores, reconexión, prueba entre pestañas). */
+  _notice(text, tone = '') {
+    const n = $('sala-aviso');
+    n.hidden = !text;
+    n.textContent = text || '';
+    n.className = `sala-aviso${tone ? ` ${tone}` : ''}`;
+  }
+
+  /**
+   * Ficha de invitación: nombre, mapa y plazas, con «Unirme» o el motivo por
+   * el que no se puede entrar (llena, empezada, cerrada, otra versión).
+   */
+  renderEntry(sala, state) {
+    this._lobbyMode = 'entrada';
+    $('sala-rejilla').hidden = true;
+    $('sala-pie').hidden = true;
+    $('btn-copiar-enlace').hidden = true;
+    const box = $('sala-entrada');
+    box.hidden = false;
+    const info = state.info || sala.roomInfo();
+    $('sala-nombre').textContent = state.estado === 'buscando' ? 'Buscando la sala…' : info.nombre;
     $('sala-codigo').textContent = sala.code.toUpperCase();
-    const players = sala.players();
-    $('sala-jugadores').replaceChildren(
-      ...players.map((p) =>
-        el(
-          'li',
-          { class: p.isMe ? 'yo' : '' },
-          emblemCanvas(p.emblem, 30),
-          el('span', { class: 'sala-nombre' }, el('strong', { text: p.name }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
-          el('span', { class: 'chip', text: p.host ? 'Anfitrión' : p.isMe ? 'Tú' : 'Listo' }),
-        ),
-      ),
-    );
-
-    const box = $('sala-ajustes');
-    const s = sala.isHost ? sala.settings : sala.hostSettings();
-    if (sala.isHost) {
-      if (!box.dataset.host) {
-        box.dataset.host = '1';
-        box.replaceChildren(
-          el('label', { class: 'campo' }, el('span', {}, 'Naciones rivales ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
-            el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(MAX_BOTS), value: String(s.bots), oninput: () => this._lobbyChanged() })),
-          el('div', { class: 'fila-2' },
-            el('label', { class: 'campo' }, el('span', { text: 'Mapa' }),
-              el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
-            el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
-              el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
-          // Las mismas reglas que contra la IA: colonias, oro, ritmos, tregua…
-          (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
-            autoColonies: () => colonyCount(landTilesOf($('sala-mapa')?.value || 'mundo'), Number($('sala-bots')?.value || 0)),
-          })),
-        );
-        fillMapSelect($('sala-mapa'));
-        $('sala-mapa').value = s.mapSize;
-        $('sala-dificultad').value = s.difficulty;
-        this._rulesSala.refresh(); // ya existen el mapa y las naciones elegidos
-      }
-    } else {
-      delete box.dataset.host;
-      box.replaceChildren(
-        el('p', { class: 'nota', text: s ? `Mapa ${mapLabel(s.mapSize)} · ${s.bots} bots · dificultad ${DIFFICULTY[s.difficulty] || 'normal'} · ${rulesSummary(s.rules)}` : 'Esperando al anfitrión…' }),
-      );
+    $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
+    $('sala-visibilidad').hidden = state.estado === 'buscando';
+    const reasons = {
+      buscando: 'Conectando con la sala…',
+      llena: 'La sala está llena.',
+      empezada: 'La partida ya ha empezado.',
+      cerrada: 'La sala no existe o se ha cerrado. Revisa el código.',
+      version: 'La sala usa otra versión del juego. Recarga la página (y que el anfitrión también) y vuelve a entrar.',
+    };
+    const s = state.settings;
+    const parts = [];
+    if (s) {
+      const card = el('div', { class: 'entrada-mapa' }, this._thumb(s.mapSize, 320), el('span', { class: 'mapa-etiqueta', text: mapLabel(s.mapSize) }));
+      const chips = el('div', { class: 'chips-sala' });
+      this._chips(chips, s);
+      parts.push(card, chips, el('p', { class: 'entrada-plazas', text: `${state.total || 1} de ${state.seats || 4} plazas ocupadas` }));
     }
+    if (state.estado === 'lista') {
+      parts.push(el('button', { type: 'button', class: 'principal grande', onclick: () => this.h.onEntryJoin?.(), text: 'Unirme' }));
+    } else {
+      parts.push(el('p', { class: 'entrada-motivo', text: reasons[state.estado] || 'No se puede entrar en esta sala.' }));
+      if (state.estado !== 'buscando') parts.push(el('button', { type: 'button', class: 'secundario', onclick: () => this.h.onLeaveRoom?.(), text: '← Volver a Multijugador' }));
+    }
+    box.replaceChildren(...parts);
+  }
 
+  /** Vestíbulo de la sala: invitación, mapa y reglas, jugadores, preparación y motivo. */
+  renderLobby(sala, kind, status = '') {
+    if (!sala) return;
+    // Al pasar de la ficha de invitación a la sala, se vuelve arriba
+    if (this._lobbyMode !== 'sala') {
+      this._lobbyMode = 'sala';
+      document.querySelector('#sala .sala-cuerpo').scrollTop = 0;
+    }
+    $('sala-entrada').hidden = true;
+    $('sala-rejilla').hidden = false;
+    $('sala-pie').hidden = false;
+    $('btn-copiar-enlace').hidden = false;
+    const st = sala.status();
+    const info = sala.roomInfo();
+    const s = sala.isHost ? sala.settings : sala.hostSettings();
+    $('sala-nombre').textContent = info.nombre;
+    $('sala-visibilidad').hidden = false;
+    $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
+    $('sala-codigo').textContent = sala.code.toUpperCase();
+    $('sala-red').textContent = kind === 'local' ? 'Prueba entre pestañas' : kind === 'mqtt' ? 'Servidor público' : '';
+    if (s) {
+      this._paintMapInto($('sala-mapa-img'), s.mapSize);
+      $('sala-mapa-nombre').textContent = mapLabel(s.mapSize);
+      this._chips($('sala-chips'), s);
+    }
+    // Jugadores: anfitrión, invitados y plazas libres
+    const rows = st.players.map((p) => {
+      const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
+      return el(
+        'li',
+        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}` },
+        el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
+        el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
+        el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),
+        el('span', { class: `check-sala${p.ready ? ' si' : ''}`, 'aria-label': p.ready ? 'Preparado' : 'Sin preparar', text: p.ready ? '✓' : '' }),
+      );
+    });
+    for (let i = st.players.length; i < st.seats; i++) {
+      rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: 'Plaza libre' }))));
+    }
+    $('sala-jugadores').replaceChildren(...rows);
+    $('sala-cuenta').textContent = `${st.total}/${st.seats}`;
+    // Pie: cuántos preparados, el motivo y la acción
+    $('sala-preparados').textContent = `${st.readyCount} de ${st.total} preparado${st.total === 1 ? '' : 's'}`;
+    const me = st.players.find((p) => p.isMe);
+    const waiting = !me && st.waiting.some((p) => p.isMe);
+    const counting = !!sala.countdown;
     $('btn-empezar').hidden = !sala.isHost;
-    const where = `${kind === 'local' ? 'Modo local: solo pueden entrar otras pestañas de este navegador.' : 'Comparte el código: entran quienes tengan este enlace.'} Reglas: ${rulesSummary(s && s.rules)}.`;
-    $('sala-estado').textContent = status || (sala.isHost ? `${where} Puedes empezar cuando quieras; el resto de naciones las lleva la IA.` : 'El anfitrión empezará la partida.');
+    $('btn-listo').hidden = sala.isHost;
+    let motivo = '';
+    if (sala.isHost) {
+      $('btn-empezar').disabled = !st.canStart || counting;
+      $('btn-empezar').textContent = counting ? 'Empezando…' : 'Iniciar partida';
+      motivo = st.canStart ? 'Todo listo' : st.blockers[0] || '';
+    } else {
+      const hostOk = st.host && st.host.presence.version === RULES_FINGERPRINT;
+      const ready = !!me && me.ready;
+      $('btn-listo').disabled = !me || !hostOk || counting;
+      $('btn-listo').textContent = ready ? 'Cancelar listo' : 'Estoy listo';
+      $('btn-listo').classList.toggle('secundario', ready);
+      $('btn-listo').classList.toggle('principal', !ready);
+      motivo = !st.host ? 'Esperando al anfitrión…' : !hostOk ? 'Otra versión del juego: recarga la página' : waiting ? 'La sala está llena' : ready ? 'Esperando a que el anfitrión inicie' : sala.ready ? 'Las reglas han cambiado: revisa y confirma de nuevo' : 'Revisa la configuración y pulsa «Estoy listo»';
+    }
+    $('sala-motivo').textContent = motivo;
+    $('sala-motivo').classList.toggle('ok', sala.isHost && st.canStart);
+    // Reglas: solo el anfitrión las edita
+    $('btn-editar-reglas').hidden = !sala.isHost;
+    if (sala.isHost) this._hostEditor(sala, s);
+    else {
+      $('sala-ajustes').hidden = true;
+      delete $('sala-ajustes').dataset.host;
+    }
+    // Aviso: lo que se pase, o la prueba entre pestañas
+    if (status) this._notice(status, /no |otra versión|perdid|ha salido|llena|cerrad|cancel/i.test(status) ? 'error' : '');
+    else if (kind === 'local') this._notice('Prueba entre pestañas: solo pueden entrar otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.', 'aviso');
+    else this._notice('');
+  }
+
+  /** Editor del anfitrión (nombre, visibilidad, plazas, mapa, naciones, dificultad y reglas). */
+  _hostEditor(sala, s) {
+    const box = $('sala-ajustes');
+    if (box.dataset.host) return;
+    box.dataset.host = '1';
+    const info = sala.info;
+    const name = el('input', { maxlength: '28', value: info.nombre, 'aria-label': 'Nombre de la sala' });
+    name.addEventListener('change', () => this.h.onRoomInfo?.({ nombre: name.value.trim() || info.nombre }));
+    const vis = el('div', { class: 'segmentos visibilidad', role: 'radiogroup', 'aria-label': 'Visibilidad' });
+    segmented(vis, [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], info.visibilidad, (v) => this.h.onRoomInfo?.({ visibilidad: v }));
+    const seats = el('select', { 'aria-label': 'Plazas' }, ...Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => el('option', { value: String(i + MIN_HUMANS), text: `${i + MIN_HUMANS} plazas` })));
+    seats.value = String(info.plazas);
+    seats.addEventListener('change', () => this.h.onRoomInfo?.({ plazas: Number(seats.value) }));
+    this.choice.rules = { ...DEFAULT_RULES, ...migrateRules(s.rules) };
+    box.replaceChildren(
+      el('p', { class: 'nota', text: 'Si cambias el mapa, las naciones, la dificultad o las reglas, los invitados tienen que confirmar de nuevo. El nombre, la visibilidad y las plazas no.' }),
+      el('div', { class: 'fila-2' }, el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name), el('label', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
+      el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis),
+      el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
+        el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(Math.min(ONLINE_MAX_BOTS, s.bots)), oninput: () => this._lobbyChanged() })),
+      el('div', { class: 'fila-2' },
+        el('label', { class: 'campo' }, el('span', { text: 'Mapa' }), el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
+        el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
+          el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
+      (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
+        autoColonies: () => colonyCount(landTilesOf($('sala-mapa')?.value || 'mundo'), Number($('sala-bots')?.value || 0)),
+      })),
+    );
+    fillMapSelect($('sala-mapa'));
+    $('sala-mapa').value = s.mapSize;
+    $('sala-dificultad').value = s.difficulty;
+    this._rulesSala.refresh();
   }
 
   _lobbyChanged() {
-    const max = maxBotsFor($('sala-mapa').value);
-    $('sala-bots').max = String(max);
-    if (Number($('sala-bots').value) > max) $('sala-bots').value = String(max);
     $('sala-out-bots').textContent = $('sala-bots').value;
     this._rulesSala?.refresh();
     // Se guardan como las reglas por defecto del jugador
@@ -1537,5 +1859,42 @@ export class Home {
       difficulty: $('sala-dificultad').value,
       rules: { ...this.choice.rules },
     });
+  }
+
+  /** Cuenta atrás grande sobre la sala (ms) o la quita (null). */
+  showCountdown(ms) {
+    const box = $('sala-cuenta-atras');
+    clearInterval(this._cdTimer);
+    const end = performance.now() + ms;
+    const paint = () => {
+      const left = Math.max(0, end - performance.now());
+      $('sala-cuenta-num').textContent = String(Math.max(1, Math.ceil(left / 1000)));
+      if (left <= 0) clearInterval(this._cdTimer);
+    };
+    box.hidden = false;
+    paint();
+    this._cdTimer = setInterval(paint, 100);
+  }
+
+  hideCountdown() {
+    clearInterval(this._cdTimer);
+    $('sala-cuenta-atras').hidden = true;
+  }
+
+  /** Enlace copiado o, si el portapapeles falla, el enlace a la vista para seleccionarlo. */
+  showCopy(ok, link) {
+    if (ok) {
+      const b = $('btn-copiar-enlace');
+      const label = b.querySelector('span');
+      label.textContent = '¡Copiado!';
+      clearTimeout(this._copyTimer);
+      this._copyTimer = setTimeout(() => (label.textContent = 'Copiar enlace'), 1800);
+      $('sala-copia').hidden = true;
+      return;
+    }
+    $('sala-copia').hidden = false;
+    $('sala-enlace').value = link;
+    $('sala-enlace').focus();
+    $('sala-enlace').select();
   }
 }

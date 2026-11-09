@@ -80,12 +80,37 @@ Créditos y licencias de terceros: `herramientas/LICENCIAS.md`.
 
 ## Multijugador
 
-- **En el enlace de Claude** (capacidad `room`): crea una sala, comparte el
-  código de 5 caracteres y quien tenga el enlace con acceso de colaborador puede
-  entrar. Hasta 8 personas más los bots que elija el anfitrión.
-- **Fuera de Claude** (fichero suelto o tu hosting): solo entre pestañas del
-  mismo navegador, útil para probar. Jugar entre equipos fuera de Claude
-  necesita un servidor (ver `ROADMAP.md`).
+**Salas.** Desde Multijugador: «Crear sala» (mapa, nombre, visibilidad y
+plazas; las reglas, en «Reglas avanzadas»), «Unirse con código» y la lista de
+salas públicas (miniatura, mapa, modo y plazas libres). En la sala:
+
+- **Invitar**: «Copiar enlace» (o el código de 5 caracteres). El enlace abre una
+  ficha de entrada con el nombre, el mapa y las plazas, y el botón «Unirme»; si
+  la sala está llena, ya empezó, se cerró o usa otra versión, dice por qué.
+- **Prepararse**: cada invitado pulsa «Estoy listo». La confirmación se ata a
+  la revisión de la configuración: si el anfitrión cambia mapa, naciones,
+  dificultad o reglas, hay que confirmar de nuevo (nombre, visibilidad y plazas
+  no la invalidan). El pie dice cuántos están preparados y qué falta.
+- **Empezar**: con todos listos y conectados (mínimo 2), el anfitrión inicia una
+  cuenta atrás de 3 s que fija participantes, semilla y configuración; si alguien
+  sale, se desconecta o deja de estar listo, se vuelve a la sala con el motivo.
+  Antes de simular, cada invitado comprueba que tiene la misma versión de reglas.
+- **Reconexión**: quien pierde la conexión sale como «Reconectando…» y conserva
+  su plaza unos 15 s.
+
+**Por dónde va.**
+
+- **En el enlace de Claude** (capacidad `room`): entre quienes tienen el enlace
+  con acceso de colaborador.
+- **En la web** (Hostinger u otro hosting): por un servidor MQTT público y
+  gratuito (EMQX, HiveMQ o Eclipse, el primero que responda) desde cualquier
+  dispositivo. Es público: quien conozca el canal podría leer los mensajes, y no
+  hay garantía de servicio. El enlace de invitación lleva el servidor del
+  anfitrión (`&b=`). Con `?broker=wss://…` se usa uno propio.
+- **Sin servidor** (o con `?red=local`): solo entre pestañas del mismo
+  navegador, como prueba («Prueba entre pestañas»).
+- Para probar en local: `node herramientas/broker-local.js` y abrir el juego con
+  `?broker=ws://localhost:1884/mqtt`.
 
 Funciona por *lockstep*: todos ejecutan la misma simulación determinista con la
 misma semilla y solo viajan las acciones. El anfitrión marca el ritmo y reparte

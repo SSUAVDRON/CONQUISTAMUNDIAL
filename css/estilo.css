@@ -2692,3 +2692,196 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 .campo-perfil .nota-perfil { display: block; margin-top: 2px; font-weight: 400; color: var(--texto-suave); }
 .pd-nota { margin: 8px 0 0; font-size: 12px; color: var(--texto-suave); }
 .version-reglas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; opacity: 0.8; }
+
+/* =========================================================================
+   Salas (diseño de salas): crear, vestíbulo, invitación y cuenta atrás
+   ========================================================================= */
+:root { --marfil: #f3ead2; --listo: #5fd3a6; --listo-osc: #0f3b2c; }
+#crear-sala.pantalla, #sala.pantalla {
+  display: flex;
+  flex-direction: column;
+  place-items: initial;
+  padding: 0;
+  overflow: hidden;
+  background:
+    var(--fondo-mundo, none) center 40% / min(1800px, 160vw) auto no-repeat,
+    linear-gradient(180deg, #0a1324 0%, var(--marino) 100%);
+}
+.sala-barra {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) 10px max(20px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(180deg, rgba(8, 13, 26, 0.97), rgba(8, 13, 26, 0.9));
+  border-bottom: 1px solid var(--oro-linea);
+}
+.pantalla-sala .sala-atras { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 10px; font-size: 18px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--marfil); }
+.sala-marca { display: inline-flex; align-items: center; gap: 8px; font-family: var(--serif); font-weight: 900; font-size: 20px; letter-spacing: 0.08em; color: var(--oro-claro); }
+.sala-logo { width: 30px; height: 30px; }
+.sala-seccion { padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, 0.18); color: var(--marfil); font-weight: 700; }
+.sala-red { margin-left: auto; font-size: 12px; color: #a9b5ca; }
+.sala-cuerpo { flex: 1; min-height: 0; overflow-y: auto; width: 100%; max-width: 1320px; margin: 0 auto; padding: 22px max(24px, env(safe-area-inset-right, 0px)) 120px max(24px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.sala-encabezado { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.sala-titulo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.sala-h1 { margin: 0; font-family: 'Black Ops One', system-ui, sans-serif; font-weight: 400; font-size: clamp(30px, 4vw, 46px); line-height: 1.05; color: var(--marfil); text-shadow: 0 3px 14px rgba(0, 0, 0, 0.6); overflow-wrap: anywhere; }
+.sala-sub { margin: 6px 0 0; color: #c9d3e4; font-size: 16px; }
+.chip-vis { padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--marfil); background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14); white-space: nowrap; }
+.sala-invitar { display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 18px; border-radius: 14px; background: rgba(10, 16, 30, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); }
+.sala-invitar small { color: #a9b5ca; font-size: 13px; }
+.sala-invitar .codigo { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 30px; font-weight: 800; letter-spacing: 0.12em; color: var(--marfil); padding: 0 14px; border-left: 1px solid rgba(255, 255, 255, 0.16); border-right: 1px solid rgba(255, 255, 255, 0.16); }
+#sala .btn-enlace { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 800; color: var(--marfil); background: transparent; border: 1.5px solid var(--marfil); box-shadow: none; }
+#sala .btn-enlace:hover { background: rgba(243, 234, 210, 0.1); }
+.btn-enlace svg { width: 16px; height: 16px; }
+.sala-copia { display: flex; gap: 8px; }
+.sala-copia input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: var(--marfil); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--oro-linea); user-select: all; -webkit-user-select: all; }
+.sala-aviso { margin: 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; color: var(--marfil); background: rgba(95, 140, 220, 0.14); border: 1px solid rgba(95, 140, 220, 0.4); }
+.sala-aviso.aviso { background: rgba(242, 179, 61, 0.12); border-color: rgba(242, 179, 61, 0.45); color: #ffe3a1; }
+.sala-aviso.error { background: rgba(255, 95, 95, 0.12); border-color: rgba(255, 95, 95, 0.45); color: #ffd0d0; }
+.sala-rejilla { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.sala-caja { padding: 16px; border-radius: 16px; background: var(--panel-v2); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4); min-width: 0; }
+.sala-caja h2 { margin: 0 0 12px; display: flex; align-items: baseline; justify-content: space-between; font-family: 'Black Ops One', system-ui, sans-serif; font-weight: 400; font-size: 26px; color: var(--marfil); }
+.sala-caja h2 span { font-family: system-ui, sans-serif; font-weight: 800; font-size: 22px; }
+.mapa-vista { position: relative; border-radius: 12px; overflow: hidden; line-height: 0; background: #1b2d52; border: 1px solid rgba(255, 255, 255, 0.08); }
+.mapa-vista canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; image-rendering: pixelated; }
+.mapa-etiqueta { position: absolute; left: 14px; bottom: 12px; padding: 4px 12px; border-radius: 8px; font-family: 'Black Ops One', system-ui, sans-serif; font-size: clamp(22px, 3vw, 36px); line-height: 1.2; color: var(--marfil); background: rgba(6, 10, 20, 0.6); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8); }
+.sala-mapa-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.chips-sala { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-sala { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--marfil); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16); }
+.chip-ico { opacity: 0.85; }
+#sala #btn-editar-reglas { padding: 8px 14px; border-radius: 9px; color: var(--marfil); background: rgba(6, 10, 20, 0.6); border: 1.5px solid var(--marfil); box-shadow: none; }
+.sala-ajustes { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 12px; }
+.sala-ajustes input:not([type]), .sala-ajustes input[maxlength] { padding: 9px 11px; border-radius: 9px; color: var(--texto); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.14); }
+.sala-jugadores { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+#sala .sala-jugadores li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 30px; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+#sala .sala-jugadores li.yo { border-color: rgba(233, 185, 85, 0.5); }
+#sala .sala-jugadores li.desconectado { opacity: 0.6; }
+#sala .sala-jugadores li.libre { border: 1.5px dashed rgba(255, 255, 255, 0.22); background: transparent; color: #8b97ad; }
+.sala-escudo { width: 40px; height: 40px; display: grid; place-items: center; padding-right: 12px; border-right: 1px solid rgba(255, 255, 255, 0.14); }
+.sala-escudo canvas { width: 34px; height: 34px; }
+.sala-escudo.libre { font-size: 22px; color: #8b97ad; }
+#sala .sala-nombre { display: flex; flex-direction: column; min-width: 0; }
+#sala .sala-nombre strong { font-size: 19px; color: var(--marfil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sala .sala-nombre small { font-size: 12px; color: #8b97ad; }
+.tag-sala { padding: 4px 10px; border-radius: 7px; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.tag-sala.anfitrion, .tag-sala.listo { color: var(--listo-osc); background: var(--listo); }
+.tag-sala.preparando { color: #2b1d02; background: var(--oro); }
+.tag-sala.aviso { color: #ffe3a1; background: transparent; border: 1px solid rgba(242, 179, 61, 0.6); }
+.tag-sala.error { color: #fff; background: #b33a3a; }
+.check-sala { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; font-weight: 900; color: var(--listo-osc); }
+.check-sala.si { background: var(--listo); }
+.sala-pie {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px max(24px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
+  background: rgba(8, 13, 26, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+}
+.sala-preparados { font-size: 20px; font-weight: 800; color: var(--marfil); padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.16); white-space: nowrap; }
+.sala-preparados::before { content: ""; display: inline-block; width: 26px; height: 18px; margin-right: 10px; vertical-align: -2px; background: var(--listo); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Ccircle cx='8' cy='4.5' r='3.5'/%3E%3Ccircle cx='17' cy='5' r='3'/%3E%3Cpath d='M1 15.5c0-4 3-6.5 7-6.5s7 2.5 7 6.5z M14.5 9.6c.8-.4 1.6-.6 2.5-.6 3.4 0 6 2.2 6 6.5h-6.3c0-2.4-.8-4.4-2.2-5.9z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Ccircle cx='8' cy='4.5' r='3.5'/%3E%3Ccircle cx='17' cy='5' r='3'/%3E%3Cpath d='M1 15.5c0-4 3-6.5 7-6.5s7 2.5 7 6.5z M14.5 9.6c.8-.4 1.6-.6 2.5-.6 3.4 0 6 2.2 6 6.5h-6.3c0-2.4-.8-4.4-2.2-5.9z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.sala-motivo { flex: 1; margin: 0; text-align: right; color: #c3cde0; font-size: 15px; }
+.sala-motivo.ok { color: var(--listo); font-weight: 700; }
+.pantalla-sala .sala-pie .principal.grande { width: auto; min-width: 230px; padding: 14px 28px; font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 10px; }
+.pantalla-sala .sala-pie button:disabled { opacity: 0.55; }
+.pantalla-sala .sala-pie .secundario { padding: 12px 20px; color: var(--marfil); }
+#btn-listo.secundario { background: transparent; border: 1.5px solid var(--marfil); min-width: 230px; padding: 14px 28px; font-size: 16px; font-weight: 900; text-transform: uppercase; }
+.sala-cuenta-atras { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; background: rgba(4, 8, 16, 0.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.sala-cuenta-atras small { font-size: 18px; color: var(--marfil); letter-spacing: 0.06em; text-transform: uppercase; }
+.sala-cuenta-atras strong { font-family: 'Black Ops One', system-ui, sans-serif; font-weight: 400; font-size: 140px; line-height: 1; color: var(--oro-claro); text-shadow: 0 8px 40px rgba(233, 185, 85, 0.5); animation: latido 1s ease-in-out infinite; }
+@keyframes latido { 50% { transform: scale(1.08); } }
+
+/* Crear sala */
+.crear-rejilla { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.crear-mapas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#crear-sala .crear-mapas button { flex: 1 1 120px; padding: 10px 12px; border-radius: 10px; font-weight: 800; color: var(--marfil); background: rgba(255, 255, 255, 0.04); border: 1.5px solid rgba(255, 255, 255, 0.14); box-shadow: none; }
+#crear-sala .crear-mapas button[aria-checked="true"] { border-color: var(--oro); background: rgba(233, 185, 85, 0.12); }
+#crear-sala .crear-mapa .mapa-vista { border: 2px solid var(--oro); }
+.crear-datos { display: flex; flex-direction: column; gap: 16px; }
+.crear-datos .campo { display: flex; flex-direction: column; gap: 8px; }
+.campo-tit { font-size: 19px; font-weight: 800; color: var(--marfil); }
+.campo-tit small { font-size: 12px; font-weight: 400; color: #8b97ad; margin-left: 6px; }
+#crear-nombre { padding: 12px 14px; border-radius: 10px; font-size: 17px; color: var(--marfil); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.18); }
+.visibilidad button { flex: 1; padding: 11px 12px !important; font-weight: 800 !important; }
+#crear-sala .visibilidad button[aria-checked="true"], #sala .visibilidad button[aria-checked="true"] { border-color: var(--oro) !important; color: var(--marfil); background: rgba(233, 185, 85, 0.1) !important; }
+.paso { display: inline-flex; align-self: flex-start; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.18); }
+#crear-sala .paso button { width: 48px; height: 44px; padding: 0; border: 0; border-radius: 0; font-size: 22px; color: var(--marfil); background: rgba(255, 255, 255, 0.05); box-shadow: none; }
+.paso output { width: 64px; display: grid; place-items: center; font-size: 20px; font-weight: 800; color: var(--marfil); border-left: 1px solid rgba(255, 255, 255, 0.18); border-right: 1px solid rgba(255, 255, 255, 0.18); }
+.sala-avanzadas { border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.2); }
+.sala-avanzadas summary { cursor: pointer; padding: 12px 14px; font-weight: 700; color: var(--marfil); list-style: none; display: flex; justify-content: space-between; }
+.sala-avanzadas summary::after { content: "⌄"; }
+.sala-avanzadas[open] summary::after { content: "⌃"; }
+.sala-avanzadas > div { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+#crear-error { color: #ffd0d0; }
+
+/* Vestíbulo público: tarjetas de salas */
+#inicio .salas-publicas { max-height: none; gap: 10px; }
+#inicio .salas-publicas li { padding: 0; background: none; }
+#inicio .salas-publicas li.vacia { padding: 6px 0; color: #a9b5ca; }
+#inicio .sala-tarjeta-pub { width: 100%; display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; text-align: left; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: none; }
+#inicio .sala-tarjeta-pub:hover:not(:disabled) { border-color: var(--oro); }
+#inicio .sala-tarjeta-pub.bloqueada { opacity: 0.6; }
+.sala-mini { width: 96px; height: 54px; border-radius: 8px; overflow: hidden; line-height: 0; }
+.sala-mini canvas { width: 100%; height: 100%; object-fit: cover; }
+.sala-tarjeta-pub .sala-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sala-tarjeta-pub .sala-info strong { font-size: 15px; color: var(--marfil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sala-tarjeta-pub .sala-info small { font-size: 12px; color: #a9b5ca; }
+.sala-entrar { padding: 7px 14px; border-radius: 8px; font-weight: 800; color: #241703; background: var(--oro); }
+.bloqueada .sala-entrar { color: var(--marfil); background: rgba(255, 255, 255, 0.1); }
+
+/* Ficha de invitación */
+.sala-entrada { width: min(560px, 100%); align-self: center; display: flex; flex-direction: column; gap: 14px; }
+.entrada-mapa { position: relative; border-radius: 12px; overflow: hidden; line-height: 0; }
+.entrada-mapa canvas { width: 100%; height: auto; }
+.entrada-plazas { margin: 0; color: #c3cde0; }
+.entrada-motivo { margin: 0; padding: 10px 14px; border-radius: 10px; color: #ffd0d0; background: rgba(255, 95, 95, 0.12); border: 1px solid rgba(255, 95, 95, 0.4); }
+.sala-entrada .principal.grande { width: 100%; }
+
+/* Tableta y móvil: mapa en tarjeta, filas apiladas, acción fija al pie */
+@media (max-width: 900px) {
+  .sala-rejilla, .crear-rejilla { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .sala-barra { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  .sala-seccion { display: none; }
+  .sala-marca { margin: 0 auto; font-size: 18px; }
+  .sala-red { display: none; }
+  .sala-cuerpo { padding: 14px 12px 150px; gap: 12px; }
+  .sala-h1 { font-size: 30px; }
+  .sala-invitar { width: 100%; padding: 8px 8px 8px 12px; gap: 10px; }
+  .sala-invitar .codigo { font-size: 22px; padding: 0 10px; }
+  #sala .btn-enlace { margin-left: auto; padding: 8px 12px; }
+  .sala-caja { padding: 12px; }
+  .sala-caja h2 { font-size: 22px; }
+  .mapa-vista canvas { aspect-ratio: 16 / 10; }
+  #sala .sala-jugadores li { padding: 8px 10px; gap: 10px; }
+  .sala-escudo { width: 32px; height: 32px; padding-right: 8px; }
+  .sala-escudo canvas { width: 28px; height: 28px; }
+  #sala .sala-nombre strong { font-size: 17px; }
+  .sala-pie { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .sala-preparados { text-align: center; border: 0; padding: 0; font-size: 18px; }
+  .sala-preparados::before { display: none; }
+  .sala-motivo { text-align: center; font-size: 13px; }
+  .pantalla-sala .sala-pie .principal.grande, #btn-listo.secundario { width: 100%; min-width: 0; }
+  #crear-sala .sala-pie { flex-direction: row; flex-wrap: wrap; }
+  #crear-sala .sala-pie .sala-motivo { order: 3; flex-basis: 100%; }
+  #crear-sala .sala-pie .principal.grande { flex: 1; }
+  .sala-cuenta-atras strong { font-size: 110px; }
+}
+
+/* Invitación en una fila también en móvil */
+.sala-invitar small, #sala .btn-enlace { white-space: nowrap; }
+@media (max-width: 640px) {
+  .sala-invitar small { font-size: 12px; }
+  .sala-invitar .codigo { font-size: 20px; letter-spacing: 0.08em; padding: 0 8px; }
+  #sala .btn-enlace { padding: 8px 10px; font-size: 14px; gap: 6px; }
+}
+@media (max-width: 360px) {
+  .sala-invitar small { display: none; }
+}

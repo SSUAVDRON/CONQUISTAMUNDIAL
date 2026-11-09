@@ -356,52 +356,107 @@ function leaveOnline() {
   state.online = false;
 }
 
-async function openSala(code, isHost) {
-  if (!transport) return;
-  leaveOnline();
-  const settings = {
-    bots: Math.min(200, profile.ajustes.bots),
+/** Ajustes de partida por defecto para una sala (los del jugador). */
+function defaultRoomSettings() {
+  return {
+    bots: Math.min(60, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
     rules: { ...DEFAULT_RULES, ...migrateRules(profile.ajustes.reglas) },
   };
-  const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings });
+}
+
+/**
+ * Abre una sala. Anfitrión: con la configuración y los datos del formulario
+ * «Crear sala» (si falla, lanza el error para que el formulario lo muestre).
+ * Invitado: entra como observador y, si se puede, ocupa su plaza (con
+ * `auto`, al momento; desde un enlace, tras pulsar «Unirme» en la ficha).
+ */
+async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
+  if (!transport) throw new Error('Sin conexión para el multijugador.');
+  leaveOnline();
+  const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
-  home.showLobby();
-  home.renderLobby(sala, transport.kind, 'Entrando en la sala…');
-  sala.onChange = () => {
+  const kind = transport.kind;
+  const render = (status = '') => {
     if (state.sala !== sala || sala.started) return;
-    const host = sala.host();
-    const busy = !isHost && host && host.presence.estado === 'jugando';
-    home.renderLobby(sala, transport.kind, busy ? 'Esta partida ya ha empezado. Espera a la siguiente o crea otra sala.' : '');
+    if (sala.observer) {
+      const entry = sala.entryState();
+      if (auto && entry.estado === 'lista') {
+        sala.join().then(() => render());
+        return;
+      }
+      home.renderEntry(sala, entry);
+    } else home.renderLobby(sala, kind, status);
   };
-  sala.onStart = (payload, hostPeer) => beginOnlineGame(sala, payload, hostPeer);
+  sala.onChange = () => render();
+  sala.onStart = (payload, hostPeer) => {
+    home.hideCountdown();
+    beginOnlineGame(sala, payload, hostPeer);
+  };
+  sala.onCountdown = (ms, motivo) => {
+    if (state.sala !== sala) return;
+    if (ms) home.showCountdown(ms);
+    else {
+      home.hideCountdown();
+      render(motivo ? `Inicio cancelado: ${motivo}.` : '');
+    }
+  };
+  sala.onConnection = (on) => {
+    if (state.sala !== sala || sala.started) return;
+    render(on ? '' : 'Reconectando… (tu plaza se guarda unos segundos)');
+  };
   // El anfitrión simula con otra versión de las reglas: no se empieza
   sala.onVersionMismatch = (theirs, mine) => {
     if (state.sala !== sala) return;
-    home.renderLobby(sala, transport.kind, `La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
+    render(`La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
   };
+  home.showLobby();
+  if (!isHost) home.renderEntry(sala, { estado: 'buscando' });
   try {
-    await sala.open();
+    await sala.open({ observer: !isHost });
   } catch (err) {
-    const code = err && err.code;
+    if (state.sala === sala) state.sala = null;
+    const c = err && err.code;
     const why =
-      code === 'not_permitted'
+      c === 'not_permitted'
         ? 'No tienes permiso para jugar online en este enlace (hace falta acceso de colaborador).'
-        : code === 'limit_reached'
+        : c === 'limit_reached'
           ? 'Hay demasiadas salas abiertas ahora mismo. Inténtalo en un momento.'
-          : 'No se ha podido entrar en la sala. Inténtalo de nuevo.';
-    home.renderLobby(sala, transport.kind, why);
+          : 'No se ha podido abrir la sala.';
+    if (isHost) {
+      home.hideLobby();
+      throw new Error(why);
+    }
+    home.renderEntry(sala, { estado: 'cerrada' });
     return;
   }
-  if (state.sala === sala) sala.onChange();
+  render();
   if (!isHost) {
-    setTimeout(() => {
-      if (state.sala === sala && !sala.started && !sala.host()) {
-        home.renderLobby(sala, transport.kind, 'No hay nadie en esa sala. Revisa el código.');
-      }
-    }, 5000);
+    // Sin anfitrión a la vista: la ficha dirá que la sala no existe o se ha cerrado
+    setTimeout(() => state.sala === sala && !sala.started && render(), 5200);
   }
+}
+
+/** Enlace de invitación: esta página con ?sala=CÓDIGO (y el servidor de salas usado). */
+function inviteLink(sala) {
+  const code = sala.code.toUpperCase();
+  if (!transport || transport.kind === 'claude' || !/^https?:$/.test(location.protocol)) return null;
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('sala', code);
+  if (transport.kind === 'mqtt') {
+    if (transport.brokerIndex >= 0) url.searchParams.set('b', String(transport.brokerIndex));
+    else url.searchParams.set('broker', transport.brokerUrl);
+  }
+  if (transport.kind === 'local') url.searchParams.set('red', 'local');
+  return url.toString();
+}
+
+function copyText(text, ok, fail) {
+  if (navigator.clipboard && window.isSecureContext !== false) navigator.clipboard.writeText(text).then(ok, fail);
+  else fail();
 }
 
 async function beginOnlineGame(sala, payload, hostPeer) {
@@ -549,8 +604,9 @@ const home = new Home(profile, {
   },
   onSettings: applySettings,
   sound: (name) => sound.play(name, 0.9, 0),
-  onCreateRoom() {
-    if (transport) openSala(newRoomCode(), true);
+  /** «Crear sala» (devuelve una promesa: el formulario espera y, si falla, permite reintentar). */
+  onCreateRoom({ settings, info }) {
+    return openSala(newRoomCode(), true, { settings, info });
   },
   onJoinRoom(text) {
     const code = normalizeCode(text);
@@ -558,14 +614,48 @@ const home = new Home(profile, {
       home.setNetStatus(transport ? transport.kind : null, 'El código tiene 5 letras o números.');
       return;
     }
-    openSala(code, false);
+    openSala(code, false, { auto: true });
+  },
+  onEntryJoin() {
+    const sala = state.sala;
+    if (!sala || !sala.observer) return;
+    if (sala.entryState().estado !== 'lista') {
+      home.renderEntry(sala, sala.entryState());
+      return;
+    }
+    sala.join().then(() => home.renderLobby(sala, transport.kind));
+  },
+  onReady() {
+    const sala = state.sala;
+    if (!sala || sala.isHost) return;
+    sala.setReady(!sala.myReadyValid());
+    home.renderLobby(sala, transport.kind);
+  },
+  onRoomInfo(info) {
+    state.sala?.setInfo(info);
+    if (state.sala) home.renderLobby(state.sala, transport.kind);
+  },
+  onCopyLink() {
+    const sala = state.sala;
+    if (!sala) return;
+    const link = inviteLink(sala);
+    const code = sala.code.toUpperCase();
+    if (!link) {
+      // Dentro de Claude: el enlace es el del juego; se copia el código
+      copyText(`Únete a mi sala de Trinchera con el código ${code}`, () => home.showCopy(true), () => home.showCopy(false, code));
+      return;
+    }
+    copyText(link, () => home.showCopy(true), () => home.showCopy(false, link));
   },
   onLeaveRoom() {
     leaveOnline();
     home.show();
   },
   onStartRoom() {
-    state.sala?.start();
+    const sala = state.sala;
+    if (!sala) return;
+    const why = sala.beginCountdown();
+    if (why) home.renderLobby(sala, transport.kind, why);
   },
   onRoomSettings(settings) {
     state.sala?.setSettings(settings);
@@ -573,11 +663,7 @@ const home = new Home(profile, {
   onCopyCode() {
     const code = state.sala ? state.sala.code.toUpperCase() : '';
     const done = () => home.renderLobby(state.sala, transport.kind, `Código ${code} copiado.`);
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(code).then(done, () => selectCode());
-    } else {
-      selectCode();
-    }
+    copyText(code, done, () => selectCode());
   },
 });
 
@@ -947,13 +1033,21 @@ requestAnimationFrame(() => setTimeout(() => {
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
+// En la web: servidor MQTT público (?b=N el del anfitrión, ?broker=ws… uno propio, ?red=local solo pestañas)
 home.setNetStatus('connecting');
-connectTransport().then((t) => {
-  transport = t;
-  state.transport = t;
-  home.setNetStatus(t ? t.kind : null);
-  if (t) t.lobby.onPeers(() => home.setRooms(openRooms(t)));
-});
+{
+  const q = new URLSearchParams(location.search);
+  const b = Number(q.get('b'));
+  connectTransport({ prefer: q.get('red') === 'local' ? 'local' : Number.isInteger(b) && q.has('b') ? b : null, brokerUrl: q.get('broker') }).then((t) => {
+    transport = t;
+    state.transport = t;
+    home.setNetStatus(t ? t.kind : null);
+    if (t) t.lobby.onPeers(() => home.setRooms(openRooms(t)));
+    // Enlace de invitación (?sala=CÓDIGO): la ficha de entrada de esa sala
+    const code = normalizeCode(q.get('sala'));
+    if (t && code.length === 5) openSala(code, false, { auto: false }).catch(() => {});
+  });
+}
 
 // Nube: perfil entre dispositivos y clasificación global
 getCloud().then(async (c) => {
