@@ -2885,3 +2885,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 @media (max-width: 360px) {
   .sala-invitar small { display: none; }
 }
+.entrada-buscando { margin: 0; padding: 10px 14px; border-radius: 10px; color: var(--marfil); background: rgba(95, 140, 220, 0.12); border: 1px solid rgba(95, 140, 220, 0.4); }
+.entrada-buscando::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 10px; border-radius: 50%; border: 2px solid var(--marfil); border-right-color: transparent; vertical-align: -1px; animation: girar 0.9s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.entrada-botones { display: flex; flex-wrap: wrap; gap: 10px; }
+.entrada-botones .principal { flex: 1; }
+.sala-invitar:has(#btn-copiar-enlace[hidden]) .codigo { border-right: 0; }

@@ -18,7 +18,7 @@ import { withLoading } from './loading.js';
 import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
-import { NetSync, RULES_FINGERPRINT, Sala, newRoomCode, normalizeCode, openRooms, roomRuleset } from './multiplayer.js';
+import { NetSync, RULES_FINGERPRINT, Sala, cleanRoomInfo, newRoomCode, normalizeCode, openRooms, roomName, roomRuleset } from './multiplayer.js';
 import { MECH_VERSION, PROFILES } from './mecanicas.js';
 import { Diagnostico } from './diagnostico.js';
 
@@ -112,6 +112,9 @@ function randomSeed() {
 }
 
 /** Lo que este jugador muestra a los demás (nombre, color, emblema…). */
+/** Etiqueta fija de esta página para jugar en sala sin nombre propio («Recluta 4821»). */
+const RECRUIT_TAG = String(1000 + Math.floor(Math.random() * 9000));
+
 function myIdentity() {
   return {
     name: profile.nombre || 'Mi nación',
@@ -195,14 +198,24 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   return game;
 }
 
-function startDemo() {
-  leaveOnline();
+/**
+ * Partida de fondo del menú. `background`: solo se cambia la partida de
+ * fondo (al arrancar o cuando termina la anterior), sin salir de la sala ni
+ * tapar la ficha de una invitación o la sala que estén a la vista.
+ */
+function startDemo({ background = false } = {}) {
+  if (!background) leaveOnline();
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
   // En el móvil, la partida de fondo del menú va más tranquila (gasta menos)
   state.speed = TOUCH ? 1 : 2;
   ui.hideHud();
   ui.closeNation();
+  if (state.sala || state.pendingEntry) {
+    home.renderAll(); // el inicio, listo para cuando se vuelva
+    return;
+  }
+  if (background && home.menuVisible()) return;
   home.show();
 }
 
@@ -375,7 +388,7 @@ function defaultRoomSettings() {
 async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
   if (!transport) throw new Error('Sin conexión para el multijugador.');
   leaveOnline();
-  const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings: settings || defaultRoomSettings(), info });
+  const sala = new Sala(transport, { code, isHost, me: { ...myIdentity(), name: roomName(profile.nombre, RECRUIT_TAG) }, settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
   const kind = transport.kind;
   const render = (status = '') => {
@@ -428,7 +441,8 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
       home.hideLobby();
       throw new Error(why);
     }
-    home.renderEntry(sala, { estado: 'cerrada' });
+    if (!state.pendingEntry) state.pendingEntry = code;
+    home.renderEntry(sala, { estado: 'error', detalle: why });
     return;
   }
   render();
@@ -469,7 +483,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   }
   state.online = true;
   const game = await withLoading(
-    `${mapLabel(payload.settings.mapSize)} · online`,
+    `${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
       { label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
       {
@@ -623,6 +637,7 @@ const home = new Home(profile, {
       home.renderEntry(sala, sala.entryState());
       return;
     }
+    state.pendingEntry = null;
     sala.join().then(() => home.renderLobby(sala, transport.kind));
   },
   onReady() {
@@ -638,8 +653,13 @@ const home = new Home(profile, {
   onCopyLink() {
     const sala = state.sala;
     if (!sala) return;
-    const link = inviteLink(sala);
+    const link = transport && transport.kind === 'mqtt' ? inviteLink(sala) : null;
     const code = sala.code.toUpperCase();
+    if (transport && transport.kind === 'local') {
+      // Prueba entre pestañas: el código, para escribirlo en otra pestaña
+      copyText(code, () => home.showCopy(true), () => home.showCopy(false, code));
+      return;
+    }
     if (!link) {
       // Dentro de Claude: el enlace es el del juego; se copia el código
       copyText(`Únete a mi sala de Trinchera con el código ${code}`, () => home.showCopy(true), () => home.showCopy(false, code));
@@ -649,7 +669,22 @@ const home = new Home(profile, {
   },
   onLeaveRoom() {
     leaveOnline();
+    if (state.pendingEntry) {
+      // La invitación ya se ha usado: fuera de la dirección (una recarga no vuelve a ella)
+      state.pendingEntry = null;
+      const url = new URL(location.href);
+      for (const k of ['sala', 'b']) url.searchParams.delete(k);
+      history.replaceState(null, '', url);
+    }
     home.show();
+    home.openPanel('online');
+  },
+  onEntryRetry() {
+    if (!state.pendingEntry && state.sala) state.pendingEntry = state.sala.code;
+    if (!state.pendingEntry) return;
+    home.renderEntry(entryStub(state.pendingEntry), { estado: 'buscando' });
+    if (transport) openEntry();
+    else connectNet();
   },
   onStartRoom() {
     const sala = state.sala;
@@ -962,7 +997,7 @@ function frame(now) {
     }
   }
   // En la demo, al terminar una partida empieza otra
-  if (state.demo && game && game.phase === 'ended') startDemo();
+  if (state.demo && game && game.phase === 'ended') startDemo({ background: true });
   // Empieza la conquista: la cámara vuela a tu zona y se acerca hasta ver la
   // región (unas 80 casillas originales de ancho), aunque el mapa sea el mundo
   if (game && !state.demo && state.lastPhase === 'spawn' && game.phase === 'playing') {
@@ -1019,7 +1054,10 @@ if (DIAG) {
 state.version = { motor: MECH_VERSION, perfiles: Object.fromEntries(Object.entries(PROFILES).map(([k, P]) => [k, P.id])), huella: RULES_FINGERPRINT, ruleset: (rules) => roomRuleset(rules) };
 {
   const v = document.getElementById('version-reglas');
-  if (v) v.textContent = `Reglas: motor ${MECH_VERSION} · perfiles ${Object.values(PROFILES).map((P) => P.id).join(' / ')} · huella ${RULES_FINGERPRINT}`;
+  // Compilación: el sello del paquete (herramientas/empaquetar.js) o «desarrollo» con módulos sueltos
+  const build = typeof window.__TRINCHERA_BUILD === 'string' ? window.__TRINCHERA_BUILD : 'desarrollo';
+  state.version.build = build;
+  if (v) v.textContent = `Compilación ${build} · reglas: motor ${MECH_VERSION} · perfiles ${Object.values(PROFILES).map((P) => P.id).join(' / ')} · huella ${RULES_FINGERPRINT}`;
 }
 state.camera = camera; // para pruebas automáticas
 state.sound = sound;
@@ -1028,25 +1066,63 @@ state.profile = profile;
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
 state.demo = true;
 requestAnimationFrame(() => setTimeout(() => {
-  if (!state.game) startDemo();
+  if (!state.game) startDemo({ background: true });
 }, 30));
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
 // En la web: servidor MQTT público (?b=N el del anfitrión, ?broker=ws… uno propio, ?red=local solo pestañas)
-home.setNetStatus('connecting');
-{
-  const q = new URLSearchParams(location.search);
-  const b = Number(q.get('b'));
-  connectTransport({ prefer: q.get('red') === 'local' ? 'local' : Number.isInteger(b) && q.has('b') ? b : null, brokerUrl: q.get('broker') }).then((t) => {
+const startParams = new URLSearchParams(location.search);
+const transportOpts = (() => {
+  const b = Number(startParams.get('b'));
+  return { prefer: startParams.get('red') === 'local' ? 'local' : Number.isInteger(b) && startParams.has('b') ? b : null, brokerUrl: startParams.get('broker') };
+})();
+
+/** Ficha de una invitación sin sala todavía (buscando, sin conexión o error). */
+function entryStub(code) {
+  return { code, roomInfo: () => cleanRoomInfo(null, 'Sala') };
+}
+
+/**
+ * Enlace de invitación (?sala=CÓDIGO): la ficha aparece al momento con
+ * «Buscando sala…» y termina en «Unirme» o en el motivo, con «Reintentar».
+ */
+function openEntry() {
+  const code = state.pendingEntry;
+  if (!code) return;
+  if (!transport) {
+    home.renderEntry(entryStub(code), { estado: 'sinred' });
+    return;
+  }
+  openSala(code, false, { auto: false }).catch((err) => {
+    if (state.pendingEntry === code) home.renderEntry(entryStub(code), { estado: 'error', detalle: err && err.message });
+  });
+}
+
+let connecting = null;
+function connectNet() {
+  if (connecting) return connecting;
+  home.setNetStatus('connecting');
+  connecting = connectTransport(transportOpts).then((t) => {
+    connecting = null;
     transport = t;
     state.transport = t;
     home.setNetStatus(t ? t.kind : null);
     if (t) t.lobby.onPeers(() => home.setRooms(openRooms(t)));
-    // Enlace de invitación (?sala=CÓDIGO): la ficha de entrada de esa sala
-    const code = normalizeCode(q.get('sala'));
-    if (t && code.length === 5) openSala(code, false, { auto: false }).catch(() => {});
+    if (state.pendingEntry) openEntry();
+    return t;
   });
+  return connecting;
+}
+
+{
+  const code = normalizeCode(startParams.get('sala'));
+  if (code.length === 5) {
+    state.pendingEntry = code;
+    home.showLobby();
+    home.renderEntry(entryStub(code), { estado: 'buscando' });
+  }
+  connectNet();
 }
 
 // Nube: perfil entre dispositivos y clasificación global

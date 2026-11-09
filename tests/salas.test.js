@@ -209,3 +209,17 @@ test('salas por MQTT (servidor de pruebas): crear, entrar, listo y arranque con 
     await broker.close();
   }
 });
+
+test('salas: nombres que se distinguen (sin nombre, «Recluta NNNN»; repetidos, «(2)») y en los motivos', async () => {
+  const { roomName } = await import('../src/multiplayer.js');
+  assert.equal(roomName('', '4821'), 'Recluta 4821');
+  assert.equal(roomName('Mi nación', '4821'), 'Recluta 4821', 'el nombre por defecto no vale para distinguir');
+  assert.equal(roomName('  Vega ', '4821'), 'Vega');
+  const P = (peer, presence) => ({ peer, presence });
+  const host = { jugador: me('Mi nación'), anfitrion: true, rev: 1, version: 'v1', info: { plazas: 4 }, desde: 1 };
+  const st = roomStatus([P('h', host), P('a', { jugador: me('Mi nación'), listo: null, version: 'v1', desde: 2 }), P('b', { jugador: me('Mi nación'), listo: 1, version: 'v1', desde: 3 })]);
+  assert.deepEqual(st.players.map((p) => p.name), ['Mi nación', 'Mi nación (2)', 'Mi nación (3)']);
+  assert.ok(st.blockers.includes('Falta Mi nación (2)'), `motivo sin ambigüedad: ${st.blockers}`);
+  const long = roomStatus([P('h', { ...host, jugador: me('Comandante Larguísimo') }), P('a', { jugador: me('Comandante Larguísimo'), listo: 1, version: 'v1', desde: 2 })]);
+  assert.ok(long.players[1].name.endsWith(' (2)') && long.players[1].name.length <= 18);
+});

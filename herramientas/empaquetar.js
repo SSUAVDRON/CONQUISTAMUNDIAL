@@ -11,6 +11,7 @@
 // sustituyen por un registro mínimo. Solo admite la sintaxis que usa este
 // proyecto: `import { a, b as c } from './x.js'` y `export function|class|const`.
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { execSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -62,6 +63,24 @@ __require('main');
 })();`;
 }
 
+/**
+ * Sello de compilación: commit (con «-dirty» si hay cambios sin guardar) y
+ * fecha UTC. Va en <meta name="trinchera-build"> y en window.__TRINCHERA_BUILD;
+ * el juego lo enseña en Ajustes, para saber qué versión sirve el hosting.
+ */
+function buildStamp() {
+  let commit = 'sin-git';
+  try {
+    commit = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
+    const dirty = execSync('git status --porcelain --untracked-files=no', { cwd: ROOT }).toString().trim();
+    if (dirty) commit += '-dirty';
+  } catch {
+    /* fuera de un repositorio */
+  }
+  const fecha = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  return `${commit} ${fecha} UTC`;
+}
+
 /** Evita que el código cierre la etiqueta <script> antes de tiempo. */
 const safeForScript = (js) => js.replace(/<\/script/gi, '<\\/script');
 
@@ -78,8 +97,9 @@ async function main() {
   // Hojas externas permitidas (la fuente del logotipo en Google Fonts)
   const fonts = (html.match(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/g) || []).join('\n');
 
-  const head = `<title>${title}</title>\n${fonts}\n<style>\n${css}\n</style>`;
-  const content = `${body}\n<script>\n${js}\n</script>`;
+  const build = buildStamp();
+  const head = `<title>${title}</title>\n<meta name="trinchera-build" content="${build}">\n${fonts}\n<style>\n${css}\n</style>`;
+  const content = `${body}\n<script>window.__TRINCHERA_BUILD = ${JSON.stringify(build)};</script>\n<script>\n${js}\n</script>`;
   const fragment = `${head}\n${content}\n`;
   const full = `<!doctype html>
 <html lang="es">
@@ -98,7 +118,7 @@ ${content}
   await writeFile(join(DIST, 'fragmento.html'), fragment);
   await writeFile(join(DIST, 'dominia.html'), full);
   const kb = (s) => `${Math.round(Buffer.byteLength(s) / 1024)} KB`;
-  console.log(`dist/dominia.html (${kb(full)}) y dist/fragmento.html (${kb(fragment)}) generados`);
+  console.log(`dist/dominia.html (${kb(full)}) y dist/fragmento.html (${kb(fragment)}) generados · compilación ${build}`);
 }
 
 main().catch((err) => {

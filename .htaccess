@@ -14,7 +14,7 @@ RedirectMatch 404 \.md$
 # El juego cambia a menudo: el navegador comprueba siempre si hay versión nueva
 <IfModule mod_headers.c>
   <FilesMatch "\.(html|js|css)$">
-    Header set Cache-Control "no-cache"
+    Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>
 

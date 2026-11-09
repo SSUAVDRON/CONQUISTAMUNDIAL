@@ -995,9 +995,15 @@ export class Home {
     );
   }
 
+  /** ¿Se ve el menú de inicio (y no una sala o «Crear sala»)? */
+  menuVisible() {
+    return !$('inicio').hidden && $('sala').hidden && $('crear-sala').hidden;
+  }
+
   show() {
     $('inicio').hidden = false;
     $('sala').hidden = true;
+    $('crear-sala').hidden = true;
     this.renderAll();
     this.cover?.start();
     requestAnimationFrame(() => this._paintHero());
@@ -1707,16 +1713,18 @@ export class Home {
     const box = $('sala-entrada');
     box.hidden = false;
     const info = state.info || sala.roomInfo();
-    $('sala-nombre').textContent = state.estado === 'buscando' ? 'Buscando la sala…' : info.nombre;
+    $('sala-nombre').textContent = state.info ? info.nombre : 'Invitación a una sala';
     $('sala-codigo').textContent = sala.code.toUpperCase();
     $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
-    $('sala-visibilidad').hidden = state.estado === 'buscando';
+    $('sala-visibilidad').hidden = !state.info;
     const reasons = {
-      buscando: 'Conectando con la sala…',
+      buscando: 'Buscando sala…',
       llena: 'La sala está llena.',
       empezada: 'La partida ya ha empezado.',
-      cerrada: 'La sala no existe o se ha cerrado. Revisa el código.',
+      cerrada: 'La sala no existe, ha caducado o se ha cerrado. Revisa el código o pide un enlace nuevo.',
       version: 'La sala usa otra versión del juego. Recarga la página (y que el anfitrión también) y vuelve a entrar.',
+      sinred: 'No hay conexión con el servidor de salas. Comprueba tu conexión a internet.',
+      error: `No se ha podido abrir la sala.${state.detalle ? ` ${state.detalle}` : ''}`,
     };
     const s = state.settings;
     const parts = [];
@@ -1728,9 +1736,19 @@ export class Home {
     }
     if (state.estado === 'lista') {
       parts.push(el('button', { type: 'button', class: 'principal grande', onclick: () => this.h.onEntryJoin?.(), text: 'Unirme' }));
+    } else if (state.estado === 'buscando') {
+      parts.push(el('p', { class: 'entrada-buscando', text: reasons.buscando }));
     } else {
       parts.push(el('p', { class: 'entrada-motivo', text: reasons[state.estado] || 'No se puede entrar en esta sala.' }));
-      if (state.estado !== 'buscando') parts.push(el('button', { type: 'button', class: 'secundario', onclick: () => this.h.onLeaveRoom?.(), text: '← Volver a Multijugador' }));
+      const again = ['cerrada', 'sinred', 'error', 'llena'].includes(state.estado);
+      parts.push(
+        el(
+          'div',
+          { class: 'entrada-botones' },
+          again ? el('button', { type: 'button', class: 'principal', onclick: () => this.h.onEntryRetry?.(), text: 'Reintentar' }) : null,
+          el('button', { type: 'button', class: 'secundario', onclick: () => this.h.onLeaveRoom?.(), text: '← Volver a Multijugador' }),
+        ),
+      );
     }
     box.replaceChildren(...parts);
   }
@@ -1747,6 +1765,10 @@ export class Home {
     $('sala-rejilla').hidden = false;
     $('sala-pie').hidden = false;
     $('btn-copiar-enlace').hidden = false;
+    // Con invitados remotos (servidor de salas), el enlace; en la prueba entre pestañas o en Claude, el código
+    this._inviteLabel = kind === 'mqtt' ? 'Copiar enlace' : 'Copiar código';
+    const lbl = $('btn-copiar-enlace').querySelector('span');
+    if (!this._copyTimer && lbl.textContent !== this._inviteLabel) lbl.textContent = this._inviteLabel;
     const st = sala.status();
     const info = sala.roomInfo();
     const s = sala.isHost ? sala.settings : sala.hostSettings();
@@ -1888,7 +1910,10 @@ export class Home {
       const label = b.querySelector('span');
       label.textContent = '¡Copiado!';
       clearTimeout(this._copyTimer);
-      this._copyTimer = setTimeout(() => (label.textContent = 'Copiar enlace'), 1800);
+      this._copyTimer = setTimeout(() => {
+        this._copyTimer = null;
+        label.textContent = this._inviteLabel || 'Copiar enlace';
+      }, 1800);
       $('sala-copia').hidden = true;
       return;
     }

@@ -96,6 +96,16 @@ export function cleanRoomInfo(raw, fallbackName = 'Sala') {
   };
 }
 
+/**
+ * Nombre en la sala: el del perfil o, si no tiene uno propio (vacío o el de
+ * por defecto, «Mi nación»), «Recluta NNNN» con una etiqueta fija de la página:
+ * así dos perfiles sin nombre no se confunden desde que entran.
+ */
+export function roomName(profileName, tag) {
+  const n = String(profileName || '').trim();
+  return n && n !== 'Mi nación' ? n.slice(0, 18) : `Recluta ${String(tag || '').slice(0, 4) || '0000'}`;
+}
+
 /** Lo que sí cambia la partida: si cambia, los invitados tienen que confirmar de nuevo. */
 export function gameplayKey(settings) {
   const s = settings || {};
@@ -140,8 +150,17 @@ export function roomStatus(peers, { myPeer = null } = {}) {
       versionOk: !host || p.presence.version === hostVersion,
     };
   };
-  const players = all.slice(0, info.plazas).map(mk);
-  const waiting = all.slice(info.plazas).map(mk);
+  // Nombres repetidos: «Vega» y «Vega (2)», por orden de llegada (los mismos en la lista, los motivos y la partida)
+  const seen = new Map();
+  const listed = all.map(mk).map((p) => {
+    const n = (seen.get(p.name) || 0) + 1;
+    seen.set(p.name, n);
+    if (n === 1) return p;
+    const suffix = ` (${n})`;
+    return { ...p, name: `${p.name.slice(0, 18 - suffix.length)}${suffix}` }; // cabe en los 18 de la partida
+  });
+  const players = listed.slice(0, info.plazas);
+  const waiting = listed.slice(info.plazas);
   const blockers = [];
   if (!host) blockers.push('El anfitrión no está en la sala');
   for (const p of players) if (!p.versionOk) blockers.push(`${p.name} tiene otra versión del juego: tiene que recargar la página`);

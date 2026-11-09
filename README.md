@@ -146,25 +146,37 @@ funciona: los módulos ES necesitan HTTP; para eso está `dist/dominia.html`.
 
 Son ficheros estáticos: no hace falta PHP ni base de datos.
 
-**Con Git (Hostinger):** la rama **`hostinger`** del repositorio tiene solo la
-web: `index.html` (el juego empaquetado en un archivo) y un `.htaccess` (que
-no se pueda leer la carpeta `.git` que deja el despliegue, sin caché vieja del
-HTML y comprimido). Se actualiza con:
+**Con Git (Hostinger), en dos pasos.** Se sirve el juego **empaquetado en un
+solo archivo** (`index.html` con su JavaScript y su CSS dentro): no puede
+mezclar versiones como pasaba con los módulos sueltos y la caché de la CDN. El
+paquete lleva un sello de compilación (commit y fecha) que se ve en Ajustes y en
+`<meta name="trinchera-build">`.
 
 ```bash
-bash herramientas/hostinger.sh
+bash herramientas/hostinger.sh prueba       # rama hostinger-prueba → …/prueba/
+bash herramientas/hostinger.sh produccion   # rama hostinger (el mismo index.html validado en prueba)
 ```
 
-que empaqueta el juego y sube un commit nuevo a esa rama. En hPanel →
-Avanzado → Git: repositorio `git@github.com:SSUAVDRON/CONQUISTAMUNDIAL.git`, rama
-`hostinger` y directorio en blanco (se despliega en `public_html`, que tiene
-que estar vacío: borra antes el archivo de bienvenida). Como el repositorio es
-privado, la clave SSH que muestra hPanel va en GitHub → Settings → Deploy keys
-(solo lectura); con el webhook de «Despliegue automático» en GitHub → Settings
-→ Webhooks, cada subida a la rama se publica sola. El juego va en una web
-propia de Hostinger, aparte de ssuavdron.com.
+En hPanel → Avanzado → Git, con el repositorio
+`git@github.com:SSUAVDRON/CONQUISTAMUNDIAL.git` (la clave SSH de hPanel en
+GitHub → Settings → Deploy keys, solo lectura):
 
-**Rama `main` tal cual** (lo que despliega ahora Hostinger): el `.htaccess` de
+1. **Prueba**: un repositorio con la rama `hostinger-prueba` y el directorio
+   `prueba` → se valida en `https://tu-web/prueba/` (Ajustes muestra la
+   compilación esperada; «Crear sala» abre el formulario; Partida rápida, el HUD
+   nuevo).
+2. **Producción**: la raíz (directorio en blanco) con la rama **`hostinger`**
+   (no `main`). Si hPanel pide la carpeta vacía, borra ese despliegue, vacía
+   `public_html` y vuelve a añadirlo.
+3. **Purga la caché de la CDN** en hPanel tras cada publicación en producción.
+4. Comprueba la dirección normal, sin parámetros, en una pestaña nueva y en un
+   navegador que ya tenía la versión anterior (recarga normal).
+
+Con el webhook de «Despliegue automático» (GitHub → Settings → Webhooks), cada
+subida a esas ramas se publica sola. El `.htaccess` de las ramas no deja leer
+`.git` y pide revalidar el HTML siempre (`no-cache, must-revalidate`).
+
+**Rama `main` tal cual** (desaconsejado: módulos sueltos que la caché puede mezclar): el `.htaccess` de
 la raíz no deja leer `.git`, `tests/`, `herramientas/`, `docs/` ni los `.md`, y
 pide al navegador comprobar siempre la última versión.
 
