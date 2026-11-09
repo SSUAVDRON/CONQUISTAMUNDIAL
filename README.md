@@ -1,6 +1,9 @@
 # Trinchera
 
-> La carpeta del proyecto se sigue llamando `dominia/` (primer nombre provisional).
+> Repositorio: `SSUAVDRON/CONQUISTAMUNDIAL`. La rama `main` tiene el código y
+> la rama `hostinger`, solo la web que publica Hostinger. Algunos nombres
+> internos (`dist/dominia.html`, `package.json`) conservan el primer nombre
+> provisional del proyecto, «dominia».
 
 Juego de estrategia de conquista territorial en el navegador. Empiezas con un
 pequeño territorio en un mundo generado al azar y compites contra naciones
@@ -128,7 +131,7 @@ bash herramientas/hostinger.sh
 ```
 
 que empaqueta el juego y sube un commit nuevo a esa rama. En hPanel →
-Avanzado → Git: repositorio `git@github.com:SSUAVDRON/SSUAVDRON.git`, rama
+Avanzado → Git: repositorio `git@github.com:SSUAVDRON/CONQUISTAMUNDIAL.git`, rama
 `hostinger` y directorio en blanco (se despliega en `public_html`, que tiene
 que estar vacío: borra antes el archivo de bienvenida). Como el repositorio es
 privado, la clave SSH que muestra hPanel va en GitHub → Settings → Deploy keys
@@ -226,7 +229,7 @@ atacados, no perdonan una traición y contestan a tus emojis.
 ## Estructura del código
 
 ```
-dominia/
+CONQUISTAMUNDIAL/
 ├── index.html          Menú, HUD y pantalla de fin
 ├── css/estilo.css
 ├── servidor.js         Servidor estático para desarrollo (npm start)

@@ -3,7 +3,7 @@
 # index.html (el juego empaquetado en un único archivo) y .htaccess.
 # Hostinger (hPanel → Avanzado → Git) despliega esa rama en el subdominio.
 #
-#   bash herramientas/hostinger.sh            (desde la carpeta dominia/)
+#   bash herramientas/hostinger.sh            (desde la raíz del repositorio)
 #   MENSAJE="texto" bash herramientas/hostinger.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
