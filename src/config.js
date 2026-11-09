@@ -9,7 +9,7 @@ export const TICK_MS = 100; // 10 ticks por segundo de simulación
  * adaptan con estos factores: distancias y velocidades × RES, valores por
  * casilla ÷ AREA (así una misma superficie vale lo mismo en tropas y oro).
  */
-export const RES = 2;
+export const RES = 3;
 export const AREA = RES * RES;
 const RES15 = RES * Math.sqrt(RES); // (AREA)^0,75: para fórmulas con casillas^0,75
 

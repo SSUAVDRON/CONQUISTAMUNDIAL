@@ -24,7 +24,7 @@ function twoNeighbors(seed = 11, rules = null, { third = false } = {}) {
   assert.ok(game.spawnPlayer(a, ta));
   const tb = tiles.find((t) => {
     const d2 = (map.x(t) - map.x(ta)) ** 2 + (map.y(t) - map.y(ta)) ** 2;
-    return game.owner[t] === 0 && d2 > (9 * RES) ** 2 && d2 < (11 * RES) ** 2;
+    return game.owner[t] === 0 && d2 > 18 ** 2 && d2 < 22 ** 2; // en casillas: el avance va por casillas (documento), no se escala con RES
   });
   assert.ok(game.spawnPlayer(b, tb));
   if (c) assert.ok(game.spawnPlayer(c, game.findSpawnTile()));

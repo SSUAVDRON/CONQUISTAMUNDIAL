@@ -20,7 +20,8 @@ export const MECH_VERSION = 'doc-1.0';
  *   (paceRegen 1: cuadra punto a punto con el HUD de FrontWars a igual reserva
  *   y techo; ver docs/calibracion-clasico.md). paceNeutral y pacePvp son
  *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
- *   comparables de FrontWars. Sin puntos estratégicos (ni bonos ni botín de
+ *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
+ *   a petición, porque la expansión inicial iba demasiado rápida. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -30,7 +31,7 @@ export const MECH_VERSION = 'doc-1.0';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-1', name: 'Clásico', paceNeutral: 0.5, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  clasico: { id: 'clasico-2', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
   trinchera: { id: 'trinchera-1', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 

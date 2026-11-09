@@ -50,7 +50,7 @@ const ARSENAL_CATS = [
 const NEWS = [
   { tag: 'Reglas', title: 'Mecánicas nuevas', text: 'Techo de tropas, regeneración, combate, cerco y retirada siguen ahora la especificación al pie de la letra.', art: 0 },
   { tag: 'Arsenal', title: 'Bomba H y MIRV', text: 'El silo lanza dos bombas nuevas: la H arrasa una zona enorme y el MIRV reparte 24 cabezas por un país.', art: 1 },
-  { tag: 'Mapas', title: 'El mundo, más grande', text: 'Mapa del mundo de 2000 × 1000 casillas con 156 países y sus ríos de verdad.', art: 2 },
+  { tag: 'Mapas', title: 'El mundo, más grande', text: 'Mapa del mundo de 3000 × 1500 casillas con 156 países y sus ríos de verdad.', art: 2 },
 ];
 
 const $ = (id) => document.getElementById(id);

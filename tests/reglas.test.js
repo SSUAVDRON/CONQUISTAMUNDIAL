@@ -18,7 +18,7 @@ function duel(rules = {}, seed = 11) {
   const ta = tiles[Math.floor(tiles.length / 2)];
   const tb = tiles.find((t) => {
     const d2 = (map.x(t) - map.x(ta)) ** 2 + (map.y(t) - map.y(ta)) ** 2;
-    return d2 > (9 * RES) ** 2 && d2 < (11 * RES) ** 2;
+    return d2 > 18 ** 2 && d2 < 22 ** 2; // en casillas: el avance va por casillas (documento), no se escala con RES
   });
   assert.ok(game.spawnPlayer(a, ta) && game.spawnPlayer(b, tb));
   game.spawnPlayer(game.players[3], game.findSpawnTile());

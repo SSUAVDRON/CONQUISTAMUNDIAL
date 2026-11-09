@@ -34,13 +34,14 @@ const MAX_COUNTRIES = 200;
 // Alturas (m) que separan llanura, meseta y montaña
 const HIGHLAND_M = 700;
 const MOUNTAIN_M = 1800;
-// Rejilla del relieve: una muestra cada `step` casillas (el mundo, más fina)
-const RELIEF_STEP = { mundo: 2 };
+// Rejilla del relieve: una muestra cada `step` casillas (por defecto, RES)
+const RELIEF_STEP = {};
 const RELIEF_MAX_M = 6500;
 
 export const DEFS = [
-  // El mundo, de 2000 × 1000 casillas lógicas (la referencia del documento de mecánicas)
-  { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-60, 82.72], w: 2000 },
+  // El mundo, de 1000·RES × 500·RES casillas (con RES 3, 3000 × 1500: 2,25 veces
+  // las casillas del mapa de referencia del documento de mecánicas, 2000 × 1000)
+  { id: 'mundo', name: 'Mundo', lon: [-180, 180], lat: [-60, 82.72], w: 1000 * RES },
   { id: 'europa', name: 'Europa', lon: [-25, 45], lat: [34, 71], w: 640 * RES },
   { id: 'norteamerica', name: 'Norteamérica', lon: [-170, -50], lat: [7, 72], w: 720 * RES },
   { id: 'sudamerica', name: 'Sudamérica', lon: [-92, -30], lat: [-56, 14], w: 480 * RES },

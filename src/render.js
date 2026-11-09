@@ -19,7 +19,10 @@ const CHUNK = 64; // lado (en casillas) de los bloques del territorio que se sub
 // Píxeles por casilla de la capa de territorio: con 2, la frontera ocupa media
 // casilla (el lado que da al vecino). En mapas enormes, 1 (frontera de una casilla)
 const TERRITORY_TS = 2;
-const TERRITORY_MAX_PX = 9e6;
+// Píxeles de la capa como mucho (imagen + lienzo: 8 bytes por píxel). En el
+// móvil, menos: el mundo (4,5 M de casillas) va allí a 1 píxel por casilla
+const COARSE = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+const TERRITORY_MAX_PX = COARSE ? 9e6 : 2e7;
 // Brillo de las casillas recién conquistadas, pintado en el propio territorio:
 // fuerte al conquistar, a medias a los GLOW_MID ms y normal a los GLOW_END ms
 const GLOW_N = 32768;
@@ -240,6 +243,14 @@ export class Renderer {
    * esquinas): media casilla. La tuya: mitad exterior blanca y mitad interior
    * en tu color.
    */
+  /** ¿Toca la casilla `i` (del dueño `o`) a otro dueño o el borde del mapa? */
+  _isEdge(i, o) {
+    const s = this.prevOwner;
+    const W = this.game.map.width;
+    const x = i % W;
+    return x === 0 || x === W - 1 || i < W || i >= s.length - W || s[i - 1] !== o || s[i + 1] !== o || s[i - W] !== o || s[i + W] !== o;
+  }
+
   _paintTile(i) {
     const s = this.prevOwner;
     const o = s[i];
@@ -263,7 +274,10 @@ export class Renderer {
     const d = i < s.length - W && s[i + W] === o;
     const P = this.pixels;
     if (this.ts === 1) {
-      P[i] = l && r && u && d ? col : this.border[o];
+      if (!(l && r && u && d)) P[i] = this.border[o];
+      // Tu nación: la casilla de dentro de la frontera, en tu color
+      else if (this.ring2[o] && (this._isEdge(i - 1, o) || this._isEdge(i + 1, o) || this._isEdge(i - W, o) || this._isEdge(i + W, o))) P[i] = this.border2[o];
+      else P[i] = col;
       return;
     }
     const ul = l && u && s[i - W - 1] === o;
@@ -448,6 +462,14 @@ export class Renderer {
         this._repaint(t - W + 1);
         this._repaint(t + W - 1);
         this._repaint(t + W + 1);
+        if (this.ts === 1) {
+          // A 1 píxel por casilla tu frontera lleva una segunda franja: también
+          // cambian las casillas a dos de distancia
+          this._repaint(t - 2);
+          this._repaint(t + 2);
+          this._repaint(t - 2 * W);
+          this._repaint(t + 2 * W);
+        }
         const x = t % W;
         const y = (t / W) | 0;
         const kind = was && o ? 0 : o ? 1 : 2;
