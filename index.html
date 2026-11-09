@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="9a05c76 2026-11-09 16:07 UTC">
+<meta name="trinchera-build" content="e25dfc0 2026-11-09 16:13 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Cinzel:wght@700;800;900&display=swap">
 <style>
 :root {
@@ -3565,7 +3565,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "9a05c76 2026-11-09 16:07 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "e25dfc0 2026-11-09 16:13 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -8715,7 +8715,10 @@ class Game {
       if (p === this.human) this._emit('Has sido derrotado', 'danger');
       else if (killer && killer === this.human) {
         this._emit(`🏆 Has conquistado ${p.name}: +${formatNumber(loot)} de oro`, 'good', { sfx: p.weak ? 'conquerColony' : 'conquer', loot, x: lx, y: ly, weak: p.weak });
-      } else this._emit(`${p.name} ha sido eliminado`, 'info', p.weak ? null : { sfx: 'fall' });
+      } else {
+        // `bot`: la muerte de un bot no va al recuadro de avisos (solo la de jugadores)
+        this._emit(`${p.name} ha sido eliminado`, 'info', { bot: !p.isHuman, ...(p.weak ? null : { sfx: 'fall' }) });
+      }
     }
   }
 
@@ -21402,9 +21405,9 @@ const EVENT_ICONS = {
 };
 
 /**
- * Solo los avisos importantes llegan al recuadro: paces y roturas, países
- * derrotados, barcos y misiles contra ti, tu puerto destruido, logros e
- * inicio. El resto (obras, saqueos, tus propios ataques…) ya se ve en el
+ * Solo los avisos importantes llegan al recuadro: paces y roturas, jugadores
+ * derrotados (la muerte de los bots no), a quién conquistas tú, barcos y
+ * misiles contra ti, tu puerto destruido, logros e inicio. El resto (obras, saqueos, tus propios ataques…) ya se ve en el
  * mapa o en las tarjetas de combate.
  */
 const IMPORTANT = [
@@ -21990,7 +21993,8 @@ class UI {
       this._hint(stripLeadingEmoji(evt.text), evt.kind);
       return;
     }
-    if (!isImportant(evt.text)) return;
+    // La muerte de los bots no se avisa (se ve en el mapa y en la clasificación)
+    if (evt.bot || !isImportant(evt.text)) return;
     const box = $('eventos');
     const now = performance.now();
     // El mismo aviso varias veces seguidas: un solo aviso con contador
