@@ -42,8 +42,6 @@ function tabPeerId() {
  * servidor MQTT (el del anfitrión, que llega en el enlace de invitación) o
  * nada (el primero que responda).
  */
-export { MqttTransport };
-
 export async function connectTransport({ prefer = null, brokerUrl = null, peerId = null } = {}) {
   const pid = peerId || tabPeerId();
   const claude = hasWindow ? window.claude : null;
@@ -188,7 +186,7 @@ class LocalTransport {
   }
 }
 
-class MqttTransport {
+export class MqttTransport {
   constructor(client, brokerIndex, brokerUrl = null, peerId = tabPeerId()) {
     this.kind = 'mqtt';
     this.client = client;
