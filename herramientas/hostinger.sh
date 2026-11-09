@@ -15,7 +15,8 @@ CODIGO=$(git -C "$RAIZ" log -1 --format=%h)
 
 TMP=$(mktemp -d)
 trap 'git -C "$RAIZ" worktree remove --force "$TMP" >/dev/null 2>&1 || rm -rf "$TMP"' EXIT
-git -C "$RAIZ" fetch -q origin "$RAMA" 2>/dev/null || true
+# (con destino explícito: en clones de una sola rama, «fetch origin rama» no crea origin/rama)
+git -C "$RAIZ" fetch -q origin "+refs/heads/$RAMA:refs/remotes/origin/$RAMA" 2>/dev/null || true
 if git -C "$RAIZ" show-ref --verify --quiet "refs/remotes/origin/$RAMA"; then
   git -C "$RAIZ" worktree add -q -B "$RAMA" "$TMP" "origin/$RAMA"
 else
