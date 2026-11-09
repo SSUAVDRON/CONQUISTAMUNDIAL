@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
+<meta name="trinchera-build" content="ed7bb09 2026-11-09 15:23 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Cinzel:wght@700;800;900&display=swap">
 <style>
 :root {
@@ -2893,6 +2894,12 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 @media (max-width: 360px) {
   .sala-invitar small { display: none; }
 }
+.entrada-buscando { margin: 0; padding: 10px 14px; border-radius: 10px; color: var(--marfil); background: rgba(95, 140, 220, 0.12); border: 1px solid rgba(95, 140, 220, 0.4); }
+.entrada-buscando::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 10px; border-radius: 50%; border: 2px solid var(--marfil); border-right-color: transparent; vertical-align: -1px; animation: girar 0.9s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.entrada-botones { display: flex; flex-wrap: wrap; gap: 10px; }
+.entrada-botones .principal { flex: 1; }
+.sala-invitar:has(#btn-copiar-enlace[hidden]) .codigo { border-right: 0; }
 
 </style>
 </head>
@@ -3558,6 +3565,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
       </div>
     </div>
   </div>
+<script>window.__TRINCHERA_BUILD = "ed7bb09 2026-11-09 15:23 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -10280,9 +10288,15 @@ class Home {
     );
   }
 
+  /** ¿Se ve el menú de inicio (y no una sala o «Crear sala»)? */
+  menuVisible() {
+    return !$('inicio').hidden && $('sala').hidden && $('crear-sala').hidden;
+  }
+
   show() {
     $('inicio').hidden = false;
     $('sala').hidden = true;
+    $('crear-sala').hidden = true;
     this.renderAll();
     this.cover?.start();
     requestAnimationFrame(() => this._paintHero());
@@ -10992,16 +11006,18 @@ class Home {
     const box = $('sala-entrada');
     box.hidden = false;
     const info = state.info || sala.roomInfo();
-    $('sala-nombre').textContent = state.estado === 'buscando' ? 'Buscando la sala…' : info.nombre;
+    $('sala-nombre').textContent = state.info ? info.nombre : 'Invitación a una sala';
     $('sala-codigo').textContent = sala.code.toUpperCase();
     $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
-    $('sala-visibilidad').hidden = state.estado === 'buscando';
+    $('sala-visibilidad').hidden = !state.info;
     const reasons = {
-      buscando: 'Conectando con la sala…',
+      buscando: 'Buscando sala…',
       llena: 'La sala está llena.',
       empezada: 'La partida ya ha empezado.',
-      cerrada: 'La sala no existe o se ha cerrado. Revisa el código.',
+      cerrada: 'La sala no existe, ha caducado o se ha cerrado. Revisa el código o pide un enlace nuevo.',
       version: 'La sala usa otra versión del juego. Recarga la página (y que el anfitrión también) y vuelve a entrar.',
+      sinred: 'No hay conexión con el servidor de salas. Comprueba tu conexión a internet.',
+      error: `No se ha podido abrir la sala.${state.detalle ? ` ${state.detalle}` : ''}`,
     };
     const s = state.settings;
     const parts = [];
@@ -11013,9 +11029,19 @@ class Home {
     }
     if (state.estado === 'lista') {
       parts.push(el('button', { type: 'button', class: 'principal grande', onclick: () => this.h.onEntryJoin?.(), text: 'Unirme' }));
+    } else if (state.estado === 'buscando') {
+      parts.push(el('p', { class: 'entrada-buscando', text: reasons.buscando }));
     } else {
       parts.push(el('p', { class: 'entrada-motivo', text: reasons[state.estado] || 'No se puede entrar en esta sala.' }));
-      if (state.estado !== 'buscando') parts.push(el('button', { type: 'button', class: 'secundario', onclick: () => this.h.onLeaveRoom?.(), text: '← Volver a Multijugador' }));
+      const again = ['cerrada', 'sinred', 'error', 'llena'].includes(state.estado);
+      parts.push(
+        el(
+          'div',
+          { class: 'entrada-botones' },
+          again ? el('button', { type: 'button', class: 'principal', onclick: () => this.h.onEntryRetry?.(), text: 'Reintentar' }) : null,
+          el('button', { type: 'button', class: 'secundario', onclick: () => this.h.onLeaveRoom?.(), text: '← Volver a Multijugador' }),
+        ),
+      );
     }
     box.replaceChildren(...parts);
   }
@@ -11032,6 +11058,10 @@ class Home {
     $('sala-rejilla').hidden = false;
     $('sala-pie').hidden = false;
     $('btn-copiar-enlace').hidden = false;
+    // Con invitados remotos (servidor de salas), el enlace; en la prueba entre pestañas o en Claude, el código
+    this._inviteLabel = kind === 'mqtt' ? 'Copiar enlace' : 'Copiar código';
+    const lbl = $('btn-copiar-enlace').querySelector('span');
+    if (!this._copyTimer && lbl.textContent !== this._inviteLabel) lbl.textContent = this._inviteLabel;
     const st = sala.status();
     const info = sala.roomInfo();
     const s = sala.isHost ? sala.settings : sala.hostSettings();
@@ -11173,7 +11203,10 @@ class Home {
       const label = b.querySelector('span');
       label.textContent = '¡Copiado!';
       clearTimeout(this._copyTimer);
-      this._copyTimer = setTimeout(() => (label.textContent = 'Copiar enlace'), 1800);
+      this._copyTimer = setTimeout(() => {
+        this._copyTimer = null;
+        label.textContent = this._inviteLabel || 'Copiar enlace';
+      }, 1800);
       $('sala-copia').hidden = true;
       return;
     }
@@ -13212,7 +13245,7 @@ const { withLoading } = __require('loading');
 const { Tutorial } = __require('tutorial');
 const { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } = __require('cloud');
 const { connectTransport } = __require('net');
-const { NetSync, RULES_FINGERPRINT, Sala, newRoomCode, normalizeCode, openRooms, roomRuleset } = __require('multiplayer');
+const { NetSync, RULES_FINGERPRINT, Sala, cleanRoomInfo, newRoomCode, normalizeCode, openRooms, roomName, roomRuleset } = __require('multiplayer');
 const { MECH_VERSION, PROFILES } = __require('mecanicas');
 const { Diagnostico } = __require('diagnostico');
 
@@ -13306,6 +13339,9 @@ function randomSeed() {
 }
 
 /** Lo que este jugador muestra a los demás (nombre, color, emblema…). */
+/** Etiqueta fija de esta página para jugar en sala sin nombre propio («Recluta 4821»). */
+const RECRUIT_TAG = String(1000 + Math.floor(Math.random() * 9000));
+
 function myIdentity() {
   return {
     name: profile.nombre || 'Mi nación',
@@ -13389,14 +13425,24 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   return game;
 }
 
-function startDemo() {
-  leaveOnline();
+/**
+ * Partida de fondo del menú. `background`: solo se cambia la partida de
+ * fondo (al arrancar o cuando termina la anterior), sin salir de la sala ni
+ * tapar la ficha de una invitación o la sala que estén a la vista.
+ */
+function startDemo({ background = false } = {}) {
+  if (!background) leaveOnline();
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
   // En el móvil, la partida de fondo del menú va más tranquila (gasta menos)
   state.speed = TOUCH ? 1 : 2;
   ui.hideHud();
   ui.closeNation();
+  if (state.sala || state.pendingEntry) {
+    home.renderAll(); // el inicio, listo para cuando se vuelva
+    return;
+  }
+  if (background && home.menuVisible()) return;
   home.show();
 }
 
@@ -13569,7 +13615,7 @@ function defaultRoomSettings() {
 async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
   if (!transport) throw new Error('Sin conexión para el multijugador.');
   leaveOnline();
-  const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings: settings || defaultRoomSettings(), info });
+  const sala = new Sala(transport, { code, isHost, me: { ...myIdentity(), name: roomName(profile.nombre, RECRUIT_TAG) }, settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
   const kind = transport.kind;
   const render = (status = '') => {
@@ -13622,7 +13668,8 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
       home.hideLobby();
       throw new Error(why);
     }
-    home.renderEntry(sala, { estado: 'cerrada' });
+    if (!state.pendingEntry) state.pendingEntry = code;
+    home.renderEntry(sala, { estado: 'error', detalle: why });
     return;
   }
   render();
@@ -13663,7 +13710,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   }
   state.online = true;
   const game = await withLoading(
-    `${mapLabel(payload.settings.mapSize)} · online`,
+    `${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
       { label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
       {
@@ -13817,6 +13864,7 @@ const home = new Home(profile, {
       home.renderEntry(sala, sala.entryState());
       return;
     }
+    state.pendingEntry = null;
     sala.join().then(() => home.renderLobby(sala, transport.kind));
   },
   onReady() {
@@ -13832,8 +13880,13 @@ const home = new Home(profile, {
   onCopyLink() {
     const sala = state.sala;
     if (!sala) return;
-    const link = inviteLink(sala);
+    const link = transport && transport.kind === 'mqtt' ? inviteLink(sala) : null;
     const code = sala.code.toUpperCase();
+    if (transport && transport.kind === 'local') {
+      // Prueba entre pestañas: el código, para escribirlo en otra pestaña
+      copyText(code, () => home.showCopy(true), () => home.showCopy(false, code));
+      return;
+    }
     if (!link) {
       // Dentro de Claude: el enlace es el del juego; se copia el código
       copyText(`Únete a mi sala de Trinchera con el código ${code}`, () => home.showCopy(true), () => home.showCopy(false, code));
@@ -13843,7 +13896,22 @@ const home = new Home(profile, {
   },
   onLeaveRoom() {
     leaveOnline();
+    if (state.pendingEntry) {
+      // La invitación ya se ha usado: fuera de la dirección (una recarga no vuelve a ella)
+      state.pendingEntry = null;
+      const url = new URL(location.href);
+      for (const k of ['sala', 'b']) url.searchParams.delete(k);
+      history.replaceState(null, '', url);
+    }
     home.show();
+    home.openPanel('online');
+  },
+  onEntryRetry() {
+    if (!state.pendingEntry && state.sala) state.pendingEntry = state.sala.code;
+    if (!state.pendingEntry) return;
+    home.renderEntry(entryStub(state.pendingEntry), { estado: 'buscando' });
+    if (transport) openEntry();
+    else connectNet();
   },
   onStartRoom() {
     const sala = state.sala;
@@ -14156,7 +14224,7 @@ function frame(now) {
     }
   }
   // En la demo, al terminar una partida empieza otra
-  if (state.demo && game && game.phase === 'ended') startDemo();
+  if (state.demo && game && game.phase === 'ended') startDemo({ background: true });
   // Empieza la conquista: la cámara vuela a tu zona y se acerca hasta ver la
   // región (unas 80 casillas originales de ancho), aunque el mapa sea el mundo
   if (game && !state.demo && state.lastPhase === 'spawn' && game.phase === 'playing') {
@@ -14213,7 +14281,10 @@ if (DIAG) {
 state.version = { motor: MECH_VERSION, perfiles: Object.fromEntries(Object.entries(PROFILES).map(([k, P]) => [k, P.id])), huella: RULES_FINGERPRINT, ruleset: (rules) => roomRuleset(rules) };
 {
   const v = document.getElementById('version-reglas');
-  if (v) v.textContent = `Reglas: motor ${MECH_VERSION} · perfiles ${Object.values(PROFILES).map((P) => P.id).join(' / ')} · huella ${RULES_FINGERPRINT}`;
+  // Compilación: el sello del paquete (herramientas/empaquetar.js) o «desarrollo» con módulos sueltos
+  const build = typeof window.__TRINCHERA_BUILD === 'string' ? window.__TRINCHERA_BUILD : 'desarrollo';
+  state.version.build = build;
+  if (v) v.textContent = `Compilación ${build} · reglas: motor ${MECH_VERSION} · perfiles ${Object.values(PROFILES).map((P) => P.id).join(' / ')} · huella ${RULES_FINGERPRINT}`;
 }
 state.camera = camera; // para pruebas automáticas
 state.sound = sound;
@@ -14222,25 +14293,63 @@ state.profile = profile;
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
 state.demo = true;
 requestAnimationFrame(() => setTimeout(() => {
-  if (!state.game) startDemo();
+  if (!state.game) startDemo({ background: true });
 }, 30));
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
 // En la web: servidor MQTT público (?b=N el del anfitrión, ?broker=ws… uno propio, ?red=local solo pestañas)
-home.setNetStatus('connecting');
-{
-  const q = new URLSearchParams(location.search);
-  const b = Number(q.get('b'));
-  connectTransport({ prefer: q.get('red') === 'local' ? 'local' : Number.isInteger(b) && q.has('b') ? b : null, brokerUrl: q.get('broker') }).then((t) => {
+const startParams = new URLSearchParams(location.search);
+const transportOpts = (() => {
+  const b = Number(startParams.get('b'));
+  return { prefer: startParams.get('red') === 'local' ? 'local' : Number.isInteger(b) && startParams.has('b') ? b : null, brokerUrl: startParams.get('broker') };
+})();
+
+/** Ficha de una invitación sin sala todavía (buscando, sin conexión o error). */
+function entryStub(code) {
+  return { code, roomInfo: () => cleanRoomInfo(null, 'Sala') };
+}
+
+/**
+ * Enlace de invitación (?sala=CÓDIGO): la ficha aparece al momento con
+ * «Buscando sala…» y termina en «Unirme» o en el motivo, con «Reintentar».
+ */
+function openEntry() {
+  const code = state.pendingEntry;
+  if (!code) return;
+  if (!transport) {
+    home.renderEntry(entryStub(code), { estado: 'sinred' });
+    return;
+  }
+  openSala(code, false, { auto: false }).catch((err) => {
+    if (state.pendingEntry === code) home.renderEntry(entryStub(code), { estado: 'error', detalle: err && err.message });
+  });
+}
+
+let connecting = null;
+function connectNet() {
+  if (connecting) return connecting;
+  home.setNetStatus('connecting');
+  connecting = connectTransport(transportOpts).then((t) => {
+    connecting = null;
     transport = t;
     state.transport = t;
     home.setNetStatus(t ? t.kind : null);
     if (t) t.lobby.onPeers(() => home.setRooms(openRooms(t)));
-    // Enlace de invitación (?sala=CÓDIGO): la ficha de entrada de esa sala
-    const code = normalizeCode(q.get('sala'));
-    if (t && code.length === 5) openSala(code, false, { auto: false }).catch(() => {});
+    if (state.pendingEntry) openEntry();
+    return t;
   });
+  return connecting;
+}
+
+{
+  const code = normalizeCode(startParams.get('sala'));
+  if (code.length === 5) {
+    state.pendingEntry = code;
+    home.showLobby();
+    home.renderEntry(entryStub(code), { estado: 'buscando' });
+  }
+  connectNet();
 }
 
 // Nube: perfil entre dispositivos y clasificación global
@@ -15647,6 +15756,16 @@ function cleanRoomInfo(raw, fallbackName = 'Sala') {
   };
 }
 
+/**
+ * Nombre en la sala: el del perfil o, si no tiene uno propio (vacío o el de
+ * por defecto, «Mi nación»), «Recluta NNNN» con una etiqueta fija de la página:
+ * así dos perfiles sin nombre no se confunden desde que entran.
+ */
+function roomName(profileName, tag) {
+  const n = String(profileName || '').trim();
+  return n && n !== 'Mi nación' ? n.slice(0, 18) : `Recluta ${String(tag || '').slice(0, 4) || '0000'}`;
+}
+
 /** Lo que sí cambia la partida: si cambia, los invitados tienen que confirmar de nuevo. */
 function gameplayKey(settings) {
   const s = settings || {};
@@ -15691,8 +15810,17 @@ function roomStatus(peers, { myPeer = null } = {}) {
       versionOk: !host || p.presence.version === hostVersion,
     };
   };
-  const players = all.slice(0, info.plazas).map(mk);
-  const waiting = all.slice(info.plazas).map(mk);
+  // Nombres repetidos: «Vega» y «Vega (2)», por orden de llegada (los mismos en la lista, los motivos y la partida)
+  const seen = new Map();
+  const listed = all.map(mk).map((p) => {
+    const n = (seen.get(p.name) || 0) + 1;
+    seen.set(p.name, n);
+    if (n === 1) return p;
+    const suffix = ` (${n})`;
+    return { ...p, name: `${p.name.slice(0, 18 - suffix.length)}${suffix}` }; // cabe en los 18 de la partida
+  });
+  const players = listed.slice(0, info.plazas);
+  const waiting = listed.slice(info.plazas);
   const blockers = [];
   if (!host) blockers.push('El anfitrión no está en la sala');
   for (const p of players) if (!p.versionOk) blockers.push(`${p.name} tiene otra versión del juego: tiene que recargar la página`);
@@ -16301,7 +16429,7 @@ class NetSync {
   }
 }
 
-return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, gameplayKey, openRooms, roomStatus, Sala, stateHash, NetSync };
+return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, roomName, gameplayKey, openRooms, roomStatus, Sala, stateHash, NetSync };
 });
 __define('names', function () {
 // Nombres de naciones ficticias para los bots, generados por sílabas.
