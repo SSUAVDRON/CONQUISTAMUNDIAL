@@ -9,11 +9,13 @@ import { POI, placePoints } from '../src/estrategia.js';
 import { TECHS, techAvailable } from '../src/tecnologias.js';
 
 /** Dos naciones pegadas (A humana y B bot sin cerebro activo), ya en juego. */
-function twoNeighbors(seed = 11, rules = null) {
+function twoNeighbors(seed = 11, rules = null, { third = false } = {}) {
   const map = generateMap(220 * RES, 130 * RES, seed);
   const game = new Game({ map, seed, rules });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 255, 0], false);
+  // Un tercero lejos, para que la partida no acabe si cae B
+  const c = third ? game.addPlayer('C', [0, 0, 255], false) : null;
   game.human = a;
   game.start();
   const body = map.landBodySizes.indexOf(Math.max(...map.landBodySizes));
@@ -25,6 +27,7 @@ function twoNeighbors(seed = 11, rules = null) {
     return game.owner[t] === 0 && d2 > (9 * RES) ** 2 && d2 < (11 * RES) ** 2;
   });
   assert.ok(game.spawnPlayer(b, tb));
+  if (c) assert.ok(game.spawnPlayer(c, game.findSpawnTile()));
   while (game.phase === 'spawn') game.tick();
   for (let i = 0; i < 40 && !game.hasLandBorder(a, b.id); i++) {
     a.troops = 1e5;
@@ -110,6 +113,56 @@ test('retirada (documento, 05.3): a los 20 ticks y, contra otro país, se pierde
     for (let i = 0; i < 25 && !w.done; i++) solo.game.tick();
     assert.ok(w.done && Math.abs(solo.a.troops - before) < 1e-6, 'de tierra libre vuelven todas');
   }
+});
+
+test('retirada (TR01): 4000 en el frente → 3000 contra un país vivo, 4000 en tierra libre o si el rival cae; una sola vez', async () => {
+  const { MECH } = await import('../src/mecanicas.js');
+  /** Ataque de 4000 internas con la reserva congelada; devuelve lo que vuelve y en cuántos turnos. */
+  const run = ({ neutral = false, killRival = false, twice = false } = {}) => {
+    const { game, a, b } = twoNeighbors(11, null, { third: killRival });
+    a.regenMult = 0;
+    a.troops = 50000;
+    b.troops = 1e6;
+    const target = neutral ? 0 : b.id;
+    if (neutral && !game.hasWildNeighbor(a)) return null;
+    assert.ok(game.launchAttack(a, target, 4000));
+    const atk = a.attacks.get(target);
+    const home = a.troops;
+    assert.equal(atk.troops, 4000);
+    // El aviso, la tarjeta y el motor usan el mismo cálculo
+    const o = game.retreatOutcome(atk);
+    assert.equal(o.refund, neutral ? 4000 : 4000 * (1 - MECH.retreatPenalty));
+    assert.ok(game.retreat(atk));
+    if (twice) assert.equal(game.retreat(atk), false, 'la segunda orden no hace nada');
+    let ticks = 0;
+    while (!atk.done && ticks < 40) {
+      if (killRival && ticks === 5) for (let t = 0; t < game.map.size; t++) if (game.owner[t] === b.id) game.setOwner(t, 0);
+      game.tick();
+      ticks++;
+    }
+    assert.ok(atk.done);
+    return { back: a.troops - home, ticks };
+  };
+  const pvp = run();
+  assert.equal(pvp.back, 3000, 'contra un país vivo vuelve el 75 %');
+  assert.equal(pvp.ticks, MECH.retreatTicks, `a los ${MECH.retreatTicks} turnos`);
+  const wild = run({ neutral: true });
+  if (wild) assert.equal(wild.back, 4000, 'de tierra libre vuelven todas');
+  assert.equal(run({ killRival: true }).back, 4000, 'si el rival cae durante la espera, vuelven todas');
+  assert.equal(run({ twice: true }).back, 3000, 'dos órdenes, un solo reembolso');
+  // Un refuerzo antes del plazo cancela la retirada y el frente sigue
+  const { game, a, b } = twoNeighbors();
+  a.regenMult = 0;
+  a.troops = 50000;
+  b.troops = 1e6;
+  game.launchAttack(a, b.id, 4000);
+  const atk = a.attacks.get(b.id);
+  game.retreat(atk);
+  for (let i = 0; i < 5; i++) game.tick();
+  game.launchAttack(a, b.id, 1000);
+  assert.equal(atk.retreatAt, 0, 'el refuerzo cancela la retirada');
+  for (let i = 0; i < MECH.retreatTicks + 5; i++) game.tick();
+  assert.ok(!atk.done || atk.troops < 1, 'sigue atacando (o se agotó luchando), no se retiró');
 });
 
 test('cerco (documento, 05.3): una bolsa sin costa rodeada por el atacante se anexiona al momento', () => {

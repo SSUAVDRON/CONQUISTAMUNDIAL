@@ -1,6 +1,6 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, cleanRules } from './config.js';
+import { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } from './config.js';
 import { fmtTroops, formatNumber } from './format.js';
 import { Rng } from './rng.js';
 import { MinHeap } from './heap.js';
@@ -1108,7 +1108,7 @@ export class Game {
     const target = tid ? this.players[tid] : null;
     // Retirada: las tropas no avanzan y vuelven a los 20 ticks
     if (atk.retreatAt) {
-      if (this.ticks >= atk.retreatAt || !A.alive) this._endAttack(atk, target && target.alive ? 1 - MECH.retreatPenalty : 1);
+      if (this.ticks >= atk.retreatAt || !A.alive) this._endAttack(atk, this.retreatOutcome(atk).ratio);
       return;
     }
     if (!A.alive || (target && !target.alive) || atk.troops < 1 || atk.inFrontier.size === 0) {
@@ -1149,14 +1149,39 @@ export class Game {
   }
 
   /**
-   * Retirada (documento, 05.3): se hace efectiva a los 20 ticks (unos 2 s);
-   * si es contra otro país, se pierde el 25 % de las tropas que sobreviven.
+   * Lo que devuelve una retirada si se completara ahora (documento, 05.3): a
+   * los retreatTicks turnos vuelven las tropas que siguen en el frente; contra
+   * un país vivo se pierde retreatPenalty, contra tierra libre (o un rival ya
+   * eliminado) no se pierde nada. Lo usan el motor, el aviso y la tarjeta.
+   */
+  retreatOutcome(atk) {
+    const target = atk.targetId ? this.players[atk.targetId] : null;
+    const ratio = target && target.alive ? 1 - MECH.retreatPenalty : 1;
+    const troops = Math.max(0, atk.troops);
+    const ticksLeft = atk.retreatAt ? Math.max(0, atk.retreatAt - this.ticks) : MECH.retreatTicks;
+    return { ratio, troops, refund: troops * ratio, lost: troops * (1 - ratio), ticksLeft, seconds: (ticksLeft * TICK_MS) / 1000 };
+  }
+
+  /**
+   * Retirada: se hace efectiva a los retreatTicks turnos. Una segunda orden
+   * mientras se resuelve no hace nada (un solo reembolso); un refuerzo antes
+   * del plazo la cancela y el frente sigue (launchAttack).
    */
   retreat(atk) {
     if (atk.done || atk.retreatAt) return false;
     atk.retreatAt = this.ticks + MECH.retreatTicks;
     const A = atk.attacker;
-    if (A === this.human) this._emit(atk.targetId ? `Retirada en 2 s: se pierde el ${Math.round(MECH.retreatPenalty * 100)} % de las tropas` : 'Retirada en 2 s', 'info', { feedback: true });
+    if (A === this.human) {
+      const o = this.retreatOutcome(atk);
+      const secs = o.seconds.toLocaleString('es-ES', { maximumFractionDigits: 1 });
+      this._emit(
+        o.ratio < 1
+          ? `Retirada en ${secs} s: vuelven ~${fmtTroops(o.refund)} de ${fmtTroops(o.troops)} (se pierde el ${Math.round(MECH.retreatPenalty * 100)} %)`
+          : `Retirada en ${secs} s: vuelven las ${fmtTroops(o.troops)} tropas`,
+        'info',
+        { feedback: true },
+      );
+    }
     return true;
   }
 

@@ -764,7 +764,8 @@ const input = new Input(canvas, camera, {
     const h = state.human;
     const o = g.owner[tile];
     if (g.phase === 'playing' && o !== h.id && !(o && h.allies.has(o))) {
-      const troops = Math.floor(h.troops * state.ratio);
+      // El mismo envío que muestra el panel (mismo turno, misma cifra)
+      const troops = ui.nextSend(h);
       if (troops >= 1) {
         const e = g.estimateAttack(h, o, troops);
         const who = o ? g.players[o].name : 'tierra libre';

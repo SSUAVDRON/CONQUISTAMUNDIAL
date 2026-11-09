@@ -2677,3 +2677,13 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 /* Al saltar a un panel, que no quede bajo la barra fija */
 #inicio .panel-modo, #reglas-ia, #inicio .vista { scroll-margin-top: 96px; }
 .arsenal-vista .arma { animation-delay: calc(var(--i, 0) * 35ms + 60ms); }
+
+/* Retirada en curso: la tarjeta lo dice y no ofrece otra ✕ */
+.f-retirar[hidden] { display: none; }
+.frente.retirada .f-vs { background: rgba(255, 200, 87, 0.22); color: #ffe3a1; }
+.frente.retirada .f-leyenda span:first-child { color: #ffe3a1; }
+
+/* Tooltip: las descripciones largas se ajustan a la caja (la primera línea, nombre y tropas, sin cortes) */
+#tooltip { white-space: normal; max-width: min(320px, calc(100vw - 16px)); line-height: 1.35; }
+#tooltip > b:first-child { white-space: nowrap; }
+#tooltip .tip-punto { max-width: none; }

@@ -2,7 +2,7 @@
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
 import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
-import { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatTime } from './format.js';
+import { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatShare, formatTime, hudSnapshot } from './format.js';
 import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
@@ -123,7 +123,8 @@ export class UI {
     this._counters = new Set();
     this._lastEvent = null;
     // Las del panel cambian a cada turno (cada 100 ms): se animan en lo que dura uno
-    this._troops = this._counter($('pj-tropas'), fmtTroopsCount, 115);
+    // La reserva no se anima: cambia de golpe en cada turno, igual que el próximo envío (hudSnapshot)
+    this._snap = null;
     this._pop = this._counter($('pj-pob'), fmtTroopsCount, 115);
     this._troopsMax = this._counter($('pj-tropas-max'), fmtTroops, 115);
     this._gold = this._counter($('pj-oro'), formatCount, 115);
@@ -383,7 +384,8 @@ export class UI {
     this._lbRows.clear();
     this._lbAt = -Infinity;
     this._lbIndex.clear();
-    for (const c of [this._troops, this._pop, this._troopsMax, this._gold]) c.value = null;
+    for (const c of [this._pop, this._troopsMax, this._gold]) c.value = null;
+    this._snap = null;
     this.closeNation();
   }
 
@@ -418,7 +420,7 @@ export class UI {
     }
     $('pn-nombre').textContent = p.name;
     $('pn-tropas').textContent = fmtTroops(p.troops);
-    $('pn-terr').textContent = formatPercent(p.tiles / game.map.landCount);
+    $('pn-terr').textContent = formatShare(p.tiles, game.map.landCount);
     $('pn-aliados').textContent = p.allies.size
       ? [...p.allies].map((id) => game.players[id].name).join(', ')
       : 'ninguno';
@@ -587,6 +589,22 @@ export class UI {
     this._ratio = r;
     $('ratio').value = Math.round(r * 100);
     $('ratio-valor').textContent = `${Math.round(r * 100)}%`;
+    if (this._snap) this._paintReserve(hudSnapshot(this._snap.reserva, r));
+  }
+
+  /** Reserva y próximo envío, del mismo turno (una sola fuente de datos). */
+  _paintReserve(snap) {
+    this._snap = snap;
+    const reserva = fmtTroopsCount(snap.reserva);
+    const envio = `próximo envío ${fmtTroops(snap.envio)}`;
+    if ($('pj-tropas').textContent !== reserva) $('pj-tropas').textContent = reserva;
+    if ($('ratio-tropas').textContent !== envio) $('ratio-tropas').textContent = envio;
+  }
+
+  /** El próximo envío con la fuerza de ataque actual (internas), el mismo que ves en el panel. */
+  nextSend(human) {
+    if (this._snap) return this._snap.envio;
+    return human ? hudSnapshot(human.troops, this._ratio).envio : 0;
   }
 
   pushEvent(evt) {
@@ -765,7 +783,7 @@ export class UI {
   liveNumbers(game, human) {
     if (!human || game.ticks === this._liveTick) return;
     this._liveTick = game.ticks;
-    this._troops.set(human.troops);
+    this._paintReserve(hudSnapshot(human.troops, this._ratio));
     this._pop.set(human.population());
     this._troopsMax.set(human.maxTroops());
     this._gold.set(human.gold);
@@ -841,7 +859,8 @@ export class UI {
     $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
     const playing = game.phase === 'playing';
-    this._troops.set(human.troops);
+    if (this._snap && ratio !== this._snapRatio) this._paintReserve(hudSnapshot(this._snap.reserva, ratio));
+    this._snapRatio = ratio;
     this._pop.set(pop);
     this._troopsMax.set(max);
     const growth = human.growthPerTick() * perSecond;
@@ -855,12 +874,10 @@ export class UI {
     }
     this._gold.set(human.gold);
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
-    $('pj-terr').textContent = formatPercent(human.tiles / landCount);
+    $('pj-terr').textContent = formatShare(human.tiles, landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
     $('pj-buques').textContent = human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
-    // El ataque sale de los soldados (no de toda la población)
-    $('ratio-tropas').textContent = `${fmtTroops(human.troops * ratio)} soldados`;
     $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
 
     const works = {};
@@ -1144,6 +1161,8 @@ export class UI {
           : target ? ['atacas con', 'sus tropas'] : ['expandes con', ''],
         retreat: mine && !atk.retreatAt ? atk.targetId : null,
         prep: atk.retreatAt > 0,
+        // Retirada: lo que volvería (el mismo cálculo que aplica el motor)
+        outcome: mine ? game.retreatOutcome(atk) : null,
       });
     }
     for (const b of game.boats) {
@@ -1199,8 +1218,29 @@ export class UI {
         f.gone = 0;
         f.li.classList.remove('saliendo');
       }
-      const mid = c.prep ? 'Retirada' : c.middle;
+      const o = c.outcome;
+      const mid = c.prep && o ? `Retirada ${o.seconds.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s` : c.middle;
       if (f.vs.textContent !== mid) f.vs.textContent = mid;
+      f.li.classList.toggle('retirada', !!c.prep);
+      if (o && f.caps) {
+        // En retirada: qué vuelve y qué se pierde; si no, las leyendas normales
+        const caps = c.prep ? [`vuelven ~${fmtTroops(o.refund)}`, o.lost >= 1 ? `pierdes ~${fmtTroops(o.lost)}` : 'sin pérdidas'] : c.captions;
+        caps.forEach((t, k) => {
+          if (f.caps[k] && f.caps[k].textContent !== t) f.caps[k].textContent = t;
+        });
+      }
+      if (f.btn) {
+        // Una sola orden: mientras se resuelve, sin ✕
+        f.btn.hidden = !!c.prep;
+        f.btn.disabled = !!c.prep;
+        if (o && !c.prep) {
+          const secs = ((MECH.retreatTicks * TICK_MS) / 1000).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+          const title = o.ratio < 1
+            ? `Retirarse: en ${secs} s vuelven ~${fmtTroops(o.refund)} de ${fmtTroops(o.troops)} (se pierde el ${Math.round(MECH.retreatPenalty * 100)} %)`
+            : `Retirarse: en ${secs} s vuelven las ${fmtTroops(o.troops)} tropas, sin pérdidas`;
+          if (f.btn.title !== title) f.btn.title = title;
+        }
+      }
       // Cifras (animadas) y barra de fuerzas
       if (c.a === null) f.aEl.textContent = c.aText;
       else f.a.set(c.a);
@@ -1307,10 +1347,12 @@ export class UI {
     // Qué es cada cifra («te ataca con» / «tus tropas»…)
     const legend = document.createElement('div');
     legend.className = 'f-fila f-leyenda';
+    const caps = [];
     for (const text of c.captions || ['', '']) {
       const s = document.createElement('span');
       s.textContent = text;
       legend.append(s);
+      caps.push(s);
     }
     // Barra de fuerzas: atacante (rojo si te atacan, verde si atacas) frente a defensor
     const bar = document.createElement('div');
@@ -1322,18 +1364,19 @@ export class UI {
     bar.append(barA, barD);
     li.append(top, mid, legend, bar);
     li.setAttribute('aria-label', c.incoming ? `Te atacan: ${c.left.name}` : `Atacas: ${c.right.name}`);
+    let btn = null;
     if (c.retreat !== null && c.retreat !== undefined) {
-      const btn = document.createElement('button');
+      btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'f-retirar';
       btn.dataset.target = c.retreat;
-      btn.title = 'Retirarse (se pierde la mitad de las tropas del ataque)';
+      btn.title = 'Retirarse';
       btn.setAttribute('aria-label', 'Retirarse');
       btn.textContent = '✕';
       li.append(btn);
     }
     $('frentes').append(li);
-    return { li, vs, aEl, dEl, barA, barD, a: this._counter(aEl, fmtTroops), d: this._counter(dEl, fmtTroops), gone: 0 };
+    return { li, vs, aEl, dEl, barA, barD, caps, btn, a: this._counter(aEl, fmtTroops), d: this._counter(dEl, fmtTroops), gone: 0 };
   }
 
   /** Barra superior: tu puesto y el líder frente a la meta de victoria. */
@@ -1473,11 +1516,11 @@ export class UI {
   _attackTip(game, targetId) {
     const h = game.human;
     if (!h || !h.alive || game.phase !== 'playing' || targetId === h.id || (targetId && h.allies.has(targetId))) return '';
-    const troops = Math.floor(h.troops * this._ratio);
+    const troops = this.nextSend(h);
     if (troops < 1) return '';
     const e = game.estimateAttack(h, targetId, troops);
     const risk = targetId ? ` · riesgo ${e.risk}` : '';
-    return `<div class="tip-estim">Con ${fmtTroops(troops)} soldados: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
+    return `<div class="tip-estim">Próximo envío ${fmtTroops(troops)}: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
   }
 
   updateTooltip(game, tile, sx, sy) {
@@ -1507,16 +1550,24 @@ export class UI {
       const human = game.human;
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
-        ${fmtTroops(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
+        ${fmtTroops(p.troops)} tropas · ${formatShare(p.tiles, map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
     } else {
       tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
     }
     tip.hidden = false;
+    // Dentro de la ventana: se mide la caja (ya con el texto ajustado) y, si
+    // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
     const w = tip.offsetWidth;
-    const left = sx + 16 + w > window.innerWidth ? sx - 16 - w : sx + 16;
+    const h = tip.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
+    let top = sy + 16 + h > vh - 8 ? sy - 16 - h : sy + 16;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    top = Math.max(8, Math.min(vh - h - 8, top));
     tip.style.left = `${left}px`;
-    tip.style.top = `${sy + 16}px`;
+    tip.style.top = `${top}px`;
   }
 }
 

@@ -1733,6 +1733,9 @@ export class Renderer {
       const radiusPx = L.r * camera.zoom;
       const allied = human && p !== human && human.allies.has(p.id);
       const player = p.isHuman;
+      // Colonias: solo con nombre cuando se ven de un tamaño razonable (en la
+      // vista global del arranque eran cientos de etiquetas diminutas)
+      if (p.weak && !allied && radiusPx < 7) continue;
       const len = Math.max(4, p.name.length + (allied ? 2 : 0));
       // Lo que cabe dentro del país…
       let size = Math.min(radiusPx * 0.6, (radiusPx * 2.6) / len, 28);

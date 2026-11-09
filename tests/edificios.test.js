@@ -117,6 +117,47 @@ test('tropas: techo y regeneración del documento; con trabajadores, la poblaci�
   assert.equal(w.soldierShare, CONFIG.minSoldierShare);
 });
 
+test('reparto con trabajadores (TR02): 70/30 → 30/70 conserva la población y el ataque sale solo de los soldados', async () => {
+  const { TROOP_SCALE } = await import('../src/format.js');
+  const map = generateMap(220 * RES, 130 * RES, 21);
+  const g = new Game({ map, seed: 21, rules: { economy: 'workers' } });
+  const w = g.addPlayer('W', [0, 0, 255], true);
+  const o = g.addPlayer('O', [255, 0, 0], false);
+  g.start();
+  g.spawnPlayer(w, g.findSpawnTile());
+  g.spawnPlayer(o, g.findSpawnTile());
+  while (g.phase === 'spawn') g.tick();
+  g.bots.length = 0;
+  w.regenMult = 0; // crecimiento cero: solo cuenta el reparto
+  g.setSoldierShare(w, 0.7);
+  g.tick();
+  const P = w.population();
+  assert.ok(Math.abs(w.troops - P * 0.7) <= 1);
+  // Se aplica en el turno siguiente, sin crear ni perder población
+  g.setSoldierShare(w, 0.3);
+  assert.ok(Math.abs(w.troops - P * 0.7) <= 1, 'hasta el turno siguiente no cambia');
+  g.tick();
+  assert.ok(Math.abs(w.population() - P) < 1e-6, 'misma población');
+  assert.ok(Math.abs(w.troops - P * 0.3) <= 1 && Math.abs(w.workers - P * 0.7) <= 1);
+  // Un ataque al 20 % sale de los soldados, no de toda la población (en el
+  // turno siguiente el reparto se vuelve a aplicar sobre la población que queda)
+  const soldiers = w.troops;
+  const workers = w.workers;
+  const wild = [...map.landTiles].find((t) => g.owner[t] === 0 && g.hasLandBorder(w, 0, map.landBody[t]));
+  if (wild !== undefined) {
+    g._handleAttackIntent(w, wild, 0.2);
+    const atk = w.attacks.get(0);
+    assert.ok(atk, 'sale la expansión');
+    assert.equal(atk.troops, Math.floor(soldiers * 0.2), 'el 20 % de los soldados');
+    assert.equal(w.workers, workers, 'los trabajadores no van al frente');
+  }
+  // Equivalencia visible del oro: cada trabajador en pantalla ≈ 1 de oro por segundo
+  w.mods.gold = 0;
+  w.workers = 20000; // 2000 en pantalla
+  const extraPerSecond = (w.goldPerTick() - w.baseGold()) * 10;
+  assert.equal(extraPerSecond, w.workers / TROOP_SCALE);
+});
+
 test('reglas de construcción: territorio propio, oro, distancia y precios del documento', () => {
   const { map, game, human } = setup();
   const mine = ownTiles(game, human);

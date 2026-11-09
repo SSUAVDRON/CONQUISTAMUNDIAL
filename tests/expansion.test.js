@@ -57,3 +57,29 @@ test('con pocas tropas se expande poco y con muchas, mucho más', () => {
   assert.ok(few <= 300 / plainLoss + 1, `${few} casillas con 300 tropas`);
   assert.ok(many <= 1500 / plainLoss + 1);
 });
+
+test('HUD (TR03): reserva y próximo envío salen del mismo turno y cuadran tras un ataque al 20 % con caída brusca', async () => {
+  const { hudSnapshot, TROOP_SCALE } = await import('../src/format.js');
+  const map = generateMap(220 * RES, 130 * RES, 5);
+  const game = new Game({ map, seed: 5 });
+  const h = game.addPlayer('Yo', [0, 0, 255], true);
+  game.human = h;
+  game.addPlayer('Otro', [255, 0, 0], false);
+  game.start();
+  game.spawnPlayer(h, game.findSpawnTile());
+  game.spawnPlayer(game.players[2], game.findSpawnTile());
+  while (game.phase === 'spawn') game.tick();
+  game.bots.length = 0;
+  const visible = (n) => Math.floor(n / TROOP_SCALE);
+  let prev = hudSnapshot(h.troops, 0.2);
+  for (let i = 0; i < 30; i++) {
+    if (i === 3) game.queueIntent({ type: 'action', playerId: h.id, tile: [...map.landTiles].find((t) => game.owner[t] === 0 && game.hasLandBorder(h, 0, map.landBody[t])), ratio: 0.2 });
+    game.tick();
+    const s = hudSnapshot(h.troops, 0.2);
+    // Mismo turno, misma fuente: el envío es el 20 % de la reserva que se ve
+    assert.equal(s.envio, Math.floor(s.reserva * 0.2));
+    assert.ok(Math.abs(visible(s.envio) - Math.floor(visible(s.reserva) * 0.2)) <= 1, `turno ${i}: ${visible(s.reserva)} → ${visible(s.envio)}`);
+    if (i === 3) assert.ok(s.reserva < prev.reserva, 'la reserva cae de golpe al enviar');
+    prev = s;
+  }
+});

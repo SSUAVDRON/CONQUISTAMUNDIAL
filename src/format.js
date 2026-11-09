@@ -39,6 +39,18 @@ export function fmtTroops(n) {
   return formatNumber(n / TROOP_SCALE);
 }
 
+/**
+ * Lo que enseña el HUD en un turno: la reserva de soldados y el próximo envío
+ * (unidades internas). Las dos cifras salen del mismo valor, el del último
+ * turno, para que cuadren siempre en pantalla: envío = 20 % de la reserva que
+ * ves, no de una cifra animada a medio camino.
+ */
+export function hudSnapshot(troops, ratio) {
+  const reserva = Math.max(0, Math.floor(troops || 0));
+  const r = Math.min(1, Math.max(0, ratio || 0));
+  return { reserva, envio: Math.floor(reserva * r) };
+}
+
 /** Tropas en los contadores que se ven contar (formatCount de la cifra en pantalla). */
 export function fmtTroopsCount(n) {
   return formatCount(n / TROOP_SCALE);
@@ -47,6 +59,15 @@ export function fmtTroopsCount(n) {
 export function formatPercent(x) {
   const v = x * 100;
   return (v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
+}
+
+/**
+ * Territorio: porcentaje y, mientras es pequeño (menos del 10 %, donde el
+ * porcentaje se redondea a 0,0 % o 0,1 %), también las casillas exactas.
+ */
+export function formatShare(tiles, landCount) {
+  const share = landCount > 0 ? tiles / landCount : 0;
+  return share < 0.1 ? `${formatPercent(share)} · ${formatNumber(tiles)} cas.` : formatPercent(share);
 }
 
 export function formatTime(seconds) {
