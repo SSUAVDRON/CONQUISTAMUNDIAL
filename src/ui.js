@@ -27,9 +27,9 @@ const EVENT_ICONS = {
 };
 
 /**
- * Solo los avisos importantes llegan al recuadro: paces y roturas, países
- * derrotados, barcos y misiles contra ti, tu puerto destruido, logros e
- * inicio. El resto (obras, saqueos, tus propios ataques…) ya se ve en el
+ * Solo los avisos importantes llegan al recuadro: paces y roturas, jugadores
+ * derrotados (la muerte de los bots no), a quién conquistas tú, barcos y
+ * misiles contra ti, tu puerto destruido, logros e inicio. El resto (obras, saqueos, tus propios ataques…) ya se ve en el
  * mapa o en las tarjetas de combate.
  */
 const IMPORTANT = [
@@ -615,7 +615,8 @@ export class UI {
       this._hint(stripLeadingEmoji(evt.text), evt.kind);
       return;
     }
-    if (!isImportant(evt.text)) return;
+    // La muerte de los bots no se avisa (se ve en el mapa y en la clasificación)
+    if (evt.bot || !isImportant(evt.text)) return;
     const box = $('eventos');
     const now = performance.now();
     // El mismo aviso varias veces seguidas: un solo aviso con contador

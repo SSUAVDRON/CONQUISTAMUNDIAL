@@ -2617,7 +2617,10 @@ export class Game {
       if (p === this.human) this._emit('Has sido derrotado', 'danger');
       else if (killer && killer === this.human) {
         this._emit(`🏆 Has conquistado ${p.name}: +${formatNumber(loot)} de oro`, 'good', { sfx: p.weak ? 'conquerColony' : 'conquer', loot, x: lx, y: ly, weak: p.weak });
-      } else this._emit(`${p.name} ha sido eliminado`, 'info', p.weak ? null : { sfx: 'fall' });
+      } else {
+        // `bot`: la muerte de un bot no va al recuadro de avisos (solo la de jugadores)
+        this._emit(`${p.name} ha sido eliminado`, 'info', { bot: !p.isHuman, ...(p.weak ? null : { sfx: 'fall' }) });
+      }
     }
   }
 
