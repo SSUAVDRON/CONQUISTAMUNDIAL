@@ -2686,6 +2686,21 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #inicio .panel-modo, #reglas-ia, #inicio .vista { scroll-margin-top: 96px; }
 .arsenal-vista .arma { animation-delay: calc(var(--i, 0) * 35ms + 60ms); }
 
+/* Retirada en curso: la tarjeta lo dice y no ofrece otra ✕ */
+.f-retirar[hidden] { display: none; }
+.frente.retirada .f-vs { background: rgba(255, 200, 87, 0.22); color: #ffe3a1; }
+.frente.retirada .f-leyenda span:first-child { color: #ffe3a1; }
+
+/* Tooltip: las descripciones largas se ajustan a la caja (la primera línea, nombre y tropas, sin cortes) */
+#tooltip { white-space: normal; max-width: min(320px, calc(100vw - 16px)); line-height: 1.35; }
+#tooltip > b:first-child { white-space: nowrap; }
+#tooltip .tip-punto { max-width: none; }
+
+/* Perfil de reglas en el editor */
+.campo-perfil .nota-perfil { display: block; margin-top: 2px; font-weight: 400; color: var(--texto-suave); }
+.pd-nota { margin: 8px 0 0; font-size: 12px; color: var(--texto-suave); }
+.version-reglas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; opacity: 0.8; }
+
 </style>
 </head>
 <body>
@@ -2864,24 +2879,25 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
         <details class="ayuda">
           <summary>Cómo se juega</summary>
           <ul>
+            <li><b>Perfiles de reglas:</b> <i>Clásico</i> (el de Partida rápida) sigue el ritmo de FrontWars: regeneración con la fórmula base, expansión y guerras rápidas, sin puntos estratégicos ni tecnologías. <i>Trinchera</i> va más despacio (expansión ×0,07, guerras ×0,5, regeneración ×0,6) y añade puntos estratégicos, tecnologías y especialización. Se elige en las reglas de «Contra IA» y de la sala.</li>
             <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas: un disco de <i>52 casillas</i> (menos si toca el mar u otro país) y <i>2500 tropas</i>.</li>
             <li><b>Tropas:</b> se regeneran solas, lo más rápido hacia el <i>42 %</i> de tu techo y nada al llenarlo. El techo es 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad (unas 12 000 al empezar): más territorio y ciudades, más tropas. No esperes con la barra llena: ataca.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Sale el % de tus tropas de <i>Fuerza de ataque</i> (20 % al empezar) y la reserva se regenera aparte. En tierra libre cada casilla cuesta 1,6 tropas en llanura, 2 en meseta y 2,4 en montaña; tu territorio crece parejo, en círculo (hacia donde haces clic, algo más), y con pocas tropas avanza más despacio. Contra otro país, cuanto más defensores tenga por casilla, más caro y lento; él pierde sus tropas por casilla a cada casilla que le quitas.</li>
-            <li><b>Retirada:</b> la ✕ de la tarjeta de un ataque retira las tropas a los 2 s; contra otro país se pierde el 25 %.</li>
+            <li><b>Retirada:</b> la ✕ de la tarjeta de un ataque retira las tropas que siguen en el frente a los 2 s (la tarjeta marca «Retirada» y lo que vuelve); contra otro país se pierde el 25 % de ellas, en tierra libre nada. Si refuerzas el ataque antes, la retirada se cancela.</li>
             <li><b>Cerco:</b> si rodeas una bolsa sin costa (de tierra libre o de otro país), es tuya al momento y sin bajas.</li>
             <li><b>Barcos:</b> si haces clic en una costa sin frontera terrestre, se envía un barco de transporte desde tu costa (máx. 3 a la vez).</li>
             <li><b>Colonias:</b> además de las naciones hay colonias («Colonia de…», «Aldea de…»): con un tercio del techo, la mitad de regeneración y 50 de oro por turno. Hay muchas: presa fácil al empezar.</li>
-            <li><b>Oro:</b> ganas <i>100 por turno</i> (1000/s) pase lo que pase: no depende del territorio ni de las tropas, y expandirte o conquistar casillas no da oro. Al eliminar a un rival entero te quedas con todo su oro. Además: mercantes, trenes y regalos de aliados. Con la regla «Economía con trabajadores», la población se reparte entre soldados y trabajadores (deslizador «Reparto») y cada 100 trabajadores dan 1 de oro más por turno.</li>
+            <li><b>Oro:</b> ganas <i>100 por turno</i> (1000/s) pase lo que pase: no depende del territorio ni de las tropas, y expandirte o conquistar casillas no da oro. Al eliminar a un rival entero te quedas con todo su oro. Además: mercantes, trenes y regalos de aliados. Con la regla «Economía con trabajadores», la población se reparte entre soldados y trabajadores (deslizador «Reparto») y cada trabajador da ~1 de oro más por segundo (por dentro, 1 por turno cada 100). El cambio de reparto se aplica en el turno siguiente.</li>
             <li><b>Precios:</b> ciudades 125k, 250k, 500k… (tope 1M); puertos y fábricas comparten escalera (125k × 2 por cada uno que tengas de los dos); puesto defensivo 50k más cada vez (tope 250k); buque 250k más cada vez (tope 1M); antimisiles 1,5M y 3M; silo 1M; bomba atómica 750k, bomba H 5M y MIRV 25M. Subir de nivel cuesta lo mismo que uno nuevo (el nivel cuenta).</li>
             <li><b>Edificios:</b> <i>ciudades</i> (+25 000 de techo por nivel), <i>puertos</i> (mercantes a puertos de otros: al llegar, los dos cobráis más cuanto más lejos, ~5k a 100 casillas y ~52k a 300; basta con hacer clic cerca de la costa), <i>puestos defensivos</i> (alrededor, conquistar cuesta ×3 de tiempo y bajas), <i>fábricas</i> (tecla F: tienden vías en ángulo recto a las ciudades, puertos y fábricas a su alcance —el rombo que ves al colocarla—; cada tren da 10 000 al llegar a una estación propia o neutral y 35 000 a una aliada). Las obras tardan unos segundos y, si te conquistan la casilla, el edificio cambia de dueño.</li>
             <li><b>Bombas:</b> construye un silo (G) y lanza una bomba atómica (M), una bomba H (J, mucho mayor) o un MIRV (K, muchas cabezas por todo el país enemigo): arrasan, dejan las casillas libres y destruyen sus edificios. Los <i>antimisiles</i> (H) intentan derribarlas; tras cada disparo recargan 20 s.</li>
           <li><b>Buques de guerra:</b> se botan desde tus puertos (tecla T) y van solos: patrullan la zona del mar donde hagas clic al botarlos, hunden buques y transportes de tropas enemigos y capturan sus mercantes. No atacan puertos. La zona no se puede cambiar después.</li>
             <li><b>Terreno:</b> verde = llanura, arena = meseta, gris y blanco = montaña. Mesetas y montañas cuestan más tiempo y bajas; al expandirte las rodeas y las tomas al final. Los ríos son solo de adorno.</li>
             <li><b>Diplomacia:</b> clic derecho (o mantén pulsado) sobre otra nación para abrir su ficha: proponer o romper alianzas, enviar tropas u oro a aliados y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s: atacarte cuesta la mitad de bajas.</li>
-            <li><b>Puntos estratégicos:</b> rombos en el mapa. Capitales (corona: conquistar una da botín y su dueño crece menos hasta recuperarla), núcleos industriales (engranaje: +15 % de oro), puertos clave (timón: +1 barco y más comercio) y pasos de montaña (picos: defensa ×1,6 alrededor). Pasa el ratón cerca para ver qué dan.</li>
-            <li><b>Desarrollo (tecla I):</b> ingresos por fuente y oro por minuto, qué da construir una ciudad, fábrica o puerto, tu especialización (industria, infraestructura o desarrollo urbano) y 12 tecnologías en tres ramas; cada una encarece la siguiente, así que hay que elegir.</li>
+            <li><b>Puntos estratégicos</b> (perfil Trinchera)<b>:</b> rombos en el mapa. Capitales (corona: conquistar una da botín y su dueño crece menos hasta recuperarla), núcleos industriales (engranaje: +15 % de oro), puertos clave (timón: +1 barco y más comercio) y pasos de montaña (picos: defensa ×1,6 alrededor). Pasa el ratón cerca para ver qué dan.</li>
+            <li><b>Desarrollo (tecla I):</b> ingresos por fuente (oro base, bonos, trabajadores, comercio, botín, regalos) y oro por minuto, qué da construir una ciudad, fábrica o puerto, tu especialización (industria, infraestructura o desarrollo urbano) y, en el perfil Trinchera, 12 tecnologías en tres ramas; cada una encarece la siguiente, así que hay que elegir.</li>
             <li><b>Pactos y paz:</b> en la ficha de otra nación puedes proponer un pacto de no agresión de 5 min, ofrecer la paz si estáis en guerra (con un tributo en oro si quieres) y pedir ayuda a tus aliados. Romper un pacto te marca como traidor.</li>
-            <li><b>Victoria:</b> según el modo de la partida: dominación (el 70 % de la tierra), capitales (controlar el 40 % de todas durante 60 s), economía (900.000 de oro por minuto durante 2 min) o supervivencia (al acabar el tiempo, la mejor puntuación). También ganas si quedas en pie solo con tus aliados.</li>
+            <li><b>Victoria:</b> según el modo de la partida: dominación (el 70 % de la tierra), capitales (solo en Trinchera: controlar el 40 % de todas durante 60 s), economía (900.000 de oro por minuto durante 2 min) o supervivencia (al acabar el tiempo, la mejor puntuación). También ganas si quedas en pie solo con tus aliados.</li>
             <li><b>Minimapa:</b> abajo a la izquierda ves todo el mapa en pequeño (tu nación late en blanco y el recuadro dorado es lo que ves); haz clic o arrastra en él para ir a ese sitio. Se pliega con su botón.</li>
             <li><b>Monedas y retos:</b> cada partida da monedas, y más los logros y los 3 retos de cada día (en «Logros»). Gástalas en «Apariencia» en estandartes, marcos, patrones, símbolos, colores y títulos.</li>
             <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R puesto defensivo · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M bomba atómica · J bomba H · K MIRV · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido · I = desarrollo.</li>
@@ -3026,6 +3042,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
             <button type="button" id="aj-tutorial">Repetir el tutorial</button>
           </div>
           <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
+          <p class="nota version-reglas" id="version-reglas"></p>
         </div>
       </section>
     </div>
@@ -3152,7 +3169,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
       <div class="barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido en la franja marcada, hacia el 42 % del techo"><div id="pj-barra"></div></div>
       <div class="cifras">
         <div class="cifra-pob" title="Tropas (o población, con trabajadores) y su techo: 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad. Se regeneran más rápido hacia el 42 % del techo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="pj-pob-etq">Tropas</span></span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub" id="pj-crec"></small></div>
-        <div class="cifra-soldados" title="Soldados: atacan y defienden. Trabajadores: producen oro extra (1 por cada 100)"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Soldados</span><span class="valor" id="pj-tropas">0</span><small class="sub sub-trab" id="pj-trab"></small></div>
+        <div class="cifra-soldados" title="Soldados: atacan y defienden. Trabajadores: producen oro extra (cada trabajador, ~1 de oro por segundo)"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Soldados</span><span class="valor" id="pj-tropas">0</span><small class="sub sub-trab" id="pj-trab"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Territorio</span><span class="valor" id="pj-terr">0%</span><small class="sub sub-barcos" title="Barcos de transporte en el mar / máximo, y buques de guerra"><span id="pj-barcos">0</span> barcos<span id="pj-buques"></span></small></div>
       </div>
@@ -3163,7 +3180,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
         <span class="ratio-cifra"><strong id="ratio-valor">20%</strong> <span id="ratio-tropas"></span></span>
         <input id="ratio" type="range" min="1" max="100" value="20">
       </label>
-      <label class="ratio reparto" title="Reparto de la población: soldados (atacan y defienden) y trabajadores (producen oro). Al cambiarlo, la gente cambia de oficio poco a poco">
+      <label class="ratio reparto" title="Reparto de la población: soldados (atacan y defienden) y trabajadores (producen oro). El cambio se aplica en el turno siguiente, sin crear ni perder población; los ataques salen solo de los soldados">
         <span class="ratio-titulo">Reparto</span>
         <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
         <input id="reparto" type="range" min="5" max="100" step="5" value="70">
@@ -3743,6 +3760,7 @@ class BotBrain {
     const g = this.game;
     const p = this.player;
     const r = g.rng;
+    if (!g.profile.techs) return; // perfil sin tecnologías (Clásico)
     if (!p.spec && g.ticks > CONFIG.spawnTicks + 1200) {
       g.setSpec(p, this.aggression > 0.7 ? 'industria' : this.diplomacy > 0.6 ? 'infra' : 'urbano');
     }
@@ -4714,7 +4732,20 @@ const DEFAULT_RULES = {
   coop: false, // multijugador: cada dos jugadores llevan una misma nación
   coopRoles: false, // con roles: uno el mando militar y otro la economía y la diplomacia
   economy: 'fixed', // 'fixed': oro pasivo fijo (OpenFront moderno) | 'workers': tropas + trabajadores (variante FrontWars)
+  profile: 'clasico', // perfil de reglas (src/mecanicas.js, PROFILES): 'clasico' | 'trinchera'
 };
+/** Perfiles de reglas (ver PROFILES en src/mecanicas.js). Sin perfil = 'trinchera' (valor histórico). */
+const PROFILE_IDS = ['clasico', 'trinchera'];
+
+/**
+ * Reglas guardadas antes de existir los perfiles: se marcan con el perfil
+ * histórico ('trinchera') ANTES de combinarlas con DEFAULT_RULES, para que una
+ * configuración antigua no cambie de perfil al cargar.
+ */
+function migrateRules(r) {
+  if (!r || typeof r !== 'object') return r;
+  return r.profile === undefined ? { ...r, profile: 'trinchera' } : r;
+}
 /** Economías: fija (la del documento) o con trabajadores (variante opcional del documento, sección 07). */
 const ECONOMY_MODES = ['fixed', 'workers'];
 /** Dificultades de las naciones de la IA (documento: ×0,5 / 0,75 / 1 / 1,25 de techo). */
@@ -4753,10 +4784,12 @@ function cleanRules(raw) {
     alliances: r.alliances !== false,
     boats: r.boats !== false,
     factories: r.factories !== false,
-    victory: VICTORY_MODES.includes(r.victory) ? r.victory : 'dominio',
+    // En Clásico no hay capitales: esa victoria sería inalcanzable
+    victory: VICTORY_MODES.includes(r.victory) && !(r.victory === 'capitales' && r.profile === 'clasico') ? r.victory : 'dominio',
     coop: r.coop === true,
     coopRoles: r.coop === true && r.coopRoles === true,
     economy: ECONOMY_MODES.includes(r.economy) ? r.economy : 'fixed',
+    profile: PROFILE_IDS.includes(r.profile) ? r.profile : 'trinchera',
   };
 }
 
@@ -4816,7 +4849,95 @@ function mapLabel(id) {
   return REAL_MAPS[id] || (MAP_SIZES[id] && MAP_SIZES[id].label) || '—';
 }
 
-return { TICK_MS, RES, AREA, TERRAIN, TERRAIN_NAMES, CONFIG, DEFAULT_RULES, ECONOMY_MODES, DIFFICULTIES, VICTORY_MODES, RULE_MULTS, TRUCE_MINS, TIME_LIMITS, WIN_SHARES, GOLD_STEPS, cleanRules, EMOJIS, BUILDINGS, STRUCTURE_KINDS, BUILDING_KINDS, colonyCount, MAP_SIZES, REAL_MAPS, MAP_IDS, mapLabel };
+return { TICK_MS, RES, AREA, TERRAIN, TERRAIN_NAMES, CONFIG, DEFAULT_RULES, PROFILE_IDS, migrateRules, ECONOMY_MODES, DIFFICULTIES, VICTORY_MODES, RULE_MULTS, TRUCE_MINS, TIME_LIMITS, WIN_SHARES, GOLD_STEPS, cleanRules, EMOJIS, BUILDINGS, STRUCTURE_KINDS, BUILDING_KINDS, colonyCount, MAP_SIZES, REAL_MAPS, MAP_IDS, mapLabel };
+});
+__define('diagnostico', function () {
+// Diagnóstico local (auditoría técnica): con ?diag=1 en la dirección, la
+// partida registra por turno y por evento lo necesario para comparar reglas
+// (reserva, techo, regeneración, oro, frentes, envíos, bajas y reembolsos).
+// Todo en unidades internas; al exportar se añaden las visibles (÷ 10).
+// Exportar: __trinchera.diag.exportar() o Ctrl+Mayús+D (descarga un JSON).
+// Sin ?diag=1, game.trace es null y el motor no hace nada de esto.
+const { TROOP_SCALE } = __require('format');
+
+/** Máximo de registros guardados (unos 25 min de partida a 10 turnos/s con un frente). */
+const MAX_EVENTS = 40000;
+/** Campos con tropas internas: al exportar se añade su cifra visible (`campo_vis`). */
+const TROOP_FIELDS = ['reserva', 'techo', 'trabajadores', 'regeneracion', 'enviadas', 'bajas', 'restantes', 'reembolso'];
+
+class Diagnostico {
+  /** `info`: { build, mechVersion, ruleset } de esta versión del juego. */
+  constructor(game, info = {}) {
+    this.game = game;
+    this.events = [];
+    this.dropped = 0;
+    /** Jugadores que se registran turno a turno (por defecto, el humano local). */
+    this.players = new Set(game.human ? [game.human.id] : []);
+    this.lastIncome = new Map();
+    this.header = { ...info, seed: game.seed, rules: game.rules, perfil: game.profile.id, mapa: game.map.width + '×' + game.map.height, inicio: new Date().toISOString() };
+    game.trace = this;
+  }
+
+  push(e) {
+    if (this.events.length < MAX_EVENTS) this.events.push(e);
+    else this.dropped++;
+  }
+
+  /** Lo llama el motor al final de cada turno de juego. */
+  onTick(game) {
+    for (const id of this.players) {
+      const p = game.players[id];
+      if (!p || !p.alive) continue;
+      const gb = p.goldBreakdown();
+      const i = p.income;
+      const events = i.trade + i.conquest + i.loot + i.gifts;
+      const before = this.lastIncome.get(id) ?? events;
+      this.lastIncome.set(id, events);
+      this.push({
+        t: 'turno',
+        tick: game.ticks,
+        jugador: id,
+        casillas: p.tiles,
+        reserva: p.troops,
+        techo: p.maxTroops(),
+        trabajadores: p.workers,
+        regeneracion: p.growthPerTick(),
+        oroPasivo: gb.base + gb.workers + gb.bonus,
+        oroEvento: events - before,
+        oro: p.gold,
+      });
+    }
+  }
+
+  /** ¿Se registra este jugador? */
+  wants(p) {
+    return p && this.players.has(p.id);
+  }
+
+  exportar(descargar = true) {
+    const events = this.events.map((e) => {
+      const o = { ...e };
+      for (const k of TROOP_FIELDS) if (typeof o[k] === 'number') o[`${k}_vis`] = Math.round((o[k] / TROOP_SCALE) * 10) / 10;
+      return o;
+    });
+    const data = { ...this.header, fin: new Date().toISOString(), turnos: this.game.ticks, descartados: this.dropped, eventos: events };
+    if (descargar && typeof document !== 'undefined') {
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `trinchera-diag-${this.header.perfil}-${this.game.seed}-t${this.game.ticks}.json`;
+      document.body.append(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 1000);
+    }
+    return data;
+  }
+}
+
+return { Diagnostico };
 });
 __define('estrategia', function () {
 // Puntos estratégicos: no todo el territorio vale lo mismo. Capitales de las
@@ -4943,6 +5064,18 @@ function fmtTroops(n) {
   return formatNumber(n / TROOP_SCALE);
 }
 
+/**
+ * Lo que enseña el HUD en un turno: la reserva de soldados y el próximo envío
+ * (unidades internas). Las dos cifras salen del mismo valor, el del último
+ * turno, para que cuadren siempre en pantalla: envío = 20 % de la reserva que
+ * ves, no de una cifra animada a medio camino.
+ */
+function hudSnapshot(troops, ratio) {
+  const reserva = Math.max(0, Math.floor(troops || 0));
+  const r = Math.min(1, Math.max(0, ratio || 0));
+  return { reserva, envio: Math.floor(reserva * r) };
+}
+
 /** Tropas en los contadores que se ven contar (formatCount de la cifra en pantalla). */
 function fmtTroopsCount(n) {
   return formatCount(n / TROOP_SCALE);
@@ -4953,13 +5086,22 @@ function formatPercent(x) {
   return (v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
 }
 
+/**
+ * Territorio: porcentaje y, mientras es pequeño (menos del 10 %, donde el
+ * porcentaje se redondea a 0,0 % o 0,1 %), también las casillas exactas.
+ */
+function formatShare(tiles, landCount) {
+  const share = landCount > 0 ? tiles / landCount : 0;
+  return share < 0.1 ? `${formatPercent(share)} · ${formatNumber(tiles)} cas.` : formatPercent(share);
+}
+
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-return { formatNumber, formatCount, formatTroops, TROOP_SCALE, fmtTroops, fmtTroopsCount, formatPercent, formatTime };
+return { formatNumber, formatCount, formatTroops, TROOP_SCALE, fmtTroops, hudSnapshot, fmtTroopsCount, formatPercent, formatShare, formatTime };
 });
 __define('fx', function () {
 // Efectos visuales: partículas (chispas, fuego, humo, escombros, espuma),
@@ -5670,7 +5812,7 @@ return { Fx, drawMissileSprite };
 __define('game', function () {
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-const { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, cleanRules } = __require('config');
+const { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } = __require('config');
 const { fmtTroops, formatNumber } = __require('format');
 const { Rng } = __require('rng');
 const { MinHeap } = __require('heap');
@@ -5681,7 +5823,7 @@ const { generateColonyNames, generateNames } = __require('names');
 const { botColor } = __require('colors');
 const { POI, POI_TYPES, placePoints } = __require('estrategia');
 const { SPECS, TECHS, addMods, emptyMods, techAvailable } = __require('tecnologias');
-const { MECH, bigEmpireBonus, neutralTimeCost, priceFor, pvpTile, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
+const { MECH, bigEmpireBonus, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -5708,6 +5850,8 @@ class Game {
   constructor({ map, seed = 1, rules = null }) {
     this.map = map;
     this.rules = cleanRules(rules);
+    /** Perfil de reglas (ritmo, puntos estratégicos, tecnologías): src/mecanicas.js, PROFILES. */
+    this.profile = profileOf(this.rules);
     this.seed = seed >>> 0;
     this.rng = new Rng((seed ^ 0x5bd1e995) >>> 0);
     this.owner = new Uint16Array(map.size); // 0 = nadie
@@ -5758,9 +5902,13 @@ class Game {
 
     this.onEvent = null;
     this.eventLog = [];
+    /** Diagnóstico (?diag=1, src/diagnostico.js): registro por turno y por evento; null = apagado. */
+    this.trace = null;
+    this._traceSeq = 0;
 
     /** Puntos estratégicos (capitales, industria, puertos clave, pasos): casilla → punto. */
-    this.points = placePoints(map, this.seed);
+    // (en el perfil Clásico no hay: ni bonos, ni capitales, ni botín de captura)
+    this.points = this.profile.points ? placePoints(map, this.seed) : [];
     this.pointAt = new Map(this.points.map((pt) => [pt.tile, pt]));
 
     // Memoria reutilizable para búsquedas en anchura
@@ -5789,6 +5937,7 @@ class Game {
     p.troopMult = this.rules.troopMult;
     p.goldMult = this.rules.goldMult;
     p.economy = this.rules.economy;
+    p.paceRegen = this.profile.paceRegen;
     this.players.push(p);
     // El primer humano es el jugador local por defecto; en multijugador se fija aparte
     if (isHuman && !this.human) this.human = p;
@@ -6023,6 +6172,7 @@ class Game {
 
   /** Al empezar: cada nación (no las colonias) tiene su capital donde se desplegó. */
   _placeCapitals() {
+    if (!this.profile.points) return; // Clásico: sin capitales
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive || p.weak || p.spawnTile < 0) continue;
@@ -6046,6 +6196,7 @@ class Game {
   }
 
   startResearch(p, id) {
+    if (!this.profile.techs) return false; // perfil sin tecnologías (Clásico)
     const check = techAvailable(p, id);
     if (!check.ok) {
       this._notify(p, check.reason, 'warn');
@@ -6073,7 +6224,7 @@ class Game {
 
   /** Especialización económica: la primera es gratis; cambiarla cuesta oro. */
   setSpec(p, id) {
-    if (!SPECS[id] || p.spec === id) return false;
+    if (!this.profile.techs || !SPECS[id] || p.spec === id) return false;
     if (p.spec) {
       const cost = Math.round(CONFIG.specChangeCost * this.rules.priceMult);
       if (p.gold < cost) {
@@ -6364,6 +6515,10 @@ class Game {
       }
     }
     atk.troops += troops;
+    if (this.trace && this.trace.wants(p)) {
+      if (!atk.traceId) atk.traceId = ++this._traceSeq;
+      this.trace.push({ t: 'envio', tick: this.ticks, jugador: p.id, idFrente: atk.traceId, objetivo: targetId, enviadas: troops, restantes: atk.troops });
+    }
     return true;
   }
 
@@ -6778,7 +6933,7 @@ class Game {
     const target = tid ? this.players[tid] : null;
     // Retirada: las tropas no avanzan y vuelven a los 20 ticks
     if (atk.retreatAt) {
-      if (this.ticks >= atk.retreatAt || !A.alive) this._endAttack(atk, target && target.alive ? 1 - MECH.retreatPenalty : 1);
+      if (this.ticks >= atk.retreatAt || !A.alive) this._endAttack(atk, this.retreatOutcome(atk).ratio);
       return;
     }
     if (!A.alive || (target && !target.alive) || atk.troops < 1 || atk.inFrontier.size === 0) {
@@ -6787,8 +6942,9 @@ class Game {
     }
     atk.step++;
     const front = atk.inFrontier.size;
-    // Ritmo (más lento que el documento, a petición): × paceNeutral / × pacePvp
-    atk.budget += target ? MECH.pacePvp : MECH.neutralBudgetPerFront * front * MECH.paceNeutral;
+    const traced = this.trace && atk.traceId ? { troops: atk.troops, tiles: A.tiles } : null;
+    // Ritmo del perfil de reglas: × paceNeutral / × pacePvp (ver PROFILES)
+    atk.budget += target ? this.profile.pacePvp : MECH.neutralBudgetPerFront * front * this.profile.paceNeutral;
 
     const owner = this.owner;
     const aid = A.id;
@@ -6815,18 +6971,46 @@ class Game {
       this.setOwner(t, aid);
       this._annexAround(t, aid, tid);
     }
+    if (traced) {
+      this.trace.push({ t: 'frente', tick: this.ticks, jugador: aid, idFrente: atk.traceId, objetivo: tid, ancho: front, presupuesto: atk.budget, ganadas: A.tiles - traced.tiles, bajas: traced.troops - atk.troops, restantes: atk.troops });
+    }
     if (atk.inFrontier.size === 0 || atk.troops < 1) this._endAttack(atk);
   }
 
   /**
-   * Retirada (documento, 05.3): se hace efectiva a los 20 ticks (unos 2 s);
-   * si es contra otro país, se pierde el 25 % de las tropas que sobreviven.
+   * Lo que devuelve una retirada si se completara ahora (documento, 05.3): a
+   * los retreatTicks turnos vuelven las tropas que siguen en el frente; contra
+   * un país vivo se pierde retreatPenalty, contra tierra libre (o un rival ya
+   * eliminado) no se pierde nada. Lo usan el motor, el aviso y la tarjeta.
+   */
+  retreatOutcome(atk) {
+    const target = atk.targetId ? this.players[atk.targetId] : null;
+    const ratio = target && target.alive ? 1 - MECH.retreatPenalty : 1;
+    const troops = Math.max(0, atk.troops);
+    const ticksLeft = atk.retreatAt ? Math.max(0, atk.retreatAt - this.ticks) : MECH.retreatTicks;
+    return { ratio, troops, refund: troops * ratio, lost: troops * (1 - ratio), ticksLeft, seconds: (ticksLeft * TICK_MS) / 1000 };
+  }
+
+  /**
+   * Retirada: se hace efectiva a los retreatTicks turnos. Una segunda orden
+   * mientras se resuelve no hace nada (un solo reembolso); un refuerzo antes
+   * del plazo la cancela y el frente sigue (launchAttack).
    */
   retreat(atk) {
     if (atk.done || atk.retreatAt) return false;
     atk.retreatAt = this.ticks + MECH.retreatTicks;
     const A = atk.attacker;
-    if (A === this.human) this._emit(atk.targetId ? `Retirada en 2 s: se pierde el ${Math.round(MECH.retreatPenalty * 100)} % de las tropas` : 'Retirada en 2 s', 'info', { feedback: true });
+    if (A === this.human) {
+      const o = this.retreatOutcome(atk);
+      const secs = o.seconds.toLocaleString('es-ES', { maximumFractionDigits: 1 });
+      this._emit(
+        o.ratio < 1
+          ? `Retirada en ${secs} s: vuelven ~${fmtTroops(o.refund)} de ${fmtTroops(o.troops)} (se pierde el ${Math.round(MECH.retreatPenalty * 100)} %)`
+          : `Retirada en ${secs} s: vuelven las ${fmtTroops(o.troops)} tropas`,
+        'info',
+        { feedback: true },
+      );
+    }
     return true;
   }
 
@@ -6906,6 +7090,9 @@ class Game {
     if (atk.done) return;
     atk.done = true;
     const A = atk.attacker;
+    if (this.trace && atk.traceId) {
+      this.trace.push({ t: 'fin', tick: this.ticks, jugador: A.id, idFrente: atk.traceId, objetivo: atk.targetId, reembolso: A.alive ? atk.troops * refund : 0, bajas: atk.troops * (1 - refund), retirada: atk.retreatAt > 0 });
+    }
     if (A.alive) A.troops += atk.troops * refund;
     atk.troops = 0;
     if (A.attacks.get(atk.targetId) === atk) A.attacks.delete(atk.targetId);
@@ -8154,9 +8341,11 @@ class Game {
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive) continue;
-      const gpt = p.goldPerTick();
-      p.gold += gpt;
-      p.income.workers += gpt;
+      const gb = p.goldBreakdown();
+      p.gold += gb.base + gb.workers + gb.bonus;
+      p.income.base += gb.base;
+      p.income.workers += gb.workers;
+      p.income.bonus += gb.bonus;
       this._growPopulation(p);
       if (p.research && this.ticks >= p.research.end) this._finishResearch(p);
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
@@ -8188,6 +8377,7 @@ class Game {
 
     this._checkEliminations();
     this._checkVictory();
+    if (this.trace) this.trace.onTick(this);
   }
 
   _beginPlaying() {
@@ -8252,7 +8442,7 @@ class Game {
 
   _totalIncome(p) {
     const i = p.income;
-    return i.workers + i.trade + i.conquest + i.loot + i.gifts;
+    return i.base + i.bonus + i.workers + i.trade + i.conquest + i.loot + i.gifts;
   }
 
   /** Puntuación de supervivencia: territorio, eliminaciones y oro ganado. */
@@ -8834,7 +9024,8 @@ return { MinHeap };
 __define('home', function () {
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-const { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel } = __require('config');
+const { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } = __require('config');
+const { PROFILES, rulesetId } = __require('mecanicas');
 const { REAL_MAP_DATA } = __require('mapas-reales');
 const { decodeRelief, generateMap, markRivers } = __require('map');
 const { RIVERS } = __require('rios');
@@ -9027,11 +9218,39 @@ function rulesEditor(prefix, rules, onChange, ctx) {
     });
     return el('label', { class: 'interruptor' }, input, el('span', { text: label }));
   };
+  // Modo de victoria: en Clásico no hay capitales, así que esa opción no sale
+  const victoryBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Modo de victoria' });
+  const syncVictory = () => {
+    const opts = [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]
+      .filter(([v]) => !(v === 'capitales' && rules.profile === 'clasico'));
+    if (!opts.some(([v]) => v === rules.victory)) rules.victory = 'dominio';
+    segmented(victoryBox, opts, rules.victory, (v) => {
+      rules.victory = v;
+      change();
+    });
+  };
+  syncVictory();
+  const profileNote = el('small', { class: 'nota-perfil' });
+  const syncProfileNote = () => {
+    const P = PROFILES[rules.profile] || PROFILES.trinchera;
+    profileNote.textContent = rules.profile === 'clasico'
+      ? `Ritmo de FrontWars, sin puntos estratégicos ni tecnologías (${P.id})`
+      : `Ritmo lento, con puntos estratégicos y tecnologías (${P.id})`;
+  };
+  syncProfileNote();
+  const profileBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Perfil de reglas' });
+  segmented(profileBox, Object.entries(PROFILES).map(([k, P]) => [k, P.name]), rules.profile, (v) => {
+    rules.profile = v;
+    syncProfileNote();
+    syncVictory();
+    change();
+  });
   const box = el('div', { class: 'reglas-rejilla' },
+    el('div', { class: 'campo campo-perfil' }, el('span', {}, 'Perfil de reglas ', profileNote), profileBox),
     el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
     el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
     seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
-    seg('Modo de victoria', 'victory', [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]),
+    el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox),
     seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
     seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
     seg('Ingresos de oro', 'goldMult', MULT_OPTS),
@@ -9090,7 +9309,7 @@ function segmented(box, options, current, onChange) {
 function rulesSummary(r) {
   if (!r) return '';
   const modes = { capitales: 'victoria por capitales', economia: 'victoria económica', supervivencia: 'supervivencia' };
-  const parts = [modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
+  const parts = [`${(PROFILES[r.profile] || PROFILES.trinchera).name} (${rulesetId(r)})`, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.economy === 'workers') parts.push('economía con trabajadores');
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
@@ -9177,7 +9396,7 @@ class Home {
 
     // Partida contra la IA
     const a = this.profile.ajustes;
-    this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...a.reglas } };
+    this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } };
     this._buildGallery();
     // Portada con nuestro mapa (un poco después, para que el menú salga al instante)
     const cover = $('portada-mapa');
@@ -9340,7 +9559,8 @@ class Home {
   /** Clic en una tarjeta de modo. */
   _mode(mode) {
     if (mode === 'rapida') {
-      this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES } });
+      // Partida rápida: el perfil Clásico, siempre (elegido aquí, no por los valores por defecto)
+      this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
     } else if (mode === 'personalizada') {
@@ -9357,7 +9577,7 @@ class Home {
     const a = this.profile.ajustes;
     const map = game?.mapa && (REAL_MAPS[game.mapa] || MAP_SIZES[game.mapa]) ? game.mapa : this.choice.map;
     const bots = Math.min(maxBotsFor(map), game?.rivales || a.bots || 70);
-    this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...a.reglas } });
+    this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } });
   }
 
   /** Escena de la portada y dibujos de las tarjetas de modo. */
@@ -12351,7 +12571,7 @@ return { TIPS, withLoading };
 __define('main', function () {
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
-const { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, colonyCount, mapLabel } = __require('config');
+const { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, colonyCount, mapLabel, migrateRules } = __require('config');
 const { generateMap, loadRealMap } = __require('map');
 const { Game } = __require('game');
 const { Renderer } = __require('render');
@@ -12369,7 +12589,12 @@ const { withLoading } = __require('loading');
 const { Tutorial } = __require('tutorial');
 const { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } = __require('cloud');
 const { connectTransport } = __require('net');
-const { NetSync, Sala, newRoomCode, normalizeCode, openRooms } = __require('multiplayer');
+const { NetSync, RULES_FINGERPRINT, Sala, newRoomCode, normalizeCode, openRooms, roomRuleset } = __require('multiplayer');
+const { MECH_VERSION, PROFILES } = __require('mecanicas');
+const { Diagnostico } = __require('diagnostico');
+
+/** ?diag=1: diagnóstico local de la partida (src/diagnostico.js). */
+const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('diag') === '1';
 const { Sound } = __require('sonido');
 const { Minimap } = __require('minimapa');
 
@@ -12524,6 +12749,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   state.game = game;
   state.human = game.human;
   state.mapSize = mapSize;
+  // Diagnóstico local: ?diag=1 registra la partida (exportar con Ctrl+Mayús+D o __trinchera.diag.exportar())
+  state.diag = DIAG ? new Diagnostico(game, { build: RULES_FINGERPRINT, mechVersion: MECH_VERSION, ruleset: roomRuleset(game.rules) }) : null;
   state.renderer = new Renderer(canvas, game, camera);
   // La misma densidad con la que se creó el lienzo (en móviles de 2,5-3× no es
   // la del dispositivo): si no, el mapa salía desplazado y los toques no
@@ -12707,7 +12934,7 @@ async function openSala(code, isHost) {
     bots: Math.min(200, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
-    rules: { ...DEFAULT_RULES, ...profile.ajustes.reglas },
+    rules: { ...DEFAULT_RULES, ...migrateRules(profile.ajustes.reglas) },
   };
   const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings });
   state.sala = sala;
@@ -12720,6 +12947,11 @@ async function openSala(code, isHost) {
     home.renderLobby(sala, transport.kind, busy ? 'Esta partida ya ha empezado. Espera a la siguiente o crea otra sala.' : '');
   };
   sala.onStart = (payload, hostPeer) => beginOnlineGame(sala, payload, hostPeer);
+  // El anfitrión simula con otra versión de las reglas: no se empieza
+  sala.onVersionMismatch = (theirs, mine) => {
+    if (state.sala !== sala) return;
+    home.renderLobby(sala, transport.kind, `La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
+  };
   try {
     await sala.open();
   } catch (err) {
@@ -13115,7 +13347,8 @@ const input = new Input(canvas, camera, {
     const h = state.human;
     const o = g.owner[tile];
     if (g.phase === 'playing' && o !== h.id && !(o && h.allies.has(o))) {
-      const troops = Math.floor(h.troops * state.ratio);
+      // El mismo envío que muestra el panel (mismo turno, misma cifra)
+      const troops = ui.nextSend(h);
       if (troops >= 1) {
         const e = g.estimateAttack(h, o, troops);
         const who = o ? g.players[o].name : 'tierra libre';
@@ -13258,6 +13491,21 @@ applySettings();
 // Acceso desde la consola del navegador para depurar: __dominia.game, __dominia.human…
 window.__dominia = state;
 window.__trinchera = state;
+// Ctrl+Mayús+D: descarga el diagnóstico de la partida (solo con ?diag=1)
+if (DIAG) {
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyD' && state.diag) {
+      e.preventDefault();
+      state.diag.exportar();
+    }
+  });
+}
+// Identificador de reglas (para comprobar qué versión sirve el hosting)
+state.version = { motor: MECH_VERSION, perfiles: Object.fromEntries(Object.entries(PROFILES).map(([k, P]) => [k, P.id])), huella: RULES_FINGERPRINT, ruleset: (rules) => roomRuleset(rules) };
+{
+  const v = document.getElementById('version-reglas');
+  if (v) v.textContent = `Reglas: motor ${MECH_VERSION} · perfiles ${Object.values(PROFILES).map((P) => P.id).join(' / ')} · huella ${RULES_FINGERPRINT}`;
+}
 state.camera = camera; // para pruebas automáticas
 state.sound = sound;
 state.profile = profile;
@@ -13826,6 +14074,38 @@ __define('mecanicas', function () {
 /** Versión de las reglas (para saber qué fórmulas usa una partida). */
 const MECH_VERSION = 'doc-1.0';
 
+/**
+ * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
+ * id viaja con la partida y se comprueba al empezar una sala multijugador.
+ *
+ * - clasico: el de FrontWars/OpenFront. Regeneración con la fórmula base
+ *   (paceRegen 1: cuadra punto a punto con el HUD de FrontWars a igual reserva
+ *   y techo; ver docs/calibracion-clasico.md). paceNeutral y pacePvp son
+ *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
+ *   comparables de FrontWars. Sin puntos estratégicos (ni bonos ni botín de
+ *   capitales) y sin tecnologías ni especializaciones.
+ * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
+ *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
+ *   valor histórico: las reglas guardadas sin perfil son de este.
+ *
+ * paceNeutral y pacePvp multiplican el presupuesto por tick de los ataques
+ * (contra tierra libre y contra países); paceRegen, la regeneración.
+ */
+const PROFILES = {
+  clasico: { id: 'clasico-1', name: 'Clásico', paceNeutral: 0.5, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-1', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+};
+
+/** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
+function profileOf(rules) {
+  return PROFILES[rules && rules.profile] || PROFILES.trinchera;
+}
+
+/** Identificador de las reglas con las que se simula: versión del motor + perfil. */
+function rulesetId(rules) {
+  return `${MECH_VERSION}/${profileOf(rules).id}`;
+}
+
 /** Parámetros del documento (sección 06.1, GameRules, y tablas de 01 a 07). */
 const MECH = {
   tickMs: 100,
@@ -13865,12 +14145,6 @@ const MECH = {
   neutralTimeMin: 5,
   neutralTimeMax: 100,
   neutralBudgetPerFront: 2, // presupuesto por tick = 2 × longitud del frente
-  // Ritmo de juego (no está en el documento: se pidió más lento). Multiplica el
-  // presupuesto por tick de los ataques: contra tierra libre y contra países.
-  // Y la regeneración de tropas.
-  paceNeutral: 0.07,
-  pacePvp: 0.5,
-  paceRegen: 0.6,
   neutralLossDiv: 5, // bajas por casilla = magnitud / 5
   // Guerra entre países (sección 05.2)
   pvp: {
@@ -14097,7 +14371,7 @@ function priceFor(kind, n) {
   }
 }
 
-return { MECH_VERSION, MECH, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
+return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
 });
 __define('minimapa', function () {
 // Minimapa: todo el mapa en pequeño (relieve y territorios), con el recuadro
@@ -14270,10 +14544,56 @@ __define('multiplayer', function () {
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-const { MAP_IDS, TICK_MS, cleanRules } = __require('config');
+const { BUILDINGS, CONFIG, MAP_IDS, TICK_MS, cleanRules } = __require('config');
+const { MECH, PROFILES, rulesetId } = __require('mecanicas');
 const { selfPeer } = __require('net');
 
 const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash'];
+
+/**
+ * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios): si
+ * dos clientes tienen versiones distintas del juego, no coincide.
+ */
+const FINGERPRINT = (() => {
+  const s = JSON.stringify([MECH, PROFILES, CONFIG, BUILDINGS]);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0).toString(36);
+})();
+
+/** Huella de los parámetros del motor de esta versión del juego. */
+const RULES_FINGERPRINT = FINGERPRINT;
+
+/** Identificador completo con el que se simula una sala: versión, perfil y huella. */
+function roomRuleset(rules) {
+  return `${rulesetId(cleanRules(rules))}#${FINGERPRINT}`;
+}
+
+/**
+ * Valida el mensaje de inicio del anfitrión ANTES de simular: datos bien
+ * formados y la misma versión de reglas que este cliente. Si no coincide, la
+ * partida no empieza (los dos simularían con parámetros distintos).
+ */
+function checkStartPayload(d) {
+  if (!d || d.v !== 1 || !Number.isFinite(d.seed) || !Array.isArray(d.players) || !d.settings) return { ok: false, reason: 'datos' };
+  const rules = cleanRules(d.settings.rules);
+  const mine = roomRuleset(rules);
+  if (d.ruleset !== mine) return { ok: false, reason: 'version', theirs: String(d.ruleset || 'desconocida'), mine };
+  return {
+    ok: true,
+    payload: {
+      seed: d.seed >>> 0,
+      ruleset: mine,
+      settings: {
+        mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
+        bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
+        difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
+        rules,
+      },
+      players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
+    },
+  };
+}
 const MAX_HUMANS = 8;
 
 const TURN_TICKS = 2; // ticks por mensaje del anfitrión (≈5 mensajes/s)
@@ -14408,6 +14728,8 @@ class Sala {
     const payload = {
       v: 1,
       seed: (Math.random() * 0xffffffff) >>> 0,
+      // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
+      ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
       players: players.map(({ peer, name, color, emblem, pattern }) => ({ peer, name, color, emblem, pattern })),
     };
@@ -14428,20 +14750,17 @@ class Sala {
     if (this.started || !msg.data || msg.data.v !== 1) return;
     const host = this.host();
     if (!msg.isMe && (!host || msg.peer !== host.peer)) return; // solo vale el del anfitrión
-    const d = msg.data;
-    if (!Number.isFinite(d.seed) || !Array.isArray(d.players) || !d.settings) return;
+    const check = checkStartPayload(msg.data);
+    if (!check.ok) {
+      // Otra versión del juego: no se simula (se avisa una vez y se sigue en la sala)
+      if (check.reason === 'version' && !this._versionWarned) {
+        this._versionWarned = true;
+        this.onVersionMismatch?.(check.theirs, check.mine);
+      }
+      return;
+    }
     this.started = true;
-    const payload = {
-      seed: d.seed >>> 0,
-      settings: {
-        mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
-        bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
-        difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
-        rules: cleanRules(d.settings.rules),
-      },
-      players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
-    };
-    this.onStart?.(payload, msg.isMe ? this.myPeer() : msg.peer);
+    this.onStart?.(check.payload, msg.isMe ? this.myPeer() : msg.peer);
   }
 
   async leave() {
@@ -14697,7 +15016,7 @@ class NetSync {
   }
 }
 
-return { ROOM_TOPICS, MAX_HUMANS, newRoomCode, normalizeCode, openRooms, Sala, stateHash, NetSync };
+return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, newRoomCode, normalizeCode, openRooms, Sala, stateHash, NetSync };
 });
 __define('names', function () {
 // Nombres de naciones ficticias para los bots, generados por sílabas.
@@ -15059,6 +15378,8 @@ class Player {
     /** Multiplicadores del techo de tropas y de la regeneración (bots: 1/3 y ×0,5; naciones según la dificultad). */
     this.capMult = 1;
     this.regenMult = 1;
+    /** Ritmo de regeneración del perfil de reglas (lo fija la partida al añadirlo). */
+    this.paceRegen = 1;
     /** Economía de la partida: 'fixed' (oro pasivo fijo) o 'workers' (población = tropas + trabajadores). */
     this.economy = MECH.economyMode;
     // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
@@ -15077,8 +15398,10 @@ class Player {
     this.capitalTile = -1;
     this.passes = 0; // pasos de montaña que controla
     this.helpAt = -Infinity; // última vez que pidió ayuda a sus aliados
-    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). `workers` = oro pasivo de cada turno. */
-    this.income = { workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
+    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). */
+    // Oro ganado por fuente (TR04): base pasiva, bonos (puntos estratégicos,
+    // tecnologías, especialización), trabajadores, comercio, conquistas, botín y regalos
+    this.income = { base: 0, bonus: 0, workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
     this.spent = { buildings: 0, research: 0 };
     /** Total ingresado cada 10 s (último minuto), para el ritmo de oro y la victoria económica. */
     this.incomeHist = [];
@@ -15154,8 +15477,8 @@ class Player {
    */
   growthPerTick() {
     const P = this.economy === 'workers' ? this.troops + this.workers : this.troops;
-    // × paceRegen: ritmo de juego algo más lento que el documento (ver mecanicas.js)
-    return regenPerTick(P, this.maxTroops()) * MECH.paceRegen * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
+    // × paceRegen: ritmo del perfil de reglas (ver PROFILES en mecanicas.js)
+    return regenPerTick(P, this.maxTroops()) * this.paceRegen * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
   }
 
   /** Oro pasivo base por turno: humano 100, nación 100, bot (colonia) 50. */
@@ -15168,10 +15491,20 @@ class Player {
    * ni de las tropas. Con la economía de trabajadores (07.2): +1 por cada 100.
    */
   goldPerTick() {
-    if (!this.tiles) return 0;
-    let g = this.baseGold();
-    if (this.economy === 'workers') g += Math.floor(this.workers / MECH.workersPerGold);
-    return g * this.goldMult * (1 + this.mods.gold);
+    const b = this.goldBreakdown();
+    return b.base + b.workers + b.bonus;
+  }
+
+  /**
+   * El oro pasivo de un turno por fuente (TR04): base (100, o 50 una colonia,
+   * × reglas), trabajadores (+1 cada 100, × reglas) y bonos (el % extra de
+   * puntos estratégicos, tecnologías y especialización sobre lo anterior).
+   */
+  goldBreakdown() {
+    if (!this.tiles) return { base: 0, workers: 0, bonus: 0 };
+    const base = this.baseGold() * this.goldMult;
+    const workers = this.economy === 'workers' ? Math.floor(this.workers / MECH.workersPerGold) * this.goldMult : 0;
+    return { base, workers, bonus: (base + workers) * this.mods.gold };
   }
 
   maxBoats() {
@@ -15462,7 +15795,7 @@ __define('profile', function () {
 // experiencia y nivel, estadísticas, historial y logros. Se guarda en este
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
-const { DEFAULT_RULES } = __require('config');
+const { DEFAULT_RULES, migrateRules } = __require('config');
 const { Rng, hashString } = __require('rng');
 
 // (Las claves conservan el nombre de la primera versión para no perder perfiles.)
@@ -15837,7 +16170,8 @@ function normalizeProfile(p) {
     monedas: Number.isFinite(p.monedas) ? Math.max(0, Math.floor(p.monedas)) : 0,
     comprados: p.comprados && typeof p.comprados === 'object' ? { ...p.comprados } : {},
     diarios: p.diarios && typeof p.diarios === 'object' && Array.isArray(p.diarios.retos) ? p.diarios : null,
-    ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...((p.ajustes && p.ajustes.reglas) || {}) } },
+    // Reglas guardadas antes de los perfiles: se migran (perfil histórico) ANTES de combinarlas con los valores por defecto
+    ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...(migrateRules(p.ajustes && p.ajustes.reglas) || {}) } },
   };
 }
 
@@ -17741,6 +18075,9 @@ class Renderer {
       const radiusPx = L.r * camera.zoom;
       const allied = human && p !== human && human.allies.has(p.id);
       const player = p.isHuman;
+      // Colonias: solo con nombre cuando se ven de un tamaño razonable (en la
+      // vista global del arranque eran cientos de etiquetas diminutas)
+      if (p.weak && !allied && radiusPx < 7) continue;
       const len = Math.max(4, p.name.length + (allied ? 2 : 0));
       // Lo que cabe dentro del país…
       let size = Math.min(radiusPx * 0.6, (radiusPx * 2.6) / len, 28);
@@ -19415,7 +19752,7 @@ __define('ui', function () {
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
 const { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } = __require('config');
 const { rgbToCss } = __require('colors');
-const { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatTime } = __require('format');
+const { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatShare, formatTime, hudSnapshot } = __require('format');
 const { drawBuildingReal, flagCss, hasFlag } = __require('icons');
 const { POI_TYPES } = __require('estrategia');
 const { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } = __require('tecnologias');
@@ -19536,7 +19873,8 @@ class UI {
     this._counters = new Set();
     this._lastEvent = null;
     // Las del panel cambian a cada turno (cada 100 ms): se animan en lo que dura uno
-    this._troops = this._counter($('pj-tropas'), fmtTroopsCount, 115);
+    // La reserva no se anima: cambia de golpe en cada turno, igual que el próximo envío (hudSnapshot)
+    this._snap = null;
     this._pop = this._counter($('pj-pob'), fmtTroopsCount, 115);
     this._troopsMax = this._counter($('pj-tropas-max'), fmtTroops, 115);
     this._gold = this._counter($('pj-oro'), formatCount, 115);
@@ -19796,7 +20134,8 @@ class UI {
     this._lbRows.clear();
     this._lbAt = -Infinity;
     this._lbIndex.clear();
-    for (const c of [this._troops, this._pop, this._troopsMax, this._gold]) c.value = null;
+    for (const c of [this._pop, this._troopsMax, this._gold]) c.value = null;
+    this._snap = null;
     this.closeNation();
   }
 
@@ -19831,7 +20170,7 @@ class UI {
     }
     $('pn-nombre').textContent = p.name;
     $('pn-tropas').textContent = fmtTroops(p.troops);
-    $('pn-terr').textContent = formatPercent(p.tiles / game.map.landCount);
+    $('pn-terr').textContent = formatShare(p.tiles, game.map.landCount);
     $('pn-aliados').textContent = p.allies.size
       ? [...p.allies].map((id) => game.players[id].name).join(', ')
       : 'ninguno';
@@ -20000,6 +20339,24 @@ class UI {
     this._ratio = r;
     $('ratio').value = Math.round(r * 100);
     $('ratio-valor').textContent = `${Math.round(r * 100)}%`;
+    if (this._snap) this._paintReserve({ ...hudSnapshot(this._snap.reserva, r), fija: this._snap.fija });
+  }
+
+  /** Reserva y próximo envío, del mismo turno (una sola fuente de datos). */
+  _paintReserve(snap) {
+    this._snap = snap;
+    const reserva = fmtTroopsCount(snap.reserva);
+    // Con oro fijo, la cifra grande de «Tropas» es la reserva: la misma, sin animar
+    if (snap.fija && $('pj-pob').textContent !== reserva) $('pj-pob').textContent = reserva;
+    const envio = `próximo envío ${fmtTroops(snap.envio)}`;
+    if ($('pj-tropas').textContent !== reserva) $('pj-tropas').textContent = reserva;
+    if ($('ratio-tropas').textContent !== envio) $('ratio-tropas').textContent = envio;
+  }
+
+  /** El próximo envío con la fuerza de ataque actual (internas), el mismo que ves en el panel. */
+  nextSend(human) {
+    if (this._snap) return this._snap.envio;
+    return human ? hudSnapshot(human.troops, this._ratio).envio : 0;
   }
 
   pushEvent(evt) {
@@ -20178,8 +20535,9 @@ class UI {
   liveNumbers(game, human) {
     if (!human || game.ticks === this._liveTick) return;
     this._liveTick = game.ticks;
-    this._troops.set(human.troops);
-    this._pop.set(human.population());
+    const fija = human.economy !== 'workers';
+    this._paintReserve({ ...hudSnapshot(human.troops, this._ratio), fija });
+    if (!fija) this._pop.set(human.population());
     this._troopsMax.set(human.maxTroops());
     this._gold.set(human.gold);
   }
@@ -20254,8 +20612,9 @@ class UI {
     $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
     const playing = game.phase === 'playing';
-    this._troops.set(human.troops);
-    this._pop.set(pop);
+    if (this._snap && ratio !== this._snapRatio) this._paintReserve({ ...hudSnapshot(this._snap.reserva, ratio), fija: this._snap.fija });
+    this._snapRatio = ratio;
+    if (human.economy === 'workers') this._pop.set(pop);
     this._troopsMax.set(max);
     const growth = human.growthPerTick() * perSecond;
     $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '';
@@ -20268,12 +20627,10 @@ class UI {
     }
     this._gold.set(human.gold);
     $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
-    $('pj-terr').textContent = formatPercent(human.tiles / landCount);
+    $('pj-terr').textContent = formatShare(human.tiles, landCount);
     $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
     $('pj-buques').textContent = human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
     $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
-    // El ataque sale de los soldados (no de toda la población)
-    $('ratio-tropas').textContent = `${fmtTroops(human.troops * ratio)} soldados`;
     $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
 
     const works = {};
@@ -20322,8 +20679,14 @@ class UI {
 
   _updateOrders(game, human) {
     // Aviso en el botón de desarrollo: hay oro para investigar y nada en marcha
-    const can = game.phase === 'playing' && human.alive && !human.research && human.gold >= game.techCost(human);
+    const can = game.profile.techs && game.phase === 'playing' && human.alive && !human.research && human.gold >= game.techCost(human);
     $('btn-desarrollo').querySelector('.punto-aviso').hidden = !can;
+    // Sin tecnologías (Clásico): el panel sigue, solo con la economía
+    const tabTec = document.querySelector('[data-pd="tecnologias"]');
+    if (tabTec && tabTec.hidden === game.profile.techs) {
+      tabTec.hidden = !game.profile.techs;
+      if (!game.profile.techs) this._devTab('economia');
+    }
   }
 
   toggleDev(force) {
@@ -20377,7 +20740,7 @@ class UI {
     const cap = h.maxTroops();
     const extra = MECH.cityCapBonus * h.capMult * (1 + h.mods.cap);
     const P = h.economy === 'workers' ? h.troops + h.workers : h.troops;
-    const k = h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
+    const k = h.paceRegen * h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
     const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
     out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
     out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
@@ -20395,13 +20758,17 @@ class UI {
       const inc = r ? r.income : {};
       const sp = r ? r.spent : {};
       const total = Object.values(inc).reduce((a, b) => a + b, 0);
+      // Desglose por fuente (TR04): la base pasiva aparte de los bonos y los eventos
+      const techs = game.profile.techs;
       const rows = [
-        ['Trabajadores (con puertos y fábricas)', inc.workers],
-        ['Trenes, mercantes y pesca', inc.trade],
-        ['Conquistas (oro de cada casilla)', inc.conquest],
-        ['Botín (eliminaciones y capitales)', inc.loot],
+        ['Oro base (pasivo, cada turno)', inc.base],
+        game.profile.points || techs ? ['Bonos (puntos estratégicos, tecnologías, especialización)', inc.bonus] : null,
+        h.economy === 'workers' ? ['Trabajadores', inc.workers] : null,
+        ['Trenes y mercantes', inc.trade],
+        game.profile.points ? ['Puntos estratégicos tomados', inc.conquest] : null,
+        ['Botín (eliminaciones)', inc.loot],
         ['Regalos de aliados', inc.gifts],
-      ];
+      ].filter(Boolean);
       const bar = (v) => `<span class="pd-barra"><span style="width:${total > 0 ? Math.round((100 * (v || 0)) / total) : 0}%"></span></span>`;
       const roi = this._roi(game, h);
       const specCost = h.spec ? formatNumber(CONFIG.specChangeCost * game.rules.priceMult) : 'gratis';
@@ -20410,14 +20777,14 @@ class UI {
         <table class="pd-tabla"><tbody>
           ${rows.map(([n, v]) => `<tr><td>${n}</td><td>${formatNumber(v || 0)}</td><td>${bar(v)}</td></tr>`).join('')}
           <tr class="gasto"><td>Gastado en edificios</td><td>${formatNumber(sp.buildings || 0)}</td><td></td></tr>
-          <tr class="gasto"><td>Gastado en investigación</td><td>${formatNumber(sp.research || 0)}</td><td></td></tr>
+          ${techs ? `<tr class="gasto"><td>Gastado en investigación</td><td>${formatNumber(sp.research || 0)}</td><td></td></tr>` : ''}
         </tbody></table>
         <h4>Si construyes ahora</h4>
         <ul class="pd-roi">${['city', 'factory', 'port'].map((k) => `<li>${roi[k]}</li>`).join('')}</ul>
-        <h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
+        ${techs ? `<h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
         <div class="pd-specs">${SPEC_IDS.map((id) => `
           <button type="button" class="pd-spec${h.spec === id ? ' activa' : ''}" data-spec="${id}" ${h.spec === id || game.phase !== 'playing' ? 'disabled' : ''}>
-            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>`;
+            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>` : `<p class="pd-nota">Perfil ${game.profile.name}: sin tecnologías ni especialización.</p>`}`;
     } else {
       const cost = game.techCost(h);
       const time = Math.round(game.techTime(h) / 10);
@@ -20557,6 +20924,8 @@ class UI {
           : target ? ['atacas con', 'sus tropas'] : ['expandes con', ''],
         retreat: mine && !atk.retreatAt ? atk.targetId : null,
         prep: atk.retreatAt > 0,
+        // Retirada: lo que volvería (el mismo cálculo que aplica el motor)
+        outcome: mine ? game.retreatOutcome(atk) : null,
       });
     }
     for (const b of game.boats) {
@@ -20612,8 +20981,29 @@ class UI {
         f.gone = 0;
         f.li.classList.remove('saliendo');
       }
-      const mid = c.prep ? 'Retirada' : c.middle;
+      const o = c.outcome;
+      const mid = c.prep && o ? `Retirada ${o.seconds.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s` : c.middle;
       if (f.vs.textContent !== mid) f.vs.textContent = mid;
+      f.li.classList.toggle('retirada', !!c.prep);
+      if (o && f.caps) {
+        // En retirada: qué vuelve y qué se pierde; si no, las leyendas normales
+        const caps = c.prep ? [`vuelven ~${fmtTroops(o.refund)}`, o.lost >= 1 ? `pierdes ~${fmtTroops(o.lost)}` : 'sin pérdidas'] : c.captions;
+        caps.forEach((t, k) => {
+          if (f.caps[k] && f.caps[k].textContent !== t) f.caps[k].textContent = t;
+        });
+      }
+      if (f.btn) {
+        // Una sola orden: mientras se resuelve, sin ✕
+        f.btn.hidden = !!c.prep;
+        f.btn.disabled = !!c.prep;
+        if (o && !c.prep) {
+          const secs = ((MECH.retreatTicks * TICK_MS) / 1000).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+          const title = o.ratio < 1
+            ? `Retirarse: en ${secs} s vuelven ~${fmtTroops(o.refund)} de ${fmtTroops(o.troops)} (se pierde el ${Math.round(MECH.retreatPenalty * 100)} %)`
+            : `Retirarse: en ${secs} s vuelven las ${fmtTroops(o.troops)} tropas, sin pérdidas`;
+          if (f.btn.title !== title) f.btn.title = title;
+        }
+      }
       // Cifras (animadas) y barra de fuerzas
       if (c.a === null) f.aEl.textContent = c.aText;
       else f.a.set(c.a);
@@ -20720,10 +21110,12 @@ class UI {
     // Qué es cada cifra («te ataca con» / «tus tropas»…)
     const legend = document.createElement('div');
     legend.className = 'f-fila f-leyenda';
+    const caps = [];
     for (const text of c.captions || ['', '']) {
       const s = document.createElement('span');
       s.textContent = text;
       legend.append(s);
+      caps.push(s);
     }
     // Barra de fuerzas: atacante (rojo si te atacan, verde si atacas) frente a defensor
     const bar = document.createElement('div');
@@ -20735,18 +21127,19 @@ class UI {
     bar.append(barA, barD);
     li.append(top, mid, legend, bar);
     li.setAttribute('aria-label', c.incoming ? `Te atacan: ${c.left.name}` : `Atacas: ${c.right.name}`);
+    let btn = null;
     if (c.retreat !== null && c.retreat !== undefined) {
-      const btn = document.createElement('button');
+      btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'f-retirar';
       btn.dataset.target = c.retreat;
-      btn.title = 'Retirarse (se pierde la mitad de las tropas del ataque)';
+      btn.title = 'Retirarse';
       btn.setAttribute('aria-label', 'Retirarse');
       btn.textContent = '✕';
       li.append(btn);
     }
     $('frentes').append(li);
-    return { li, vs, aEl, dEl, barA, barD, a: this._counter(aEl, fmtTroops), d: this._counter(dEl, fmtTroops), gone: 0 };
+    return { li, vs, aEl, dEl, barA, barD, caps, btn, a: this._counter(aEl, fmtTroops), d: this._counter(dEl, fmtTroops), gone: 0 };
   }
 
   /** Barra superior: tu puesto y el líder frente a la meta de victoria. */
@@ -20886,11 +21279,11 @@ class UI {
   _attackTip(game, targetId) {
     const h = game.human;
     if (!h || !h.alive || game.phase !== 'playing' || targetId === h.id || (targetId && h.allies.has(targetId))) return '';
-    const troops = Math.floor(h.troops * this._ratio);
+    const troops = this.nextSend(h);
     if (troops < 1) return '';
     const e = game.estimateAttack(h, targetId, troops);
     const risk = targetId ? ` · riesgo ${e.risk}` : '';
-    return `<div class="tip-estim">Con ${fmtTroops(troops)} soldados: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
+    return `<div class="tip-estim">Próximo envío ${fmtTroops(troops)}: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
   }
 
   updateTooltip(game, tile, sx, sy) {
@@ -20920,16 +21313,24 @@ class UI {
       const human = game.human;
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
       tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
-        ${fmtTroops(p.troops)} tropas · ${formatPercent(p.tiles / map.landCount)}<br>
+        ${fmtTroops(p.troops)} tropas · ${formatShare(p.tiles, map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
     } else {
       tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
     }
     tip.hidden = false;
+    // Dentro de la ventana: se mide la caja (ya con el texto ajustado) y, si
+    // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
     const w = tip.offsetWidth;
-    const left = sx + 16 + w > window.innerWidth ? sx - 16 - w : sx + 16;
+    const h = tip.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
+    let top = sy + 16 + h > vh - 8 ? sy - 16 - h : sy + 16;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    top = Math.max(8, Math.min(vh - h - 8, top));
     tip.style.left = `${left}px`;
-    tip.style.top = `${sy + 16}px`;
+    tip.style.top = `${top}px`;
   }
 }
 
