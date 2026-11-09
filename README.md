@@ -116,10 +116,30 @@ funciona: los módulos ES necesitan HTTP; para eso está `dist/dominia.html`.
 
 ## Publicarlo en la web (Hostinger u otro hosting)
 
-Son ficheros estáticos. Opción más simple: sube `dist/dominia.html` como
-`public_html/dominia/index.html` y estará en `https://tu-dominio/dominia/`.
-También vale subir `index.html`, `css/` y `src/` tal cual. No hace falta PHP ni
-base de datos.
+Son ficheros estáticos: no hace falta PHP ni base de datos.
+
+**Con Git (Hostinger):** la rama **`hostinger`** del repositorio tiene solo la
+web: `index.html` (el juego empaquetado en un archivo) y un `.htaccess` (que
+no se pueda leer la carpeta `.git` que deja el despliegue, sin caché vieja del
+HTML y comprimido). Se actualiza con:
+
+```bash
+bash herramientas/hostinger.sh
+```
+
+que empaqueta el juego y sube un commit nuevo a esa rama. En hPanel →
+Avanzado → Git: repositorio `git@github.com:SSUAVDRON/SSUAVDRON.git`, rama
+`hostinger` y la carpeta del subdominio (vacía). Como el repositorio es
+privado, la clave SSH que muestra hPanel va en GitHub → Settings → Deploy keys
+(solo lectura); con el webhook de «Despliegue automático» en GitHub → Settings
+→ Webhooks, cada subida a la rama se publica sola. No uses la carpeta principal
+de ssuavdron.com: allí vive otra web.
+
+**A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
+
+Fuera del enlace de Claude no hay multijugador entre ordenadores (solo entre
+pestañas del mismo navegador), ni clasificación global ni perfil en la nube:
+el progreso se guarda en cada navegador.
 
 ## Reglas
 
