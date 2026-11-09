@@ -2701,6 +2701,199 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 .pd-nota { margin: 8px 0 0; font-size: 12px; color: var(--texto-suave); }
 .version-reglas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; opacity: 0.8; }
 
+/* =========================================================================
+   Salas (diseño de salas): crear, vestíbulo, invitación y cuenta atrás
+   ========================================================================= */
+:root { --marfil: #f3ead2; --listo: #5fd3a6; --listo-osc: #0f3b2c; }
+#crear-sala.pantalla, #sala.pantalla {
+  display: flex;
+  flex-direction: column;
+  place-items: initial;
+  padding: 0;
+  overflow: hidden;
+  background:
+    var(--fondo-mundo, none) center 40% / min(1800px, 160vw) auto no-repeat,
+    linear-gradient(180deg, #0a1324 0%, var(--marino) 100%);
+}
+.sala-barra {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) 10px max(20px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(180deg, rgba(8, 13, 26, 0.97), rgba(8, 13, 26, 0.9));
+  border-bottom: 1px solid var(--oro-linea);
+}
+.pantalla-sala .sala-atras { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 10px; font-size: 18px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--marfil); }
+.sala-marca { display: inline-flex; align-items: center; gap: 8px; font-family: var(--serif); font-weight: 900; font-size: 20px; letter-spacing: 0.08em; color: var(--oro-claro); }
+.sala-logo { width: 30px; height: 30px; }
+.sala-seccion { padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, 0.18); color: var(--marfil); font-weight: 700; }
+.sala-red { margin-left: auto; font-size: 12px; color: #a9b5ca; }
+.sala-cuerpo { flex: 1; min-height: 0; overflow-y: auto; width: 100%; max-width: 1320px; margin: 0 auto; padding: 22px max(24px, env(safe-area-inset-right, 0px)) 120px max(24px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.sala-encabezado { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.sala-titulo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.sala-h1 { margin: 0; font-family: 'Black Ops One', system-ui, sans-serif; font-weight: 400; font-size: clamp(30px, 4vw, 46px); line-height: 1.05; color: var(--marfil); text-shadow: 0 3px 14px rgba(0, 0, 0, 0.6); overflow-wrap: anywhere; }
+.sala-sub { margin: 6px 0 0; color: #c9d3e4; font-size: 16px; }
+.chip-vis { padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--marfil); background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14); white-space: nowrap; }
+.sala-invitar { display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 18px; border-radius: 14px; background: rgba(10, 16, 30, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); }
+.sala-invitar small { color: #a9b5ca; font-size: 13px; }
+.sala-invitar .codigo { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 30px; font-weight: 800; letter-spacing: 0.12em; color: var(--marfil); padding: 0 14px; border-left: 1px solid rgba(255, 255, 255, 0.16); border-right: 1px solid rgba(255, 255, 255, 0.16); }
+#sala .btn-enlace { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 800; color: var(--marfil); background: transparent; border: 1.5px solid var(--marfil); box-shadow: none; }
+#sala .btn-enlace:hover { background: rgba(243, 234, 210, 0.1); }
+.btn-enlace svg { width: 16px; height: 16px; }
+.sala-copia { display: flex; gap: 8px; }
+.sala-copia input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: var(--marfil); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--oro-linea); user-select: all; -webkit-user-select: all; }
+.sala-aviso { margin: 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; color: var(--marfil); background: rgba(95, 140, 220, 0.14); border: 1px solid rgba(95, 140, 220, 0.4); }
+.sala-aviso.aviso { background: rgba(242, 179, 61, 0.12); border-color: rgba(242, 179, 61, 0.45); color: #ffe3a1; }
+.sala-aviso.error { background: rgba(255, 95, 95, 0.12); border-color: rgba(255, 95, 95, 0.45); color: #ffd0d0; }
+.sala-rejilla { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.sala-caja { padding: 16px; border-radius: 16px; background: var(--panel-v2); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4); min-width: 0; }
+.sala-caja h2 { margin: 0 0 12px; display: flex; align-items: baseline; justify-content: space-between; font-family: 'Black Ops One', system-ui, sans-serif; font-weight: 400; font-size: 26px; color: var(--marfil); }
+.sala-caja h2 span { font-family: system-ui, sans-serif; font-weight: 800; font-size: 22px; }
+.mapa-vista { position: relative; border-radius: 12px; overflow: hidden; line-height: 0; background: #1b2d52; border: 1px solid rgba(255, 255, 255, 0.08); }
+.mapa-vista canvas { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; image-rendering: pixelated; }
+.mapa-etiqueta { position: absolute; left: 14px; bottom: 12px; padding: 4px 12px; border-radius: 8px; font-family: 'Black Ops One', system-ui, sans-serif; font-size: clamp(22px, 3vw, 36px); line-height: 1.2; color: var(--marfil); background: rgba(6, 10, 20, 0.6); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8); }
+.sala-mapa-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.chips-sala { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-sala { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--marfil); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16); }
+.chip-ico { opacity: 0.85; }
+#sala #btn-editar-reglas { padding: 8px 14px; border-radius: 9px; color: var(--marfil); background: rgba(6, 10, 20, 0.6); border: 1.5px solid var(--marfil); box-shadow: none; }
+.sala-ajustes { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 12px; }
+.sala-ajustes input:not([type]), .sala-ajustes input[maxlength] { padding: 9px 11px; border-radius: 9px; color: var(--texto); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.14); }
+.sala-jugadores { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+#sala .sala-jugadores li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 30px; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+#sala .sala-jugadores li.yo { border-color: rgba(233, 185, 85, 0.5); }
+#sala .sala-jugadores li.desconectado { opacity: 0.6; }
+#sala .sala-jugadores li.libre { border: 1.5px dashed rgba(255, 255, 255, 0.22); background: transparent; color: #8b97ad; }
+.sala-escudo { width: 40px; height: 40px; display: grid; place-items: center; padding-right: 12px; border-right: 1px solid rgba(255, 255, 255, 0.14); }
+.sala-escudo canvas { width: 34px; height: 34px; }
+.sala-escudo.libre { font-size: 22px; color: #8b97ad; }
+#sala .sala-nombre { display: flex; flex-direction: column; min-width: 0; }
+#sala .sala-nombre strong { font-size: 19px; color: var(--marfil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sala .sala-nombre small { font-size: 12px; color: #8b97ad; }
+.tag-sala { padding: 4px 10px; border-radius: 7px; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.tag-sala.anfitrion, .tag-sala.listo { color: var(--listo-osc); background: var(--listo); }
+.tag-sala.preparando { color: #2b1d02; background: var(--oro); }
+.tag-sala.aviso { color: #ffe3a1; background: transparent; border: 1px solid rgba(242, 179, 61, 0.6); }
+.tag-sala.error { color: #fff; background: #b33a3a; }
+.check-sala { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; font-weight: 900; color: var(--listo-osc); }
+.check-sala.si { background: var(--listo); }
+.sala-pie {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px max(24px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
+  background: rgba(8, 13, 26, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+}
+.sala-preparados { font-size: 20px; font-weight: 800; color: var(--marfil); padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.16); white-space: nowrap; }
+.sala-preparados::before { content: ""; display: inline-block; width: 26px; height: 18px; margin-right: 10px; vertical-align: -2px; background: var(--listo); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Ccircle cx='8' cy='4.5' r='3.5'/%3E%3Ccircle cx='17' cy='5' r='3'/%3E%3Cpath d='M1 15.5c0-4 3-6.5 7-6.5s7 2.5 7 6.5z M14.5 9.6c.8-.4 1.6-.6 2.5-.6 3.4 0 6 2.2 6 6.5h-6.3c0-2.4-.8-4.4-2.2-5.9z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Ccircle cx='8' cy='4.5' r='3.5'/%3E%3Ccircle cx='17' cy='5' r='3'/%3E%3Cpath d='M1 15.5c0-4 3-6.5 7-6.5s7 2.5 7 6.5z M14.5 9.6c.8-.4 1.6-.6 2.5-.6 3.4 0 6 2.2 6 6.5h-6.3c0-2.4-.8-4.4-2.2-5.9z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.sala-motivo { flex: 1; margin: 0; text-align: right; color: #c3cde0; font-size: 15px; }
+.sala-motivo.ok { color: var(--listo); font-weight: 700; }
+.pantalla-sala .sala-pie .principal.grande { width: auto; min-width: 230px; padding: 14px 28px; font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 10px; }
+.pantalla-sala .sala-pie button:disabled { opacity: 0.55; }
+.pantalla-sala .sala-pie .secundario { padding: 12px 20px; color: var(--marfil); }
+#btn-listo.secundario { background: transparent; border: 1.5px solid var(--marfil); min-width: 230px; padding: 14px 28px; font-size: 16px; font-weight: 900; text-transform: uppercase; }
+.sala-cuenta-atras { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; background: rgba(4, 8, 16, 0.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.sala-cuenta-atras small { font-size: 18px; color: var(--marfil); letter-spacing: 0.06em; text-transform: uppercase; }
+.sala-cuenta-atras strong { font-family: 'Black Ops One', system-ui, sans-serif; font-weight: 400; font-size: 140px; line-height: 1; color: var(--oro-claro); text-shadow: 0 8px 40px rgba(233, 185, 85, 0.5); animation: latido 1s ease-in-out infinite; }
+@keyframes latido { 50% { transform: scale(1.08); } }
+
+/* Crear sala */
+.crear-rejilla { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.crear-mapas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#crear-sala .crear-mapas button { flex: 1 1 120px; padding: 10px 12px; border-radius: 10px; font-weight: 800; color: var(--marfil); background: rgba(255, 255, 255, 0.04); border: 1.5px solid rgba(255, 255, 255, 0.14); box-shadow: none; }
+#crear-sala .crear-mapas button[aria-checked="true"] { border-color: var(--oro); background: rgba(233, 185, 85, 0.12); }
+#crear-sala .crear-mapa .mapa-vista { border: 2px solid var(--oro); }
+.crear-datos { display: flex; flex-direction: column; gap: 16px; }
+.crear-datos .campo { display: flex; flex-direction: column; gap: 8px; }
+.campo-tit { font-size: 19px; font-weight: 800; color: var(--marfil); }
+.campo-tit small { font-size: 12px; font-weight: 400; color: #8b97ad; margin-left: 6px; }
+#crear-nombre { padding: 12px 14px; border-radius: 10px; font-size: 17px; color: var(--marfil); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.18); }
+.visibilidad button { flex: 1; padding: 11px 12px !important; font-weight: 800 !important; }
+#crear-sala .visibilidad button[aria-checked="true"], #sala .visibilidad button[aria-checked="true"] { border-color: var(--oro) !important; color: var(--marfil); background: rgba(233, 185, 85, 0.1) !important; }
+.paso { display: inline-flex; align-self: flex-start; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.18); }
+#crear-sala .paso button { width: 48px; height: 44px; padding: 0; border: 0; border-radius: 0; font-size: 22px; color: var(--marfil); background: rgba(255, 255, 255, 0.05); box-shadow: none; }
+.paso output { width: 64px; display: grid; place-items: center; font-size: 20px; font-weight: 800; color: var(--marfil); border-left: 1px solid rgba(255, 255, 255, 0.18); border-right: 1px solid rgba(255, 255, 255, 0.18); }
+.sala-avanzadas { border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.2); }
+.sala-avanzadas summary { cursor: pointer; padding: 12px 14px; font-weight: 700; color: var(--marfil); list-style: none; display: flex; justify-content: space-between; }
+.sala-avanzadas summary::after { content: "⌄"; }
+.sala-avanzadas[open] summary::after { content: "⌃"; }
+.sala-avanzadas > div { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+#crear-error { color: #ffd0d0; }
+
+/* Vestíbulo público: tarjetas de salas */
+#inicio .salas-publicas { max-height: none; gap: 10px; }
+#inicio .salas-publicas li { padding: 0; background: none; }
+#inicio .salas-publicas li.vacia { padding: 6px 0; color: #a9b5ca; }
+#inicio .sala-tarjeta-pub { width: 100%; display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; text-align: left; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: none; }
+#inicio .sala-tarjeta-pub:hover:not(:disabled) { border-color: var(--oro); }
+#inicio .sala-tarjeta-pub.bloqueada { opacity: 0.6; }
+.sala-mini { width: 96px; height: 54px; border-radius: 8px; overflow: hidden; line-height: 0; }
+.sala-mini canvas { width: 100%; height: 100%; object-fit: cover; }
+.sala-tarjeta-pub .sala-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sala-tarjeta-pub .sala-info strong { font-size: 15px; color: var(--marfil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sala-tarjeta-pub .sala-info small { font-size: 12px; color: #a9b5ca; }
+.sala-entrar { padding: 7px 14px; border-radius: 8px; font-weight: 800; color: #241703; background: var(--oro); }
+.bloqueada .sala-entrar { color: var(--marfil); background: rgba(255, 255, 255, 0.1); }
+
+/* Ficha de invitación */
+.sala-entrada { width: min(560px, 100%); align-self: center; display: flex; flex-direction: column; gap: 14px; }
+.entrada-mapa { position: relative; border-radius: 12px; overflow: hidden; line-height: 0; }
+.entrada-mapa canvas { width: 100%; height: auto; }
+.entrada-plazas { margin: 0; color: #c3cde0; }
+.entrada-motivo { margin: 0; padding: 10px 14px; border-radius: 10px; color: #ffd0d0; background: rgba(255, 95, 95, 0.12); border: 1px solid rgba(255, 95, 95, 0.4); }
+.sala-entrada .principal.grande { width: 100%; }
+
+/* Tableta y móvil: mapa en tarjeta, filas apiladas, acción fija al pie */
+@media (max-width: 900px) {
+  .sala-rejilla, .crear-rejilla { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .sala-barra { gap: 10px; padding-left: 12px; padding-right: 12px; }
+  .sala-seccion { display: none; }
+  .sala-marca { margin: 0 auto; font-size: 18px; }
+  .sala-red { display: none; }
+  .sala-cuerpo { padding: 14px 12px 150px; gap: 12px; }
+  .sala-h1 { font-size: 30px; }
+  .sala-invitar { width: 100%; padding: 8px 8px 8px 12px; gap: 10px; }
+  .sala-invitar .codigo { font-size: 22px; padding: 0 10px; }
+  #sala .btn-enlace { margin-left: auto; padding: 8px 12px; }
+  .sala-caja { padding: 12px; }
+  .sala-caja h2 { font-size: 22px; }
+  .mapa-vista canvas { aspect-ratio: 16 / 10; }
+  #sala .sala-jugadores li { padding: 8px 10px; gap: 10px; }
+  .sala-escudo { width: 32px; height: 32px; padding-right: 8px; }
+  .sala-escudo canvas { width: 28px; height: 28px; }
+  #sala .sala-nombre strong { font-size: 17px; }
+  .sala-pie { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .sala-preparados { text-align: center; border: 0; padding: 0; font-size: 18px; }
+  .sala-preparados::before { display: none; }
+  .sala-motivo { text-align: center; font-size: 13px; }
+  .pantalla-sala .sala-pie .principal.grande, #btn-listo.secundario { width: 100%; min-width: 0; }
+  #crear-sala .sala-pie { flex-direction: row; flex-wrap: wrap; }
+  #crear-sala .sala-pie .sala-motivo { order: 3; flex-basis: 100%; }
+  #crear-sala .sala-pie .principal.grande { flex: 1; }
+  .sala-cuenta-atras strong { font-size: 110px; }
+}
+
+/* Invitación en una fila también en móvil */
+.sala-invitar small, #sala .btn-enlace { white-space: nowrap; }
+@media (max-width: 640px) {
+  .sala-invitar small { font-size: 12px; }
+  .sala-invitar .codigo { font-size: 20px; letter-spacing: 0.08em; padding: 0 8px; }
+  #sala .btn-enlace { padding: 8px 10px; font-size: 14px; gap: 6px; }
+}
+@media (max-width: 360px) {
+  .sala-invitar small { display: none; }
+}
+
 </style>
 </head>
 <body>
@@ -2837,14 +3030,14 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
             <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
           </div>
           <div class="online-acciones">
-            <button type="button" id="btn-crear-sala" class="principal" disabled>Crear sala</button>
+            <button type="button" id="btn-crear-sala" class="principal" disabled>＋ Crear sala</button>
             <form id="form-unirse" class="unirse" autocomplete="off">
-              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false">
-              <button type="submit" disabled>Unirse</button>
+              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false" autocapitalize="characters">
+              <button type="submit" disabled>Unirse con código</button>
             </form>
           </div>
-          <h3>Salas abiertas</h3>
-          <ul id="lista-salas" class="lista-salas"></ul>
+          <h3>Salas públicas</h3>
+          <ul id="lista-salas" class="lista-salas salas-publicas" aria-live="polite"></ul>
           <p id="nota-red" class="nota"></p>
         </div>
 
@@ -3072,20 +3265,91 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   </div>
 
   <!-- Sala multijugador -->
-  <div id="sala" class="pantalla" hidden>
-    <div class="tarjeta sala-tarjeta">
-      <div class="sala-cabecera">
-        <h2>Sala <span id="sala-codigo" class="codigo"></span></h2>
+  <!-- Crear sala: mapa, nombre, visibilidad y plazas (las reglas, en «Reglas avanzadas») -->
+  <div id="crear-sala" class="pantalla pantalla-sala" hidden>
+    <header class="sala-barra">
+      <button type="button" class="sala-atras" id="crear-atras" aria-label="Volver a Multijugador">←</button>
+      <span class="sala-marca"><svg class="sala-logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="4"/><path d="M30 11 V37" stroke="#e9eef7" stroke-width="3" stroke-linecap="round"/><path d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/><path d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>TRINCHERA</span></span>
+      <span class="sala-seccion">Multijugador</span>
+    </header>
+    <main class="sala-cuerpo">
+      <div class="sala-encabezado">
+        <div>
+          <h1 class="sala-h1">Crear sala</h1>
+          <p class="sala-sub">Elige dónde vais a jugar y quién puede entrar.</p>
+        </div>
+      </div>
+      <div class="crear-rejilla">
+        <section class="sala-caja crear-mapa" aria-labelledby="crear-mapa-tit">
+          <h2 id="crear-mapa-tit">Mapa</h2>
+          <div class="mapa-vista"><canvas id="crear-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="crear-mapa-nombre"></span></div>
+          <div class="crear-mapas" id="crear-mapas" role="radiogroup" aria-label="Mapa"></div>
+        </section>
+        <section class="sala-caja crear-datos">
+          <label class="campo"><span class="campo-tit">Nombre de la sala</span><input id="crear-nombre" maxlength="28" autocomplete="off" spellcheck="false"></label>
+          <div class="campo"><span class="campo-tit">Visibilidad</span>
+            <div class="segmentos visibilidad" id="crear-visibilidad" role="radiogroup" aria-label="Visibilidad"></div>
+            <small class="nota" id="crear-vis-nota"></small>
+          </div>
+          <div class="campo"><span class="campo-tit">Plazas <small>jugadores humanos; los bots van aparte</small></span>
+            <div class="paso" role="group" aria-label="Plazas">
+              <button type="button" id="plazas-menos" aria-label="Una plaza menos">−</button><output id="plazas-valor">4</output><button type="button" id="plazas-mas" aria-label="Una plaza más">+</button>
+            </div>
+          </div>
+          <div class="chips-sala" id="crear-resumen"></div>
+          <details class="sala-avanzadas" id="crear-avanzadas"><summary>Reglas avanzadas</summary><div id="crear-reglas"></div></details>
+        </section>
+      </div>
+    </main>
+    <footer class="sala-pie">
+      <button type="button" id="crear-volver" class="secundario">← Volver</button>
+      <p class="sala-motivo" id="crear-error" role="status"></p>
+      <button type="button" id="crear-confirmar" class="principal grande">Crear sala</button>
+    </footer>
+  </div>
+
+  <!-- Sala: invitación, mapa y reglas, jugadores y preparación -->
+  <div id="sala" class="pantalla pantalla-sala" hidden>
+    <header class="sala-barra">
+      <button type="button" class="sala-atras" id="btn-salir-sala" aria-label="Salir de la sala">←</button>
+      <span class="sala-marca"><svg class="sala-logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="4"/><path d="M30 11 V37" stroke="#e9eef7" stroke-width="3" stroke-linecap="round"/><path d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/><path d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>TRINCHERA</span></span>
+      <span class="sala-seccion">Multijugador</span>
+      <span class="sala-red" id="sala-red"></span>
+    </header>
+    <main class="sala-cuerpo">
+      <div class="sala-encabezado">
+        <div class="sala-titulo"><h1 class="sala-h1" id="sala-nombre">Sala</h1><span class="chip-vis" id="sala-visibilidad"></span></div>
+        <div class="sala-invitar">
+          <small>Código de sala</small>
+          <strong id="sala-codigo" class="codigo"></strong>
+          <button type="button" id="btn-copiar-enlace" class="btn-enlace"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5 L9.5 6.5 M7 4.5 L8.5 3 a2.8 2.8 0 0 1 4 4 L11 8.5 M9 11.5 L7.5 13 a2.8 2.8 0 0 1 -4 -4 L5 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Copiar enlace</span></button>
+        </div>
+      </div>
+      <div class="sala-copia" id="sala-copia" hidden>
+        <input id="sala-enlace" readonly aria-label="Enlace de invitación">
         <button type="button" id="btn-copiar-codigo">Copiar código</button>
       </div>
-      <p id="sala-estado" class="nota"></p>
-      <ul id="sala-jugadores" class="sala-jugadores"></ul>
-      <div id="sala-ajustes" class="sala-ajustes"></div>
-      <div class="botones">
-        <button type="button" id="btn-salir-sala">Salir</button>
-        <button type="button" id="btn-empezar" class="principal">Empezar partida</button>
+      <p class="sala-aviso" id="sala-aviso" role="status" hidden></p>
+      <div class="sala-rejilla" id="sala-rejilla">
+        <section class="sala-caja sala-mapa">
+          <div class="mapa-vista"><canvas id="sala-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="sala-mapa-nombre"></span></div>
+          <div class="sala-mapa-pie"><div class="chips-sala" id="sala-chips"></div><button type="button" id="btn-editar-reglas" class="secundario" hidden aria-expanded="false">Editar reglas</button></div>
+          <div class="sala-ajustes" id="sala-ajustes" hidden></div>
+        </section>
+        <section class="sala-caja sala-gente" aria-labelledby="sala-gente-tit">
+          <h2 id="sala-gente-tit">Jugadores <span id="sala-cuenta"></span></h2>
+          <ul id="sala-jugadores" class="sala-jugadores"></ul>
+        </section>
       </div>
-    </div>
+      <section class="sala-caja sala-entrada" id="sala-entrada" hidden aria-live="polite"></section>
+    </main>
+    <footer class="sala-pie" id="sala-pie">
+      <span class="sala-preparados" id="sala-preparados"></span>
+      <span class="sala-motivo" id="sala-motivo"></span>
+      <button type="button" id="btn-listo" class="principal grande">Estoy listo</button>
+      <button type="button" id="btn-empezar" class="principal grande">Iniciar partida</button>
+    </footer>
+    <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
   </div>
 
   <!-- Interfaz de partida -->
@@ -9026,6 +9290,7 @@ __define('home', function () {
 // clasificación, y la sala de espera del multijugador.
 const { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } = __require('config');
 const { PROFILES, rulesetId } = __require('mecanicas');
+const { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } = __require('multiplayer');
 const { REAL_MAP_DATA } = __require('mapas-reales');
 const { decodeRelief, generateMap, markRivers } = __require('map');
 const { RIVERS } = __require('rios');
@@ -9075,6 +9340,9 @@ const NEWS = [
 
 const $ = (id) => document.getElementById(id);
 const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
+/** Naciones de la IA en una partida online (más cargan demasiado el lockstep). */
+const ONLINE_MAX_BOTS = 60;
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -9495,15 +9763,24 @@ class Home {
     this._buildSwatches();
 
     // Multijugador
-    $('btn-crear-sala').addEventListener('click', () => this.h.onCreateRoom?.());
+    $('btn-crear-sala').addEventListener('click', () => this.showCreate());
     $('form-unirse').addEventListener('submit', (e) => {
       e.preventDefault();
       this.h.onJoinRoom?.($('in-codigo').value);
     });
     $('lista-salas').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-code]');
-      if (b) this.h.onJoinRoom?.(b.dataset.code);
+      if (b && !b.disabled) this.h.onJoinRoom?.(b.dataset.code);
+      if (e.target.closest('[data-crear]')) this.showCreate();
     });
+    // Crear sala
+    for (const id of ['crear-atras', 'crear-volver']) $(id).addEventListener('click', () => this.hideCreate());
+    $('crear-confirmar').addEventListener('click', () => this._submitCreate());
+    $('crear-nombre').addEventListener('input', () => {
+      this.create.name = $('crear-nombre').value;
+    });
+    $('plazas-menos').addEventListener('click', () => this._seats(-1));
+    $('plazas-mas').addEventListener('click', () => this._seats(1));
 
     // Perfil
     $('in-nombre').addEventListener('input', () => {
@@ -9550,7 +9827,15 @@ class Home {
     // Sala
     $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
     $('btn-empezar').addEventListener('click', () => this.h.onStartRoom?.());
+    $('btn-listo').addEventListener('click', () => this.h.onReady?.());
+    $('btn-copiar-enlace').addEventListener('click', () => this.h.onCopyLink?.());
     $('btn-copiar-codigo').addEventListener('click', () => this.h.onCopyCode?.());
+    $('btn-editar-reglas').addEventListener('click', () => {
+      const box = $('sala-ajustes');
+      box.hidden = !box.hidden;
+      $('btn-editar-reglas').setAttribute('aria-expanded', String(!box.hidden));
+      $('btn-editar-reglas').textContent = box.hidden ? 'Editar reglas' : 'Cerrar reglas';
+    });
 
     $('in-bots').value = a.bots;
     this._syncBots();
@@ -10434,24 +10719,28 @@ class Home {
 
   // ------------------------------------------------------------- en línea
 
-  /** kind: 'claude' | 'local' | null; detail: texto opcional. */
+  /** kind: 'claude' | 'mqtt' | 'local' | 'connecting' | null; detail: texto opcional. */
   setNetStatus(kind, detail = '') {
+    this.netKind = kind;
     const chip = $('estado-red');
-    const labels = { claude: 'En línea', local: 'Modo local', none: 'No disponible', connecting: 'Conectando…' };
+    const labels = { claude: 'En línea', mqtt: 'En línea', local: 'Prueba entre pestañas', none: 'No disponible', connecting: 'Conectando…' };
     chip.textContent = labels[kind || 'none'];
-    chip.className = `chip ${kind === 'claude' ? 'bien' : kind === 'local' ? 'aviso' : ''}`;
-    const usable = kind === 'claude' || kind === 'local';
+    chip.className = `chip ${kind === 'claude' || kind === 'mqtt' ? 'bien' : kind === 'local' ? 'aviso' : ''}`;
+    const usable = kind === 'claude' || kind === 'local' || kind === 'mqtt';
     $('btn-crear-sala').disabled = !usable;
     $('form-unirse').querySelector('button').disabled = !usable;
     $('nota-red').textContent =
       detail ||
       (kind === 'claude'
         ? 'Comparte el código con quien tenga este enlace. Para jugar necesitan permiso de colaborador.'
-        : kind === 'local'
-          ? 'Fuera de Claude solo pueden unirse otras pestañas de este navegador (útil para probar).'
-          : kind === 'connecting'
-            ? ''
-            : 'Este navegador no permite el modo multijugador.');
+        : kind === 'mqtt'
+          ? 'Las salas van por un servidor público: entra quien tenga el enlace o el código desde cualquier dispositivo. Las públicas salen aquí.'
+          : kind === 'local'
+            ? 'Prueba entre pestañas: sin conexión con el servidor de salas, solo pueden unirse otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.'
+            : kind === 'connecting'
+              ? ''
+              : 'Este navegador no permite el modo multijugador.');
+    this.renderRooms();
   }
 
   setRooms(rooms) {
@@ -10459,94 +10748,391 @@ class Home {
     this.renderRooms();
   }
 
+  /** Vestíbulo público: tarjetas con miniatura, mapa, modo y plazas libres. */
   renderRooms() {
     const list = $('lista-salas');
     if (!this.rooms.length) {
-      list.replaceChildren(el('li', { class: 'vacia', text: 'No hay salas abiertas ahora mismo. Crea una.' }));
+      list.replaceChildren(
+        el('li', { class: 'vacia' }, el('span', { text: 'No hay salas públicas ahora mismo.' }), ' ', el('button', { type: 'button', class: 'enlace-ini', 'data-crear': '1', text: 'Crea una' })),
+      );
       return;
     }
     list.replaceChildren(
-      ...this.rooms.map((r) =>
-        el(
+      ...this.rooms.map((r) => {
+        const full = (r.jugadores || 1) >= (r.plazas || 8);
+        const P = PROFILES[r.perfil] || PROFILES.trinchera;
+        const blocked = full || r.otraVersion;
+        return el(
           'li',
           {},
           el(
-            'span',
-            { class: 'sala-info' },
-            el('strong', { text: `Sala de ${String(r.nombre || 'alguien').slice(0, 18)}` }),
-            el('small', { text: `${r.jugadores || 1} jugador${r.jugadores === 1 ? '' : 'es'} · ${mapLabel(r.mapa)} · ${Number(r.bots) || 0} bots` }),
+            'button',
+            { type: 'button', class: `sala-tarjeta-pub${blocked ? ' bloqueada' : ''}`, 'data-code': r.code, disabled: blocked, title: r.otraVersion ? 'Esta sala usa otra versión del juego' : full ? 'Sala llena' : `Entrar en ${r.nombre}` },
+            el('span', { class: 'sala-mini' }, this._thumb(r.mapa, 168)),
+            el(
+              'span',
+              { class: 'sala-info' },
+              el('strong', { text: String(r.nombre || 'Sala').slice(0, 28) }),
+              el('small', { text: `${mapLabel(r.mapa)} · ${P.name} · ${VICTORY_NAMES[r.victoria] || 'Dominación'}` }),
+              el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} bots` }),
+            ),
+            el('span', { class: 'sala-entrar', text: r.otraVersion ? 'Otra versión' : full ? 'Llena' : 'Entrar' }),
           ),
-          el('button', { type: 'button', 'data-code': r.code, text: 'Entrar' }),
-        ),
+        );
+      }),
+    );
+  }
+
+  /** Miniatura de un mapa, una sola vez por mapa y tamaño. */
+  _thumb(id, width) {
+    const key = `${id}:${width}`;
+    this._thumbs ??= new Map();
+    let src = this._thumbs.get(key);
+    if (!src) {
+      src = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', width);
+      this._thumbs.set(key, src);
+    }
+    const c = el('canvas', { width: src.width, height: src.height, 'aria-hidden': 'true' });
+    c.getContext('2d').drawImage(src, 0, 0);
+    return c;
+  }
+
+  /** Pinta el mapa `id` en un lienzo grande (recortado para llenarlo). */
+  _paintMapInto(canvas, id) {
+    if (canvas.dataset.mapa === id) return;
+    canvas.dataset.mapa = id;
+    const src = this._thumbs?.get(`${id}:640`) || (() => {
+      this._thumbs ??= new Map();
+      const c = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', 640);
+      this._thumbs.set(`${id}:640`, c);
+      return c;
+    })();
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const k = Math.max(W / src.width, H / src.height);
+    const w = src.width * k;
+    const h = src.height * k;
+    ctx.fillStyle = '#1b2d52';
+    ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(src, (W - w) / 2, (H - h) / 2, w, h);
+  }
+
+  /** Chips del resumen: perfil, bots y modo de victoria. */
+  _chips(box, settings) {
+    const s = settings || {};
+    const r = s.rules || {};
+    const P = PROFILES[r.profile] || PROFILES.trinchera;
+    box.replaceChildren(
+      el('span', { class: 'chip-sala', title: `Perfil de reglas ${P.id}` }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚙' }), P.name),
+      el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${Number(s.bots) || 0} bots`),
+      el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚑' }), VICTORY_NAMES[r.victory] || 'Dominación'),
+    );
+  }
+
+  // --------------------------------------------------------- crear sala
+
+  /** Pantalla «Crear sala»: mapa y quién entra; las reglas, en «Reglas avanzadas». */
+  showCreate() {
+    const a = this.profile.ajustes;
+    if (!this.create) {
+      this.create = {
+        map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'europa',
+        name: `Sala de ${this.profile.nombre || 'Trinchera'}`,
+        visibility: 'enlace',
+        seats: 4,
+        bots: Math.min(ONLINE_MAX_BOTS, a.bots || 40),
+        difficulty: a.dificultad || 'normal',
+        rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) },
+      };
+    }
+    $('inicio').hidden = true;
+    $('crear-sala').hidden = false;
+    $('crear-nombre').value = this.create.name;
+    $('crear-error').textContent = '';
+    this._busyCreate(false);
+    this._renderCreate();
+  }
+
+  hideCreate() {
+    $('crear-sala').hidden = true;
+    $('inicio').hidden = false;
+    this.openPanel('online');
+  }
+
+  _renderCreate() {
+    const c = this.create;
+    // Mapas: el grande y una tira con todos
+    this._paintMapInto($('crear-mapa-img'), c.map);
+    $('crear-mapa-nombre').textContent = mapLabel(c.map);
+    const maps = [...Object.keys(REAL_MAPS), ...Object.keys(MAP_SIZES)];
+    $('crear-mapas').replaceChildren(
+      ...maps.map((id) =>
+        el('button', {
+          type: 'button',
+          role: 'radio',
+          'aria-checked': String(id === c.map),
+          text: REAL_MAPS[id] || `Aleatorio ${MAP_SIZES[id].label.toLowerCase()}`,
+          onclick: () => {
+            c.map = id;
+            this._renderCreate();
+          },
+        }),
       ),
     );
+    segmented($('crear-visibilidad'), [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], c.visibility, (v) => {
+      c.visibility = v;
+      this._renderCreate();
+    });
+    $('crear-vis-nota').textContent = c.visibility === 'publica' ? 'Sale en la lista de salas públicas de Multijugador.' : 'No sale en la lista: se entra con el enlace o el código.';
+    $('plazas-valor').textContent = String(c.seats);
+    $('plazas-menos').disabled = c.seats <= MIN_HUMANS;
+    $('plazas-mas').disabled = c.seats >= MAX_HUMANS;
+    this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+    // Reglas avanzadas: naciones, dificultad y el editor de reglas
+    if (!this._createRules) {
+      const out = el('strong', { text: String(c.bots) });
+      const bots = el('input', { type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(c.bots) });
+      bots.addEventListener('input', () => {
+        c.bots = Number(bots.value);
+        out.textContent = bots.value;
+        this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+        this._createRules?.refresh();
+      });
+      const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
+      segmented(dif, Object.entries(DIFFICULTY), c.difficulty, (v) => {
+        c.difficulty = v;
+      });
+      this._createRules = rulesEditor('crear', c.rules, () => this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules }), {
+        autoColonies: () => colonyCount(landTilesOf(c.map), c.bots),
+      });
+      $('crear-reglas').replaceChildren(
+        el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', out), bots),
+        el('div', { class: 'campo' }, el('span', { text: 'Dificultad' }), dif),
+        this._createRules,
+      );
+    }
+    this._createRules.refresh();
+  }
+
+  _seats(d) {
+    this.create.seats = Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, this.create.seats + d));
+    this._renderCreate();
+  }
+
+  _busyCreate(on) {
+    this.creating = on;
+    const b = $('crear-confirmar');
+    b.disabled = on;
+    b.textContent = on ? 'Creando sala…' : 'Crear sala';
+  }
+
+  /** Crear: una sola sala aunque se pulse dos veces; si falla, se conserva todo y se puede reintentar. */
+  async _submitCreate() {
+    if (this.creating) return;
+    const c = this.create;
+    c.name = $('crear-nombre').value.trim() || `Sala de ${this.profile.nombre || 'Trinchera'}`;
+    this._busyCreate(true);
+    $('crear-error').textContent = '';
+    // Las reglas elegidas pasan a ser las del jugador
+    Object.assign(this.profile.ajustes, { mapa: c.map, dificultad: c.difficulty, reglas: { ...c.rules } });
+    this.h.onProfileChange?.(false);
+    try {
+      await this.h.onCreateRoom?.({
+        settings: { bots: c.bots, mapSize: c.map, difficulty: c.difficulty, rules: { ...c.rules } },
+        info: { nombre: c.name, visibilidad: c.visibility, plazas: c.seats },
+      });
+      $('crear-sala').hidden = true;
+    } catch (err) {
+      $('crear-error').textContent = `${err && err.message ? err.message : 'No se ha podido crear la sala.'} Revisa la conexión y vuelve a intentarlo.`;
+      $('crear-confirmar').textContent = 'Reintentar';
+      this.creating = false;
+      $('crear-confirmar').disabled = false;
+      return;
+    }
+    this._busyCreate(false);
   }
 
   // ---------------------------------------------------------------- sala
 
   showLobby() {
+    this._lobbyMode = null;
     $('inicio').hidden = true;
+    $('crear-sala').hidden = true;
     $('sala').hidden = false;
+    $('sala-ajustes').hidden = true;
+    $('btn-editar-reglas').textContent = 'Editar reglas';
+    $('sala-copia').hidden = true;
+    delete $('sala-ajustes').dataset.host;
   }
 
   hideLobby() {
     $('sala').hidden = true;
+    this.hideCountdown();
   }
 
-  renderLobby(sala, kind, status = '') {
+  /** Aviso bajo la cabecera (motivos, errores, reconexión, prueba entre pestañas). */
+  _notice(text, tone = '') {
+    const n = $('sala-aviso');
+    n.hidden = !text;
+    n.textContent = text || '';
+    n.className = `sala-aviso${tone ? ` ${tone}` : ''}`;
+  }
+
+  /**
+   * Ficha de invitación: nombre, mapa y plazas, con «Unirme» o el motivo por
+   * el que no se puede entrar (llena, empezada, cerrada, otra versión).
+   */
+  renderEntry(sala, state) {
+    this._lobbyMode = 'entrada';
+    $('sala-rejilla').hidden = true;
+    $('sala-pie').hidden = true;
+    $('btn-copiar-enlace').hidden = true;
+    const box = $('sala-entrada');
+    box.hidden = false;
+    const info = state.info || sala.roomInfo();
+    $('sala-nombre').textContent = state.estado === 'buscando' ? 'Buscando la sala…' : info.nombre;
     $('sala-codigo').textContent = sala.code.toUpperCase();
-    const players = sala.players();
-    $('sala-jugadores').replaceChildren(
-      ...players.map((p) =>
-        el(
-          'li',
-          { class: p.isMe ? 'yo' : '' },
-          emblemCanvas(p.emblem, 30),
-          el('span', { class: 'sala-nombre' }, el('strong', { text: p.name }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
-          el('span', { class: 'chip', text: p.host ? 'Anfitrión' : p.isMe ? 'Tú' : 'Listo' }),
-        ),
-      ),
-    );
-
-    const box = $('sala-ajustes');
-    const s = sala.isHost ? sala.settings : sala.hostSettings();
-    if (sala.isHost) {
-      if (!box.dataset.host) {
-        box.dataset.host = '1';
-        box.replaceChildren(
-          el('label', { class: 'campo' }, el('span', {}, 'Naciones rivales ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
-            el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(MAX_BOTS), value: String(s.bots), oninput: () => this._lobbyChanged() })),
-          el('div', { class: 'fila-2' },
-            el('label', { class: 'campo' }, el('span', { text: 'Mapa' }),
-              el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
-            el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
-              el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
-          // Las mismas reglas que contra la IA: colonias, oro, ritmos, tregua…
-          (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
-            autoColonies: () => colonyCount(landTilesOf($('sala-mapa')?.value || 'mundo'), Number($('sala-bots')?.value || 0)),
-          })),
-        );
-        fillMapSelect($('sala-mapa'));
-        $('sala-mapa').value = s.mapSize;
-        $('sala-dificultad').value = s.difficulty;
-        this._rulesSala.refresh(); // ya existen el mapa y las naciones elegidos
-      }
-    } else {
-      delete box.dataset.host;
-      box.replaceChildren(
-        el('p', { class: 'nota', text: s ? `Mapa ${mapLabel(s.mapSize)} · ${s.bots} bots · dificultad ${DIFFICULTY[s.difficulty] || 'normal'} · ${rulesSummary(s.rules)}` : 'Esperando al anfitrión…' }),
-      );
+    $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
+    $('sala-visibilidad').hidden = state.estado === 'buscando';
+    const reasons = {
+      buscando: 'Conectando con la sala…',
+      llena: 'La sala está llena.',
+      empezada: 'La partida ya ha empezado.',
+      cerrada: 'La sala no existe o se ha cerrado. Revisa el código.',
+      version: 'La sala usa otra versión del juego. Recarga la página (y que el anfitrión también) y vuelve a entrar.',
+    };
+    const s = state.settings;
+    const parts = [];
+    if (s) {
+      const card = el('div', { class: 'entrada-mapa' }, this._thumb(s.mapSize, 320), el('span', { class: 'mapa-etiqueta', text: mapLabel(s.mapSize) }));
+      const chips = el('div', { class: 'chips-sala' });
+      this._chips(chips, s);
+      parts.push(card, chips, el('p', { class: 'entrada-plazas', text: `${state.total || 1} de ${state.seats || 4} plazas ocupadas` }));
     }
+    if (state.estado === 'lista') {
+      parts.push(el('button', { type: 'button', class: 'principal grande', onclick: () => this.h.onEntryJoin?.(), text: 'Unirme' }));
+    } else {
+      parts.push(el('p', { class: 'entrada-motivo', text: reasons[state.estado] || 'No se puede entrar en esta sala.' }));
+      if (state.estado !== 'buscando') parts.push(el('button', { type: 'button', class: 'secundario', onclick: () => this.h.onLeaveRoom?.(), text: '← Volver a Multijugador' }));
+    }
+    box.replaceChildren(...parts);
+  }
 
+  /** Vestíbulo de la sala: invitación, mapa y reglas, jugadores, preparación y motivo. */
+  renderLobby(sala, kind, status = '') {
+    if (!sala) return;
+    // Al pasar de la ficha de invitación a la sala, se vuelve arriba
+    if (this._lobbyMode !== 'sala') {
+      this._lobbyMode = 'sala';
+      document.querySelector('#sala .sala-cuerpo').scrollTop = 0;
+    }
+    $('sala-entrada').hidden = true;
+    $('sala-rejilla').hidden = false;
+    $('sala-pie').hidden = false;
+    $('btn-copiar-enlace').hidden = false;
+    const st = sala.status();
+    const info = sala.roomInfo();
+    const s = sala.isHost ? sala.settings : sala.hostSettings();
+    $('sala-nombre').textContent = info.nombre;
+    $('sala-visibilidad').hidden = false;
+    $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
+    $('sala-codigo').textContent = sala.code.toUpperCase();
+    $('sala-red').textContent = kind === 'local' ? 'Prueba entre pestañas' : kind === 'mqtt' ? 'Servidor público' : '';
+    if (s) {
+      this._paintMapInto($('sala-mapa-img'), s.mapSize);
+      $('sala-mapa-nombre').textContent = mapLabel(s.mapSize);
+      this._chips($('sala-chips'), s);
+    }
+    // Jugadores: anfitrión, invitados y plazas libres
+    const rows = st.players.map((p) => {
+      const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
+      return el(
+        'li',
+        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}` },
+        el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
+        el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
+        el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),
+        el('span', { class: `check-sala${p.ready ? ' si' : ''}`, 'aria-label': p.ready ? 'Preparado' : 'Sin preparar', text: p.ready ? '✓' : '' }),
+      );
+    });
+    for (let i = st.players.length; i < st.seats; i++) {
+      rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: 'Plaza libre' }))));
+    }
+    $('sala-jugadores').replaceChildren(...rows);
+    $('sala-cuenta').textContent = `${st.total}/${st.seats}`;
+    // Pie: cuántos preparados, el motivo y la acción
+    $('sala-preparados').textContent = `${st.readyCount} de ${st.total} preparado${st.total === 1 ? '' : 's'}`;
+    const me = st.players.find((p) => p.isMe);
+    const waiting = !me && st.waiting.some((p) => p.isMe);
+    const counting = !!sala.countdown;
     $('btn-empezar').hidden = !sala.isHost;
-    const where = `${kind === 'local' ? 'Modo local: solo pueden entrar otras pestañas de este navegador.' : 'Comparte el código: entran quienes tengan este enlace.'} Reglas: ${rulesSummary(s && s.rules)}.`;
-    $('sala-estado').textContent = status || (sala.isHost ? `${where} Puedes empezar cuando quieras; el resto de naciones las lleva la IA.` : 'El anfitrión empezará la partida.');
+    $('btn-listo').hidden = sala.isHost;
+    let motivo = '';
+    if (sala.isHost) {
+      $('btn-empezar').disabled = !st.canStart || counting;
+      $('btn-empezar').textContent = counting ? 'Empezando…' : 'Iniciar partida';
+      motivo = st.canStart ? 'Todo listo' : st.blockers[0] || '';
+    } else {
+      const hostOk = st.host && st.host.presence.version === RULES_FINGERPRINT;
+      const ready = !!me && me.ready;
+      $('btn-listo').disabled = !me || !hostOk || counting;
+      $('btn-listo').textContent = ready ? 'Cancelar listo' : 'Estoy listo';
+      $('btn-listo').classList.toggle('secundario', ready);
+      $('btn-listo').classList.toggle('principal', !ready);
+      motivo = !st.host ? 'Esperando al anfitrión…' : !hostOk ? 'Otra versión del juego: recarga la página' : waiting ? 'La sala está llena' : ready ? 'Esperando a que el anfitrión inicie' : sala.ready ? 'Las reglas han cambiado: revisa y confirma de nuevo' : 'Revisa la configuración y pulsa «Estoy listo»';
+    }
+    $('sala-motivo').textContent = motivo;
+    $('sala-motivo').classList.toggle('ok', sala.isHost && st.canStart);
+    // Reglas: solo el anfitrión las edita
+    $('btn-editar-reglas').hidden = !sala.isHost;
+    if (sala.isHost) this._hostEditor(sala, s);
+    else {
+      $('sala-ajustes').hidden = true;
+      delete $('sala-ajustes').dataset.host;
+    }
+    // Aviso: lo que se pase, o la prueba entre pestañas
+    if (status) this._notice(status, /no |otra versión|perdid|ha salido|llena|cerrad|cancel/i.test(status) ? 'error' : '');
+    else if (kind === 'local') this._notice('Prueba entre pestañas: solo pueden entrar otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.', 'aviso');
+    else this._notice('');
+  }
+
+  /** Editor del anfitrión (nombre, visibilidad, plazas, mapa, naciones, dificultad y reglas). */
+  _hostEditor(sala, s) {
+    const box = $('sala-ajustes');
+    if (box.dataset.host) return;
+    box.dataset.host = '1';
+    const info = sala.info;
+    const name = el('input', { maxlength: '28', value: info.nombre, 'aria-label': 'Nombre de la sala' });
+    name.addEventListener('change', () => this.h.onRoomInfo?.({ nombre: name.value.trim() || info.nombre }));
+    const vis = el('div', { class: 'segmentos visibilidad', role: 'radiogroup', 'aria-label': 'Visibilidad' });
+    segmented(vis, [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], info.visibilidad, (v) => this.h.onRoomInfo?.({ visibilidad: v }));
+    const seats = el('select', { 'aria-label': 'Plazas' }, ...Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => el('option', { value: String(i + MIN_HUMANS), text: `${i + MIN_HUMANS} plazas` })));
+    seats.value = String(info.plazas);
+    seats.addEventListener('change', () => this.h.onRoomInfo?.({ plazas: Number(seats.value) }));
+    this.choice.rules = { ...DEFAULT_RULES, ...migrateRules(s.rules) };
+    box.replaceChildren(
+      el('p', { class: 'nota', text: 'Si cambias el mapa, las naciones, la dificultad o las reglas, los invitados tienen que confirmar de nuevo. El nombre, la visibilidad y las plazas no.' }),
+      el('div', { class: 'fila-2' }, el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name), el('label', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
+      el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis),
+      el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
+        el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(Math.min(ONLINE_MAX_BOTS, s.bots)), oninput: () => this._lobbyChanged() })),
+      el('div', { class: 'fila-2' },
+        el('label', { class: 'campo' }, el('span', { text: 'Mapa' }), el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
+        el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
+          el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
+      (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
+        autoColonies: () => colonyCount(landTilesOf($('sala-mapa')?.value || 'mundo'), Number($('sala-bots')?.value || 0)),
+      })),
+    );
+    fillMapSelect($('sala-mapa'));
+    $('sala-mapa').value = s.mapSize;
+    $('sala-dificultad').value = s.difficulty;
+    this._rulesSala.refresh();
   }
 
   _lobbyChanged() {
-    const max = maxBotsFor($('sala-mapa').value);
-    $('sala-bots').max = String(max);
-    if (Number($('sala-bots').value) > max) $('sala-bots').value = String(max);
     $('sala-out-bots').textContent = $('sala-bots').value;
     this._rulesSala?.refresh();
     // Se guardan como las reglas por defecto del jugador
@@ -10558,6 +11144,43 @@ class Home {
       difficulty: $('sala-dificultad').value,
       rules: { ...this.choice.rules },
     });
+  }
+
+  /** Cuenta atrás grande sobre la sala (ms) o la quita (null). */
+  showCountdown(ms) {
+    const box = $('sala-cuenta-atras');
+    clearInterval(this._cdTimer);
+    const end = performance.now() + ms;
+    const paint = () => {
+      const left = Math.max(0, end - performance.now());
+      $('sala-cuenta-num').textContent = String(Math.max(1, Math.ceil(left / 1000)));
+      if (left <= 0) clearInterval(this._cdTimer);
+    };
+    box.hidden = false;
+    paint();
+    this._cdTimer = setInterval(paint, 100);
+  }
+
+  hideCountdown() {
+    clearInterval(this._cdTimer);
+    $('sala-cuenta-atras').hidden = true;
+  }
+
+  /** Enlace copiado o, si el portapapeles falla, el enlace a la vista para seleccionarlo. */
+  showCopy(ok, link) {
+    if (ok) {
+      const b = $('btn-copiar-enlace');
+      const label = b.querySelector('span');
+      label.textContent = '¡Copiado!';
+      clearTimeout(this._copyTimer);
+      this._copyTimer = setTimeout(() => (label.textContent = 'Copiar enlace'), 1800);
+      $('sala-copia').hidden = true;
+      return;
+    }
+    $('sala-copia').hidden = false;
+    $('sala-enlace').value = link;
+    $('sala-enlace').focus();
+    $('sala-enlace').select();
   }
 }
 
@@ -12927,52 +13550,107 @@ function leaveOnline() {
   state.online = false;
 }
 
-async function openSala(code, isHost) {
-  if (!transport) return;
-  leaveOnline();
-  const settings = {
-    bots: Math.min(200, profile.ajustes.bots),
+/** Ajustes de partida por defecto para una sala (los del jugador). */
+function defaultRoomSettings() {
+  return {
+    bots: Math.min(60, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
     rules: { ...DEFAULT_RULES, ...migrateRules(profile.ajustes.reglas) },
   };
-  const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings });
+}
+
+/**
+ * Abre una sala. Anfitrión: con la configuración y los datos del formulario
+ * «Crear sala» (si falla, lanza el error para que el formulario lo muestre).
+ * Invitado: entra como observador y, si se puede, ocupa su plaza (con
+ * `auto`, al momento; desde un enlace, tras pulsar «Unirme» en la ficha).
+ */
+async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
+  if (!transport) throw new Error('Sin conexión para el multijugador.');
+  leaveOnline();
+  const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
-  home.showLobby();
-  home.renderLobby(sala, transport.kind, 'Entrando en la sala…');
-  sala.onChange = () => {
+  const kind = transport.kind;
+  const render = (status = '') => {
     if (state.sala !== sala || sala.started) return;
-    const host = sala.host();
-    const busy = !isHost && host && host.presence.estado === 'jugando';
-    home.renderLobby(sala, transport.kind, busy ? 'Esta partida ya ha empezado. Espera a la siguiente o crea otra sala.' : '');
+    if (sala.observer) {
+      const entry = sala.entryState();
+      if (auto && entry.estado === 'lista') {
+        sala.join().then(() => render());
+        return;
+      }
+      home.renderEntry(sala, entry);
+    } else home.renderLobby(sala, kind, status);
   };
-  sala.onStart = (payload, hostPeer) => beginOnlineGame(sala, payload, hostPeer);
+  sala.onChange = () => render();
+  sala.onStart = (payload, hostPeer) => {
+    home.hideCountdown();
+    beginOnlineGame(sala, payload, hostPeer);
+  };
+  sala.onCountdown = (ms, motivo) => {
+    if (state.sala !== sala) return;
+    if (ms) home.showCountdown(ms);
+    else {
+      home.hideCountdown();
+      render(motivo ? `Inicio cancelado: ${motivo}.` : '');
+    }
+  };
+  sala.onConnection = (on) => {
+    if (state.sala !== sala || sala.started) return;
+    render(on ? '' : 'Reconectando… (tu plaza se guarda unos segundos)');
+  };
   // El anfitrión simula con otra versión de las reglas: no se empieza
   sala.onVersionMismatch = (theirs, mine) => {
     if (state.sala !== sala) return;
-    home.renderLobby(sala, transport.kind, `La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
+    render(`La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
   };
+  home.showLobby();
+  if (!isHost) home.renderEntry(sala, { estado: 'buscando' });
   try {
-    await sala.open();
+    await sala.open({ observer: !isHost });
   } catch (err) {
-    const code = err && err.code;
+    if (state.sala === sala) state.sala = null;
+    const c = err && err.code;
     const why =
-      code === 'not_permitted'
+      c === 'not_permitted'
         ? 'No tienes permiso para jugar online en este enlace (hace falta acceso de colaborador).'
-        : code === 'limit_reached'
+        : c === 'limit_reached'
           ? 'Hay demasiadas salas abiertas ahora mismo. Inténtalo en un momento.'
-          : 'No se ha podido entrar en la sala. Inténtalo de nuevo.';
-    home.renderLobby(sala, transport.kind, why);
+          : 'No se ha podido abrir la sala.';
+    if (isHost) {
+      home.hideLobby();
+      throw new Error(why);
+    }
+    home.renderEntry(sala, { estado: 'cerrada' });
     return;
   }
-  if (state.sala === sala) sala.onChange();
+  render();
   if (!isHost) {
-    setTimeout(() => {
-      if (state.sala === sala && !sala.started && !sala.host()) {
-        home.renderLobby(sala, transport.kind, 'No hay nadie en esa sala. Revisa el código.');
-      }
-    }, 5000);
+    // Sin anfitrión a la vista: la ficha dirá que la sala no existe o se ha cerrado
+    setTimeout(() => state.sala === sala && !sala.started && render(), 5200);
   }
+}
+
+/** Enlace de invitación: esta página con ?sala=CÓDIGO (y el servidor de salas usado). */
+function inviteLink(sala) {
+  const code = sala.code.toUpperCase();
+  if (!transport || transport.kind === 'claude' || !/^https?:$/.test(location.protocol)) return null;
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('sala', code);
+  if (transport.kind === 'mqtt') {
+    if (transport.brokerIndex >= 0) url.searchParams.set('b', String(transport.brokerIndex));
+    else url.searchParams.set('broker', transport.brokerUrl);
+  }
+  if (transport.kind === 'local') url.searchParams.set('red', 'local');
+  return url.toString();
+}
+
+function copyText(text, ok, fail) {
+  if (navigator.clipboard && window.isSecureContext !== false) navigator.clipboard.writeText(text).then(ok, fail);
+  else fail();
 }
 
 async function beginOnlineGame(sala, payload, hostPeer) {
@@ -13120,8 +13798,9 @@ const home = new Home(profile, {
   },
   onSettings: applySettings,
   sound: (name) => sound.play(name, 0.9, 0),
-  onCreateRoom() {
-    if (transport) openSala(newRoomCode(), true);
+  /** «Crear sala» (devuelve una promesa: el formulario espera y, si falla, permite reintentar). */
+  onCreateRoom({ settings, info }) {
+    return openSala(newRoomCode(), true, { settings, info });
   },
   onJoinRoom(text) {
     const code = normalizeCode(text);
@@ -13129,14 +13808,48 @@ const home = new Home(profile, {
       home.setNetStatus(transport ? transport.kind : null, 'El código tiene 5 letras o números.');
       return;
     }
-    openSala(code, false);
+    openSala(code, false, { auto: true });
+  },
+  onEntryJoin() {
+    const sala = state.sala;
+    if (!sala || !sala.observer) return;
+    if (sala.entryState().estado !== 'lista') {
+      home.renderEntry(sala, sala.entryState());
+      return;
+    }
+    sala.join().then(() => home.renderLobby(sala, transport.kind));
+  },
+  onReady() {
+    const sala = state.sala;
+    if (!sala || sala.isHost) return;
+    sala.setReady(!sala.myReadyValid());
+    home.renderLobby(sala, transport.kind);
+  },
+  onRoomInfo(info) {
+    state.sala?.setInfo(info);
+    if (state.sala) home.renderLobby(state.sala, transport.kind);
+  },
+  onCopyLink() {
+    const sala = state.sala;
+    if (!sala) return;
+    const link = inviteLink(sala);
+    const code = sala.code.toUpperCase();
+    if (!link) {
+      // Dentro de Claude: el enlace es el del juego; se copia el código
+      copyText(`Únete a mi sala de Trinchera con el código ${code}`, () => home.showCopy(true), () => home.showCopy(false, code));
+      return;
+    }
+    copyText(link, () => home.showCopy(true), () => home.showCopy(false, link));
   },
   onLeaveRoom() {
     leaveOnline();
     home.show();
   },
   onStartRoom() {
-    state.sala?.start();
+    const sala = state.sala;
+    if (!sala) return;
+    const why = sala.beginCountdown();
+    if (why) home.renderLobby(sala, transport.kind, why);
   },
   onRoomSettings(settings) {
     state.sala?.setSettings(settings);
@@ -13144,11 +13857,7 @@ const home = new Home(profile, {
   onCopyCode() {
     const code = state.sala ? state.sala.code.toUpperCase() : '';
     const done = () => home.renderLobby(state.sala, transport.kind, `Código ${code} copiado.`);
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(code).then(done, () => selectCode());
-    } else {
-      selectCode();
-    }
+    copyText(code, done, () => selectCode());
   },
 });
 
@@ -13518,13 +14227,21 @@ requestAnimationFrame(() => setTimeout(() => {
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
+// En la web: servidor MQTT público (?b=N el del anfitrión, ?broker=ws… uno propio, ?red=local solo pestañas)
 home.setNetStatus('connecting');
-connectTransport().then((t) => {
-  transport = t;
-  state.transport = t;
-  home.setNetStatus(t ? t.kind : null);
-  if (t) t.lobby.onPeers(() => home.setRooms(openRooms(t)));
-});
+{
+  const q = new URLSearchParams(location.search);
+  const b = Number(q.get('b'));
+  connectTransport({ prefer: q.get('red') === 'local' ? 'local' : Number.isInteger(b) && q.has('b') ? b : null, brokerUrl: q.get('broker') }).then((t) => {
+    transport = t;
+    state.transport = t;
+    home.setNetStatus(t ? t.kind : null);
+    if (t) t.lobby.onPeers(() => home.setRooms(openRooms(t)));
+    // Enlace de invitación (?sala=CÓDIGO): la ficha de entrada de esa sala
+    const code = normalizeCode(q.get('sala'));
+    if (t && code.length === 5) openSala(code, false, { auto: false }).catch(() => {});
+  });
+}
 
 // Nube: perfil entre dispositivos y clasificación global
 getCloud().then(async (c) => {
@@ -14535,6 +15252,302 @@ class Minimap {
 
 return { Minimap };
 });
+__define('mqtt', function () {
+// Cliente MQTT 3.1.1 mínimo sobre WebSocket, sin dependencias. Solo lo que
+// necesitan las salas: conectar, suscribirse, publicar (QoS 0, con o sin
+// «retain»), latido y reconexión automática. Sirve con cualquier servidor
+// público que acepte MQTT por WebSocket seguro (wss://…/mqtt).
+//
+// Los mensajes de las salas no son secretos ni fiables: cualquiera que conozca
+// el tema puede leerlos o escribirlos; el juego valida todo lo que recibe.
+
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+/** Une trozos de bytes (arrays de números o Uint8Array). */
+function concat(parts) {
+  let n = 0;
+  for (const p of parts) n += p.length;
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+
+/** Cadena MQTT: 2 bytes de longitud + UTF-8. */
+function mqttString(s) {
+  const b = enc.encode(s);
+  return concat([[b.length >> 8, b.length & 255], b]);
+}
+
+/** «Remaining length» (entero de longitud variable, 7 bits por byte). */
+function encodeLength(n) {
+  const out = [];
+  do {
+    let d = n % 128;
+    n = Math.floor(n / 128);
+    if (n > 0) d |= 128;
+    out.push(d);
+  } while (n > 0);
+  return out;
+}
+
+function packet(type, flags, body) {
+  return concat([[(type << 4) | flags], encodeLength(body.length), body]);
+}
+
+function connectPacket({ clientId, keepAlive = 20, clean = true, will = null }) {
+  const flags = (clean ? 2 : 0) | (will ? 4 | (will.retain ? 32 : 0) : 0);
+  const parts = [mqttString('MQTT'), [4, flags, keepAlive >> 8, keepAlive & 255], mqttString(clientId)];
+  if (will) parts.push(mqttString(will.topic), mqttString(will.payload || ''));
+  return packet(1, 0, concat(parts));
+}
+
+function subscribePacket(id, filters) {
+  return packet(8, 2, concat([[id >> 8, id & 255], ...filters.flatMap((f) => [mqttString(f), [0]])]));
+}
+
+function unsubscribePacket(id, filters) {
+  return packet(10, 2, concat([[id >> 8, id & 255], ...filters.map((f) => mqttString(f))]));
+}
+
+function publishPacket(topic, payload, retain = false) {
+  const body = typeof payload === 'string' ? enc.encode(payload) : payload;
+  return packet(3, retain ? 1 : 0, concat([mqttString(topic), body]));
+}
+
+const PINGREQ = new Uint8Array([0xc0, 0]);
+const DISCONNECT = new Uint8Array([0xe0, 0]);
+
+/**
+ * Lee los paquetes completos de `buf` (puede traer varios o uno a medias).
+ * Devuelve { packets, rest }: lo que sobra se guarda para el siguiente trozo.
+ */
+function parsePackets(buf) {
+  const packets = [];
+  let i = 0;
+  while (i < buf.length) {
+    if (i + 2 > buf.length) break;
+    const head = buf[i];
+    let mult = 1;
+    let len = 0;
+    let j = i + 1;
+    let done = false;
+    for (let k = 0; k < 4 && j < buf.length; k++, j++) {
+      len += (buf[j] & 127) * mult;
+      mult *= 128;
+      if (!(buf[j] & 128)) {
+        done = true;
+        j++;
+        break;
+      }
+    }
+    if (!done || j + len > buf.length) break; // incompleto
+    const body = buf.subarray(j, j + len);
+    const type = head >> 4;
+    if (type === 3) {
+      const qos = (head >> 1) & 3;
+      const tl = (body[0] << 8) | body[1];
+      const topic = dec.decode(body.subarray(2, 2 + tl));
+      const start = 2 + tl + (qos > 0 ? 2 : 0);
+      packets.push({ type: 'publish', topic, payload: dec.decode(body.subarray(start)), retain: !!(head & 1), qos, id: qos > 0 ? (body[2 + tl] << 8) | body[3 + tl] : 0 });
+    } else if (type === 2) packets.push({ type: 'connack', code: body[1] });
+    else if (type === 9) packets.push({ type: 'suback' });
+    else if (type === 11) packets.push({ type: 'unsuback' });
+    else if (type === 13) packets.push({ type: 'pingresp' });
+    else packets.push({ type: 'other', code: type });
+    i = j + len;
+  }
+  return { packets, rest: buf.subarray(i) };
+}
+
+/**
+ * Cliente con reconexión: si se corta, vuelve a conectar (1, 2, 4… hasta 10 s)
+ * y se vuelve a suscribir. Mientras está desconectado, publicar no hace nada
+ * (QoS 0): las salas repiten lo importante (presencia cada 1,5 s).
+ */
+class MqttClient {
+  constructor(url, { clientId, keepAlive = 20, WebSocketImpl = globalThis.WebSocket } = {}) {
+    this.url = url;
+    this.clientId = clientId || `trinchera-${Math.random().toString(36).slice(2, 12)}`;
+    this.keepAlive = keepAlive;
+    this.WS = WebSocketImpl;
+    this.ws = null;
+    this.isConnected = false;
+    this.closed = false;
+    this.filters = new Set();
+    this.msgFns = new Set();
+    this.stateFns = new Set();
+    this.buf = new Uint8Array(0);
+    this.nextId = 1;
+    this.retry = 0;
+    this._ping = null;
+  }
+
+  /** Primera conexión: se resuelve con CONNACK o falla (timeout, error o rechazo). */
+  connect(timeoutMs = 6000) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const done = (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (err) {
+          this.closed = true;
+          this._drop();
+          reject(err);
+        } else resolve(this);
+      };
+      const timer = setTimeout(() => done(new Error('tiempo agotado')), timeoutMs);
+      this._open(done);
+    });
+  }
+
+  _open(onFirst) {
+    let ws;
+    try {
+      ws = new this.WS(this.url, ['mqtt']);
+    } catch (err) {
+      onFirst?.(err);
+      if (!onFirst) this._schedule();
+      return;
+    }
+    this.ws = ws;
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => ws.send(connectPacket({ clientId: this.clientId, keepAlive: this.keepAlive }));
+    ws.onmessage = (e) => {
+      const chunk = new Uint8Array(e.data instanceof ArrayBuffer ? e.data : e.data.buffer || e.data);
+      const all = this.buf.length ? concat([this.buf, chunk]) : chunk;
+      const { packets, rest } = parsePackets(all);
+      this.buf = rest.length ? rest.slice() : new Uint8Array(0);
+      for (const p of packets) this._handle(p, onFirst);
+    };
+    ws.onerror = () => {
+      if (!this.isConnected) onFirst?.(new Error('no se pudo conectar'));
+    };
+    ws.onclose = () => {
+      const was = this.isConnected;
+      this._drop();
+      if (!this.closed) {
+        if (was) this._emitState(false);
+        this._schedule();
+      } else onFirst?.(new Error('cerrado'));
+    };
+  }
+
+  _handle(p, onFirst) {
+    if (p.type === 'connack') {
+      if (p.code !== 0) {
+        onFirst?.(new Error(`rechazado (${p.code})`));
+        this.ws?.close();
+        return;
+      }
+      this.isConnected = true;
+      this.retry = 0;
+      if (this.filters.size) this._send(subscribePacket(this._id(), [...this.filters]));
+      clearInterval(this._ping);
+      this._ping = setInterval(() => this._send(PINGREQ), Math.max(5, this.keepAlive * 0.6) * 1000);
+      onFirst?.();
+      this._emitState(true);
+    } else if (p.type === 'publish') {
+      for (const fn of [...this.msgFns]) fn(p.topic, p.payload, p.retain);
+    }
+  }
+
+  _schedule() {
+    if (this.closed) return;
+    const wait = Math.min(10000, 1000 * 2 ** this.retry++);
+    setTimeout(() => {
+      if (!this.closed && !this.isConnected) this._open(null);
+    }, wait);
+  }
+
+  _drop() {
+    this.isConnected = false;
+    clearInterval(this._ping);
+    this._ping = null;
+    this.buf = new Uint8Array(0);
+    if (this.ws) {
+      this.ws.onopen = this.ws.onmessage = this.ws.onerror = this.ws.onclose = null;
+      try {
+        this.ws.close();
+      } catch {
+        /* ya estaba cerrado */
+      }
+    }
+    this.ws = null;
+  }
+
+  _id() {
+    const id = this.nextId;
+    this.nextId = (this.nextId % 65535) + 1;
+    return id;
+  }
+
+  _send(bytes) {
+    if (this.ws && this.isConnected) {
+      try {
+        this.ws.send(bytes);
+      } catch {
+        /* se reconectará */
+      }
+    }
+  }
+
+  _emitState(on) {
+    for (const fn of [...this.stateFns]) fn(on);
+  }
+
+  subscribe(filter) {
+    if (this.filters.has(filter)) return;
+    this.filters.add(filter);
+    if (this.isConnected) this._send(subscribePacket(this._id(), [filter]));
+  }
+
+  unsubscribe(filter) {
+    if (!this.filters.delete(filter)) return;
+    if (this.isConnected) this._send(unsubscribePacket(this._id(), [filter]));
+  }
+
+  publish(topic, payload, { retain = false } = {}) {
+    this._send(publishPacket(topic, payload, retain));
+  }
+
+  onMessage(fn) {
+    this.msgFns.add(fn);
+    return () => this.msgFns.delete(fn);
+  }
+
+  onState(fn) {
+    this.stateFns.add(fn);
+    return () => this.stateFns.delete(fn);
+  }
+
+  close() {
+    if (this.closed) return;
+    this.closed = true;
+    this._send(DISCONNECT);
+    this._drop();
+  }
+}
+
+/** ¿Encaja `topic` con el filtro MQTT `filter` (con + y #)? */
+function topicMatches(filter, topic) {
+  const f = filter.split('/');
+  const t = topic.split('/');
+  for (let i = 0; i < f.length; i++) {
+    if (f[i] === '#') return true;
+    if (i >= t.length) return false;
+    if (f[i] !== '+' && f[i] !== t[i]) return false;
+  }
+  return f.length === t.length;
+}
+
+return { encodeLength, connectPacket, subscribePacket, unsubscribePacket, publishPacket, PINGREQ, DISCONNECT, parsePackets, MqttClient, topicMatches };
+});
 __define('multiplayer', function () {
 // Multijugador: salas (vestíbulo de espera) y sincronización "lockstep".
 //
@@ -14615,14 +15628,79 @@ function normalizeCode(text) {
   return String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5);
 }
 
-/** Salas que anuncian en el vestíbulo quienes las han creado. */
+/** Mínimo de jugadores humanos para empezar una partida en sala. */
+const MIN_HUMANS = 2;
+/** Cuenta atrás antes de arrancar (fija participantes, semilla y configuración). */
+const COUNTDOWN_MS = 3000;
+/** Visibilidad: «Solo con enlace» (no sale en el vestíbulo) o «Pública». */
+const VISIBILITIES = ['enlace', 'publica'];
+
+/** Nombre, visibilidad y plazas de una sala (no cambian la partida). */
+function cleanRoomInfo(raw, fallbackName = 'Sala') {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const name = String(r.nombre || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 28);
+  const seats = Math.round(Number(r.plazas));
+  return {
+    nombre: name || String(fallbackName).slice(0, 28),
+    visibilidad: VISIBILITIES.includes(r.visibilidad) ? r.visibilidad : 'enlace',
+    plazas: Number.isFinite(seats) ? Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, seats)) : 4,
+  };
+}
+
+/** Lo que sí cambia la partida: si cambia, los invitados tienen que confirmar de nuevo. */
+function gameplayKey(settings) {
+  const s = settings || {};
+  return JSON.stringify([s.mapSize, s.bots, s.difficulty, cleanRules(s.rules)]);
+}
+
+/** Salas públicas que anuncian en el vestíbulo quienes las han creado. Las «Solo con enlace» no aparecen. */
 function openRooms(transport) {
   if (!transport) return [];
   return transport.lobby
     .peers()
-    .filter((p) => !p.sameTab && p.presence && p.presence.sala && p.presence.sala.abierta)
-    .map((p) => ({ ...p.presence.sala, peer: p.peer }))
-    .filter((s) => typeof s.code === 'string' && /^[a-z0-9]{5}$/.test(s.code));
+    .filter((p) => !p.sameTab && p.presence && p.presence.sala && p.presence.sala.abierta && p.presence.sala.visibilidad === 'publica')
+    .map((p) => ({ ...p.presence.sala, peer: p.peer, otraVersion: p.presence.sala.version !== FINGERPRINT }))
+    .filter((s) => typeof s.code === 'string' && /^[a-z0-9]{5}$/.test(s.code))
+    .sort((x, y) => (y.jugadores || 0) - (x.jugadores || 0) || (x.code < y.code ? -1 : 1));
+}
+
+/**
+ * Estado de la sala a partir de la presencia de cada par (función pura, la
+ * usan la interfaz, el inicio y los tests): jugadores sentados por orden de
+ * llegada (el anfitrión primero), quién está listo PARA LA REVISIÓN ACTUAL de
+ * la configuración, quién se reconecta o tiene otra versión del juego, y qué
+ * impide empezar.
+ */
+function roomStatus(peers, { myPeer = null } = {}) {
+  const host = peers.find((p) => p.presence && p.presence.anfitrion && p.presence.jugador) || null;
+  const rev = host ? host.presence.rev : null;
+  const info = cleanRoomInfo(host && host.presence.info);
+  const hostVersion = host ? host.presence.version : null;
+  const all = peers
+    .filter((p) => p.presence && p.presence.jugador)
+    .sort((a, b) => (b.presence.anfitrion ? 1 : 0) - (a.presence.anfitrion ? 1 : 0) || (Number(a.presence.desde) || 0) - (Number(b.presence.desde) || 0) || (a.peer < b.peer ? -1 : 1));
+  const mk = (p) => {
+    const isHost = !!p.presence.anfitrion;
+    return {
+      peer: p.peer,
+      isMe: p.peer === myPeer || !!p.sameTab,
+      host: isHost,
+      ...cleanPlayer(p.presence.jugador),
+      ready: isHost || (rev != null && p.presence.listo === rev),
+      stale: !!p.stale,
+      versionOk: !host || p.presence.version === hostVersion,
+    };
+  };
+  const players = all.slice(0, info.plazas).map(mk);
+  const waiting = all.slice(info.plazas).map(mk);
+  const blockers = [];
+  if (!host) blockers.push('El anfitrión no está en la sala');
+  for (const p of players) if (!p.versionOk) blockers.push(`${p.name} tiene otra versión del juego: tiene que recargar la página`);
+  for (const p of players) if (p.stale) blockers.push(`${p.name} se está reconectando`);
+  const missing = players.filter((p) => !p.ready && !p.stale && p.versionOk).map((p) => p.name);
+  if (missing.length) blockers.push(`${missing.length > 1 ? 'Faltan' : 'Falta'} ${missing.length > 1 ? `${missing.slice(0, -1).join(', ')} y ${missing[missing.length - 1]}` : missing[0]}`);
+  if (players.length < MIN_HUMANS) blockers.push('Hace falta al menos otro jugador');
+  return { host, rev, info, players, waiting, seats: info.plazas, readyCount: players.filter((p) => p.ready).length, total: players.length, blockers, canStart: blockers.length === 0 };
 }
 
 /** Copia "segura" de lo que otro jugador dice de sí mismo (datos no fiables). */
@@ -14646,32 +15724,57 @@ function cleanPlayer(raw) {
 class Sala {
   /**
    * @param transport  resultado de connectTransport()
-   * @param opts { code, isHost, me: {name,color,emblem,pattern,level,title}, settings }
+   * @param opts { code, isHost, me: {name,color,emblem,pattern,level,title}, settings, info }
+   *
+   * Llamadas: onChange() al cambiar algo · onStart(payload, hostPeer) al
+   * arrancar · onCountdown(ms | null, motivo) al empezar o cancelarse la
+   * cuenta atrás · onVersionMismatch(suya, mía) · onConnection(conectado).
    */
-  constructor(transport, { code, isHost, me, settings }) {
+  constructor(transport, { code, isHost, me, settings, info }) {
     this.transport = transport;
     this.code = code;
     this.isHost = isHost;
     this.me = me;
     this.settings = settings;
+    this.info = cleanRoomInfo(info, `Sala de ${me && me.name ? me.name : 'Trinchera'}`);
+    /** Revisión de la configuración: sube cuando cambia algo que afecta a la partida. */
+    this.rev = 1;
+    this._key = gameplayKey(settings);
+    this.ready = false;
+    this.observer = false;
     this.room = null;
     this.started = false;
+    this.countdown = null;
     this.unsubs = [];
-    this.onChange = null; // () => void
-    this.onStart = null; // (payload, hostPeer) => void
+    this.onChange = null;
+    this.onStart = null;
+    this.onCountdown = null;
+    this.onConnection = null;
     this._startTimer = null;
   }
 
-  async open() {
+  /** Entra en el canal. `observer`: solo mira (ficha de invitación), sin ocupar plaza. */
+  async open({ observer = false } = {}) {
+    this.observer = observer && !this.isHost;
+    this.openedAt = Date.now();
     this.room = await this.transport.join(`sala-${this.code}`);
-    this.unsubs.push(this.room.onPeers(() => this.onChange?.()));
+    this.unsubs.push(this.room.onPeers(() => this._changed()));
     this.unsubs.push(this.room.on('start', (m) => this._onStart(m)));
-    await this.room.presence({
-      jugador: this.me,
-      anfitrion: this.isHost,
-      ajustes: this.isHost ? this.settings : null,
-    });
-    if (this.isHost) this._advertise(true);
+    this.unsubs.push(this.room.on('cuenta', (m) => this._onCountdownMsg(m)));
+    this.unsubs.push(this.room.on('cancelar', (m) => this._onCancelMsg(m)));
+    if (this.room.onConnection) this.unsubs.push(this.room.onConnection((on) => this.onConnection?.(on)) || (() => {}));
+    if (this.isHost) {
+      await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now() });
+      this._advertise();
+    } else if (!this.observer) await this.join();
+    this._tick = setInterval(() => this._watchCountdown(), 250);
+  }
+
+  /** Invitado: ocupa su plaza (desde la ficha de invitación). */
+  async join() {
+    this.observer = false;
+    this.ready = false;
+    await this.room.presence({ jugador: this.me, listo: null, version: FINGERPRINT, desde: Date.now() });
   }
 
   myPeer() {
@@ -14680,18 +15783,16 @@ class Sala {
 
   host() {
     if (!this.room) return null;
-    return this.room.peers().find((p) => p.presence && p.presence.anfitrion) || null;
+    return this.room.peers().find((p) => p.presence && p.presence.anfitrion && p.presence.jugador) || null;
   }
 
-  /** Jugadores en la sala: el anfitrión primero, luego por orden estable. */
+  status() {
+    return roomStatus(this.room ? this.room.peers() : [], { myPeer: this.myPeer() });
+  }
+
+  /** Jugadores sentados (el anfitrión primero, luego por orden de llegada). */
   players() {
-    if (!this.room) return [];
-    return this.room
-      .peers()
-      .filter((p) => p.presence && p.presence.jugador)
-      .sort((a, b) => (b.presence.anfitrion ? 1 : 0) - (a.presence.anfitrion ? 1 : 0) || (a.peer < b.peer ? -1 : 1))
-      .slice(0, MAX_HUMANS)
-      .map((p) => ({ peer: p.peer, isMe: p.sameTab, host: !!p.presence.anfitrion, ...cleanPlayer(p.presence.jugador) }));
+    return this.status().players;
   }
 
   hostSettings() {
@@ -14699,35 +15800,212 @@ class Sala {
     return h && h.presence.ajustes ? h.presence.ajustes : null;
   }
 
+  /** Nombre, visibilidad y plazas actuales (las del anfitrión). */
+  roomInfo() {
+    if (this.isHost) return this.info;
+    const h = this.host();
+    return cleanRoomInfo(h && h.presence.info);
+  }
+
+  /**
+   * Ficha de invitación: si se puede entrar y, si no, por qué.
+   * estado: 'buscando' | 'lista' | 'llena' | 'empezada' | 'cerrada' | 'version'
+   */
+  entryState() {
+    const h = this.host();
+    if (!h) return { estado: this.openedAt && Date.now() - this.openedAt > 5000 ? 'cerrada' : 'buscando' };
+    const st = this.status();
+    const base = { info: st.info, settings: h.presence.ajustes || null, total: st.total, seats: st.seats };
+    if (h.presence.estado === 'jugando') return { ...base, estado: 'empezada' };
+    if (h.presence.version !== FINGERPRINT) return { ...base, estado: 'version' };
+    const meSeated = st.players.some((p) => p.isMe);
+    if (!meSeated && st.total >= st.seats) return { ...base, estado: 'llena' };
+    return { ...base, estado: 'lista' };
+  }
+
+  /** Invitado: «Estoy listo» / «Cancelar listo» (para la revisión actual de la configuración). */
+  setReady(on) {
+    if (this.isHost || !this.room) return;
+    const st = this.status();
+    this.ready = !!on && st.rev != null;
+    this.room.presence({ listo: this.ready ? st.rev : null });
+  }
+
+  /** ¿Sigue valiendo mi «listo»? (si el anfitrión cambió el mapa o las reglas, no) */
+  myReadyValid() {
+    const st = this.status();
+    const me = st.players.find((p) => p.isMe);
+    return !!me && me.ready;
+  }
+
+  /** Anfitrión: cambia mapa, naciones, dificultad o reglas (los invitados confirman de nuevo). */
   setSettings(settings) {
     this.settings = settings;
     if (!this.isHost || !this.room) return;
-    this.room.presence({ ajustes: settings });
-    this._advertise(true);
+    const key = gameplayKey(settings);
+    if (key !== this._key) {
+      this._key = key;
+      this.rev++;
+    }
+    if (this.countdown) this.cancelCountdown('El anfitrión ha cambiado la configuración');
+    this.room.presence({ ajustes: settings, rev: this.rev });
+    this._advertise();
   }
 
-  _advertise(open) {
+  /** Anfitrión: nombre, visibilidad y plazas (no invalidan la preparación). */
+  setInfo(info) {
+    this.info = cleanRoomInfo({ ...this.info, ...info }, this.info.nombre);
+    if (!this.isHost || !this.room) return;
+    this.room.presence({ info: this.info });
+    this._advertise();
+  }
+
+  _advertise() {
+    if (!this.isHost) return;
+    const open = !!this.room && !this.started;
+    const pub = open && this.info.visibilidad === 'publica';
+    const st = pub ? this.status() : null;
     this.transport.lobby.presence({
-      sala: open
+      sala: pub
         ? {
             code: this.code,
-            nombre: this.me.name,
-            jugadores: Math.max(1, this.players().length),
+            nombre: this.info.nombre,
+            visibilidad: 'publica',
+            jugadores: Math.max(1, st.total),
+            plazas: this.info.plazas,
             mapa: this.settings.mapSize,
             bots: this.settings.bots,
+            perfil: this.settings.rules && this.settings.rules.profile,
+            victoria: this.settings.rules && this.settings.rules.victory,
+            version: FINGERPRINT,
             abierta: true,
           }
         : null,
     });
   }
 
-  /** Solo el anfitrión: reparte la semilla y la lista de jugadores. */
-  start() {
+  _changed() {
+    if (this.isHost && !this.started) {
+      // El número de jugadores del anuncio, al día
+      const n = this.status().total;
+      if (n !== this._advertisedPlayers) {
+        this._advertisedPlayers = n;
+        this._advertise();
+      }
+    }
+    this._watchCountdown();
+    this.onChange?.();
+  }
+
+  // ------------------------------------------------------- cuenta atrás
+
+  /**
+   * Anfitrión: si todo está listo, empieza la cuenta atrás de 3 s. Fija los
+   * participantes, la semilla y la revisión; si alguien sale, pierde la
+   * conexión o deja de estar listo, se cancela y se vuelve al vestíbulo con el
+   * motivo. Devuelve null o el motivo por el que no se puede.
+   */
+  beginCountdown() {
+    if (!this.isHost || this.started || this.countdown || !this.room) return 'Ya se está preparando el inicio';
+    const st = this.status();
+    if (!st.canStart) return st.blockers[0];
+    this.countdown = {
+      endsAt: Date.now() + COUNTDOWN_MS,
+      seed: (Math.random() * 0xffffffff) >>> 0,
+      rev: this.rev,
+      peers: st.players.map((p) => p.peer),
+      names: Object.fromEntries(st.players.map((p) => [p.peer, p.name])),
+    };
+    this.room.presence({ estado: 'cuenta' });
+    this._sendCountdown();
+    this.onCountdown?.(COUNTDOWN_MS, null);
+    return null;
+  }
+
+  _sendCountdown() {
+    const c = this.countdown;
+    if (!c || !this.room) return;
+    this.room.emit('cuenta', { v: 1, ms: Math.max(0, c.endsAt - Date.now()), rev: c.rev, peers: c.peers });
+    c.lastSent = Date.now();
+  }
+
+  /** Anfitrión: cancela la cuenta atrás y lo dice a todos. */
+  cancelCountdown(motivo) {
+    if (!this.countdown) return;
+    this.countdown = null;
+    if (this.isHost && this.room) {
+      this.room.emit('cancelar', { v: 1, motivo: String(motivo).slice(0, 120) });
+      this.room.presence({ estado: 'vestibulo' });
+    }
+    this.onCountdown?.(null, motivo);
+    this.onChange?.();
+  }
+
+  /** Comprueba la cuenta atrás en curso (cada 250 ms y con cada cambio). */
+  _watchCountdown() {
+    const c = this.countdown;
+    if (!c || this.started || !this.room) return;
+    if (!this.isHost) {
+      // Invitado: si el anfitrión desaparece, se vuelve al vestíbulo
+      const h = this.host();
+      if (!h || h.stale) {
+        this.countdown = null;
+        this.onCountdown?.(null, 'Se ha perdido la conexión con el anfitrión');
+        this.onChange?.();
+      }
+      return;
+    }
+    const peers = new Map(this.room.peers().map((p) => [p.peer, p]));
+    for (const id of c.peers) {
+      const p = peers.get(id);
+      const name = c.names[id] || 'Un jugador';
+      if (!p || !p.presence || !p.presence.jugador) return this.cancelCountdown(`${name} ha salido de la sala`);
+      if (p.stale) return this.cancelCountdown(`${name} ha perdido la conexión`);
+      if (!p.presence.anfitrion && p.presence.listo !== c.rev) return this.cancelCountdown(`${name} ya no está listo`);
+    }
+    if (Date.now() >= c.endsAt) this._launch();
+    else if (Date.now() - (c.lastSent || 0) > 600) this._sendCountdown(); // por si se pierde algún mensaje
+  }
+
+  _onCountdownMsg(msg) {
+    if (this.isHost || this.started || !msg.data || msg.data.v !== 1) return;
+    const h = this.host();
+    if (!h || msg.peer !== h.peer) return;
+    const ms = Math.max(0, Math.min(COUNTDOWN_MS, Number(msg.data.ms) || 0));
+    const first = !this.countdown;
+    this.countdown = { endsAt: Date.now() + ms, rev: msg.data.rev, peers: Array.isArray(msg.data.peers) ? msg.data.peers.map(String) : [] };
+    if (first) this.onCountdown?.(ms, null);
+  }
+
+  _onCancelMsg(msg) {
+    if (this.isHost || this.started || !msg.data || msg.data.v !== 1) return;
+    const h = this.host();
+    if (!h || msg.peer !== h.peer) return;
+    this.countdown = null;
+    this.onCountdown?.(null, String(msg.data.motivo || 'Se ha cancelado el inicio').slice(0, 120));
+    this.onChange?.();
+  }
+
+  /** Fin de la cuenta atrás: reparte semilla, configuración y jugadores (una sola vez). */
+  _launch() {
+    const c = this.countdown;
+    if (!c || this.started) return;
+    const all = new Map(this.status().players.map((p) => [p.peer, p]));
+    const players = c.peers.map((id) => all.get(id)).filter(Boolean);
+    this.countdown = null;
+    this.start({ seed: c.seed, players });
+  }
+
+  /**
+   * Solo el anfitrión: reparte la semilla y la lista de jugadores. Sin
+   * argumentos (pruebas o anfitrión solo) usa la sala tal cual.
+   */
+  start({ seed = (Math.random() * 0xffffffff) >>> 0, players = this.players() } = {}) {
     if (!this.isHost || this.started) return null;
-    const players = this.players();
+    this.started = true;
     const payload = {
       v: 1,
-      seed: (Math.random() * 0xffffffff) >>> 0,
+      seed,
       // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
       ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
@@ -14741,13 +16019,16 @@ class Sala {
       if (Date.now() - t0 > START_REPEAT_FOR_MS) clearInterval(this._startTimer);
       else this.room?.emit('start', payload);
     }, START_REPEAT_MS);
-    this._advertise(false);
+    this._advertise();
     this.room.presence({ estado: 'jugando' });
     return payload;
   }
 
   _onStart(msg) {
-    if (this.started || !msg.data || msg.data.v !== 1) return;
+    if (!msg.data || msg.data.v !== 1) return;
+    if (this.started && !msg.isMe) return;
+    if (this.isHost && !msg.isMe) return;
+    if (this._startHandled) return;
     const host = this.host();
     if (!msg.isMe && (!host || msg.peer !== host.peer)) return; // solo vale el del anfitrión
     const check = checkStartPayload(msg.data);
@@ -14759,17 +16040,21 @@ class Sala {
       }
       return;
     }
+    this._startHandled = true;
     this.started = true;
+    this.countdown = null;
     this.onStart?.(check.payload, msg.isMe ? this.myPeer() : msg.peer);
   }
 
   async leave() {
     clearInterval(this._startTimer);
-    for (const u of this.unsubs) u();
+    clearInterval(this._tick);
+    if (this.countdown && this.isHost) this.cancelCountdown('El anfitrión ha salido de la sala');
+    for (const u of this.unsubs) u?.();
     this.unsubs = [];
-    if (this.isHost) this._advertise(false);
     const room = this.room;
     this.room = null;
+    if (this.isHost) this._advertise();
     if (room) await room.leave().catch(() => {});
   }
 }
@@ -14795,7 +16080,7 @@ function cleanIntent(raw) {
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
-  if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile'].includes(raw.kind)) out.kind = raw.kind;
+  if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile', 'hbomb', 'mirv'].includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;
@@ -15016,7 +16301,7 @@ class NetSync {
   }
 }
 
-return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, newRoomCode, normalizeCode, openRooms, Sala, stateHash, NetSync };
+return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, gameplayKey, openRooms, roomStatus, Sala, stateHash, NetSync };
 });
 __define('names', function () {
 // Nombres de naciones ficticias para los bots, generados por sílabas.
@@ -15078,27 +16363,82 @@ function generateColonyNames(rng, count, exclude = []) {
 return { generateNames, PLACES, generateColonyNames };
 });
 __define('net', function () {
-// Transporte en tiempo real para el multijugador. Las dos variantes ofrecen
+// Transporte en tiempo real para el multijugador. Las tres variantes ofrecen
 // la misma interfaz (la de la capacidad `room` de Claude):
 //   canal.emit(tema, datos) · canal.on(tema, fn) · canal.presence(parche)
 //   canal.peers() · canal.onPeers(fn) · canal.connected() · canal.leave()
 //
 // - Dentro de Claude: `room` conecta a todas las personas con el enlace abierto.
-// - Fuera (fichero suelto, hosting propio): BroadcastChannel entre pestañas
-//   del mismo navegador. Sirve para probar; para jugar entre equipos fuera de
-//   Claude haría falta un servidor (ver ROADMAP.md).
+// - En la web (Hostinger u otro hosting): un servidor MQTT público por
+//   WebSocket seguro conecta navegadores de distintos dispositivos. Es gratis
+//   y sin cuentas, pero público: cualquiera que conozca el canal puede leer o
+//   escribir, así que el juego valida todo lo que recibe.
+// - Si no hay ninguno (o con ?red=local): BroadcastChannel entre pestañas del
+//   mismo navegador, para probar.
+const { MqttClient } = __require('mqtt');
 
-async function connectTransport() {
-  const claude = typeof window !== 'undefined' ? window.claude : null;
+/** Servidores MQTT públicos por WebSocket seguro, en orden de preferencia. */
+const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://mqtt.eclipseprojects.io/mqtt'];
+/** Prefijo de los temas MQTT del juego (cambia con incompatibilidades de protocolo). */
+const TOPIC_PREFIX = 'trinchera-ssuav/v1';
+
+const HEARTBEAT_MS = 1500;
+/** Tras este silencio, un par se marca «reconectando» (sigue en la lista). */
+const STALE_MS = 4000;
+/** Vestíbulo: se olvida a quien lleva este tiempo sin dar señales. */
+const LOBBY_TIMEOUT_MS = 6000;
+/** Salas: la plaza se reserva este tiempo para que pueda volver a conectar. */
+const ROOM_TIMEOUT_MS = 15000;
+
+const hasWindow = typeof window !== 'undefined';
+
+/**
+ * Identidad de esta página: la misma mientras siga abierta, también tras un
+ * corte de conexión (el cliente MQTT se reconecta solo y la presencia vuelve
+ * con el mismo par, así que conserva su plaza en la sala).
+ */
+const PAGE_PEER = Math.random().toString(36).slice(2, 12);
+function tabPeerId() {
+  return PAGE_PEER;
+}
+
+/**
+ * Elige el transporte. `prefer`: 'local' (solo pestañas), un índice de
+ * servidor MQTT (el del anfitrión, que llega en el enlace de invitación) o
+ * nada (el primero que responda).
+ */
+async function connectTransport({ prefer = null, brokerUrl = null, peerId = null } = {}) {
+  const pid = peerId || tabPeerId();
+  const claude = hasWindow ? window.claude : null;
   if (claude && typeof claude.use === 'function') {
     try {
       const room = await claude.use('room');
       if (room) return new ClaudeTransport(room);
     } catch {
-      /* sin room: probamos la alternativa local */
+      /* sin room: probamos las alternativas */
     }
   }
-  if (typeof BroadcastChannel !== 'undefined') return new LocalTransport();
+  if (prefer !== 'local' && typeof WebSocket !== 'undefined') {
+    // Servidor propio o de pruebas (?broker=ws://…): solo ese
+    if (brokerUrl) {
+      try {
+        const client = await new MqttClient(brokerUrl, { clientId: `trinchera-${tabPeerId()}-${Math.random().toString(36).slice(2, 6)}` }).connect(5000);
+        return new MqttTransport(client, -1, brokerUrl, pid);
+      } catch {
+        /* sigue con los públicos */
+      }
+    }
+    const order = Number.isInteger(prefer) && BROKERS[prefer] ? [prefer, ...BROKERS.keys()].filter((v, i, a) => a.indexOf(v) === i) : [...BROKERS.keys()];
+    for (const i of order) {
+      try {
+        const client = await new MqttClient(BROKERS[i], { clientId: `trinchera-${tabPeerId()}-${Math.random().toString(36).slice(2, 6)}` }).connect(5000);
+        return new MqttTransport(client, i, null, pid);
+      } catch {
+        /* siguiente servidor */
+      }
+    }
+  }
+  if (typeof BroadcastChannel !== 'undefined') return new LocalTransport(pid);
   return null;
 }
 
@@ -15119,62 +16459,174 @@ class ClaudeTransport {
   }
 }
 
-// ------------------------------------------------- alternativa entre pestañas
+// ---------------------------------------------- buses (por dónde viajan)
 
-const HEARTBEAT_MS = 1500;
-const PEER_TIMEOUT_MS = 5000;
-
-class LocalTransport {
-  constructor() {
-    this.kind = 'local';
-    this.peerId = Math.random().toString(36).slice(2, 12);
-    this.lobby = new LocalChannel('vestibulo', this.peerId);
+/** Pestañas del mismo navegador. */
+class LocalBus {
+  constructor(name) {
+    this.bc = new BroadcastChannel(`dominia:${name}`);
+    this.fn = null;
+    this.bc.onmessage = (e) => this.fn?.(e.data);
   }
 
-  async join(name) {
-    return new LocalChannel(`sala:${name}`, this.peerId);
+  send(m) {
+    this.bc?.postMessage(m);
+  }
+
+  onMessage(fn) {
+    this.fn = fn;
+  }
+
+  connected() {
+    return !!this.bc;
+  }
+
+  onConnection(fn) {
+    queueMicrotask(() => fn(this.connected()));
+    return () => {};
+  }
+
+  close() {
+    this.bc?.close();
+    this.bc = null;
   }
 }
 
-class LocalChannel {
-  constructor(name, peerId) {
-    this.name = name;
+/** Un tema MQTT por canal, compartido por todos sus pares. */
+class MqttBus {
+  constructor(client, name) {
+    this.client = client;
+    this.topic = `${TOPIC_PREFIX}/c/${name}`;
+    this.fn = null;
+    this.unsub = client.onMessage((topic, payload) => {
+      if (topic !== this.topic) return;
+      let m;
+      try {
+        m = JSON.parse(payload);
+      } catch {
+        return;
+      }
+      this.fn?.(m);
+    });
+    client.subscribe(this.topic);
+  }
+
+  send(m) {
+    this.client.publish(this.topic, JSON.stringify(m));
+  }
+
+  onMessage(fn) {
+    this.fn = fn;
+  }
+
+  connected() {
+    return this.client.isConnected;
+  }
+
+  onConnection(fn) {
+    queueMicrotask(() => fn(this.connected()));
+    return this.client.onState(fn);
+  }
+
+  close() {
+    this.unsub();
+    this.client.unsubscribe(this.topic);
+    this.fn = null;
+  }
+}
+
+class LocalTransport {
+  constructor(peerId = tabPeerId()) {
+    this.kind = 'local';
     this.peerId = peerId;
-    this.bc = new BroadcastChannel(`dominia:${name}`);
+    this.lobby = new PeerChannel(new LocalBus('vestibulo'), this.peerId, { timeout: LOBBY_TIMEOUT_MS });
+  }
+
+  async join(name) {
+    return new PeerChannel(new LocalBus(`sala:${name}`), this.peerId, { timeout: ROOM_TIMEOUT_MS });
+  }
+
+  close() {
+    this.lobby.leave();
+  }
+}
+
+class MqttTransport {
+  constructor(client, brokerIndex, brokerUrl = null, peerId = tabPeerId()) {
+    this.kind = 'mqtt';
+    this.client = client;
+    /** Índice en BROKERS (va en el enlace de invitación) o -1 si es uno propio (brokerUrl). */
+    this.brokerIndex = brokerIndex;
+    this.brokerUrl = brokerUrl || BROKERS[brokerIndex];
+    this.peerId = peerId;
+    this.lobby = new PeerChannel(new MqttBus(client, 'vestibulo'), this.peerId, { timeout: LOBBY_TIMEOUT_MS });
+  }
+
+  async join(name) {
+    return new PeerChannel(new MqttBus(this.client, `sala-${name}`), this.peerId, { timeout: ROOM_TIMEOUT_MS });
+  }
+
+  close() {
+    this.lobby.leave();
+    this.client.close();
+  }
+}
+
+// ------------------------------------------- canal con presencia (común)
+
+/**
+ * Presencia por latidos: cada par repite la suya cada 1,5 s; quien calla más
+ * de STALE_MS se marca «reconectando» (stale) y, pasado `timeout`, sale de la
+ * lista. Al volver con la misma identidad recupera su sitio.
+ */
+class PeerChannel {
+  constructor(bus, peerId, { timeout = LOBBY_TIMEOUT_MS } = {}) {
+    this.bus = bus;
+    this.peerId = peerId;
+    this.timeout = timeout;
     this.mine = {};
     this.others = new Map(); // peer → { presence, updatedAt, lastSeen }
     this.topics = new Map(); // tema → Set(fn)
     this.peerFns = new Set();
-    this.bc.onmessage = (e) => this._recv(e.data);
+    this.open = true;
+    bus.onMessage((m) => this._recv(m));
     this._hb = setInterval(() => {
       this._send({ t: 'p', presence: this.mine });
       this._expire();
     }, HEARTBEAT_MS);
+    // Al volver la conexión, se anuncia de nuevo (los demás responden con la suya)
+    this._unConn = bus.onConnection((on) => {
+      if (on && this.open) this._send({ t: 'hola', presence: this.mine });
+    });
     this._onHide = () => this.leave();
-    window.addEventListener('pagehide', this._onHide);
+    if (hasWindow) window.addEventListener('pagehide', this._onHide);
     this._send({ t: 'hola', presence: this.mine });
   }
 
   _send(m) {
-    if (this.bc) this.bc.postMessage({ ...m, peer: this.peerId });
+    if (this.open) this.bus.send({ ...m, peer: this.peerId });
   }
 
   _recv(m) {
-    if (!m || m.peer === this.peerId) return;
+    if (!m || typeof m !== 'object' || typeof m.peer !== 'string' || m.peer === this.peerId) return;
     if (m.t === 'p' || m.t === 'hola') {
       const prev = this.others.get(m.peer);
-      const changed = !prev || JSON.stringify(prev.presence) !== JSON.stringify(m.presence);
+      const presence = m.presence && typeof m.presence === 'object' ? m.presence : {};
+      const changed = !prev || JSON.stringify(prev.presence) !== JSON.stringify(presence);
+      const wasStale = prev && Date.now() - prev.lastSeen > STALE_MS;
       this.others.set(m.peer, {
-        presence: Object.freeze({ ...m.presence }),
+        presence: Object.freeze({ ...presence }),
         updatedAt: changed ? Date.now() : prev.updatedAt,
         lastSeen: Date.now(),
       });
       if (m.t === 'hola') this._send({ t: 'p', presence: this.mine });
       if (!prev) this._notify({ joined: [this._peer(m.peer)] });
-      else if (changed) this._notify({ updated: [this._peer(m.peer)] });
+      else if (changed || wasStale) this._notify({ updated: [this._peer(m.peer)] });
     } else if (m.t === 'adios') {
       if (this.others.delete(m.peer)) this._notify({ left: [{ peer: m.peer, presence: {} }] });
-    } else if (m.t === 'e') {
+    } else if (m.t === 'e' && typeof m.topic === 'string') {
+      const info = this.others.get(m.peer);
+      if (info) info.lastSeen = Date.now();
       this._deliver(m.topic, m.data, m.peer, false);
     }
   }
@@ -15182,21 +16634,30 @@ class LocalChannel {
   _expire() {
     const now = Date.now();
     const left = [];
+    const stale = [];
     for (const [peer, info] of this.others) {
-      if (now - info.lastSeen > PEER_TIMEOUT_MS) {
+      const quiet = now - info.lastSeen;
+      if (quiet > this.timeout) {
         this.others.delete(peer);
         left.push({ peer, presence: info.presence });
+      } else if (quiet > STALE_MS && !info.flagged) {
+        info.flagged = true;
+        stale.push(this._peer(peer));
+      } else if (quiet <= STALE_MS && info.flagged) {
+        info.flagged = false;
+        stale.push(this._peer(peer));
       }
     }
-    if (left.length) this._notify({ left });
+    if (left.length || stale.length) this._notify({ left, updated: stale });
   }
 
   _peer(peer) {
     if (peer === this.peerId) {
-      return { peer, presence: this.mine, isMe: true, sameTab: true, by: null, kind: 'viewer', guest: false, updatedAt: Date.now() };
+      return { peer, presence: this.mine, isMe: true, sameTab: true, by: null, kind: 'viewer', guest: false, updatedAt: Date.now(), stale: !this.connected() };
     }
     const info = this.others.get(peer);
-    return { peer, presence: info ? info.presence : {}, isMe: false, sameTab: false, by: null, kind: 'viewer', guest: false, updatedAt: info ? info.updatedAt : 0 };
+    const quiet = info ? Date.now() - info.lastSeen : Infinity;
+    return { peer, presence: info ? info.presence : {}, isMe: false, sameTab: false, by: null, kind: 'viewer', guest: false, updatedAt: info ? info.updatedAt : 0, stale: quiet > STALE_MS };
   }
 
   _deliver(topic, data, peer, mine) {
@@ -15246,28 +16707,29 @@ class LocalChannel {
   }
 
   connected() {
-    return !!this.bc;
+    return this.open && this.bus.connected();
   }
 
+  /** fn(true|false) al conectar o perder la conexión (MQTT); con pestañas, siempre true. */
   onConnection(fn) {
-    queueMicrotask(() => fn(this.connected()));
-    return () => {};
+    return this.bus.onConnection(fn);
   }
 
   leave() {
-    if (!this.bc) return Promise.resolve();
+    if (!this.open) return Promise.resolve();
     this._send({ t: 'adios' });
+    this.open = false;
     clearInterval(this._hb);
-    window.removeEventListener('pagehide', this._onHide);
-    this.bc.close();
-    this.bc = null;
+    this._unConn?.();
+    if (hasWindow) window.removeEventListener('pagehide', this._onHide);
+    this.bus.close();
     this.topics.clear();
     this.peerFns.clear();
     return Promise.resolve();
   }
 }
 
-return { connectTransport, selfPeer };
+return { BROKERS, TOPIC_PREFIX, STALE_MS, ROOM_TIMEOUT_MS, connectTransport, selfPeer, MqttTransport, PeerChannel };
 });
 __define('noise', function () {
 // Ruido de valor 2D con semilla + fBm (suma de octavas). Suficiente para generar
