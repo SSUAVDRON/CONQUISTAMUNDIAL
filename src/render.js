@@ -11,11 +11,15 @@ import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 
-const FILL_ALPHA = 140; // territorio semitransparente: se ve el terreno debajo
+const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
-const CHUNK = 128; // lado de los bloques del territorio que se suben a la gráfica
+const CHUNK = 64; // lado (en casillas) de los bloques del territorio que se suben a la gráfica
+// Píxeles por casilla de la capa de territorio: con 2, la frontera ocupa media
+// casilla (el lado que da al vecino). En mapas enormes, 1 (frontera de una casilla)
+const TERRITORY_TS = 2;
+const TERRITORY_MAX_PX = 9e6;
 // Brillo de las casillas recién conquistadas, pintado en el propio territorio:
 // fuerte al conquistar, a medias a los GLOW_MID ms y normal a los GLOW_END ms
 const GLOW_N = 32768;
@@ -103,9 +107,10 @@ export class Renderer {
     this.baseScale = terrain.scale;
     this._vignette = null;
 
-    this.territoryCanvas = makeCanvas(width, height);
+    this.ts = size * TERRITORY_TS * TERRITORY_TS <= TERRITORY_MAX_PX ? TERRITORY_TS : 1;
+    this.territoryCanvas = makeCanvas(width * this.ts, height * this.ts);
     this.tctx = this.territoryCanvas.getContext('2d');
-    this.image = this.tctx.createImageData(width, height);
+    this.image = this.tctx.createImageData(width * this.ts, height * this.ts);
     this.pixels = new Uint32Array(this.image.data.buffer);
     this._buildPalette();
     this.diploVersion = game.diploVersion;
@@ -171,8 +176,8 @@ export class Renderer {
     this.fill = new Uint32Array(n);
     this.inner = new Uint32Array(n);
     this.alt = new Uint32Array(n);
-    this.border = new Uint32Array(n); // frontera: una casilla, opaca
-    this.border2 = new Uint32Array(n); // segunda franja: solo la tuya (resaltado)
+    this.border = new Uint32Array(n); // frontera: media casilla, opaca
+    this.border2 = new Uint32Array(n); // mitad interior de la frontera: solo la tuya (resaltado)
     this.ring2 = new Uint8Array(n);
     this.patterns = new Array(n).fill(null);
     this.allied = new Uint8Array(n);
@@ -180,11 +185,10 @@ export class Renderer {
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
-      // Relleno: el color de la nación en un tono apagado y semitransparente
-      // (se ve el terreno debajo). Frontera de una sola casilla, opaca, en el
-      // mismo tono más oscuro
-      const muted = mutedRgb(p.color);
-      const [r, g, b] = muted;
+      // Relleno: el color de la nación en un tono pálido y semitransparente
+      // (se ve el terreno debajo). Frontera fina y opaca en el mismo tono, más oscuro
+      const pale = mutedRgb(p.color, 0.34, 0.64, 0.74);
+      const [r, g, b] = pale;
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
       this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
@@ -192,14 +196,14 @@ export class Renderer {
       // Patrón del perfil: algunas casillas con un tono más oscuro.
       // Los aliados llevan franjas verdes en diagonal: se reconocen de un vistazo.
       this.patterns[p.id] = PATTERN_FNS[p.pattern] || null;
-      const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(muted, 0.72);
+      const [ar, ag, ab] = ally ? ALLY_STRIPE : shadeRgb(pale, 0.8);
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para ti y verde para tus aliados; las demás, su tono
-      // apagado más oscuro
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(muted, 0.62);
+      // pálido más oscuro
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(pale, 0.58);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
-      // Tu nación, resaltada: por dentro de la frontera blanca, una franja en
-      // tu color vivo
+      // Tu nación, resaltada: por dentro de la frontera blanca, otra media
+      // casilla en tu color vivo
       if (p === human) {
         const b2 = vividRgb(p.color, 0.1, 1.12, 0.36, 0.72);
         this.border2[p.id] = pack(b2[0], b2[1], b2[2], 210);
@@ -211,47 +215,74 @@ export class Renderer {
     }
   }
 
-  /**
-   * ¿Es frontera la casilla `i` tal como se ve ahora? (Se calcula con el
-   * dueño que se muestra, que puede ir unos milisegundos por detrás de la
-   * simulación mientras se revela el último turno.)
-   */
-  _shownBorder(i, o) {
-    const s = this.prevOwner;
-    const w = this.game.map.width;
-    const x = i % w;
-    return x === 0 || x === w - 1 || i < w || i >= s.length - w || s[i - 1] !== o || s[i + 1] !== o || s[i - w] !== o || s[i + w] !== o;
+  /** Pinta los TS×TS píxeles de la casilla `i` de un solo color. */
+  _setTile(i, color) {
+    const ts = this.ts;
+    const P = this.pixels;
+    if (ts === 1) {
+      P[i] = color;
+      return;
+    }
+    const W = this.game.map.width;
+    const PW = W * 2;
+    const k = ((i / W) | 0) * 2 * PW + (i % W) * 2;
+    P[k] = color;
+    P[k + 1] = color;
+    P[k + PW] = color;
+    P[k + PW + 1] = color;
   }
 
+  /**
+   * Pinta la casilla `i` según el dueño que se muestra ahora (puede ir unos
+   * milisegundos por detrás de la simulación mientras se revela el último
+   * turno). Con 2 píxeles por casilla, la frontera solo ocupa los píxeles que
+   * dan al vecino de otro dueño (también en diagonal, para cerrar las
+   * esquinas): media casilla. La tuya: mitad exterior blanca y mitad interior
+   * en tu color.
+   */
   _paintTile(i) {
-    const o = this.prevOwner[i];
+    const s = this.prevOwner;
+    const o = s[i];
     if (!o) {
-      this.pixels[i] = 0;
+      this._setTile(i, 0);
       return;
     }
-    if (this._shownBorder(i, o)) {
-      this.pixels[i] = this.border[o];
+    const W = this.game.map.width;
+    const x = i % W;
+    const y = (i / W) | 0;
+    let col;
+    if (this.allied[o]) col = (x + y) % 7 < 2 ? this.alt[o] : this.fill[o];
+    else {
+      const pattern = this.patterns[o];
+      col = pattern && pattern(x, y) ? this.alt[o] : this.fill[o];
+    }
+    // ¿Es del mismo dueño el vecino de cada lado? (fuera del mapa: no)
+    const l = x > 0 && s[i - 1] === o;
+    const r = x < W - 1 && s[i + 1] === o;
+    const u = i >= W && s[i - W] === o;
+    const d = i < s.length - W && s[i + W] === o;
+    const P = this.pixels;
+    if (this.ts === 1) {
+      P[i] = l && r && u && d ? col : this.border[o];
       return;
     }
-    const w = this.game.map.width;
-    // Segunda franja de la frontera, solo en tu nación (las vecinas existen: esta no es borde)
-    if (this.ring2[o] && (this._shownBorder(i - 1, o) || this._shownBorder(i + 1, o) || this._shownBorder(i - w, o) || this._shownBorder(i + w, o))) {
-      this.pixels[i] = this.border2[o];
-      return;
-    }
-    const x = i % w;
-    const y = (i / w) | 0;
-    if (this.allied[o]) {
-      this.pixels[i] = (x + y) % 7 < 2 ? this.alt[o] : this.fill[o];
-      return;
-    }
-    const pattern = this.patterns[o];
-    this.pixels[i] = pattern && pattern(x, y) ? this.alt[o] : this.fill[o];
+    const ul = l && u && s[i - W - 1] === o;
+    const ur = r && u && s[i - W + 1] === o;
+    const dl = l && d && s[i + W - 1] === o;
+    const dr = r && d && s[i + W + 1] === o;
+    const edge = this.border[o];
+    const inside = this.ring2[o] && !(ul && ur && dl && dr) ? this.border2[o] : col;
+    const PW = W * 2;
+    const k = y * 2 * PW + x * 2;
+    P[k] = ul ? inside : edge;
+    P[k + 1] = ur ? inside : edge;
+    P[k + PW] = dl ? inside : edge;
+    P[k + PW + 1] = dr ? inside : edge;
   }
 
   /** Repinta una casilla (si existe) y marca su bloque para subirlo. */
   _repaint(i) {
-    if (i < 0 || i >= this.pixels.length) return;
+    if (i < 0 || i >= this.prevOwner.length) return;
     this._paintTile(i);
     const w = this.game.map.width;
     this._markChunk(i % w, (i / w) | 0);
@@ -301,47 +332,10 @@ export class Renderer {
     }
   }
 
-  /** Todo el territorio de una vez (al empezar o si cambian tus alianzas): en dos pasadas, rápido. */
+  /** Todo el territorio de una vez (al empezar o si cambian tus alianzas). */
   _paintAllTerritory() {
-    const s = this.prevOwner;
-    const N = s.length;
-    const W = this.game.map.width;
-    const px = this.pixels;
-    // 1) Qué casillas son frontera
-    const m = this._bmask && this._bmask.length === N ? this._bmask : (this._bmask = new Uint8Array(N));
-    for (let i = 0; i < N; i++) {
-      const o = s[i];
-      if (!o) {
-        m[i] = 0;
-        continue;
-      }
-      const x = i % W;
-      m[i] = x === 0 || x === W - 1 || i < W || i >= N - W || s[i - 1] !== o || s[i + 1] !== o || s[i - W] !== o || s[i + W] !== o ? 1 : 0;
-    }
-    // 2) Color de cada una (igual que _paintTile)
-    for (let i = 0; i < N; i++) {
-      const o = s[i];
-      if (!o) {
-        px[i] = 0;
-        continue;
-      }
-      if (m[i]) {
-        px[i] = this.border[o];
-        continue;
-      }
-      if (this.ring2[o] && (m[i - 1] || m[i + 1] || m[i - W] || m[i + W])) {
-        px[i] = this.border2[o];
-        continue;
-      }
-      const x = i % W;
-      const y = (i / W) | 0;
-      if (this.allied[o]) {
-        px[i] = (x + y) % 7 < 2 ? this.alt[o] : this.fill[o];
-        continue;
-      }
-      const pattern = this.patterns[o];
-      px[i] = pattern && pattern(x, y) ? this.alt[o] : this.fill[o];
-    }
+    const N = this.prevOwner.length;
+    for (let i = 0; i < N; i++) this._paintTile(i);
     this.tctx.putImageData(this.image, 0, 0);
   }
 
@@ -443,17 +437,13 @@ export class Renderer {
         const was = shown[t];
         if (o === was) continue;
         shown[t] = o;
-        // La casilla y todo lo que está a dos casillas o menos: la frontera
-        // tiene dos franjas, así que cambia también la de las de alrededor
+        // La casilla y sus 8 vecinas: la frontera de cada una depende de las
+        // de alrededor (también en diagonal, por las esquinas)
         this._repaint(t);
         this._repaint(t - 1);
         this._repaint(t + 1);
         this._repaint(t - W);
         this._repaint(t + W);
-        this._repaint(t - 2);
-        this._repaint(t + 2);
-        this._repaint(t - 2 * W);
-        this._repaint(t + 2 * W);
         this._repaint(t - W - 1);
         this._repaint(t - W + 1);
         this._repaint(t + W - 1);
@@ -474,7 +464,7 @@ export class Renderer {
     const g = this._glow;
     for (let j = glowFrom; j !== g.head; j = (j + 1) % GLOW_N) {
       const t = g.t[j];
-      if (shown[t] === g.o[j]) this.pixels[t] = this.glowCol[g.k[j]][0][g.o[j]];
+      if (shown[t] === g.o[j]) this._setTile(t, this.glowCol[g.k[j]][0][g.o[j]]);
     }
     if (!watch) return;
     // Solo una muestra: suficiente para que el frente «hierva» sin saturar
@@ -510,7 +500,7 @@ export class Renderer {
     const g = this._glow;
     const t = g.t[j];
     if (this.prevOwner[t] === g.o[j]) {
-      if (stage === 1) this.pixels[t] = this.glowCol[g.k[j]][1][g.o[j]];
+      if (stage === 1) this._setTile(t, this.glowCol[g.k[j]][1][g.o[j]]);
       else this._paintTile(t);
       const W = this.game.map.width;
       this._markChunk(t % W, (t / W) | 0);
@@ -546,7 +536,8 @@ export class Renderer {
         continue;
       }
       this._chunkDirty[c] = 0;
-      this.tctx.putImageData(this.image, 0, 0, bx, by, Math.min(CHUNK, W - bx), Math.min(CHUNK, H - by));
+      const ts = this.ts;
+      this.tctx.putImageData(this.image, 0, 0, bx * ts, by * ts, Math.min(CHUNK, W - bx) * ts, Math.min(CHUNK, H - by) * ts);
     }
     list.length = keep;
   }
@@ -793,7 +784,8 @@ export class Renderer {
       const w = x1 - x0;
       const h = y1 - y0;
       ctx.drawImage(img, x0 * S, y0 * S, w * S, h * S, x0, y0, w, h);
-      ctx.drawImage(this.territoryCanvas, x0, y0, w, h, x0, y0, w, h);
+      const ts = this.ts;
+      ctx.drawImage(this.territoryCanvas, x0 * ts, y0 * ts, w * ts, h * ts, x0, y0, w, h);
     }
     this._drawFlashes(now);
 

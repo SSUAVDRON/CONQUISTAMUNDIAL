@@ -19,13 +19,13 @@ export function hslToRgb(h, s, l) {
 
 /**
  * Colores bien repartidos en el círculo cromático (ángulo áureo), en tonos
- * apagados de mapa: pizarra, salvia, malva, rosa viejo… (Dos tiradas de `rng`,
+ * pálidos de mapa: pizarra, salvia, malva, rosa viejo… (Dos tiradas de `rng`,
  * siempre: el resto de la partida depende de esa secuencia.)
  */
 export function botColor(index, rng) {
   const hue = (index * 137.508 + 20) % 360;
-  const sat = 0.22 + rng.float() * 0.2;
-  const light = 0.48 + rng.float() * 0.14;
+  const sat = 0.18 + rng.float() * 0.16;
+  const light = 0.58 + rng.float() * 0.12;
   return hslToRgb(hue, sat, light);
 }
 

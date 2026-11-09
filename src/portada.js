@@ -54,7 +54,7 @@ export class CoverArt {
       const [x, y] = toScreen(tile);
       if (x < -W * 0.3 || y < -H * 0.5 || x > W * 1.3 || y > H * 1.5) return;
       const hue = (i * 137.508 + 20) % 360;
-      nations.push({ name, iso, x, y, area, w: (area / Math.PI) * k * k * 0.7, c: hslRgb(hue, 0.32, 0.56), e: hslRgb(hue, 0.3, 0.35) });
+      nations.push({ name, iso, x, y, area, w: (area / Math.PI) * k * k * 0.7, c: hslRgb(hue, 0.28, 0.68), e: hslRgb(hue, 0.28, 0.4) });
     });
     this.nations = nations;
     const img = ctx.getImageData(0, 0, W, H);
@@ -92,7 +92,7 @@ export class CoverArt {
       const edge = (x > 0 && owner[i - 1] !== o) || (x < W - 1 && owner[i + 1] !== o) || (i >= W && owner[i - W] !== o) || (i < W * (H - 1) && owner[i + W] !== o);
       const [r, g, b] = edge ? nations[o].e : nations[o].c;
       // Como en la partida: relleno apagado y semitransparente, frontera opaca
-      const a = edge ? 1 : 0.55;
+      const a = edge ? 1 : 0.5;
       const p = i * 4;
       d[p] = d[p] + (r - d[p]) * a;
       d[p + 1] = d[p + 1] + (g - d[p + 1]) * a;
