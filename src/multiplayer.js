@@ -77,14 +77,79 @@ export function normalizeCode(text) {
   return String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5);
 }
 
-/** Salas que anuncian en el vestíbulo quienes las han creado. */
+/** Mínimo de jugadores humanos para empezar una partida en sala. */
+export const MIN_HUMANS = 2;
+/** Cuenta atrás antes de arrancar (fija participantes, semilla y configuración). */
+export const COUNTDOWN_MS = 3000;
+/** Visibilidad: «Solo con enlace» (no sale en el vestíbulo) o «Pública». */
+export const VISIBILITIES = ['enlace', 'publica'];
+
+/** Nombre, visibilidad y plazas de una sala (no cambian la partida). */
+export function cleanRoomInfo(raw, fallbackName = 'Sala') {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const name = String(r.nombre || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 28);
+  const seats = Math.round(Number(r.plazas));
+  return {
+    nombre: name || String(fallbackName).slice(0, 28),
+    visibilidad: VISIBILITIES.includes(r.visibilidad) ? r.visibilidad : 'enlace',
+    plazas: Number.isFinite(seats) ? Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, seats)) : 4,
+  };
+}
+
+/** Lo que sí cambia la partida: si cambia, los invitados tienen que confirmar de nuevo. */
+export function gameplayKey(settings) {
+  const s = settings || {};
+  return JSON.stringify([s.mapSize, s.bots, s.difficulty, cleanRules(s.rules)]);
+}
+
+/** Salas públicas que anuncian en el vestíbulo quienes las han creado. Las «Solo con enlace» no aparecen. */
 export function openRooms(transport) {
   if (!transport) return [];
   return transport.lobby
     .peers()
-    .filter((p) => !p.sameTab && p.presence && p.presence.sala && p.presence.sala.abierta)
-    .map((p) => ({ ...p.presence.sala, peer: p.peer }))
-    .filter((s) => typeof s.code === 'string' && /^[a-z0-9]{5}$/.test(s.code));
+    .filter((p) => !p.sameTab && p.presence && p.presence.sala && p.presence.sala.abierta && p.presence.sala.visibilidad === 'publica')
+    .map((p) => ({ ...p.presence.sala, peer: p.peer, otraVersion: p.presence.sala.version !== FINGERPRINT }))
+    .filter((s) => typeof s.code === 'string' && /^[a-z0-9]{5}$/.test(s.code))
+    .sort((x, y) => (y.jugadores || 0) - (x.jugadores || 0) || (x.code < y.code ? -1 : 1));
+}
+
+/**
+ * Estado de la sala a partir de la presencia de cada par (función pura, la
+ * usan la interfaz, el inicio y los tests): jugadores sentados por orden de
+ * llegada (el anfitrión primero), quién está listo PARA LA REVISIÓN ACTUAL de
+ * la configuración, quién se reconecta o tiene otra versión del juego, y qué
+ * impide empezar.
+ */
+export function roomStatus(peers, { myPeer = null } = {}) {
+  const host = peers.find((p) => p.presence && p.presence.anfitrion && p.presence.jugador) || null;
+  const rev = host ? host.presence.rev : null;
+  const info = cleanRoomInfo(host && host.presence.info);
+  const hostVersion = host ? host.presence.version : null;
+  const all = peers
+    .filter((p) => p.presence && p.presence.jugador)
+    .sort((a, b) => (b.presence.anfitrion ? 1 : 0) - (a.presence.anfitrion ? 1 : 0) || (Number(a.presence.desde) || 0) - (Number(b.presence.desde) || 0) || (a.peer < b.peer ? -1 : 1));
+  const mk = (p) => {
+    const isHost = !!p.presence.anfitrion;
+    return {
+      peer: p.peer,
+      isMe: p.peer === myPeer || !!p.sameTab,
+      host: isHost,
+      ...cleanPlayer(p.presence.jugador),
+      ready: isHost || (rev != null && p.presence.listo === rev),
+      stale: !!p.stale,
+      versionOk: !host || p.presence.version === hostVersion,
+    };
+  };
+  const players = all.slice(0, info.plazas).map(mk);
+  const waiting = all.slice(info.plazas).map(mk);
+  const blockers = [];
+  if (!host) blockers.push('El anfitrión no está en la sala');
+  for (const p of players) if (!p.versionOk) blockers.push(`${p.name} tiene otra versión del juego: tiene que recargar la página`);
+  for (const p of players) if (p.stale) blockers.push(`${p.name} se está reconectando`);
+  const missing = players.filter((p) => !p.ready && !p.stale && p.versionOk).map((p) => p.name);
+  if (missing.length) blockers.push(`${missing.length > 1 ? 'Faltan' : 'Falta'} ${missing.length > 1 ? `${missing.slice(0, -1).join(', ')} y ${missing[missing.length - 1]}` : missing[0]}`);
+  if (players.length < MIN_HUMANS) blockers.push('Hace falta al menos otro jugador');
+  return { host, rev, info, players, waiting, seats: info.plazas, readyCount: players.filter((p) => p.ready).length, total: players.length, blockers, canStart: blockers.length === 0 };
 }
 
 /** Copia "segura" de lo que otro jugador dice de sí mismo (datos no fiables). */
@@ -108,32 +173,57 @@ function cleanPlayer(raw) {
 export class Sala {
   /**
    * @param transport  resultado de connectTransport()
-   * @param opts { code, isHost, me: {name,color,emblem,pattern,level,title}, settings }
+   * @param opts { code, isHost, me: {name,color,emblem,pattern,level,title}, settings, info }
+   *
+   * Llamadas: onChange() al cambiar algo · onStart(payload, hostPeer) al
+   * arrancar · onCountdown(ms | null, motivo) al empezar o cancelarse la
+   * cuenta atrás · onVersionMismatch(suya, mía) · onConnection(conectado).
    */
-  constructor(transport, { code, isHost, me, settings }) {
+  constructor(transport, { code, isHost, me, settings, info }) {
     this.transport = transport;
     this.code = code;
     this.isHost = isHost;
     this.me = me;
     this.settings = settings;
+    this.info = cleanRoomInfo(info, `Sala de ${me && me.name ? me.name : 'Trinchera'}`);
+    /** Revisión de la configuración: sube cuando cambia algo que afecta a la partida. */
+    this.rev = 1;
+    this._key = gameplayKey(settings);
+    this.ready = false;
+    this.observer = false;
     this.room = null;
     this.started = false;
+    this.countdown = null;
     this.unsubs = [];
-    this.onChange = null; // () => void
-    this.onStart = null; // (payload, hostPeer) => void
+    this.onChange = null;
+    this.onStart = null;
+    this.onCountdown = null;
+    this.onConnection = null;
     this._startTimer = null;
   }
 
-  async open() {
+  /** Entra en el canal. `observer`: solo mira (ficha de invitación), sin ocupar plaza. */
+  async open({ observer = false } = {}) {
+    this.observer = observer && !this.isHost;
+    this.openedAt = Date.now();
     this.room = await this.transport.join(`sala-${this.code}`);
-    this.unsubs.push(this.room.onPeers(() => this.onChange?.()));
+    this.unsubs.push(this.room.onPeers(() => this._changed()));
     this.unsubs.push(this.room.on('start', (m) => this._onStart(m)));
-    await this.room.presence({
-      jugador: this.me,
-      anfitrion: this.isHost,
-      ajustes: this.isHost ? this.settings : null,
-    });
-    if (this.isHost) this._advertise(true);
+    this.unsubs.push(this.room.on('cuenta', (m) => this._onCountdownMsg(m)));
+    this.unsubs.push(this.room.on('cancelar', (m) => this._onCancelMsg(m)));
+    if (this.room.onConnection) this.unsubs.push(this.room.onConnection((on) => this.onConnection?.(on)) || (() => {}));
+    if (this.isHost) {
+      await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now() });
+      this._advertise();
+    } else if (!this.observer) await this.join();
+    this._tick = setInterval(() => this._watchCountdown(), 250);
+  }
+
+  /** Invitado: ocupa su plaza (desde la ficha de invitación). */
+  async join() {
+    this.observer = false;
+    this.ready = false;
+    await this.room.presence({ jugador: this.me, listo: null, version: FINGERPRINT, desde: Date.now() });
   }
 
   myPeer() {
@@ -142,18 +232,16 @@ export class Sala {
 
   host() {
     if (!this.room) return null;
-    return this.room.peers().find((p) => p.presence && p.presence.anfitrion) || null;
+    return this.room.peers().find((p) => p.presence && p.presence.anfitrion && p.presence.jugador) || null;
   }
 
-  /** Jugadores en la sala: el anfitrión primero, luego por orden estable. */
+  status() {
+    return roomStatus(this.room ? this.room.peers() : [], { myPeer: this.myPeer() });
+  }
+
+  /** Jugadores sentados (el anfitrión primero, luego por orden de llegada). */
   players() {
-    if (!this.room) return [];
-    return this.room
-      .peers()
-      .filter((p) => p.presence && p.presence.jugador)
-      .sort((a, b) => (b.presence.anfitrion ? 1 : 0) - (a.presence.anfitrion ? 1 : 0) || (a.peer < b.peer ? -1 : 1))
-      .slice(0, MAX_HUMANS)
-      .map((p) => ({ peer: p.peer, isMe: p.sameTab, host: !!p.presence.anfitrion, ...cleanPlayer(p.presence.jugador) }));
+    return this.status().players;
   }
 
   hostSettings() {
@@ -161,35 +249,212 @@ export class Sala {
     return h && h.presence.ajustes ? h.presence.ajustes : null;
   }
 
+  /** Nombre, visibilidad y plazas actuales (las del anfitrión). */
+  roomInfo() {
+    if (this.isHost) return this.info;
+    const h = this.host();
+    return cleanRoomInfo(h && h.presence.info);
+  }
+
+  /**
+   * Ficha de invitación: si se puede entrar y, si no, por qué.
+   * estado: 'buscando' | 'lista' | 'llena' | 'empezada' | 'cerrada' | 'version'
+   */
+  entryState() {
+    const h = this.host();
+    if (!h) return { estado: this.openedAt && Date.now() - this.openedAt > 5000 ? 'cerrada' : 'buscando' };
+    const st = this.status();
+    const base = { info: st.info, settings: h.presence.ajustes || null, total: st.total, seats: st.seats };
+    if (h.presence.estado === 'jugando') return { ...base, estado: 'empezada' };
+    if (h.presence.version !== FINGERPRINT) return { ...base, estado: 'version' };
+    const meSeated = st.players.some((p) => p.isMe);
+    if (!meSeated && st.total >= st.seats) return { ...base, estado: 'llena' };
+    return { ...base, estado: 'lista' };
+  }
+
+  /** Invitado: «Estoy listo» / «Cancelar listo» (para la revisión actual de la configuración). */
+  setReady(on) {
+    if (this.isHost || !this.room) return;
+    const st = this.status();
+    this.ready = !!on && st.rev != null;
+    this.room.presence({ listo: this.ready ? st.rev : null });
+  }
+
+  /** ¿Sigue valiendo mi «listo»? (si el anfitrión cambió el mapa o las reglas, no) */
+  myReadyValid() {
+    const st = this.status();
+    const me = st.players.find((p) => p.isMe);
+    return !!me && me.ready;
+  }
+
+  /** Anfitrión: cambia mapa, naciones, dificultad o reglas (los invitados confirman de nuevo). */
   setSettings(settings) {
     this.settings = settings;
     if (!this.isHost || !this.room) return;
-    this.room.presence({ ajustes: settings });
-    this._advertise(true);
+    const key = gameplayKey(settings);
+    if (key !== this._key) {
+      this._key = key;
+      this.rev++;
+    }
+    if (this.countdown) this.cancelCountdown('El anfitrión ha cambiado la configuración');
+    this.room.presence({ ajustes: settings, rev: this.rev });
+    this._advertise();
   }
 
-  _advertise(open) {
+  /** Anfitrión: nombre, visibilidad y plazas (no invalidan la preparación). */
+  setInfo(info) {
+    this.info = cleanRoomInfo({ ...this.info, ...info }, this.info.nombre);
+    if (!this.isHost || !this.room) return;
+    this.room.presence({ info: this.info });
+    this._advertise();
+  }
+
+  _advertise() {
+    if (!this.isHost) return;
+    const open = !!this.room && !this.started;
+    const pub = open && this.info.visibilidad === 'publica';
+    const st = pub ? this.status() : null;
     this.transport.lobby.presence({
-      sala: open
+      sala: pub
         ? {
             code: this.code,
-            nombre: this.me.name,
-            jugadores: Math.max(1, this.players().length),
+            nombre: this.info.nombre,
+            visibilidad: 'publica',
+            jugadores: Math.max(1, st.total),
+            plazas: this.info.plazas,
             mapa: this.settings.mapSize,
             bots: this.settings.bots,
+            perfil: this.settings.rules && this.settings.rules.profile,
+            victoria: this.settings.rules && this.settings.rules.victory,
+            version: FINGERPRINT,
             abierta: true,
           }
         : null,
     });
   }
 
-  /** Solo el anfitrión: reparte la semilla y la lista de jugadores. */
-  start() {
+  _changed() {
+    if (this.isHost && !this.started) {
+      // El número de jugadores del anuncio, al día
+      const n = this.status().total;
+      if (n !== this._advertisedPlayers) {
+        this._advertisedPlayers = n;
+        this._advertise();
+      }
+    }
+    this._watchCountdown();
+    this.onChange?.();
+  }
+
+  // ------------------------------------------------------- cuenta atrás
+
+  /**
+   * Anfitrión: si todo está listo, empieza la cuenta atrás de 3 s. Fija los
+   * participantes, la semilla y la revisión; si alguien sale, pierde la
+   * conexión o deja de estar listo, se cancela y se vuelve al vestíbulo con el
+   * motivo. Devuelve null o el motivo por el que no se puede.
+   */
+  beginCountdown() {
+    if (!this.isHost || this.started || this.countdown || !this.room) return 'Ya se está preparando el inicio';
+    const st = this.status();
+    if (!st.canStart) return st.blockers[0];
+    this.countdown = {
+      endsAt: Date.now() + COUNTDOWN_MS,
+      seed: (Math.random() * 0xffffffff) >>> 0,
+      rev: this.rev,
+      peers: st.players.map((p) => p.peer),
+      names: Object.fromEntries(st.players.map((p) => [p.peer, p.name])),
+    };
+    this.room.presence({ estado: 'cuenta' });
+    this._sendCountdown();
+    this.onCountdown?.(COUNTDOWN_MS, null);
+    return null;
+  }
+
+  _sendCountdown() {
+    const c = this.countdown;
+    if (!c || !this.room) return;
+    this.room.emit('cuenta', { v: 1, ms: Math.max(0, c.endsAt - Date.now()), rev: c.rev, peers: c.peers });
+    c.lastSent = Date.now();
+  }
+
+  /** Anfitrión: cancela la cuenta atrás y lo dice a todos. */
+  cancelCountdown(motivo) {
+    if (!this.countdown) return;
+    this.countdown = null;
+    if (this.isHost && this.room) {
+      this.room.emit('cancelar', { v: 1, motivo: String(motivo).slice(0, 120) });
+      this.room.presence({ estado: 'vestibulo' });
+    }
+    this.onCountdown?.(null, motivo);
+    this.onChange?.();
+  }
+
+  /** Comprueba la cuenta atrás en curso (cada 250 ms y con cada cambio). */
+  _watchCountdown() {
+    const c = this.countdown;
+    if (!c || this.started || !this.room) return;
+    if (!this.isHost) {
+      // Invitado: si el anfitrión desaparece, se vuelve al vestíbulo
+      const h = this.host();
+      if (!h || h.stale) {
+        this.countdown = null;
+        this.onCountdown?.(null, 'Se ha perdido la conexión con el anfitrión');
+        this.onChange?.();
+      }
+      return;
+    }
+    const peers = new Map(this.room.peers().map((p) => [p.peer, p]));
+    for (const id of c.peers) {
+      const p = peers.get(id);
+      const name = c.names[id] || 'Un jugador';
+      if (!p || !p.presence || !p.presence.jugador) return this.cancelCountdown(`${name} ha salido de la sala`);
+      if (p.stale) return this.cancelCountdown(`${name} ha perdido la conexión`);
+      if (!p.presence.anfitrion && p.presence.listo !== c.rev) return this.cancelCountdown(`${name} ya no está listo`);
+    }
+    if (Date.now() >= c.endsAt) this._launch();
+    else if (Date.now() - (c.lastSent || 0) > 600) this._sendCountdown(); // por si se pierde algún mensaje
+  }
+
+  _onCountdownMsg(msg) {
+    if (this.isHost || this.started || !msg.data || msg.data.v !== 1) return;
+    const h = this.host();
+    if (!h || msg.peer !== h.peer) return;
+    const ms = Math.max(0, Math.min(COUNTDOWN_MS, Number(msg.data.ms) || 0));
+    const first = !this.countdown;
+    this.countdown = { endsAt: Date.now() + ms, rev: msg.data.rev, peers: Array.isArray(msg.data.peers) ? msg.data.peers.map(String) : [] };
+    if (first) this.onCountdown?.(ms, null);
+  }
+
+  _onCancelMsg(msg) {
+    if (this.isHost || this.started || !msg.data || msg.data.v !== 1) return;
+    const h = this.host();
+    if (!h || msg.peer !== h.peer) return;
+    this.countdown = null;
+    this.onCountdown?.(null, String(msg.data.motivo || 'Se ha cancelado el inicio').slice(0, 120));
+    this.onChange?.();
+  }
+
+  /** Fin de la cuenta atrás: reparte semilla, configuración y jugadores (una sola vez). */
+  _launch() {
+    const c = this.countdown;
+    if (!c || this.started) return;
+    const all = new Map(this.status().players.map((p) => [p.peer, p]));
+    const players = c.peers.map((id) => all.get(id)).filter(Boolean);
+    this.countdown = null;
+    this.start({ seed: c.seed, players });
+  }
+
+  /**
+   * Solo el anfitrión: reparte la semilla y la lista de jugadores. Sin
+   * argumentos (pruebas o anfitrión solo) usa la sala tal cual.
+   */
+  start({ seed = (Math.random() * 0xffffffff) >>> 0, players = this.players() } = {}) {
     if (!this.isHost || this.started) return null;
-    const players = this.players();
+    this.started = true;
     const payload = {
       v: 1,
-      seed: (Math.random() * 0xffffffff) >>> 0,
+      seed,
       // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
       ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
@@ -203,13 +468,16 @@ export class Sala {
       if (Date.now() - t0 > START_REPEAT_FOR_MS) clearInterval(this._startTimer);
       else this.room?.emit('start', payload);
     }, START_REPEAT_MS);
-    this._advertise(false);
+    this._advertise();
     this.room.presence({ estado: 'jugando' });
     return payload;
   }
 
   _onStart(msg) {
-    if (this.started || !msg.data || msg.data.v !== 1) return;
+    if (!msg.data || msg.data.v !== 1) return;
+    if (this.started && !msg.isMe) return;
+    if (this.isHost && !msg.isMe) return;
+    if (this._startHandled) return;
     const host = this.host();
     if (!msg.isMe && (!host || msg.peer !== host.peer)) return; // solo vale el del anfitrión
     const check = checkStartPayload(msg.data);
@@ -221,17 +489,21 @@ export class Sala {
       }
       return;
     }
+    this._startHandled = true;
     this.started = true;
+    this.countdown = null;
     this.onStart?.(check.payload, msg.isMe ? this.myPeer() : msg.peer);
   }
 
   async leave() {
     clearInterval(this._startTimer);
-    for (const u of this.unsubs) u();
+    clearInterval(this._tick);
+    if (this.countdown && this.isHost) this.cancelCountdown('El anfitrión ha salido de la sala');
+    for (const u of this.unsubs) u?.();
     this.unsubs = [];
-    if (this.isHost) this._advertise(false);
     const room = this.room;
     this.room = null;
+    if (this.isHost) this._advertise();
     if (room) await room.leave().catch(() => {});
   }
 }
@@ -257,7 +529,7 @@ function cleanIntent(raw) {
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
-  if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile'].includes(raw.kind)) out.kind = raw.kind;
+  if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile', 'hbomb', 'mirv'].includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;
