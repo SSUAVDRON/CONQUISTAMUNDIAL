@@ -589,13 +589,15 @@ export class UI {
     this._ratio = r;
     $('ratio').value = Math.round(r * 100);
     $('ratio-valor').textContent = `${Math.round(r * 100)}%`;
-    if (this._snap) this._paintReserve(hudSnapshot(this._snap.reserva, r));
+    if (this._snap) this._paintReserve({ ...hudSnapshot(this._snap.reserva, r), fija: this._snap.fija });
   }
 
   /** Reserva y próximo envío, del mismo turno (una sola fuente de datos). */
   _paintReserve(snap) {
     this._snap = snap;
     const reserva = fmtTroopsCount(snap.reserva);
+    // Con oro fijo, la cifra grande de «Tropas» es la reserva: la misma, sin animar
+    if (snap.fija && $('pj-pob').textContent !== reserva) $('pj-pob').textContent = reserva;
     const envio = `próximo envío ${fmtTroops(snap.envio)}`;
     if ($('pj-tropas').textContent !== reserva) $('pj-tropas').textContent = reserva;
     if ($('ratio-tropas').textContent !== envio) $('ratio-tropas').textContent = envio;
@@ -783,8 +785,9 @@ export class UI {
   liveNumbers(game, human) {
     if (!human || game.ticks === this._liveTick) return;
     this._liveTick = game.ticks;
-    this._paintReserve(hudSnapshot(human.troops, this._ratio));
-    this._pop.set(human.population());
+    const fija = human.economy !== 'workers';
+    this._paintReserve({ ...hudSnapshot(human.troops, this._ratio), fija });
+    if (!fija) this._pop.set(human.population());
     this._troopsMax.set(human.maxTroops());
     this._gold.set(human.gold);
   }
@@ -859,9 +862,9 @@ export class UI {
     $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
     const playing = game.phase === 'playing';
-    if (this._snap && ratio !== this._snapRatio) this._paintReserve(hudSnapshot(this._snap.reserva, ratio));
+    if (this._snap && ratio !== this._snapRatio) this._paintReserve({ ...hudSnapshot(this._snap.reserva, ratio), fija: this._snap.fija });
     this._snapRatio = ratio;
-    this._pop.set(pop);
+    if (human.economy === 'workers') this._pop.set(pop);
     this._troopsMax.set(max);
     const growth = human.growthPerTick() * perSecond;
     $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '';
