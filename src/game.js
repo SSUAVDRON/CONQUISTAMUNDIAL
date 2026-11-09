@@ -11,7 +11,7 @@ import { generateColonyNames, generateNames } from './names.js';
 import { botColor } from './colors.js';
 import { POI, POI_TYPES, placePoints } from './estrategia.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
-import { MECH, bigEmpireBonus, neutralTimeCost, priceFor, pvpTile, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
+import { MECH, bigEmpireBonus, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -38,6 +38,8 @@ export class Game {
   constructor({ map, seed = 1, rules = null }) {
     this.map = map;
     this.rules = cleanRules(rules);
+    /** Perfil de reglas (ritmo, puntos estratégicos, tecnologías): src/mecanicas.js, PROFILES. */
+    this.profile = profileOf(this.rules);
     this.seed = seed >>> 0;
     this.rng = new Rng((seed ^ 0x5bd1e995) >>> 0);
     this.owner = new Uint16Array(map.size); // 0 = nadie
@@ -88,9 +90,13 @@ export class Game {
 
     this.onEvent = null;
     this.eventLog = [];
+    /** Diagnóstico (?diag=1, src/diagnostico.js): registro por turno y por evento; null = apagado. */
+    this.trace = null;
+    this._traceSeq = 0;
 
     /** Puntos estratégicos (capitales, industria, puertos clave, pasos): casilla → punto. */
-    this.points = placePoints(map, this.seed);
+    // (en el perfil Clásico no hay: ni bonos, ni capitales, ni botín de captura)
+    this.points = this.profile.points ? placePoints(map, this.seed) : [];
     this.pointAt = new Map(this.points.map((pt) => [pt.tile, pt]));
 
     // Memoria reutilizable para búsquedas en anchura
@@ -119,6 +125,7 @@ export class Game {
     p.troopMult = this.rules.troopMult;
     p.goldMult = this.rules.goldMult;
     p.economy = this.rules.economy;
+    p.paceRegen = this.profile.paceRegen;
     this.players.push(p);
     // El primer humano es el jugador local por defecto; en multijugador se fija aparte
     if (isHuman && !this.human) this.human = p;
@@ -353,6 +360,7 @@ export class Game {
 
   /** Al empezar: cada nación (no las colonias) tiene su capital donde se desplegó. */
   _placeCapitals() {
+    if (!this.profile.points) return; // Clásico: sin capitales
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive || p.weak || p.spawnTile < 0) continue;
@@ -376,6 +384,7 @@ export class Game {
   }
 
   startResearch(p, id) {
+    if (!this.profile.techs) return false; // perfil sin tecnologías (Clásico)
     const check = techAvailable(p, id);
     if (!check.ok) {
       this._notify(p, check.reason, 'warn');
@@ -403,7 +412,7 @@ export class Game {
 
   /** Especialización económica: la primera es gratis; cambiarla cuesta oro. */
   setSpec(p, id) {
-    if (!SPECS[id] || p.spec === id) return false;
+    if (!this.profile.techs || !SPECS[id] || p.spec === id) return false;
     if (p.spec) {
       const cost = Math.round(CONFIG.specChangeCost * this.rules.priceMult);
       if (p.gold < cost) {
@@ -694,6 +703,10 @@ export class Game {
       }
     }
     atk.troops += troops;
+    if (this.trace && this.trace.wants(p)) {
+      if (!atk.traceId) atk.traceId = ++this._traceSeq;
+      this.trace.push({ t: 'envio', tick: this.ticks, jugador: p.id, idFrente: atk.traceId, objetivo: targetId, enviadas: troops, restantes: atk.troops });
+    }
     return true;
   }
 
@@ -1117,8 +1130,9 @@ export class Game {
     }
     atk.step++;
     const front = atk.inFrontier.size;
-    // Ritmo (más lento que el documento, a petición): × paceNeutral / × pacePvp
-    atk.budget += target ? MECH.pacePvp : MECH.neutralBudgetPerFront * front * MECH.paceNeutral;
+    const traced = this.trace && atk.traceId ? { troops: atk.troops, tiles: A.tiles } : null;
+    // Ritmo del perfil de reglas: × paceNeutral / × pacePvp (ver PROFILES)
+    atk.budget += target ? this.profile.pacePvp : MECH.neutralBudgetPerFront * front * this.profile.paceNeutral;
 
     const owner = this.owner;
     const aid = A.id;
@@ -1144,6 +1158,9 @@ export class Game {
       if (target) target.troops = Math.max(0, target.troops - c.defLoss);
       this.setOwner(t, aid);
       this._annexAround(t, aid, tid);
+    }
+    if (traced) {
+      this.trace.push({ t: 'frente', tick: this.ticks, jugador: aid, idFrente: atk.traceId, objetivo: tid, ancho: front, presupuesto: atk.budget, ganadas: A.tiles - traced.tiles, bajas: traced.troops - atk.troops, restantes: atk.troops });
     }
     if (atk.inFrontier.size === 0 || atk.troops < 1) this._endAttack(atk);
   }
@@ -1261,6 +1278,9 @@ export class Game {
     if (atk.done) return;
     atk.done = true;
     const A = atk.attacker;
+    if (this.trace && atk.traceId) {
+      this.trace.push({ t: 'fin', tick: this.ticks, jugador: A.id, idFrente: atk.traceId, objetivo: atk.targetId, reembolso: A.alive ? atk.troops * refund : 0, bajas: atk.troops * (1 - refund), retirada: atk.retreatAt > 0 });
+    }
     if (A.alive) A.troops += atk.troops * refund;
     atk.troops = 0;
     if (A.attacks.get(atk.targetId) === atk) A.attacks.delete(atk.targetId);
@@ -2509,9 +2529,11 @@ export class Game {
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive) continue;
-      const gpt = p.goldPerTick();
-      p.gold += gpt;
-      p.income.workers += gpt;
+      const gb = p.goldBreakdown();
+      p.gold += gb.base + gb.workers + gb.bonus;
+      p.income.base += gb.base;
+      p.income.workers += gb.workers;
+      p.income.bonus += gb.bonus;
       this._growPopulation(p);
       if (p.research && this.ticks >= p.research.end) this._finishResearch(p);
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
@@ -2543,6 +2565,7 @@ export class Game {
 
     this._checkEliminations();
     this._checkVictory();
+    if (this.trace) this.trace.onTick(this);
   }
 
   _beginPlaying() {
@@ -2607,7 +2630,7 @@ export class Game {
 
   _totalIncome(p) {
     const i = p.income;
-    return i.workers + i.trade + i.conquest + i.loot + i.gifts;
+    return i.base + i.bonus + i.workers + i.trade + i.conquest + i.loot + i.gifts;
   }
 
   /** Puntuación de supervivencia: territorio, eliminaciones y oro ganado. */

@@ -2,7 +2,7 @@
 // experiencia y nivel, estadísticas, historial y logros. Se guarda en este
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
-import { DEFAULT_RULES } from './config.js';
+import { DEFAULT_RULES, migrateRules } from './config.js';
 import { Rng, hashString } from './rng.js';
 
 // (Las claves conservan el nombre de la primera versión para no perder perfiles.)
@@ -377,7 +377,8 @@ export function normalizeProfile(p) {
     monedas: Number.isFinite(p.monedas) ? Math.max(0, Math.floor(p.monedas)) : 0,
     comprados: p.comprados && typeof p.comprados === 'object' ? { ...p.comprados } : {},
     diarios: p.diarios && typeof p.diarios === 'object' && Array.isArray(p.diarios.retos) ? p.diarios : null,
-    ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...((p.ajustes && p.ajustes.reglas) || {}) } },
+    // Reglas guardadas antes de los perfiles: se migran (perfil histórico) ANTES de combinarlas con los valores por defecto
+    ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...(migrateRules(p.ajustes && p.ajustes.reglas) || {}) } },
   };
 }
 

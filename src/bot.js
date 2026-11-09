@@ -130,6 +130,7 @@ export class BotBrain {
     const g = this.game;
     const p = this.player;
     const r = g.rng;
+    if (!g.profile.techs) return; // perfil sin tecnologías (Clásico)
     if (!p.spec && g.ticks > CONFIG.spawnTicks + 1200) {
       g.setSpec(p, this.aggression > 0.7 ? 'industria' : this.diplomacy > 0.6 ? 'infra' : 'urbano');
     }

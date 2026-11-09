@@ -12,6 +12,38 @@
 /** Versión de las reglas (para saber qué fórmulas usa una partida). */
 export const MECH_VERSION = 'doc-1.0';
 
+/**
+ * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
+ * id viaja con la partida y se comprueba al empezar una sala multijugador.
+ *
+ * - clasico: el de FrontWars/OpenFront. Regeneración con la fórmula base
+ *   (paceRegen 1: cuadra punto a punto con el HUD de FrontWars a igual reserva
+ *   y techo; ver docs/calibracion-clasico.md). paceNeutral y pacePvp son
+ *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
+ *   comparables de FrontWars. Sin puntos estratégicos (ni bonos ni botín de
+ *   capitales) y sin tecnologías ni especializaciones.
+ * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
+ *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
+ *   valor histórico: las reglas guardadas sin perfil son de este.
+ *
+ * paceNeutral y pacePvp multiplican el presupuesto por tick de los ataques
+ * (contra tierra libre y contra países); paceRegen, la regeneración.
+ */
+export const PROFILES = {
+  clasico: { id: 'clasico-1', name: 'Clásico', paceNeutral: 0.5, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-1', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+};
+
+/** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
+export function profileOf(rules) {
+  return PROFILES[rules && rules.profile] || PROFILES.trinchera;
+}
+
+/** Identificador de las reglas con las que se simula: versión del motor + perfil. */
+export function rulesetId(rules) {
+  return `${MECH_VERSION}/${profileOf(rules).id}`;
+}
+
 /** Parámetros del documento (sección 06.1, GameRules, y tablas de 01 a 07). */
 export const MECH = {
   tickMs: 100,
@@ -51,12 +83,6 @@ export const MECH = {
   neutralTimeMin: 5,
   neutralTimeMax: 100,
   neutralBudgetPerFront: 2, // presupuesto por tick = 2 × longitud del frente
-  // Ritmo de juego (no está en el documento: se pidió más lento). Multiplica el
-  // presupuesto por tick de los ataques: contra tierra libre y contra países.
-  // Y la regeneración de tropas.
-  paceNeutral: 0.07,
-  pacePvp: 0.5,
-  paceRegen: 0.6,
   neutralLossDiv: 5, // bajas por casilla = magnitud / 5
   // Guerra entre países (sección 05.2)
   pvp: {

@@ -1,6 +1,7 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
-import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel } from './config.js';
+import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } from './config.js';
+import { PROFILES, rulesetId } from './mecanicas.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { decodeRelief, generateMap, markRivers } from './map.js';
 import { RIVERS } from './rios.js';
@@ -196,11 +197,39 @@ function rulesEditor(prefix, rules, onChange, ctx) {
     });
     return el('label', { class: 'interruptor' }, input, el('span', { text: label }));
   };
+  // Modo de victoria: en Clásico no hay capitales, así que esa opción no sale
+  const victoryBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Modo de victoria' });
+  const syncVictory = () => {
+    const opts = [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]
+      .filter(([v]) => !(v === 'capitales' && rules.profile === 'clasico'));
+    if (!opts.some(([v]) => v === rules.victory)) rules.victory = 'dominio';
+    segmented(victoryBox, opts, rules.victory, (v) => {
+      rules.victory = v;
+      change();
+    });
+  };
+  syncVictory();
+  const profileNote = el('small', { class: 'nota-perfil' });
+  const syncProfileNote = () => {
+    const P = PROFILES[rules.profile] || PROFILES.trinchera;
+    profileNote.textContent = rules.profile === 'clasico'
+      ? `Ritmo de FrontWars, sin puntos estratégicos ni tecnologías (${P.id})`
+      : `Ritmo lento, con puntos estratégicos y tecnologías (${P.id})`;
+  };
+  syncProfileNote();
+  const profileBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Perfil de reglas' });
+  segmented(profileBox, Object.entries(PROFILES).map(([k, P]) => [k, P.name]), rules.profile, (v) => {
+    rules.profile = v;
+    syncProfileNote();
+    syncVictory();
+    change();
+  });
   const box = el('div', { class: 'reglas-rejilla' },
+    el('div', { class: 'campo campo-perfil' }, el('span', {}, 'Perfil de reglas ', profileNote), profileBox),
     el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
     el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
     seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
-    seg('Modo de victoria', 'victory', [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]),
+    el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox),
     seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
     seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
     seg('Ingresos de oro', 'goldMult', MULT_OPTS),
@@ -259,7 +288,7 @@ function segmented(box, options, current, onChange) {
 export function rulesSummary(r) {
   if (!r) return '';
   const modes = { capitales: 'victoria por capitales', economia: 'victoria económica', supervivencia: 'supervivencia' };
-  const parts = [modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
+  const parts = [`${(PROFILES[r.profile] || PROFILES.trinchera).name} (${rulesetId(r)})`, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.economy === 'workers') parts.push('economía con trabajadores');
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
@@ -346,7 +375,7 @@ export class Home {
 
     // Partida contra la IA
     const a = this.profile.ajustes;
-    this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...a.reglas } };
+    this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } };
     this._buildGallery();
     // Portada con nuestro mapa (un poco después, para que el menú salga al instante)
     const cover = $('portada-mapa');
@@ -509,7 +538,8 @@ export class Home {
   /** Clic en una tarjeta de modo. */
   _mode(mode) {
     if (mode === 'rapida') {
-      this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES } });
+      // Partida rápida: el perfil Clásico, siempre (elegido aquí, no por los valores por defecto)
+      this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
     } else if (mode === 'personalizada') {
@@ -526,7 +556,7 @@ export class Home {
     const a = this.profile.ajustes;
     const map = game?.mapa && (REAL_MAPS[game.mapa] || MAP_SIZES[game.mapa]) ? game.mapa : this.choice.map;
     const bots = Math.min(maxBotsFor(map), game?.rivales || a.bots || 70);
-    this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...a.reglas } });
+    this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } });
   }
 
   /** Escena de la portada y dibujos de las tarjetas de modo. */

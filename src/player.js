@@ -23,6 +23,8 @@ export class Player {
     /** Multiplicadores del techo de tropas y de la regeneración (bots: 1/3 y ×0,5; naciones según la dificultad). */
     this.capMult = 1;
     this.regenMult = 1;
+    /** Ritmo de regeneración del perfil de reglas (lo fija la partida al añadirlo). */
+    this.paceRegen = 1;
     /** Economía de la partida: 'fixed' (oro pasivo fijo) o 'workers' (población = tropas + trabajadores). */
     this.economy = MECH.economyMode;
     // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
@@ -41,8 +43,10 @@ export class Player {
     this.capitalTile = -1;
     this.passes = 0; // pasos de montaña que controla
     this.helpAt = -Infinity; // última vez que pidió ayuda a sus aliados
-    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). `workers` = oro pasivo de cada turno. */
-    this.income = { workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
+    /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). */
+    // Oro ganado por fuente (TR04): base pasiva, bonos (puntos estratégicos,
+    // tecnologías, especialización), trabajadores, comercio, conquistas, botín y regalos
+    this.income = { base: 0, bonus: 0, workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
     this.spent = { buildings: 0, research: 0 };
     /** Total ingresado cada 10 s (último minuto), para el ritmo de oro y la victoria económica. */
     this.incomeHist = [];
@@ -118,8 +122,8 @@ export class Player {
    */
   growthPerTick() {
     const P = this.economy === 'workers' ? this.troops + this.workers : this.troops;
-    // × paceRegen: ritmo de juego algo más lento que el documento (ver mecanicas.js)
-    return regenPerTick(P, this.maxTroops()) * MECH.paceRegen * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
+    // × paceRegen: ritmo del perfil de reglas (ver PROFILES en mecanicas.js)
+    return regenPerTick(P, this.maxTroops()) * this.paceRegen * this.regenMult * this.troopMult * Math.max(0.1, 1 + this.mods.growth);
   }
 
   /** Oro pasivo base por turno: humano 100, nación 100, bot (colonia) 50. */
@@ -132,10 +136,20 @@ export class Player {
    * ni de las tropas. Con la economía de trabajadores (07.2): +1 por cada 100.
    */
   goldPerTick() {
-    if (!this.tiles) return 0;
-    let g = this.baseGold();
-    if (this.economy === 'workers') g += Math.floor(this.workers / MECH.workersPerGold);
-    return g * this.goldMult * (1 + this.mods.gold);
+    const b = this.goldBreakdown();
+    return b.base + b.workers + b.bonus;
+  }
+
+  /**
+   * El oro pasivo de un turno por fuente (TR04): base (100, o 50 una colonia,
+   * × reglas), trabajadores (+1 cada 100, × reglas) y bonos (el % extra de
+   * puntos estratégicos, tecnologías y especialización sobre lo anterior).
+   */
+  goldBreakdown() {
+    if (!this.tiles) return { base: 0, workers: 0, bonus: 0 };
+    const base = this.baseGold() * this.goldMult;
+    const workers = this.economy === 'workers' ? Math.floor(this.workers / MECH.workersPerGold) * this.goldMult : 0;
+    return { base, workers, bonus: (base + workers) * this.mods.gold };
   }
 
   maxBoats() {

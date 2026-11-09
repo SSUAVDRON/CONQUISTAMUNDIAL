@@ -1,6 +1,6 @@
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, colonyCount, mapLabel } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, DEFAULT_RULES, MAP_SIZES, REAL_MAPS, RES, TICK_MS, colonyCount, mapLabel, migrateRules } from './config.js';
 import { generateMap, loadRealMap } from './map.js';
 import { Game } from './game.js';
 import { Renderer } from './render.js';
@@ -18,7 +18,12 @@ import { withLoading } from './loading.js';
 import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
-import { NetSync, Sala, newRoomCode, normalizeCode, openRooms } from './multiplayer.js';
+import { NetSync, RULES_FINGERPRINT, Sala, newRoomCode, normalizeCode, openRooms, roomRuleset } from './multiplayer.js';
+import { MECH_VERSION, PROFILES } from './mecanicas.js';
+import { Diagnostico } from './diagnostico.js';
+
+/** ?diag=1: diagnóstico local de la partida (src/diagnostico.js). */
+const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('diag') === '1';
 import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
 
@@ -173,6 +178,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   state.game = game;
   state.human = game.human;
   state.mapSize = mapSize;
+  // Diagnóstico local: ?diag=1 registra la partida (exportar con Ctrl+Mayús+D o __trinchera.diag.exportar())
+  state.diag = DIAG ? new Diagnostico(game, { build: RULES_FINGERPRINT, mechVersion: MECH_VERSION, ruleset: roomRuleset(game.rules) }) : null;
   state.renderer = new Renderer(canvas, game, camera);
   // La misma densidad con la que se creó el lienzo (en móviles de 2,5-3× no es
   // la del dispositivo): si no, el mapa salía desplazado y los toques no
@@ -356,7 +363,7 @@ async function openSala(code, isHost) {
     bots: Math.min(200, profile.ajustes.bots),
     mapSize: profile.ajustes.mapa,
     difficulty: profile.ajustes.dificultad,
-    rules: { ...DEFAULT_RULES, ...profile.ajustes.reglas },
+    rules: { ...DEFAULT_RULES, ...migrateRules(profile.ajustes.reglas) },
   };
   const sala = new Sala(transport, { code, isHost, me: myIdentity(), settings });
   state.sala = sala;
@@ -369,6 +376,11 @@ async function openSala(code, isHost) {
     home.renderLobby(sala, transport.kind, busy ? 'Esta partida ya ha empezado. Espera a la siguiente o crea otra sala.' : '');
   };
   sala.onStart = (payload, hostPeer) => beginOnlineGame(sala, payload, hostPeer);
+  // El anfitrión simula con otra versión de las reglas: no se empieza
+  sala.onVersionMismatch = (theirs, mine) => {
+    if (state.sala !== sala) return;
+    home.renderLobby(sala, transport.kind, `La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
+  };
   try {
     await sala.open();
   } catch (err) {
@@ -908,6 +920,21 @@ applySettings();
 // Acceso desde la consola del navegador para depurar: __dominia.game, __dominia.human…
 window.__dominia = state;
 window.__trinchera = state;
+// Ctrl+Mayús+D: descarga el diagnóstico de la partida (solo con ?diag=1)
+if (DIAG) {
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyD' && state.diag) {
+      e.preventDefault();
+      state.diag.exportar();
+    }
+  });
+}
+// Identificador de reglas (para comprobar qué versión sirve el hosting)
+state.version = { motor: MECH_VERSION, perfiles: Object.fromEntries(Object.entries(PROFILES).map(([k, P]) => [k, P.id])), huella: RULES_FINGERPRINT, ruleset: (rules) => roomRuleset(rules) };
+{
+  const v = document.getElementById('version-reglas');
+  if (v) v.textContent = `Reglas: motor ${MECH_VERSION} · perfiles ${Object.values(PROFILES).map((P) => P.id).join(' / ')} · huella ${RULES_FINGERPRINT}`;
+}
 state.camera = camera; // para pruebas automáticas
 state.sound = sound;
 state.profile = profile;

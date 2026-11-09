@@ -926,8 +926,14 @@ export class UI {
 
   _updateOrders(game, human) {
     // Aviso en el botón de desarrollo: hay oro para investigar y nada en marcha
-    const can = game.phase === 'playing' && human.alive && !human.research && human.gold >= game.techCost(human);
+    const can = game.profile.techs && game.phase === 'playing' && human.alive && !human.research && human.gold >= game.techCost(human);
     $('btn-desarrollo').querySelector('.punto-aviso').hidden = !can;
+    // Sin tecnologías (Clásico): el panel sigue, solo con la economía
+    const tabTec = document.querySelector('[data-pd="tecnologias"]');
+    if (tabTec && tabTec.hidden === game.profile.techs) {
+      tabTec.hidden = !game.profile.techs;
+      if (!game.profile.techs) this._devTab('economia');
+    }
   }
 
   toggleDev(force) {
@@ -981,7 +987,7 @@ export class UI {
     const cap = h.maxTroops();
     const extra = MECH.cityCapBonus * h.capMult * (1 + h.mods.cap);
     const P = h.economy === 'workers' ? h.troops + h.workers : h.troops;
-    const k = h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
+    const k = h.paceRegen * h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
     const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
     out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
     out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
@@ -999,13 +1005,17 @@ export class UI {
       const inc = r ? r.income : {};
       const sp = r ? r.spent : {};
       const total = Object.values(inc).reduce((a, b) => a + b, 0);
+      // Desglose por fuente (TR04): la base pasiva aparte de los bonos y los eventos
+      const techs = game.profile.techs;
       const rows = [
-        ['Trabajadores (con puertos y fábricas)', inc.workers],
-        ['Trenes, mercantes y pesca', inc.trade],
-        ['Conquistas (oro de cada casilla)', inc.conquest],
-        ['Botín (eliminaciones y capitales)', inc.loot],
+        ['Oro base (pasivo, cada turno)', inc.base],
+        game.profile.points || techs ? ['Bonos (puntos estratégicos, tecnologías, especialización)', inc.bonus] : null,
+        h.economy === 'workers' ? ['Trabajadores', inc.workers] : null,
+        ['Trenes y mercantes', inc.trade],
+        game.profile.points ? ['Puntos estratégicos tomados', inc.conquest] : null,
+        ['Botín (eliminaciones)', inc.loot],
         ['Regalos de aliados', inc.gifts],
-      ];
+      ].filter(Boolean);
       const bar = (v) => `<span class="pd-barra"><span style="width:${total > 0 ? Math.round((100 * (v || 0)) / total) : 0}%"></span></span>`;
       const roi = this._roi(game, h);
       const specCost = h.spec ? formatNumber(CONFIG.specChangeCost * game.rules.priceMult) : 'gratis';
@@ -1014,14 +1024,14 @@ export class UI {
         <table class="pd-tabla"><tbody>
           ${rows.map(([n, v]) => `<tr><td>${n}</td><td>${formatNumber(v || 0)}</td><td>${bar(v)}</td></tr>`).join('')}
           <tr class="gasto"><td>Gastado en edificios</td><td>${formatNumber(sp.buildings || 0)}</td><td></td></tr>
-          <tr class="gasto"><td>Gastado en investigación</td><td>${formatNumber(sp.research || 0)}</td><td></td></tr>
+          ${techs ? `<tr class="gasto"><td>Gastado en investigación</td><td>${formatNumber(sp.research || 0)}</td><td></td></tr>` : ''}
         </tbody></table>
         <h4>Si construyes ahora</h4>
         <ul class="pd-roi">${['city', 'factory', 'port'].map((k) => `<li>${roi[k]}</li>`).join('')}</ul>
-        <h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
+        ${techs ? `<h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
         <div class="pd-specs">${SPEC_IDS.map((id) => `
           <button type="button" class="pd-spec${h.spec === id ? ' activa' : ''}" data-spec="${id}" ${h.spec === id || game.phase !== 'playing' ? 'disabled' : ''}>
-            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>`;
+            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>` : `<p class="pd-nota">Perfil ${game.profile.name}: sin tecnologías ni especialización.</p>`}`;
     } else {
       const cost = game.techCost(h);
       const time = Math.round(game.techTime(h) / 10);

@@ -163,7 +163,20 @@ export const DEFAULT_RULES = {
   coop: false, // multijugador: cada dos jugadores llevan una misma nación
   coopRoles: false, // con roles: uno el mando militar y otro la economía y la diplomacia
   economy: 'fixed', // 'fixed': oro pasivo fijo (OpenFront moderno) | 'workers': tropas + trabajadores (variante FrontWars)
+  profile: 'clasico', // perfil de reglas (src/mecanicas.js, PROFILES): 'clasico' | 'trinchera'
 };
+/** Perfiles de reglas (ver PROFILES en src/mecanicas.js). Sin perfil = 'trinchera' (valor histórico). */
+export const PROFILE_IDS = ['clasico', 'trinchera'];
+
+/**
+ * Reglas guardadas antes de existir los perfiles: se marcan con el perfil
+ * histórico ('trinchera') ANTES de combinarlas con DEFAULT_RULES, para que una
+ * configuración antigua no cambie de perfil al cargar.
+ */
+export function migrateRules(r) {
+  if (!r || typeof r !== 'object') return r;
+  return r.profile === undefined ? { ...r, profile: 'trinchera' } : r;
+}
 /** Economías: fija (la del documento) o con trabajadores (variante opcional del documento, sección 07). */
 export const ECONOMY_MODES = ['fixed', 'workers'];
 /** Dificultades de las naciones de la IA (documento: ×0,5 / 0,75 / 1 / 1,25 de techo). */
@@ -202,10 +215,12 @@ export function cleanRules(raw) {
     alliances: r.alliances !== false,
     boats: r.boats !== false,
     factories: r.factories !== false,
-    victory: VICTORY_MODES.includes(r.victory) ? r.victory : 'dominio',
+    // En Clásico no hay capitales: esa victoria sería inalcanzable
+    victory: VICTORY_MODES.includes(r.victory) && !(r.victory === 'capitales' && r.profile === 'clasico') ? r.victory : 'dominio',
     coop: r.coop === true,
     coopRoles: r.coop === true && r.coopRoles === true,
     economy: ECONOMY_MODES.includes(r.economy) ? r.economy : 'fixed',
+    profile: PROFILE_IDS.includes(r.profile) ? r.profile : 'trinchera',
   };
 }
 

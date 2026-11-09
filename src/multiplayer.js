@@ -6,10 +6,56 @@
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-import { MAP_IDS, TICK_MS, cleanRules } from './config.js';
+import { BUILDINGS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from './config.js';
+import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
 
 export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash'];
+
+/**
+ * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios): si
+ * dos clientes tienen versiones distintas del juego, no coincide.
+ */
+const FINGERPRINT = (() => {
+  const s = JSON.stringify([MECH, PROFILES, CONFIG, BUILDINGS]);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0).toString(36);
+})();
+
+/** Huella de los parámetros del motor de esta versión del juego. */
+export const RULES_FINGERPRINT = FINGERPRINT;
+
+/** Identificador completo con el que se simula una sala: versión, perfil y huella. */
+export function roomRuleset(rules) {
+  return `${rulesetId(cleanRules(rules))}#${FINGERPRINT}`;
+}
+
+/**
+ * Valida el mensaje de inicio del anfitrión ANTES de simular: datos bien
+ * formados y la misma versión de reglas que este cliente. Si no coincide, la
+ * partida no empieza (los dos simularían con parámetros distintos).
+ */
+export function checkStartPayload(d) {
+  if (!d || d.v !== 1 || !Number.isFinite(d.seed) || !Array.isArray(d.players) || !d.settings) return { ok: false, reason: 'datos' };
+  const rules = cleanRules(d.settings.rules);
+  const mine = roomRuleset(rules);
+  if (d.ruleset !== mine) return { ok: false, reason: 'version', theirs: String(d.ruleset || 'desconocida'), mine };
+  return {
+    ok: true,
+    payload: {
+      seed: d.seed >>> 0,
+      ruleset: mine,
+      settings: {
+        mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
+        bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
+        difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
+        rules,
+      },
+      players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
+    },
+  };
+}
 export const MAX_HUMANS = 8;
 
 const TURN_TICKS = 2; // ticks por mensaje del anfitrión (≈5 mensajes/s)
@@ -144,6 +190,8 @@ export class Sala {
     const payload = {
       v: 1,
       seed: (Math.random() * 0xffffffff) >>> 0,
+      // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
+      ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
       players: players.map(({ peer, name, color, emblem, pattern }) => ({ peer, name, color, emblem, pattern })),
     };
@@ -164,20 +212,17 @@ export class Sala {
     if (this.started || !msg.data || msg.data.v !== 1) return;
     const host = this.host();
     if (!msg.isMe && (!host || msg.peer !== host.peer)) return; // solo vale el del anfitrión
-    const d = msg.data;
-    if (!Number.isFinite(d.seed) || !Array.isArray(d.players) || !d.settings) return;
+    const check = checkStartPayload(msg.data);
+    if (!check.ok) {
+      // Otra versión del juego: no se simula (se avisa una vez y se sigue en la sala)
+      if (check.reason === 'version' && !this._versionWarned) {
+        this._versionWarned = true;
+        this.onVersionMismatch?.(check.theirs, check.mine);
+      }
+      return;
+    }
     this.started = true;
-    const payload = {
-      seed: d.seed >>> 0,
-      settings: {
-        mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
-        bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
-        difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
-        rules: cleanRules(d.settings.rules),
-      },
-      players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
-    };
-    this.onStart?.(payload, msg.isMe ? this.myPeer() : msg.peer);
+    this.onStart?.(check.payload, msg.isMe ? this.myPeer() : msg.peer);
   }
 
   async leave() {
