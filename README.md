@@ -129,11 +129,12 @@ bash herramientas/hostinger.sh
 
 que empaqueta el juego y sube un commit nuevo a esa rama. En hPanel →
 Avanzado → Git: repositorio `git@github.com:SSUAVDRON/SSUAVDRON.git`, rama
-`hostinger` y la carpeta del subdominio (vacía). Como el repositorio es
+`hostinger` y directorio en blanco (se despliega en `public_html`, que tiene
+que estar vacío: borra antes el archivo de bienvenida). Como el repositorio es
 privado, la clave SSH que muestra hPanel va en GitHub → Settings → Deploy keys
 (solo lectura); con el webhook de «Despliegue automático» en GitHub → Settings
-→ Webhooks, cada subida a la rama se publica sola. No uses la carpeta principal
-de ssuavdron.com: allí vive otra web.
+→ Webhooks, cada subida a la rama se publica sola. El juego va en una web
+propia de Hostinger, aparte de ssuavdron.com.
 
 **A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
 
