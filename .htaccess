@@ -1,0 +1,24 @@
+# Trinchera en Hostinger (LiteSpeed), desplegando la rama main tal cual
+# (index.html + css/ + src/ como módulos). La rama «hostinger» lleva su propio
+# .htaccess con el juego empaquetado en un solo archivo.
+DirectoryIndex index.html
+Options -Indexes
+
+# El despliegue por Git deja la carpeta .git junto a la web, y main trae
+# también código de desarrollo: nada de eso se sirve
+RedirectMatch 404 /\.git
+RedirectMatch 404 ^/(tests|herramientas|docs|node_modules)(/|$)
+RedirectMatch 404 ^/(package\.json|package-lock\.json|servidor\.js|ROADMAP\.md|README\.md)$
+RedirectMatch 404 \.md$
+
+# El juego cambia a menudo: el navegador comprueba siempre si hay versión nueva
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+# Comprimido viaja mucho menos
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>

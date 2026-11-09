@@ -139,6 +139,10 @@ privado, la clave SSH que muestra hPanel va en GitHub → Settings → Deploy ke
 → Webhooks, cada subida a la rama se publica sola. El juego va en una web
 propia de Hostinger, aparte de ssuavdron.com.
 
+**Rama `main` tal cual** (lo que despliega ahora Hostinger): el `.htaccess` de
+la raíz no deja leer `.git`, `tests/`, `herramientas/`, `docs/` ni los `.md`, y
+pide al navegador comprobar siempre la última versión.
+
 **A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
 
 Fuera del enlace de Claude no hay multijugador entre ordenadores (solo entre
@@ -195,7 +199,7 @@ el progreso se guarda en cada navegador.
 | Traición | Romper una alianza (pide doble confirmación) te marca como traidor 60 s: conquistarte cuesta ×0,6 y los bots no se fían de ti. |
 | Victoria | Cuatro modos (en las reglas de la partida): **dominación** (el 70 % de la tierra; también 50 o 90 %), **capitales** (controlar el 40 % de todas las capitales durante 60 s), **economía** (ingresar 900.000 de oro por minuto durante 2 min) y **supervivencia** (al acabar el tiempo —20 min si no hay límite— gana la mejor puntuación entre los vivos: territorio, eliminaciones y oro ganado). En todos, también se gana siendo el último en pie o si solo quedan naciones aliadas. La barra superior muestra el objetivo del modo y, si alguien lo cumple, cuánto le falta para ganar. |
 | Puntos estratégicos | Rombos en el mapa, siempre visibles: **capitales** (corona; una por nación, donde se desplegó: conquistar una ajena da 30.000 de oro y su dueño crece un 15 % menos hasta recuperarla; cada capital que controles da +5 % de oro y de crecimiento), **núcleos industriales** (engranaje: +15 % de oro de los trabajadores, con rendimiento decreciente), **puertos clave** (timón: +1 barco de transporte y +25 % de oro de trenes y mercantes) y **pasos de montaña** (picos: conquistar a su alrededor cuesta un 60 % más). Unos 1 por cada 75.000 casillas de tierra (entre 8 y 36), separados y colocados con la semilla. Avisos al tomarlos o perderlos; la IA los busca. |
-| Ritmo | Más lento que el documento, a petición: el presupuesto por turno de los ataques va × **0,07** en tierra libre (`MECH.paceNeutral`) y × **0,5** contra países (`MECH.pacePvp`), y la regeneración de tropas × **0,6** (`MECH.paceRegen`). En el mapa del mundo con 90 naciones, la tierra ocupada va por ~25 % al minuto, ~50 % a los 2 y ~90 % a los 4. |
+| Perfiles de reglas | Versionados en `PROFILES` (`src/mecanicas.js`); el id viaja con la partida y se comprueba al empezar una sala. **Clásico** (`clasico-1`, el de Partida rápida y el de los jugadores nuevos): el ritmo de FrontWars, sin puntos estratégicos (ni capitales, ni su botín, ni la victoria por capitales) ni tecnologías/especialización; `paceRegen` 1 (cerrado: cuadra con el HUD de FrontWars a igual reserva y techo), `paceNeutral` **0,5** y `pacePvp` **1** (provisionales). **Trinchera** (`trinchera-1`): ×0,07 en tierra libre, ×0,5 en guerras y ×0,6 de regeneración, con puntos estratégicos y tecnologías; en el mapa del mundo con 90 naciones la tierra ocupada va por ~25 % al minuto, ~50 % a los 2 y ~90 % a los 4. Las reglas guardadas antes de los perfiles se migran a `trinchera` (el valor histórico) antes de combinarse con los valores por defecto (`migrateRules`). Calibración: `node herramientas/calibrar.js` → `docs/calibracion-clasico.md`. |
 | Cifras en pantalla | Las tropas se muestran **÷ 10** (`TROOP_SCALE` en `src/format.js`), como en el juego de referencia: por dentro siguen siendo las del documento (25.000 al empezar), en pantalla 2.500; el techo con 52 casillas sale como 12,1k y una ciudad suma 25.000. El oro no cambia. |
 | Combate | Del documento (sección 05). **Tierra libre**: presupuesto por turno = 2 × casillas del frente (× ritmo); cada casilla cuesta clamp(2000 × coste ÷ tropas, 5, 100) de tiempo (coste 16,5 llanura, 20 meseta, 25 montaña) y magnitud ÷ 5 de bajas (16 / 20 / 24). **Contra otro país**: ratio = tropas del defensor ÷ del ataque; bajas del atacante por casilla = magnitud × traidor × clamp(ratio, 0,6, 2) × (0,463 + 0,0039 × tropas del defensor por casilla); el defensor pierde sus tropas ÷ casillas por cada casilla; cada casilla cuesta speedCost × coste × efectos de defensa ÷ ancho del frente (speedCost = clamp(ratio, 0,82, 7,5) × clamp(ratio ÷ 20, 1, 50) ÷ 8,55). **Retirada**: a los 20 turnos; contra otro país se pierde el 25 %. **Cerco**: una bolsa sin costa rodeada por ti (de tierra libre o del defensor) pasa a ser tuya al momento. Los bonus de «imperio grande» del documento no tienen fórmula pública: quedan neutros (×1). Sin órdenes de ataque (rápido, preparado, fortificar ni avance continuo). |
 | Desarrollo (tecla I) | **Economía**: oro por minuto e ingresos del último minuto por fuente (trabajadores, comercio, conquistas, botín, regalos) y gastos; qué daría construir ahora una ciudad (techo y regeneración), una fábrica o un puerto. **Especialización**: industria (+25 % de oro y fábricas un 50 % más rentables, pero más caras), infraestructura (trenes y mercantes +60 %, raíles más largos, +1 barco) o desarrollo urbano (+15 % de población máxima, +10 % de crecimiento, ciudades un 20 % más baratas); la primera es gratis y cambiarla cuesta 300.000. **Tecnologías**: 12 en tres ramas (economía, ejército, defensa) con dos niveles; una a la vez, 150.000 la primera y cada una ×1,6 la siguiente (y 10 s más), así que no se pueden tener todas. La IA investiga según su carácter. |
@@ -279,6 +283,17 @@ Decisiones de diseño que conviene conservar:
 - **Imports simples.** El empaquetador solo entiende `import { a } from './x.js'`
   y `export function|class|const`. Si añades otra forma, falla con un mensaje
   claro en vez de generar un fichero roto.
+
+## Diagnóstico
+
+Con `?diag=1` en la dirección, la partida registra por turno y por evento (en
+unidades internas; al exportar se añaden las visibles): build, versión del
+motor, perfil, semilla, reglas, turno, jugador, casillas, reserva y techo,
+trabajadores, regeneración, oro pasivo y de eventos, y por cada frente su
+objetivo, ancho, presupuesto, tropas enviadas, casillas ganadas, bajas y
+reembolso. Se descarga en JSON con **Ctrl+Mayús+D** o
+`__trinchera.diag.exportar()`. El identificador de reglas que sirve el hosting
+se ve en Ajustes (y en `__trinchera.version`).
 
 ## Tests
 
