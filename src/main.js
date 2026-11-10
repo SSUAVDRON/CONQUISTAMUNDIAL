@@ -19,7 +19,7 @@ import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
 import { NetSync, RULES_FINGERPRINT, Sala, cleanRoomInfo, newRoomCode, normalizeCode, openRooms, roomName, roomRuleset } from './multiplayer.js';
-import { MECH_VERSION, PROFILES } from './mecanicas.js';
+import { MECH_VERSION, PROFILES, startOffsets } from './mecanicas.js';
 import { Diagnostico } from './diagnostico.js';
 
 /** ?diag=1: diagnóstico local de la partida (src/diagnostico.js). */
@@ -1155,23 +1155,56 @@ function updateSpeedBox() {
  * las demás naciones. Se busca con el azar del navegador, no con el de la
  * simulación (en multijugador, todos tienen que tirar los mismos dados).
  */
+const START_AREA = startOffsets();
+
+/** ¿Cabe entera la zona inicial (52 casillas) en `t`? Tierra libre de la misma masa. */
+function fullStart(game, t) {
+  const map = game.map;
+  const cx = map.x(t);
+  const cy = map.y(t);
+  const body = map.landBody[t];
+  for (const [dx, dy] of START_AREA) {
+    const x = cx + dx;
+    const y = cy + dy;
+    if (!map.inBounds(x, y)) return false;
+    const i = map.index(x, y);
+    if (!map.isLand(i) || game.owner[i] !== 0 || map.landBody[i] !== body) return false;
+  }
+  return true;
+}
+
+/**
+ * «Elegir por mí»: un sitio donde quepa entera la zona inicial, lejos de los
+ * polos y con espacio respecto a los demás. Pasado cierto espacio, cualquiera
+ * vale (al azar): antes buscaba el más alejado de todos y acababa en el
+ * borde del mapa o en el Ártico.
+ */
 function suggestSpawn(game, human) {
   const map = game.map;
   const others = [];
   for (const p of game.players) if (p && p !== human && p.spawned && p.spawnTile >= 0) others.push(p.spawnTile);
+  const yMin = Math.round(map.height * 0.08);
+  const yMax = map.height - 1 - yMin;
+  const roomy = (20 * RES) ** 2;
   let best = -1;
-  let bestD = -1;
-  for (let k = 0; k < 600; k++) {
+  let bestScore = -1;
+  for (let k = 0; k < 800; k++) {
     const t = map.landTiles[Math.floor(Math.random() * map.landTiles.length)];
-    if (!game.spawnCheck(human, t).ok) continue;
+    const y = map.y(t);
+    if (y < yMin || y > yMax || !game.spawnCheck(human, t).ok || !fullStart(game, t)) continue;
     let d = Infinity;
     const x = map.x(t);
-    const y = map.y(t);
     for (const s of others) d = Math.min(d, (map.x(s) - x) ** 2 + (map.y(s) - y) ** 2);
-    if (d > bestD) {
-      bestD = d;
+    const score = Math.min(d, roomy) + Math.random();
+    if (score > bestScore) {
+      bestScore = score;
       best = t;
     }
+  }
+  // Sin sitio así (mapas pequeños o muy llenos): cualquiera válido
+  for (let k = 0; best < 0 && k < 600; k++) {
+    const t = map.landTiles[Math.floor(Math.random() * map.landTiles.length)];
+    if (game.spawnCheck(human, t).ok) best = t;
   }
   return best;
 }

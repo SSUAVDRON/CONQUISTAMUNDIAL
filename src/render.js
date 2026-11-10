@@ -8,6 +8,7 @@ import { mutedRgb, rgbToCss, shadeRgb, vividRgb } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
+import { MECH } from './mecanicas.js';
 import { Fx, drawMissileSprite } from './fx.js';
 import { drawCargo, drawTransport, drawWarship } from './barcos.js';
 
@@ -39,6 +40,17 @@ const FLASH_COLORS = [
   ['rgba(255, 150, 60, 0.85)', 'rgba(200, 50, 20, 0.55)', 'rgba(70, 20, 10, 0.4)'],
 ];
 const ALLY_STRIPE = [96, 226, 140];
+// Despliegue: cada nación es su zona inicial (un disco de casillas) con un
+// aro de una casilla en su color y el interior teñido y translúcido
+const SPAWN_R = MECH.startingRadius + 0.5;
+const SPAWN_C = MECH.startingCenterOffset + 0.5;
+// Placas de nombre de los bots: solo si el país se ve de este radio (px) o
+// más; alejado no se ven (tú, otros jugadores y aliados, siempre)
+// o con la cámara cerca (píxeles por casilla del mundo de 2000×1000)
+const BOT_LABEL_R = 26;
+const COLONY_LABEL_R = 30;
+const BOT_LABEL_ZOOM = 6;
+const COLONY_LABEL_ZOOM = 8;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -140,6 +152,7 @@ export class Renderer {
     this._chunkDirty = new Uint8Array(this._cw * Math.ceil(height / CHUNK));
     this._chunkList = [];
     this._allySig = this._allySignature();
+    this._spawnStyle = game.phase === 'spawn';
     this._paintAllTerritory();
 
     // Destellos de casillas que cambian de dueño (cola circular)
@@ -200,6 +213,8 @@ export class Renderer {
     this.patterns = new Array(n).fill(null);
     this.allied = new Uint8Array(n);
     this.glowCol = GLOW_MIX.map(() => [new Uint32Array(n), new Uint32Array(n)]);
+    this.spawnFill = new Uint32Array(n);
+    this.spawnEdge = new Uint32Array(n);
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
@@ -227,6 +242,11 @@ export class Renderer {
         this.border2[p.id] = pack(b2[0], b2[1], b2[2], 210);
         this.ring2[p.id] = 1;
       }
+      // Despliegue: interior del color de la nación, translúcido, y aro opaco
+      const sf = vividRgb(p.color, 0.06, 1, 0.36, 0.64);
+      const se = p === human ? vividRgb(p.color, 0.2, 1.05, 0.3, 0.62) : vividRgb(p.color, 0.12, 0.8, 0.24, 0.52);
+      this.spawnFill[p.id] = pack(sf[0], sf[1], sf[2], 150);
+      this.spawnEdge[p.id] = pack(se[0], se[1], se[2], 255);
       GLOW_MIX.forEach((stages, kind) => stages.forEach(([gr, gg, gb, m], st) => {
         this.glowCol[kind][st][p.id] = pack(Math.round(lerp(r, gr, m)), Math.round(lerp(g, gg, m)), Math.round(lerp(b, gb, m)), 235);
       }));
@@ -276,6 +296,12 @@ export class Renderer {
     const W = this.game.map.width;
     const x = i % W;
     const y = (i / W) | 0;
+    if (this._spawnStyle) {
+      // Aro de una casilla entera (la que toca a otro por un lado) e interior teñido
+      const inner = x > 0 && x < W - 1 && s[i - 1] === o && s[i + 1] === o && s[i - W] === o && s[i + W] === o;
+      this._setTile(i, inner ? this.spawnFill[o] : this.spawnEdge[o]);
+      return;
+    }
     let col;
     if (this.allied[o]) col = (x + y) % 7 < 2 ? this.alt[o] : this.fill[o];
     else {
@@ -414,6 +440,22 @@ export class Renderer {
     }
   }
 
+  /**
+   * Termina el despliegue: las zonas iniciales pasan del estilo de disco
+   * (aro de su color) al territorio normal. Solo se repintan las casillas con
+   * dueño (y sus bloques se suben a medida que se ven).
+   */
+  _endSpawnStyle() {
+    this._spawnStyle = false;
+    const s = this.prevOwner;
+    const W = this.game.map.width;
+    for (let i = 0; i < s.length; i++) {
+      if (!s[i]) continue;
+      this._paintTile(i);
+      this._markChunk(i % W, (i / W) | 0);
+    }
+  }
+
   /** Todo el territorio de una vez (al empezar o si cambian tus alianzas). */
   _paintAllTerritory() {
     const N = this.prevOwner.length;
@@ -442,7 +484,8 @@ export class Renderer {
       this._queueChanges(dirty);
       dirty.length = 0;
     }
-    if (this._runN) this._reveal(this.anim ? this._fracEarly : 1, now);
+    // En el despliegue, al momento (cambiar de sitio no es una conquista)
+    if (this._runN) this._reveal(this.anim && game.phase !== 'spawn' ? this._fracEarly : 1, now);
   }
 
   /** Mete en la cola las casillas que han cambiado de dueño, agrupadas por tramos del mismo conquistador. */
@@ -546,7 +589,7 @@ export class Renderer {
         // anillo brillante cubría casi todo el país y latía en cada turno
         if (kind === 0) {
           if (glowOn && this._inView(x, y, 2)) this._pushGlow(t, o, now, kind);
-        } else if (kind === 2) this._pushFlash(t, now, kind);
+        } else if (kind === 2 && this.game.phase !== 'spawn') this._pushFlash(t, now, kind);
         if (watch && kind < 2 && this._inView(x, y, 2)) (kind === 0 ? battles : wild).push(t);
       }
       this._runD[r] = Math.max(this._runD[r], target);
@@ -819,11 +862,18 @@ export class Renderer {
     old.clear();
     for (const [id, L] of this.labelById) old.set(id, L);
     this.labelById.clear();
+    const spawn = this.game.phase === 'spawn';
     for (const p of players) {
       if (!p || !p.alive || at[p.id] < 0) continue;
-      const tx = (at[p.id] % W) * F + F / 2;
-      const ty = Math.floor(at[p.id] / W) * F + F / 2;
-      const tr = best[p.id] * F;
+      let tx = (at[p.id] % W) * F + F / 2;
+      let ty = Math.floor(at[p.id] / W) * F + F / 2;
+      let tr = best[p.id] * F;
+      // En el despliegue, en el centro de su círculo
+      if (spawn && p.spawned && p.spawnTile >= 0) {
+        tx = map.x(p.spawnTile) + SPAWN_C;
+        ty = map.y(p.spawnTile) + SPAWN_C;
+        tr = SPAWN_R;
+      }
       const prev = old.get(p.id);
       // Si el sitio nuevo queda lejos (otro trozo del país), va directo
       const near = prev && Math.abs(prev.x - tx) + Math.abs(prev.y - ty) < Math.max(40, tr * 3);
@@ -874,10 +924,18 @@ export class Renderer {
         this._paintAllTerritory();
       }
     }
+    if (this._spawnStyle && game.phase !== 'spawn') this._endSpawnStyle();
     this._flushDirty(now);
     this._updateGlowsAndUpload(now);
-    // Nombres: el cálculo se reparte en tres fotogramas seguidos
-    if (this._lbStep) {
+    // Nombres: el cálculo se reparte en tres fotogramas seguidos. Si cambias
+    // de sitio en el despliegue, el tuyo va con su círculo al momento
+    const me = game.human;
+    if (game.phase === 'spawn' && me && me.spawnTile !== this._mySpawn) {
+      this._mySpawn = me.spawnTile;
+      this._lbStep = 0;
+      this._updateLabels();
+      this.lastLabelTime = now;
+    } else if (this._lbStep) {
       this._labelStage(this._lbStep);
       this._lbStep = (this._lbStep + 1) % 3;
     } else if (now - this.lastLabelTime > (this.lite ? 2 : 1) * LABEL_INTERVAL_MS) {
@@ -1877,9 +1935,15 @@ export class Renderer {
       const radiusPx = L.r * camera.zoom;
       const allied = human && p !== human && human.allies.has(p.id);
       const player = p.isHuman;
-      // Colonias: solo con nombre cuando se ven de un tamaño razonable (en la
-      // vista global del arranque eran cientos de etiquetas diminutas)
-      if (p.weak && !allied && radiusPx < 7) continue;
+      // Bots (naciones y colonias): placa solo cuando el país se ve grande;
+      // al alejar no (eran cientos de placas). Un poco de margen para el que
+      // ya se veía, así no aparece y desaparece en el límite
+      if (!allied && !player) {
+        const k = L.was ? 0.85 : 1;
+        const minR = (p.weak ? COLONY_LABEL_R : BOT_LABEL_R) * k;
+        const minZoom = (p.weak ? COLONY_LABEL_ZOOM : BOT_LABEL_ZOOM) * k;
+        if (radiusPx < minR && camera.zoom * (RES / 2) < minZoom) continue;
+      }
       const len = Math.max(4, p.name.length + (allied ? 2 : 0));
       // Lo que cabe dentro del país…
       let size = Math.min(radiusPx * 0.6, (radiusPx * 2.6) / len, 28);
@@ -2354,7 +2418,7 @@ export class Renderer {
     const h = game.human;
     if (!h || !h.spawned) return;
     const map = game.map;
-    const [sx, sy] = camera.worldToScreen(map.x(h.spawnTile) + 0.5, map.y(h.spawnTile) + 0.5);
+    const [sx, sy] = camera.worldToScreen(map.x(h.spawnTile) + SPAWN_C, map.y(h.spawnTile) + SPAWN_C);
     const pulse = (Math.sin(now / 200) + 1) / 2;
     ctx.beginPath();
     ctx.arc(sx, sy, 14 + pulse * 8, 0, Math.PI * 2);
