@@ -108,6 +108,10 @@ export const MECH = {
   // Cerco: bolsas sin costa encerradas por el atacante (PROPUESTA: tamaño máximo de una bolsa)
   annexMaxTiles: 600,
   annexVisitsPerTick: 60000,
+  // Sonda del cerco: a partir de cuántas casillas se comprueba en línea recta
+  // si la bolsa escapa (la tierra abierta deja de agotar el presupuesto y los
+  // cercos de verdad se resuelven para todas las naciones)
+  annexProbeAt: 8,
 
   // Precios (sección 04.2)
   prices: {

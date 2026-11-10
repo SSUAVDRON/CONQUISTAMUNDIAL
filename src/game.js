@@ -42,6 +42,8 @@ const DOC_LEN = RES / 2;
 const DOC_AREA = DOC_LEN * DOC_LEN;
 const ANNEX_MAX_TILES = Math.round(MECH.annexMaxTiles * DOC_AREA);
 const ANNEX_VISITS_PER_TICK = Math.round(MECH.annexVisitsPerTick * DOC_AREA);
+// Casillas recorridas antes de probar la sonda del cerco (ver _annexProbe)
+const ANNEX_PROBE_AT = MECH.annexProbeAt;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -1274,7 +1276,21 @@ export class Game {
     queue[tail++] = start;
     seen[start] = stamp;
     let ok = true;
+    let probed = false;
+    let probeSteps = 0;
     while (ok && head < tail) {
+      // Bolsa que ya pasa de unas decenas de casillas: casi siempre es tierra
+      // abierta que acaba escapando tras recorrer cientos. Una sonda en línea
+      // recta lo demuestra mucho antes (mismo resultado, mucho menos trabajo)
+      if (!probed && tail >= ANNEX_PROBE_AT) {
+        probed = true;
+        const escapes = this._annexProbe(start, o, aid);
+        probeSteps = this._probeSteps;
+        if (escapes) {
+          ok = false;
+          break;
+        }
+      }
       const u = queue[head++];
       const cnt = map.neighbors(u, nb);
       if (cnt < 4) {
@@ -1299,7 +1315,7 @@ export class Game {
         }
       }
     }
-    this._annexBudget -= tail;
+    this._annexBudget -= tail + probeSteps;
     if (!ok) {
       for (let i = 0; i < tail; i++) fail[queue[i]] = this.ticks;
       return false;
@@ -1307,6 +1323,72 @@ export class Game {
     const tiles = Array.from(queue.subarray(0, tail));
     for (const u of tiles) this.setOwner(u, aid);
     return true;
+  }
+
+  /**
+   * Sonda del cerco: desde `start` (de `o`) avanza en línea recta en las
+   * cuatro direcciones a la vez, solo por casillas de `o`. Si alguna llega al
+   * borde del mapa, al agua, a otro dueño o a una casilla que ya escapó en
+   * este turno, o si entre todas pasan del tamaño máximo de una bolsa, la
+   * bolsa no está cercada: el recorrido completo fallaría igual (todas esas
+   * casillas son de la bolsa). Si las cuatro chocan con `aid`, no se sabe.
+   * Devuelve si escapa; los pasos dados quedan en `_probeSteps`.
+   */
+  _annexProbe(start, o, aid) {
+    const map = this.map;
+    const W = map.width;
+    const owner = this.owner;
+    const terrain = map.terrain;
+    const fail = this._annexFail;
+    const ticks = this.ticks;
+    const cur = (this._probeCur ??= new Int32Array(4));
+    const dirs = (this._probeDirs ??= Int32Array.of(-1, 1, -W, W));
+    const room = (this._probeRoom ??= new Int32Array(4));
+    // Pasos hasta el borde del mapa en cada dirección (la de salida no está
+    // en el borde: el recorrido ya la ha visto con sus cuatro vecinas)
+    const x = start % W;
+    const y = (start / W) | 0;
+    room[0] = x;
+    room[1] = W - 1 - x;
+    room[2] = y;
+    room[3] = map.height - 1 - y;
+    cur.fill(start);
+    this._probeStart = start;
+    let alive = 15; // direcciones aún abiertas (bits)
+    let steps = 0;
+    while (alive) {
+      for (let d = 0; d < 4; d++) {
+        if (!(alive & (1 << d))) continue;
+        // En el borde: la bolsa toca el límite del mapa
+        if (--room[d] < 0) return this._probeEnd(steps, true);
+        const v = cur[d] + dirs[d];
+        if (terrain[v] === 0) return this._probeEnd(steps, true);
+        const ov = owner[v];
+        if (ov === aid) {
+          alive &= ~(1 << d);
+          continue;
+        }
+        if (ov !== o || fail[v] === ticks) return this._probeEnd(steps, true);
+        cur[d] = v;
+        // Casillas distintas de la bolsa: la de salida y las de cada rayo
+        if (++steps + 1 > ANNEX_MAX_TILES) return this._probeEnd(steps, true);
+      }
+    }
+    return this._probeEnd(steps, false);
+  }
+
+  _probeEnd(steps, escapes) {
+    this._probeSteps = steps;
+    if (escapes) {
+      // Los rayos también son de la bolsa que escapa: las búsquedas que los
+      // toquen en este turno fallan al momento
+      const fail = this._annexFail;
+      const cur = this._probeCur;
+      const dirs = this._probeDirs;
+      const start = this._probeStart;
+      for (let d = 0; d < 4; d++) for (let u = start; u !== cur[d]; ) fail[(u += dirs[d])] = this.ticks;
+    }
+    return escapes;
   }
 
   /** Termina un ataque; las tropas sobrantes (× refund) vuelven a casa. */

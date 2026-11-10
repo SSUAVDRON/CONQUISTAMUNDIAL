@@ -1580,8 +1580,13 @@ export class UI {
     $('cab-puesto').textContent = rank >= 0 ? `${rank + 1}.º` : '';
     const leaderTiles = alive.length ? alive[0].tiles : 1;
     const animate = !document.body.classList.contains('sin-animaciones');
+    // Medir las filas obliga al navegador a recalcular el diseño: solo si
+    // cambia el orden (casi siempre es el mismo de un segundo a otro)
+    const order = rows.map((p) => p.id).join(',');
+    const flip = animate && order !== this._lbOrder;
+    this._lbOrder = order;
     const before = new Map();
-    if (animate) for (const [id, li] of this._lbRows) before.set(id, li.getBoundingClientRect().top);
+    if (flip) for (const [id, li] of this._lbRows) before.set(id, li.getBoundingClientRect().top);
 
     rows.forEach((p, i) => {
       let li = this._lbRows.get(p.id);
@@ -1639,7 +1644,7 @@ export class UI {
     }
     // FLIP: cada fila que cambió de posición parte de donde estaba (con la
     // Web Animations API: no deja estilos en línea que anulen el hover)
-    if (animate) {
+    if (flip) {
       for (const [id, top] of before) {
         const li = this._lbRows.get(id);
         if (!li || !li.animate) continue;

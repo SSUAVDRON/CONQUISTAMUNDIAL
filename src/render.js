@@ -30,7 +30,7 @@ const GLOW_MID = [140, 110]; // combate, tierra libre
 const GLOW_END = [420, 300];
 const GLOW_MIX = [
   [[255, 232, 170, 0.7], [255, 214, 150, 0.32]], // combate: brasa
-  [[255, 255, 255, 0.5], [255, 255, 255, 0.22]], // tierra libre: luz
+  [[255, 255, 255, 0.5], [255, 255, 255, 0.22]], // tierra libre (ya no se usa: no brilla)
 ];
 const FLASH_LIFE = [700, 450, 1400]; // combate, tierra libre, arrasada (ms)
 const FLASH_COLORS = [
@@ -541,9 +541,12 @@ export class Renderer {
         const x = t % W;
         const y = (t / W) | 0;
         const kind = was && o ? 0 : o ? 1 : 2;
-        if (kind < 2) {
+        // Brillo solo al ganar terreno en combate. En tierra libre no: al
+        // empezar crecen cientos de países a la vez y, siendo aún pequeños, el
+        // anillo brillante cubría casi todo el país y latía en cada turno
+        if (kind === 0) {
           if (glowOn && this._inView(x, y, 2)) this._pushGlow(t, o, now, kind);
-        } else this._pushFlash(t, now, kind);
+        } else if (kind === 2) this._pushFlash(t, now, kind);
         if (watch && kind < 2 && this._inView(x, y, 2)) (kind === 0 ? battles : wild).push(t);
       }
       this._runD[r] = Math.max(this._runD[r], target);
@@ -722,10 +725,19 @@ export class Renderer {
   /**
    * Para colocar cada nombre buscamos la casilla más alejada de su frontera
    * (transformada de distancia en dos pasadas). Esa distancia da también el
-   * tamaño de letra.
+   * tamaño de letra. Todo de una vez (ver _labelStage para el reparto).
    */
   _updateLabels() {
-    this._eliminations();
+    for (let k = 0; k < 3; k++) this._labelStage(k);
+  }
+
+  /**
+   * El cálculo de los nombres en tres trozos, uno por fotograma (en el mundo
+   * son medio millón de celdas: de una vez daba un tirón cada medio segundo
+   * en equipos lentos). 0: copia de los dueños y bordes; 1: pasada de ida;
+   * 2: pasada de vuelta y nombres. Trabaja sobre la copia del paso 0.
+   */
+  _labelStage(stage) {
     const { owner, players, map } = this.game;
     // Basta una rejilla basta (F×F casillas por celda): el nombre solo necesita
     // una posición aproximada y así el cálculo no da tirones
@@ -739,33 +751,48 @@ export class Renderer {
       this.distField = new Uint16Array(n);
     }
     const own = this._lbOwner;
-    const half = F >> 1;
-    for (let y = 0; y < H; y++) {
-      const sy = Math.min(map.height - 1, y * F + half) * MW;
-      for (let x = 0; x < W; x++) own[y * W + x] = owner[sy + Math.min(MW - 1, x * F + half)];
-    }
     const d = this.distField;
-    for (let i = 0; i < n; i++) {
-      const o = own[i];
-      if (!o) {
-        d[i] = 0;
-        continue;
+    if (stage === 0) {
+      this._eliminations();
+      const half = F >> 1;
+      let cols = this._lbCols;
+      if (!cols || cols.length !== W) {
+        cols = this._lbCols = new Int32Array(W);
+        for (let x = 0; x < W; x++) cols[x] = Math.min(MW - 1, x * F + half);
       }
-      const x = i % W;
-      const edge =
-        x === 0 || x === W - 1 || i < W || i >= n - W ||
-        own[i - 1] !== o || own[i + 1] !== o || own[i - W] !== o || own[i + W] !== o;
-      d[i] = edge ? 1 : 65535;
+      for (let y = 0; y < H; y++) {
+        const sy = Math.min(map.height - 1, y * F + half) * MW;
+        const row = y * W;
+        for (let x = 0; x < W; x++) own[row + x] = owner[sy + cols[x]];
+      }
+      for (let y = 0; y < H; y++) {
+        const row = y * W;
+        const rim = y === 0 || y === H - 1;
+        for (let x = 0; x < W; x++) {
+          const i = row + x;
+          const o = own[i];
+          if (!o) {
+            d[i] = 0;
+            continue;
+          }
+          const edge = rim || x === 0 || x === W - 1 || own[i - 1] !== o || own[i + 1] !== o || own[i - W] !== o || own[i + W] !== o;
+          d[i] = edge ? 1 : 65535;
+        }
+      }
+      return;
     }
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const i = y * W + x;
-        if (d[i] <= 1) continue;
-        let v = d[i - 1] + 1;
-        if (v < d[i]) d[i] = v;
-        v = d[i - W] + 1;
-        if (v < d[i]) d[i] = v;
+    if (stage === 1) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const i = y * W + x;
+          if (d[i] <= 1) continue;
+          let v = d[i - 1] + 1;
+          if (v < d[i]) d[i] = v;
+          v = d[i - W] + 1;
+          if (v < d[i]) d[i] = v;
+        }
       }
+      return;
     }
     for (let y = H - 1; y >= 0; y--) {
       for (let x = W - 1; x >= 0; x--) {
@@ -800,7 +827,11 @@ export class Renderer {
       const prev = old.get(p.id);
       // Si el sitio nuevo queda lejos (otro trozo del país), va directo
       const near = prev && Math.abs(prev.x - tx) + Math.abs(prev.y - ty) < Math.max(40, tr * 3);
-      const L = { player: p, tx, ty, tr, x: near ? prev.x : tx, y: near ? prev.y : ty, r: near ? prev.r : tr };
+      // También su opacidad y si estaba a la vista: antes cada nombre volvía a
+      // aparecer desde transparente dos veces por segundo (parpadeaban todos)
+      const L = near
+        ? { player: p, tx, ty, tr, x: prev.x, y: prev.y, r: prev.r, alpha: prev.alpha, shown: prev.shown, s2: prev.s2 }
+        : { player: p, tx, ty, tr, x: tx, y: ty, r: tr, alpha: 0, shown: false, s2: 0 };
       this.labels.push(L);
       this.labelById.set(p.id, L);
     }
@@ -845,8 +876,17 @@ export class Renderer {
     }
     this._flushDirty(now);
     this._updateGlowsAndUpload(now);
-    if (now - this.lastLabelTime > (this.lite ? 2 : 1) * LABEL_INTERVAL_MS) {
-      this._updateLabels();
+    // Nombres: el cálculo se reparte en tres fotogramas seguidos
+    if (this._lbStep) {
+      this._labelStage(this._lbStep);
+      this._lbStep = (this._lbStep + 1) % 3;
+    } else if (now - this.lastLabelTime > (this.lite ? 2 : 1) * LABEL_INTERVAL_MS) {
+      // La primera vez, todo de golpe (para que los nombres salgan ya)
+      if (!this.labels.length) this._updateLabels();
+      else {
+        this._labelStage(0);
+        this._lbStep = 1;
+      }
       this.lastLabelTime = now;
     }
     this.fx.update(this._dt);
@@ -1813,7 +1853,9 @@ export class Renderer {
     for (const L of this.labels) {
       const p = L.player;
       // Las colonias, después de todas las naciones
-      L.rank = (p === human ? 4e9 : 0) + (human && human.allies.has(p.id) ? 3e9 : 0) + (p.isHuman ? 2e9 : 0) + (p.weak ? 0 : 1e9) + L.r;
+      // El que ya se veía tiene preferencia (un 30 % más de radio): así dos
+      // nombres parecidos que se pisan no se turnan en cada fotograma
+      L.rank = (p === human ? 4e9 : 0) + (human && human.allies.has(p.id) ? 3e9 : 0) + (p.isHuman ? 2e9 : 0) + (p.weak ? 0 : 1e9) + L.r * (L.shown ? 1.3 : 1);
       L.size = 0;
       order.push(L);
     }
@@ -1823,7 +1865,11 @@ export class Renderer {
     // Los nombres aparecen con un fundido (antes saltaban al entrar en pantalla
     // o al dejar de chocar con otro); el que no se dibuja vuelve a empezar
     const fadeStep = this.anim ? Math.min(1, this._dt * 5) : 1;
-    for (const L of order) L.shown = false;
+    for (const L of order) {
+      L.was = L.shown;
+      L.shown = false;
+      L.fading = false;
+    }
     for (const L of order) {
       const p = L.player;
       const [sx, sy] = camera.worldToScreen(L.x, L.y);
@@ -1871,16 +1917,32 @@ export class Renderer {
       const x1 = sx + w / 2 + 2;
       const y0 = sy - size * 0.95;
       const y1 = sy + size * 0.6 + s2 * 0.6;
+      // Margen: el que ya se veía solo se quita si el choque es claro, y el
+      // que no, solo aparece con algo de hueco (sin turnarse en el límite)
+      const m = L.was ? -0.12 : 0.08;
+      const mx = (x1 - x0) * m;
+      const my = (y1 - y0) * m;
       let hit = false;
       for (let i = 0; i < boxes.length && !hit; i += 4) {
-        hit = x0 < boxes[i + 2] && x1 > boxes[i] && y0 < boxes[i + 3] && y1 > boxes[i + 1];
+        hit = x0 - mx < boxes[i + 2] && x1 + mx > boxes[i] && y0 - my < boxes[i + 3] && y1 + my > boxes[i + 1];
       }
-      if (hit && !me) continue;
+      const d = this.dpr;
+      if (hit && !me) {
+        // Tapado por otro: se desvanece en vez de desaparecer de golpe
+        if (L.alpha > 0 && this.anim) {
+          L.alpha = Math.max(0, L.alpha - fadeStep * 1.5);
+          L.fading = true;
+          ctx.globalAlpha = L.alpha;
+          if (k === 1) ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
+          else ctx.drawImage(N.canvas, sx - N.tx * k, sy - size * 0.35 - N.ty * k, (N.canvas.width / d) * k, (N.canvas.height / d) * k);
+          ctx.globalAlpha = 1;
+        }
+        continue;
+      }
       boxes.push(x0, y0, x1, y1);
       L.size = size;
       // Nombre (con su icono) y tropas: imágenes ya dibujadas, centradas
       // En píxeles enteros del lienzo: copia directa, sin remuestrear
-      const d = this.dpr;
       L.shown = true;
       L.alpha = Math.min(1, (L.alpha || 0) + fadeStep);
       if (L.alpha < 1) ctx.globalAlpha = L.alpha;
@@ -1889,7 +1951,7 @@ export class Renderer {
       this._drawTroops((me ? fmtTroopsCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, ds2, me, s2 / ds2);
       if (L.alpha < 1) ctx.globalAlpha = 1;
     }
-    for (const L of order) if (!L.shown) L.alpha = 0;
+    for (const L of order) if (!L.shown && !L.fading) L.alpha = 0;
   }
 
   /**
