@@ -83,3 +83,39 @@ test('HUD (TR03): reserva y próximo envío salen del mismo turno y cuadran tras
     prev = s;
   }
 });
+
+test('la expansión es pareja: con clics en varias direcciones el territorio sigue redondo', () => {
+  const { map, game, a, ta } = solo(8);
+  const W = map.width;
+  // Clics hacia la derecha, abajo, izquierda y arriba (en tierra libre), con tropas de sobra
+  let clicks = 0;
+  for (const d of [1, W, -1, -W]) {
+    let f = -1;
+    for (let k = 12 * RES; k <= 30 * RES; k++) {
+      const t = ta + d * k;
+      if (t >= 0 && t < map.size && map.isLand(t) && map.landBody[t] === map.landBody[ta] && game.owner[t] === 0) f = t;
+    }
+    if (f < 0) continue;
+    expand(game, a, f, 5000);
+    clicks++;
+  }
+  assert.ok(clicks >= 2, `al menos dos clics posibles: ${clicks}`);
+  const mine = [...map.landTiles].filter((t) => game.owner[t] === a.id);
+  const cx = mine.reduce((s, t) => s + map.x(t), 0) / mine.length;
+  const cy = mine.reduce((s, t) => s + map.y(t), 0) / mine.length;
+  // Radio de cada casilla del borde que da a tierra libre (la costa no cuenta)
+  const ds = mine
+    .filter((t) => [1, -1, W, -W].some((d) => map.isLand(t + d) && game.owner[t + d] === 0))
+    .map((t) => Math.hypot(map.x(t) - cx, map.y(t) - cy));
+  const mean = ds.reduce((s, v) => s + v, 0) / ds.length;
+  const cv = Math.sqrt(ds.reduce((s, v) => s + (v - mean) ** 2, 0) / ds.length) / mean;
+  assert.ok(mine.length > 300, `ha crecido: ${mine.length} casillas`);
+  // Borde liso: perímetro (aristas hacia lo que no es suyo) frente a la superficie
+  const own = new Set(mine);
+  let per = 0;
+  for (const t of mine) for (const d of [1, -1, W, -W]) if (!own.has(t + d)) per++;
+  const q = (4 * Math.PI * mine.length) / (per * per);
+  assert.ok(cv < 0.1, `borde casi a la misma distancia del centro (variación ${cv.toFixed(3)})`);
+  // Un círculo de casillas da ~0,6; un borde dentado, bastante menos (con el azar de antes, 0,51)
+  assert.ok(q > 0.55, `borde liso, sin dientes (redondez ${q.toFixed(3)})`);
+});

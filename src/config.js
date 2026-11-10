@@ -17,7 +17,7 @@ export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
-  spawnTicks: 150, // 15 s para elegir dónde empezar
+  spawnTicks: 200, // 20 s para elegir dónde empezar (la cuenta atrás del despliegue)
   // La zona inicial (52 casillas), las tropas y el oro iniciales, el techo, la
   // regeneración, los precios, el comercio y el combate están en mecanicas.js
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
@@ -33,12 +33,12 @@ export const CONFIG = {
   // azar hacen que los países crezcan irregulares y no como círculos.
   // Orden de conquista de la tierra libre: por distancia al centro del país
   // (en casillas), así crece parejo, en círculo, sin manchas ni brazos
-  growRandom: 1.6, // azar por casilla: el borde sale algo irregular, no una regla
-  growTerrain: (6 * RES) / 2, // retraso (en casillas de distancia) por cada punto de coste de terreno sobre la llanura: la misma superficie con más resolución
+  growRandom: 0.45, // azar por casilla: el borde sale algo irregular, no una regla (poco: crece parejo, sin dientes)
+  growTerrain: (4 * RES) / 2, // retraso (en casillas de distancia) por cada punto de coste de terreno sobre la llanura: la misma superficie con más resolución
   growSmooth: 1.2, // las casillas con más vecinas propias antes: rellena huecos y esquinas
   // Hacia un clic, el lado que mira allí avanza antes: al de detrás le pesa la
   // distancia × (1 + 2 × growFocusStretch); contra países, growFocus pasos
-  growFocusStretch: 0.6,
+  growFocusStretch: 0.2, // hacia el clic crece algo antes, pero sin estirarse: el territorio sigue redondo
   growFocus: (8 * RES) / 2,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
