@@ -237,8 +237,15 @@ pide al navegador comprobar siempre la última versión.
 
 **A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
 
-**Tabla de rangos en Hostinger** (opcional): `hostinger.sh` publica también
-`api/rangos.php`.
+**Tabla de rangos en Hostinger**: `api/rangos.php` va con la web (en `main` y
+en las ramas de `hostinger.sh`) y **no hace falta configurar nada**: la primera
+vez crea una base de datos SQLite **fuera de `public_html`** (junto a esa
+carpeta, donde la web no la puede servir): `trinchera-rangos.sqlite`, y
+`trinchera-rangos-prueba.sqlite` para el despliegue de `…/prueba/`. Para
+comprobarla, abre `https://tu-web/api/rangos.php?temporada=2026-6`: debe
+responder `{"filas":[]}` (o las filas que haya).
+
+**Con MySQL en su lugar** (opcional, para mucho tráfico):
 
 1. En hPanel → Bases de datos → MySQL, crea una base de datos y su usuario.
 2. Crea, **fuera de `public_html`** (en la carpeta de tu usuario, junto a
@@ -253,8 +260,8 @@ pide al navegador comprobar siempre la última versión.
    ];
    ```
 
-3. Abre `https://tu-web/api/rangos.php?temporada=2026-6`: debe responder
-   `{"filas":[]}`. Las tablas se crean solas la primera vez.
+3. Las tablas se crean solas la primera vez; desde entonces se usa MySQL en
+   vez de la SQLite.
 
 Cada navegador tiene un id y un secreto aleatorios; el servidor guarda solo el
 hash del secreto, limita las escrituras (una cada 8 s por jugador y 120 por hora

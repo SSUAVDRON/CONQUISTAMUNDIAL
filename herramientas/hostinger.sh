@@ -42,7 +42,7 @@ if [ "$DESTINO" = prueba ]; then
   cp dist/dominia.html "$SRC/index.html"
   # API de la tabla de rangos (PHP); su configuración va fuera de public_html
   mkdir -p "$SRC/api"
-  cp api/rangos.php "$SRC/api/rangos.php"
+  cp api/rangos.php api/.htaccess "$SRC/api/"
 else
   # Producción: el mismo archivo que se validó en prueba, byte a byte
   fetch_rama hostinger-prueba
@@ -53,6 +53,7 @@ else
   git -C "$RAIZ" show origin/hostinger-prueba:index.html > "$SRC/index.html"
   mkdir -p "$SRC/api"
   git -C "$RAIZ" show origin/hostinger-prueba:api/rangos.php > "$SRC/api/rangos.php" 2>/dev/null || rm -rf "$SRC/api"
+  [ -d "$SRC/api" ] && git -C "$RAIZ" show origin/hostinger-prueba:api/.htaccess > "$SRC/api/.htaccess" 2>/dev/null || true
 fi
 BUILD=$(grep -o '<meta name="trinchera-build" content="[^"]*"' "$SRC/index.html" | sed 's/.*content="//; s/"$//')
 
@@ -71,6 +72,7 @@ cp herramientas/hostinger.htaccess "$TMP/.htaccess"
 if [ -d "$SRC/api" ]; then
   mkdir -p "$TMP/api"
   cp "$SRC/api/rangos.php" "$TMP/api/rangos.php"
+  [ -f "$SRC/api/.htaccess" ] && cp "$SRC/api/.htaccess" "$TMP/api/.htaccess"
   git -C "$TMP" add api
 fi
 git -C "$TMP" add index.html .htaccess
