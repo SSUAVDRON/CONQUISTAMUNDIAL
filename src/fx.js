@@ -125,7 +125,12 @@ export class Fx {
    * a0 (opacidad), sprite | spark | ring | chunk, color.
    */
   add(p) {
-    if (this.parts.length >= this.max) return;
+    if (this.parts.length >= this.max) {
+      // Lleno (p. ej. de chispas de los frentes): lo importante (explosiones)
+      // entra igualmente, quitando la partícula más vieja
+      if (!this._priority) return;
+      this.parts.shift();
+    }
     // Las recetas usan medidas de la rejilla original: se pasan a casillas actuales
     if (!p.raw) {
       if (p.vx) p.vx *= RES;
@@ -288,6 +293,15 @@ export class Fx {
   explosion(x, y, R) {
     this.shake = Math.max(this.shake, 9);
     this.flash = Math.max(this.flash, 0.55);
+    this._priority = true;
+    try {
+      this._explosion(x, y, R);
+    } finally {
+      this._priority = false;
+    }
+  }
+
+  _explosion(x, y, R) {
     this.add({ x, y, life: 0.45, s0: R * 2.4, s1: R * 3, min: 70, sprite: 'core', a0: 1 });
     this.add({ x, y, life: 0.7, s0: R * 1.6, s1: R * 2.5, min: 50, sprite: 'fire', a0: 1 });
     this.add({ x, y, life: 0.9, s0: R * 1.2, s1: R * 2, min: 36, sprite: 'red', a0: 0.8 });
@@ -662,7 +676,7 @@ export function drawMissileSprite(ctx, x, y, ang, len, color, time) {
   ctx.rotate(ang);
   const w = len * 0.22;
   // Llama del motor
-  const flick = 0.75 + Math.sin(time * 60) * 0.12 + Math.random() * 0.13;
+  const flick = 0.82 + Math.sin(time * 60) * 0.1 + Math.sin(time * 37 + 1.7) * 0.07;
   ctx.globalCompositeOperation = 'lighter';
   ctx.drawImage(sprites().fire, -len * 1.05 - len * 0.5 * flick, -len * 0.35, len * flick, len * 0.7);
   ctx.drawImage(sprites().core, -len * 0.75, -w * 0.9, len * 0.4, w * 1.8);

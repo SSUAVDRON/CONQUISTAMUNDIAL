@@ -2947,3 +2947,12 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   letter-spacing: 0.02em;
 }
 .cuenta-atras.sello { font-size: clamp(40px, 8vw, 84px); color: #fff3cf; }
+
+/* En partida, sin desenfoque detrás de los paneles también en el ordenador:
+   con el mapa moviéndose, la gráfica tenía que volver a desenfocar cada panel
+   en cada fotograma. Fondos algo más opacos para que se sigan leyendo bien */
+#hud .panel, #hud #avisos, #hud #combates, #hud #panel-jugador, #hud #panel-desarrollo, #hud #panel-nacion {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+#hud { --panel: rgba(12, 18, 30, 0.9); }

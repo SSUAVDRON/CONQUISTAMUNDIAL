@@ -42,6 +42,21 @@ const ALLY_STRIPE = [96, 226, 140];
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// Color CSS de cada nación, calculado una vez (antes, una cadena nueva por
+// barco, buque, misil y tren en cada fotograma)
+const CSS_OF = new WeakMap();
+const RGB_OF = new WeakMap();
+function pcss(p) {
+  let c = CSS_OF.get(p);
+  if (!c) CSS_OF.set(p, (c = rgbToCss(p.color)));
+  return c;
+}
+function prgb(p) {
+  let c = RGB_OF.get(p);
+  if (!c) RGB_OF.set(p, (c = p.color.join(', ')));
+  return c;
+}
+
 /** Tren visto desde arriba apuntando en `ang`: locomotora (color del dueño) y dos vagones. */
 function drawTrain(ctx, x, y, ang, L, color) {
   ctx.save();
@@ -300,6 +315,28 @@ export class Renderer {
     this._paintTile(i);
     const w = this.game.map.width;
     this._markChunk(i % w, (i / w) | 0);
+  }
+
+  /**
+   * Una nación (no colonia) acaba de caer: donde estaba su nombre, una onda
+   * oscura y su nombre que sube y se desvanece.
+   */
+  _eliminations() {
+    const seen = (this._aliveNations ??= new Set());
+    const human = this.game.human;
+    for (const p of this.game.players) {
+      if (!p || p.weak) continue;
+      if (p.alive && p.tiles > 0) {
+        seen.add(p.id);
+        continue;
+      }
+      if (!seen.has(p.id)) continue;
+      seen.delete(p.id);
+      const L = this.labelById.get(p.id);
+      if (!L || !this.anim || !this._inView(L.x, L.y, 20)) continue;
+      this.fx.add({ x: L.x, y: L.y, life: 1.1, s0: 0.5, s1: 9 * RES, min: 8, ring: true, color: 'rgba(30, 24, 20, 0.7)', lw: 0.6 });
+      this.fx.label(L.x, L.y, `✝ ${p.name}`, p === human ? 'rgba(255, 120, 120, 0.95)' : 'rgba(255, 236, 214, 0.95)', 15, 2.4);
+    }
   }
 
   /**
@@ -688,6 +725,7 @@ export class Renderer {
    * tamaño de letra.
    */
   _updateLabels() {
+    this._eliminations();
     const { owner, players, map } = this.game;
     // Basta una rejilla basta (F×F casillas por celda): el nombre solo necesita
     // una posición aproximada y así el cálculo no da tirones
@@ -815,8 +853,11 @@ export class Renderer {
 
     // Temblor de cámara tras una explosión cercana
     const sh = this.anim ? this.fx.shake : 0;
-    const ox = sh ? (Math.random() - 0.5) * sh : 0;
-    const oy = sh ? (Math.random() - 0.5) * sh : 0;
+    // Temblor con ondas suaves (no un salto al azar en cada fotograma: así no
+    // depende de los fps y no «vibra» en pantallas de 120 Hz)
+    const ts = now / 1000;
+    const ox = sh ? (Math.sin(ts * 53) * 0.6 + Math.sin(ts * 31 + 1.3) * 0.4) * sh * 0.5 : 0;
+    const oy = sh ? (Math.sin(ts * 47 + 0.7) * 0.6 + Math.sin(ts * 37 + 2.1) * 0.4) * sh * 0.5 : 0;
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#0a1a30';
@@ -1082,7 +1123,7 @@ export class Renderer {
       if (px < -L * 2 || py < -L * 2 || px > W + L * 2 || py > H + L * 2) continue;
       const ang = a + (t.dir < 0 ? Math.PI : 0);
       const owner = game.players[r.factory.owner];
-      drawTrain(ctx, px, py, ang, L, owner ? rgbToCss(owner.color) : '#888');
+      drawTrain(ctx, px, py, ang, L, owner ? pcss(owner) : '#888');
     }
   }
 
@@ -1244,14 +1285,14 @@ export class Renderer {
         this._merch.set(m.id, st);
       } else if (st.owner !== m.owner) {
         st.owner = m.owner;
-        if (this.anim) fx.capture(s.x, s.y, rgbToCss(game.players[m.owner].color));
+        if (this.anim) fx.capture(s.x, s.y, pcss(game.players[m.owner]));
       }
       st.gen = gen;
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
       if (!this._onScreen(sx, sy, 40)) continue;
       const p = game.players[m.owner];
-      const color = rgbToCss(p.color);
+      const color = pcss(p);
       const mine = p === game.human;
       const moving = clamp((s.speed / RES) * 3, 0, 1);
       const len = clamp(z * RES * 2.6, 6, 30);
@@ -1279,7 +1320,7 @@ export class Renderer {
       this._drawBoatTrail(b, s, p);
       if (!this._onScreen(sx, sy, 60)) continue;
       const len = clamp(z * RES * 2.4, 8, 30);
-      drawTransport(ctx, sx, sy, s.ang, len, rgbToCss(p.color), p === human, 1);
+      drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
       this._maybeWake(s, len, 8);
       const mine = human && (b.owner === human.id || b.targetId === human.id);
       if (z * RES >= 4 || mine) {
@@ -1317,7 +1358,7 @@ export class Renderer {
     const path = b.path;
     const step = Math.max(1, Math.floor(path.length / 90));
     const pt = (t) => [((t % W) + 0.5 - camera.x) * z, (Math.floor(t / W) + 0.5 - camera.y) * z];
-    const color = p.color.join(', ');
+    const color = prgb(p);
     const [hx, hy] = [(s.x - camera.x) * z, (s.y - camera.y) * z];
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -1416,7 +1457,7 @@ export class Renderer {
         }
         ctx.setLineDash([]);
       }
-      drawWarship(ctx, sx, sy, s.ang, r, rgbToCss(p.color), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
+      drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
       this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
@@ -1526,7 +1567,7 @@ export class Renderer {
         const vx = (tx - fx0) * rate;
         const vy = (ty - fy0) * rate;
         const vz = arc * Math.PI * Math.cos(Math.PI * t) * rate;
-        const color = rgbToCss(game.players[m.owner].color);
+        const color = pcss(game.players[m.owner]);
         this._missiles.set(m.id, { gx, gy, z: alt, vx, vy, vz, color, gen });
 
         const involved = human && (m.owner === human.id || m.targetId === human.id);
@@ -1757,6 +1798,9 @@ export class Renderer {
   _drawLabels() {
     this._glideLabels();
     const { ctx, camera } = this;
+    // ¿Cambia el zoom en este fotograma? (zoom suave, vuelo o pellizco)
+    const zooming = !!(camera.zoomTarget || camera.tween || this._lastZoom !== camera.zoom);
+    this._lastZoom = camera.zoom;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
@@ -1776,6 +1820,10 @@ export class Renderer {
     order.sort((a, b) => b.rank - a.rank);
     const boxes = (this._labelBoxes ??= []);
     boxes.length = 0;
+    // Los nombres aparecen con un fundido (antes saltaban al entrar en pantalla
+    // o al dejar de chocar con otro); el que no se dibuja vuelve a empezar
+    const fadeStep = this.anim ? Math.min(1, this._dt * 5) : 1;
+    for (const L of order) L.shown = false;
     for (const L of order) {
       const p = L.player;
       const [sx, sy] = camera.worldToScreen(L.x, L.y);
@@ -1801,11 +1849,25 @@ export class Renderer {
       size = size < 20 ? Math.round(size) : Math.round(size / 2) * 2;
       const traitor = this.game.isTraitor(p);
       const me = p === human;
-      const N = this._nameSprite(p, size, me, allied, traitor, player);
       const s2 = Math.round(size * 0.78);
+      // Mientras la cámara hace zoom, el tamaño cambia en cada fotograma: se
+      // reutiliza la imagen ya dibujada del nombre (y de las cifras), escalada,
+      // y se vuelve a dibujar nítida cuando el zoom se para
+      let N = null;
+      let k = 1;
+      if (zooming) {
+        const e = this._labelEntry(p).name;
+        if (e.canvas && e.size) {
+          N = e;
+          k = size / e.size;
+        }
+      }
+      if (!N) N = this._nameSprite(p, size, me, allied, traitor, player);
+      const ds2 = zooming && L.s2 ? L.s2 : s2;
+      if (!zooming) L.s2 = s2;
       // Caja que ocupa (icono + nombre + tropas) para no pisar otros nombres
-      const w = N.w;
-      const x0 = sx - w / 2 - N.iconW - 2;
+      const w = N.w * k;
+      const x0 = sx - w / 2 - N.iconW * k - 2;
       const x1 = sx + w / 2 + 2;
       const y0 = sy - size * 0.95;
       const y1 = sy + size * 0.6 + s2 * 0.6;
@@ -1819,9 +1881,15 @@ export class Renderer {
       // Nombre (con su icono) y tropas: imágenes ya dibujadas, centradas
       // En píxeles enteros del lienzo: copia directa, sin remuestrear
       const d = this.dpr;
-      ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
-      this._drawTroops((me ? fmtTroopsCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, s2, me);
+      L.shown = true;
+      L.alpha = Math.min(1, (L.alpha || 0) + fadeStep);
+      if (L.alpha < 1) ctx.globalAlpha = L.alpha;
+      if (k === 1) ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
+      else ctx.drawImage(N.canvas, sx - N.tx * k, sy - size * 0.35 - N.ty * k, (N.canvas.width / d) * k, (N.canvas.height / d) * k);
+      this._drawTroops((me ? fmtTroopsCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, ds2, me, s2 / ds2);
+      if (L.alpha < 1) ctx.globalAlpha = 1;
     }
+    for (const L of order) if (!L.shown) L.alpha = 0;
   }
 
   /**
@@ -1878,6 +1946,7 @@ export class Renderer {
     const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${this.dpr}`;
     if (e.key === key) return e;
     e.key = key;
+    e.size = size;
     const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
     const font = `${me ? 800 : player ? 600 : 500} ${size}px system-ui, sans-serif`;
     const mc = this.ctx;
@@ -1975,14 +2044,16 @@ export class Renderer {
   }
 
   /** Cifra de tropas centrada en (cx, cy) con el juego de caracteres guardado. */
-  _drawTroops(text, cx, cy, s2, me) {
+  /** `scale`: durante el zoom, el juego de cifras de `s2` dibujado a escala (sin rehacerlo). */
+  _drawTroops(text, cx, cy, s2, me, scale = 1) {
     const f = this._digitFont(s2, me);
     const { ctx, dpr } = this;
     let w = 0;
     for (let i = 0; i < text.length; i++) w += f.widths[text[i]] || 0;
+    w *= scale;
     // Cada carácter, en píxeles enteros del lienzo (copia directa, sin remuestrear)
     const ch = Math.round(f.cellH * dpr);
-    const y = Math.round((cy - f.ty) * dpr) / dpr;
+    const y = scale === 1 ? Math.round((cy - f.ty) * dpr) / dpr : cy - f.ty * scale;
     for (let pass = 0; pass < 2; pass++) {
       let x = cx - w / 2;
       const srcY = pass * Math.round((f.cellH + 2) * dpr);
@@ -1991,8 +2062,9 @@ export class Renderer {
         const cw = f.widths[c];
         if (cw === undefined) continue;
         const sw = Math.round((cw + f.pad * 2) * dpr);
-        ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, Math.round((x - f.pad) * dpr) / dpr, y, sw / dpr, ch / dpr);
-        x += cw;
+        if (scale === 1) ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, Math.round((x - f.pad) * dpr) / dpr, y, sw / dpr, ch / dpr);
+        else ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, x - f.pad * scale, y, (sw / dpr) * scale, (ch / dpr) * scale);
+        x += cw * scale;
       }
     }
   }
@@ -2115,7 +2187,7 @@ export class Renderer {
       if (!this._onScreen(sx, sy, 80)) continue;
       const dx = Math.cos(f.ang);
       const dy = Math.sin(f.ang);
-      const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : atk.attacker.color.join(', ');
+      const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : prgb(atk.attacker);
       const s = incoming || mine ? 8 : 5.5;
       const lw = incoming || mine ? 3.2 : 2.4;
       for (let k = 0; k < 3; k++) {
@@ -2186,21 +2258,31 @@ export class Renderer {
       const wx = label ? label.x : map.x(sender.spawnTile) + 0.5;
       const wy = label ? label.y : map.y(sender.spawnTile) + 0.5;
       const [sx, sy0] = camera.worldToScreen(wx, wy);
-      const age = game.ticks - e.tick;
+      // Edad continua (entre turnos también), para que suba sin tirones
+      const age = game.ticks - e.tick + (this._frac || 0);
       const sy = sy0 - 34 - age * 0.4;
       ctx.globalAlpha = Math.max(0, Math.min(1, (CONFIG.emojiTicks - age) / 10));
+      // Al aparecer, un pequeño rebote (de 0,6 a 1 pasándose un poco)
+      const k = Math.min(1, age / 3);
+      const back = 1 + 2.7 * (k - 1) ** 3 + 1.7 * (k - 1) ** 2;
+      const pop = 0.6 + 0.4 * back;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.scale(pop, pop);
+      ctx.translate(-sx, -sy);
       ctx.beginPath();
       ctx.arc(sx, sy, 17, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,255,0.92)';
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = rgbToCss(sender.color);
+      ctx.strokeStyle = pcss(sender);
       ctx.stroke();
       ctx.font = '20px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#000';
       ctx.fillText(e.emoji, sx, sy + 1);
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
   }

@@ -95,6 +95,7 @@ salas públicas (miniatura, mapa, modo y plazas libres). En la sala:
   cuenta atrás de 3 s que fija participantes, semilla y configuración; si alguien
   sale, se desconecta o deja de estar listo, se vuelve a la sala con el motivo.
   Antes de simular, cada invitado comprueba que tiene la misma versión de reglas.
+- **Al empezar**: el anfitrión espera a que todos hayan cargado el mapa (como mucho 20 s) antes del primer turno. Cada invitado compara su estado con el del anfitrión y, si se desincroniza, se le avisa. El reloj del anfitrión va en un Worker: la partida no se frena si su pestaña queda en segundo plano (y, si lo está, los invitados lo ven).
 - **Reconexión**: quien pierde la conexión sale como «Reconectando…» y conserva
   su plaza unos 15 s.
 
@@ -245,7 +246,7 @@ el progreso se guarda en cada navegador.
 
 ### Controles
 
-- **Arrastrar**: mover el mapa · **Rueda / pellizco**: zoom · **WASD / flechas**: desplazarse
+- **Arrastrar**: mover el mapa (al soltar en movimiento sigue un poco y frena) · **Rueda / pellizco**: zoom (la rueda, suave y hacia el cursor; con dos dedos también se desplaza) · **WASD / flechas**: desplazarse
 - **1–9 / 0**: fuerza de ataque 10 %–100 % · **Mayús + rueda**: ajuste fino
 - **Q / E / R / F / G / H / T**: ciudad / puerto / puesto defensivo / fábrica / silo / antimisiles / buque (o los botones del panel), luego clic en el mapa
 - **M / J / K**: apuntar una bomba atómica / bomba H / MIRV (clic en territorio enemigo)
@@ -256,7 +257,10 @@ el progreso se guarda en cada navegador.
 - **C** o botón **Mi nación**: la cámara vuela a tu nación · **+ / −**: zoom · **Esc**: cerrar
 - **Puntero**: sobre tu nación flota la marca «TÚ»; si la pierdes de vista, una flecha en el borde de la pantalla apunta hacia ella (pulsarla te lleva). Se desactiva en Ajustes.
 - **Clic en una tarjeta de combate** (a la derecha): la cámara vuela a ese frente
-- Clic en la clasificación: centra la cámara en esa nación y abre su ficha
+- Clic en la clasificación: la cámara vuela a esa nación y abre su ficha · Minimapa: un toque vuela allí; arrastrando, la vista sigue al dedo
+- **Despliegue**: «🎲 Elegir por mí» busca un sitio válido lejos de las demás naciones; las islas demasiado pequeñas salen en sombra y, si no puedes empezar en un sitio, se dice por qué. Los últimos 3 s, cuenta atrás grande y «¡Comienza!».
+- **Al perder** (sin conexión): ×1 / ×2 / ×4 en la barra superior para mirar el resto de la partida. Mientras juegas, la partida va siempre a su ritmo.
+- **Fin de partida**: la cámara se aleja hasta ver todo el mapa y aparece el resultado sobre él; «Revancha» repite la partida (mapa, rivales y reglas) con otra semilla.
 
 En el mapa, tu frontera es blanca, la de tus aliados verde y los traidores llevan ⚠.
 
