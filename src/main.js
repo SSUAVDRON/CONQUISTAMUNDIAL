@@ -880,7 +880,7 @@ function checkEnd() {
     const progress = finishGame();
     const extra = endExtra('derrota');
     setTimeout(() => {
-      if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress, extra);
+      if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(extra.stats.seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress, extra);
     }, 1200);
   }
 }

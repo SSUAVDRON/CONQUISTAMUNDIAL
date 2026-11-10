@@ -3521,3 +3521,15 @@ body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }
 .fin-reto { margin-top: var(--e3); padding: var(--e2) var(--e3); border-radius: var(--r-s); text-align: center; font-weight: 700; }
 .fin-reto.si { background: rgba(95, 211, 141, 0.14); color: #bff3d2; border: 1px solid rgba(95, 211, 141, 0.4); }
 .fin-reto.no { background: rgba(255, 255, 255, 0.04); color: var(--texto-2); border: 1px solid var(--borde-1); }
+/* La tarjeta de fin no puede ser más ancha que la pantalla (las pestañas, sin salto, la ensanchaban) */
+#fin.pantalla, .pantalla.dialogo { grid-template-columns: minmax(0, 1fr); }
+#fin .fin-tarjeta, .dialogo-caja { justify-self: center; min-width: 0; max-width: 100%; }
+.fin-cuerpo, #fin .fin-pestanas { min-width: 0; }
+@media (max-width: 480px) {
+  .fin-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fin-cifra:first-child { grid-column: 1 / -1; }
+  .repe-controles { flex-wrap: wrap; }
+  #repe-barra { flex: 1 1 60%; }
+  .repe-vel { flex: 1 0 100%; display: flex; }
+  .repe-vel button { flex: 1; }
+}
