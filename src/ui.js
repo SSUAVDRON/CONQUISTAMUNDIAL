@@ -383,7 +383,6 @@ export class UI {
     const box = $('aviso');
     if (text) {
       $('aviso-texto').textContent = text;
-      $('aviso-auto').hidden = true;
       box.hidden = false;
       box.dataset.red = '1';
     } else if (box.dataset.red) {
@@ -810,7 +809,7 @@ export class UI {
   }
 
   /**
-   * Cuenta atrás grande en los últimos 3 s del despliegue y, al empezar la
+   * Cuenta atrás grande en los últimos 5 s del despliegue y, al empezar la
    * conquista, el sello «¡Comienza!».
    */
   _countdown(game) {
@@ -818,7 +817,7 @@ export class UI {
     let text = '';
     if (game.phase === 'spawn') {
       const left = Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000);
-      if (left >= 1 && left <= 3) text = String(left);
+      if (left >= 1 && left <= 5) text = String(left);
     } else if (game.phase === 'playing' && game.ticks - CONFIG.spawnTicks < 9) text = '¡Comienza!';
     if (text === (this._countText || '')) return;
     const prev = this._countText;
@@ -842,6 +841,39 @@ export class UI {
     }
   }
 
+  /**
+   * Panel del despliegue: los segundos que quedan en un reloj circular y una
+   * barra que se vacía; dorado, ámbar en los últimos 10 s y rojo (latiendo)
+   * en los últimos 5. Con la posición ya elegida, verde.
+   */
+  _spawnBanner(game, human) {
+    const box = $('despliegue');
+    if (game.phase !== 'spawn' || !human.alive) {
+      if (!box.hidden) ocultar(box, { y: -10, scale: 0.96, base: 'translateX(-50%)' });
+      return;
+    }
+    mostrar(box, { y: -10, scale: 0.96, base: 'translateX(-50%)' });
+    const totalMs = CONFIG.spawnTicks * TICK_MS;
+    const leftMs = Math.max(0, (CONFIG.spawnTicks - game.ticks) * TICK_MS);
+    const left = Math.ceil(leftMs / 1000);
+    const frac = leftMs / totalMs;
+    txt('dp-segundos', String(left));
+    const estado = left <= 5 ? 'urgente' : left <= 10 ? 'aviso' : 'normal';
+    if (box.dataset.estado !== estado) box.dataset.estado = estado;
+    box.classList.toggle('elegido', !!human.spawned);
+    txt('dp-titulo', human.spawned ? '✓ Posición elegida' : 'Elige dónde empezar');
+    txt('dp-texto', human.spawned ? 'Puedes cambiarla: haz clic en otro sitio' : left <= 5 ? '¡Rápido! Si no eliges, se te asigna un sitio' : 'Haz clic en el mapa donde quieras empezar');
+    // Barra y aro: se vacían de forma continua (transición de 200 ms entre actualizaciones)
+    cssProp($('dp-barra'), 'transform', `scaleX(${frac.toFixed(4)})`);
+    cssProp($('dp-aro'), 'stroke-dashoffset', `${(125.66 * (1 - frac)).toFixed(2)}`);
+    // Cada segundo, la cifra da un pequeño salto (más fuerte al final)
+    if (this._spawnLeft !== left) {
+      this._spawnLeft = left;
+      const num = $('dp-segundos');
+      if (!document.body.classList.contains('sin-animaciones')) num.animate?.([{ transform: `scale(${left <= 5 ? 1.45 : 1.18})` }, { transform: 'scale(1)' }], { duration: left <= 5 ? 420 : 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+    }
+  }
+
   /** Avanza las cifras animadas (llamar en cada frame). */
   animate(dt) {
     for (const c of this._counters) c.step(dt);
@@ -860,17 +892,14 @@ export class UI {
       if (avisoTxt.textContent !== text) avisoTxt.textContent = text;
     };
     this._countdown(game);
-    // «Elegir por mí»: solo en el despliegue
-    const showAuto = !aviso.dataset.red && game.phase === 'spawn' && human.alive;
+    this._spawnBanner(game, human);
+    // «Elegir por mí»: solo mientras no hayas elegido sitio
+    const showAuto = game.phase === 'spawn' && human.alive && !human.spawned;
     if (auto.hidden === showAuto) auto.hidden = !showAuto;
     if (aviso.dataset.red) {
       // el estado de la red tiene prioridad
     } else if (game.phase === 'spawn') {
-      const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000));
-      setAviso(human.spawned
-        ? `Posición elegida. Puedes cambiarla. Empieza en ${left} s`
-        : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`);
-      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
+      ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));

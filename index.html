@@ -17,14 +17,14 @@
       "./src/camera.js": "./src/camera.js?v=0292fc299c",
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=61b9fe2d81",
-      "./src/config.js": "./src/config.js?v=a9d4d2dce9",
+      "./src/config.js": "./src/config.js?v=f433f722df",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
       "./src/fin.js": "./src/fin.js?v=72a8fd1796",
       "./src/format.js": "./src/format.js?v=66b8e86f09",
       "./src/fx.js": "./src/fx.js?v=dae868bb98",
       "./src/game.js": "./src/game.js?v=564667f531",
-      "./src/guia.js": "./src/guia.js?v=5aee8fcab8",
+      "./src/guia.js": "./src/guia.js?v=b79a5cf9e8",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
       "./src/home.js": "./src/home.js?v=06e5aa3c69",
       "./src/icons.js": "./src/icons.js?v=d51a108086",
@@ -33,7 +33,7 @@
       "./src/input.js": "./src/input.js?v=986539a5f5",
       "./src/ladder.js": "./src/ladder.js?v=c9c00ff77d",
       "./src/loading.js": "./src/loading.js?v=60190a41c1",
-      "./src/main.js": "./src/main.js?v=a191367e90",
+      "./src/main.js": "./src/main.js?v=40ebfb5267",
       "./src/map.js": "./src/map.js?v=88708ebc94",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=eebaf66b1d",
       "./src/mecanicas.js": "./src/mecanicas.js?v=1d5a071315",
@@ -53,16 +53,16 @@
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=f3d23579ab",
       "./src/rng.js": "./src/rng.js?v=f9717328bc",
-      "./src/sonido.js": "./src/sonido.js?v=62d9afae2f",
+      "./src/sonido.js": "./src/sonido.js?v=90e9490ca0",
       "./src/tecnologias.js": "./src/tecnologias.js?v=e5f4d0a332",
       "./src/terreno.js": "./src/terreno.js?v=2744ae1249",
       "./src/tutorial.js": "./src/tutorial.js?v=18c38a27ef",
-      "./src/ui.js": "./src/ui.js?v=cfc4bdcc8f"
+      "./src/ui.js": "./src/ui.js?v=0364a69f68"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=a6c89fbd84">
+  <link rel="stylesheet" href="css/estilo.css?v=704df1a21d">
 </head>
 <body>
   <canvas id="lienzo"></canvas>
@@ -630,9 +630,24 @@
       <span class="puntero-txt">TÚ</span>
     </button>
 
-    <!-- Últimos segundos del despliegue (3-2-1) y «¡Comienza!» -->
+    <!-- Despliegue: reloj con los segundos que quedan, barra que se vacía y «Elegir por mí» -->
+    <div id="despliegue" class="despliegue" role="status" aria-live="polite" hidden>
+      <div class="dp-fila">
+        <span class="dp-reloj" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><circle class="dp-aro-fondo" cx="24" cy="24" r="20"/><circle class="dp-aro" id="dp-aro" cx="24" cy="24" r="20"/></svg>
+          <b id="dp-segundos">30</b>
+        </span>
+        <span class="dp-textos">
+          <strong id="dp-titulo">Elige dónde empezar</strong>
+          <small id="dp-texto">Haz clic en el mapa</small>
+        </span>
+        <button type="button" id="aviso-auto" class="dp-auto">🎲 Elegir por mí</button>
+      </div>
+      <span class="dp-barra" aria-hidden="true"><span id="dp-barra"></span></span>
+    </div>
+    <!-- Últimos segundos del despliegue (5-4-3-2-1) y «¡Comienza!» -->
     <div id="cuenta-atras" class="cuenta-atras" aria-hidden="true" hidden></div>
-    <div id="aviso" hidden><span id="aviso-texto"></span><button type="button" id="aviso-auto" class="aviso-auto" hidden>🎲 Elegir por mí</button></div>
+    <div id="aviso" hidden><span id="aviso-texto"></span></div>
     <!-- Respuesta breve a tus acciones (no es un aviso importante) -->
     <div id="pista" class="pista" hidden role="status"></div>
     <section id="avisos" class="plegable vacio" data-plegable="avisos">

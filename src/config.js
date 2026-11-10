@@ -17,7 +17,7 @@ export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
 
 export const CONFIG = {
   // Fase inicial: los jugadores eligen dónde aparecer
-  spawnTicks: 200, // 20 s para elegir dónde empezar (la cuenta atrás del despliegue)
+  spawnTicks: 300, // 30 s para elegir dónde empezar (la cuenta atrás del despliegue)
   // La zona inicial (52 casillas), las tropas y el oro iniciales, el techo, la
   // regeneración, los precios, el comercio y el combate están en mecanicas.js
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos

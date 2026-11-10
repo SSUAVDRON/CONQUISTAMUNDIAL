@@ -1386,6 +1386,14 @@ function frame(now) {
     }
   }
   if (!state.demo && state.rec && state.rec.game === game) state.rec.update();
+  // Últimos 5 s del despliegue: un «tic» por segundo
+  if (game && !state.demo && game.phase === 'spawn' && state.human?.alive) {
+    const left = Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000);
+    if (left !== state.spawnLeft) {
+      state.spawnLeft = left;
+      if (left >= 1 && left <= 5) sound.play('tick', left === 1 ? 1 : 0.75, 0);
+    }
+  }
   // En la demo, al terminar una partida empieza otra
   if (state.demo && game && game.phase === 'ended') startDemo({ background: true });
   // Empieza la conquista: la cámara vuela a tu zona y se acerca hasta ver la

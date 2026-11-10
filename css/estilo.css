@@ -3533,3 +3533,71 @@ body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }
   .repe-vel { flex: 1 0 100%; display: flex; }
   .repe-vel button { flex: 1; }
 }
+
+/* ===================================================== Despliegue: reloj y barra que se vacía (ui.js _spawnBanner) */
+.despliegue {
+  --dp-color: #f2b33d;
+  --dp-color2: #ffe3a1;
+  --dp-glow: rgba(242, 179, 61, 0.28);
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  width: min(580px, calc(100vw - 24px));
+  padding: 12px 16px 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(24, 33, 54, 0.97), rgba(10, 15, 28, 0.98));
+  border: 1.5px solid var(--dp-color);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), 0 0 26px var(--dp-glow);
+  pointer-events: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.despliegue[hidden] { display: none; }
+.despliegue[data-estado="aviso"] { --dp-color: #ff9f2e; --dp-color2: #ffd08a; --dp-glow: rgba(255, 159, 46, 0.35); }
+.despliegue[data-estado="urgente"] { --dp-color: #ff4d4d; --dp-color2: #ff9a8a; --dp-glow: rgba(255, 77, 77, 0.45); animation: despliegueLatido 1s ease-in-out infinite; }
+.despliegue.elegido { --dp-color: #5fd38d; --dp-color2: #b8f5cf; --dp-glow: rgba(95, 211, 141, 0.3); }
+.despliegue.elegido[data-estado="urgente"] { animation: none; }
+@keyframes despliegueLatido { 50% { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), 0 0 44px rgba(255, 77, 77, 0.7); border-color: #ff8a8a; } }
+.dp-fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding-bottom: 12px; }
+.dp-reloj { position: relative; width: 58px; height: 58px; flex: none; }
+.dp-reloj svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.dp-aro-fondo { fill: rgba(0, 0, 0, 0.4); stroke: rgba(255, 255, 255, 0.12); stroke-width: 4; }
+.dp-aro { fill: none; stroke: var(--dp-color); stroke-width: 4.5; stroke-linecap: round; stroke-dasharray: 125.66; stroke-dashoffset: 0; transition: stroke-dashoffset 0.22s linear, stroke 0.3s; filter: drop-shadow(0 0 4px var(--dp-glow)); }
+.dp-reloj b { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-weight: 900; font-size: 24px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+.despliegue[data-estado="urgente"]:not(.elegido) .dp-reloj b { color: #ffd6d0; }
+.dp-textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dp-textos strong { font-family: var(--serif); font-weight: 800; font-size: 18px; letter-spacing: 0.02em; color: var(--dp-color2); }
+.dp-textos small { font-size: 13px; color: var(--texto-2); line-height: 1.35; }
+.dp-auto {
+  pointer-events: auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 0;
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  color: #241703;
+  background: linear-gradient(180deg, #ffd36b, #f2b33d);
+  box-shadow: 0 4px 14px rgba(242, 179, 61, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.dp-auto:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(242, 179, 61, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+.dp-auto:active { transform: translateY(1px); }
+.dp-auto[hidden] { display: none; }
+.dp-barra { display: block; height: 7px; margin: 0 -16px; background: rgba(255, 255, 255, 0.08); }
+.dp-barra > span { display: block; height: 100%; transform-origin: left center; background: linear-gradient(90deg, var(--dp-color), var(--dp-color2)); box-shadow: 0 0 12px var(--dp-glow); transition: transform 0.22s linear, background 0.3s; }
+body.sin-animaciones .despliegue { animation: none; }
+@media (prefers-reduced-motion: reduce) { .despliegue { animation: none !important; } }
+@media (max-width: 720px) {
+  .despliegue { top: auto; bottom: calc(var(--pj-alto, 250px) + 16px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px 0; border-radius: 16px; }
+  .dp-fila { grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding-bottom: 10px; }
+  .dp-reloj { width: 48px; height: 48px; }
+  .dp-reloj b { font-size: 20px; }
+  .dp-textos strong { font-size: 16px; }
+  .dp-textos small { font-size: 12px; }
+  .dp-auto { grid-column: 1 / -1; padding: 9px 14px; }
+  .dp-barra { margin: 0 -12px; }
+}

@@ -463,6 +463,8 @@ const SFX = {
     s._tone(t, 'sine', 90, 40, 0.6, 0.35 * v);
   },
   ding: (s, t, v) => s._tone(t, 'sine', 880, 880, 0.6, 0.1 * v, { reverb: 0.4 }),
+  // Últimos segundos del despliegue
+  tick: (s, t, v) => s._tone(t, 'triangle', 1500, 1150, 0.07, 0.16 * v),
   chime: (s, t, v) => {
     s._tone(t, 'sine', freq('C5'), freq('C5'), 0.8, 0.09 * v, { reverb: 0.5 });
     s._tone(t + 0.12, 'sine', freq('E5'), freq('E5'), 0.9, 0.08 * v, { reverb: 0.5 });
