@@ -7,7 +7,8 @@ import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
-import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, contar, mostrar, ocultar } from './movimiento.js';
+import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } from './movimiento.js';
+import { PantallaFin, abrirFin } from './fin.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -568,52 +569,18 @@ export class UI {
     abrirDialogo($('confirmar'), { foco: '#conf-no' });
   }
 
-  /** `progress`: { xp, level, levelUp, achievements: [{icon, name}] } o null. */
-  showEnd(title, text, progress = null) {
-    $('fin-titulo').textContent = title;
-    $('fin-texto').textContent = text;
-    const box = $('fin-progreso');
-    box.replaceChildren();
-    let counters = null;
-    if (progress) {
-      // Recompensas que suben desde cero cuando aparece la tarjeta
-      const xp = document.createElement('p');
-      xp.className = 'fin-xp';
-      const nXp = document.createElement('b');
-      const nCoins = document.createElement('b');
-      nXp.textContent = '+0';
-      nCoins.textContent = '+0';
-      xp.append(nXp, ' XP · ', nCoins, ' 🪙', progress.levelUp ? ` · ¡Subes al nivel ${progress.level}!` : '');
-      box.append(xp);
-      counters = () => {
-        contar(nXp, progress.xp, { de: 0, ms: 900, formato: (n) => `+${Math.round(n)}` });
-        contar(nCoins, progress.coins || 0, { de: 0, ms: 900, formato: (n) => `+${Math.round(n)}` });
-      };
-      const line = (text, i) => {
-        const li = document.createElement('p');
-        li.className = 'fin-logro';
-        li.style.setProperty('--i', String(i));
-        li.textContent = text;
-        box.append(li);
-      };
-      let i = 0;
-      for (const d of progress.daily || []) line(`${d.icon} Reto diario: ${d.name} (+${d.coins} 🪙)`, i++);
-      if (progress.dailyBonus) line(`📅 ¡Los tres retos de hoy! (+${progress.dailyBonus} 🪙)`, i++);
-      for (const a of progress.achievements) line(`${a.icon} Logro conseguido: ${a.name}${a.coins ? ` (+${a.coins} 🪙)` : ''}`, i++);
-    }
-    // Entra en dos tiempos: el velo sobre el mapa y luego la tarjeta
-    abrirDialogo($('fin'), { ms: 450, tarjeta: false, foco: '#fin-nueva' });
-    const card = $('fin').querySelector('.tarjeta');
-    if (card && card.animate && !document.body.classList.contains('sin-animaciones')) {
-      card.animate(
-        [{ opacity: 0, transform: 'translateY(18px) scale(0.96)' }, { opacity: 1, transform: 'none' }],
-        { duration: 420, delay: 120, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' },
-      );
-    }
-    if (counters) setTimeout(counters, 420);
+  /**
+   * Fin de partida. `progress`: { xp, coins, level, levelUp, achievements,
+   * daily, dailyBonus } o null. `extra`: { rec, game, human, place, stats,
+   * outcome, renderRank } (ver fin.js).
+   */
+  showEnd(title, text, progress = null, extra = {}) {
+    this.fin ??= new PantallaFin();
+    abrirFin(this.fin, { title, text, progress, ...extra });
   }
 
   hideEnd() {
+    this.fin?.hide();
     cerrarDialogo($('fin'));
   }
 

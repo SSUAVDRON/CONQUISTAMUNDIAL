@@ -28,6 +28,7 @@ import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
 import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
+import { Grabador, compactCurve, placement } from './resumen.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -253,7 +254,10 @@ function enterGame(game) {
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
+  // Resumen de partida: graba cómo va (sin tocar la simulación)
+  state.rec = game.human ? new Grabador(game, game.human) : null;
   game.onEvent = (evt) => {
+    if (state.rec && state.rec.game === game) state.rec.onEvent(evt);
     if (!state.demo) sound.onEvent(evt);
     // Botín al eliminar a alguien: monedas que vuelan del mapa a tu oro
     if (evt.loot && !state.demo && evt.tick >= game.ticks - 2 && state.renderer?.anim) {
@@ -542,7 +546,12 @@ function gameResult() {
   const seconds = (Math.max(0, game.ticks - CONFIG.spawnTicks) * TICK_MS) / 1000;
   const survived = human.alive ? seconds : (Math.max(0, human.eliminatedTick - CONFIG.spawnTicks) * TICK_MS) / 1000;
   const alliedWin = !!(game.winningAlliance && game.winningAlliance.includes(human));
+  const place = placement(game, human);
+  const rec = state.rec && state.rec.game === game ? state.rec : null;
   return {
+    place: place.place,
+    of: place.of,
+    curve: rec ? compactCurve(rec.samples) : [],
     won: game.winner === human && !game.winningAlliance,
     alliedWin,
     mapSize: state.mapSize,
@@ -577,6 +586,7 @@ function finishGame() {
   const { game, human } = state;
   if (state.recorded || state.demo || !game || !human) return null;
   state.recorded = true;
+  if (state.rec && state.rec.game === game) state.rec.finish();
   const result = gameResult();
   // Abandonos de menos de un minuto no cuentan
   if (game.phase !== 'ended' && human.alive && result.seconds < 60) return null;
@@ -602,6 +612,21 @@ function winText(game, mine, who, land) {
     default:
       return mine ? `Has conquistado el ${formatPercent(who.tiles / land)} del mundo` : `${who.name} domina el mundo`;
   }
+}
+
+/** Lo que necesita la pantalla de fin: grabación, puesto y cifras de la partida. */
+function endExtra(outcome) {
+  const { game, human } = state;
+  const r = gameResult();
+  return {
+    rec: state.rec && state.rec.game === game ? state.rec : null,
+    game,
+    human,
+    outcome,
+    place: { place: r.place, of: r.of },
+    stats: { seconds: outcome === 'derrota' ? r.survivedSeconds : r.seconds, maxShare: r.maxShare, kills: r.kills, built: r.built },
+    share: { map: mapLabel(state.mapSize), online: !!state.online },
+  };
 }
 
 function checkEnd() {
@@ -633,14 +658,17 @@ function checkEnd() {
     const map = game.map;
     const fit = Math.min(camera.viewW / map.width, camera.viewH / map.height) * 0.9;
     camera.flyTo(map.width / 2, map.height / 2, fit, 1300);
+    const won = game.winner === human || !!(game.winningAlliance && game.winningAlliance.includes(human));
+    const extra = endExtra(won ? 'victoria' : 'fin');
     setTimeout(() => {
-      if (state.game === game) ui.showEnd(title, text, progress);
+      if (state.game === game) ui.showEnd(title, text, progress, extra);
     }, 1500);
   } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
     state.defeatShown = true;
     const progress = finishGame();
+    const extra = endExtra('derrota');
     setTimeout(() => {
-      if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+      if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress, extra);
     }, 1200);
   }
 }
@@ -1138,6 +1166,7 @@ function frame(now) {
       if (steps === 3) state.acc = Math.min(state.acc, TICK_MS);
     }
   }
+  if (!state.demo && state.rec && state.rec.game === game) state.rec.update();
   // En la demo, al terminar una partida empieza otra
   if (state.demo && game && game.phase === 'ended') startDemo({ background: true });
   // Empieza la conquista: la cámara vuela a tu zona y se acerca hasta ver la

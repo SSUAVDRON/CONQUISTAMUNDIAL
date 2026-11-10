@@ -555,6 +555,12 @@ export function recordGame(profile, r) {
     mapa: r.mapSize,
     rivales: r.rivals,
     online: r.online,
+    // Resumen compacto: puesto entre las naciones, cifras y la curva de tu territorio (~30 puntos, 0-1000)
+    puesto: r.place || 0,
+    de: r.of || 0,
+    elim: r.kills || 0,
+    edif: r.built || 0,
+    curva: Array.isArray(r.curve) ? r.curve.slice(0, 40) : [],
   });
   profile.historial.length = Math.min(profile.historial.length, HISTORY_MAX);
   saveProfile(profile);

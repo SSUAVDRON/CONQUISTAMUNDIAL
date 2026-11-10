@@ -3205,7 +3205,7 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 #sala-ajustes .segmentos.plazas button { min-width: 38px; }
 
 /* ===================================================== Sub-pestañas (Perfil y Clasificación) */
-#inicio .sub-pestanas, .dialogo .sub-pestanas {
+#inicio .sub-pestanas, :is(.dialogo, #fin) .sub-pestanas {
   position: relative;
   display: flex;
   gap: var(--e1);
@@ -3219,10 +3219,10 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
   overflow-x: auto;
   scrollbar-width: none;
 }
-#inicio .sub-pestanas::-webkit-scrollbar, .dialogo .sub-pestanas::-webkit-scrollbar { display: none; }
-#inicio .sub-pestanas button, .dialogo .sub-pestanas button { flex: none; padding: 10px 16px; border: 0; border-radius: var(--r-s) var(--r-s) 0 0; background: none; box-shadow: none; color: var(--texto-2); font-weight: 700; font-size: 14px; }
-#inicio .sub-pestanas button:hover, .dialogo .sub-pestanas button:hover { color: var(--texto-1); background: rgba(255, 255, 255, 0.04); }
-#inicio .sub-pestanas button[aria-selected="true"], .dialogo .sub-pestanas button[aria-selected="true"] { color: var(--oro-200); background: none; box-shadow: inset 0 -2px 0 var(--oro-400); }
+#inicio .sub-pestanas::-webkit-scrollbar, :is(.dialogo, #fin) .sub-pestanas::-webkit-scrollbar { display: none; }
+#inicio .sub-pestanas button, :is(.dialogo, #fin) .sub-pestanas button { flex: none; padding: 10px 16px; border: 0; border-radius: var(--r-s) var(--r-s) 0 0; background: none; box-shadow: none; color: var(--texto-2); font-weight: 700; font-size: 14px; }
+#inicio .sub-pestanas button:hover, :is(.dialogo, #fin) .sub-pestanas button:hover { color: var(--texto-1); background: rgba(255, 255, 255, 0.04); }
+#inicio .sub-pestanas button[aria-selected="true"], :is(.dialogo, #fin) .sub-pestanas button[aria-selected="true"] { color: var(--oro-200); background: none; box-shadow: inset 0 -2px 0 var(--oro-400); }
 #inicio .sub-pestanas.con-subrayado button[aria-selected="true"] { box-shadow: none; }
 .subrayado-pestana {
   position: absolute; left: 0; bottom: 0; height: 2px; width: 0; opacity: 0; pointer-events: none;
@@ -3367,3 +3367,68 @@ body.sin-animaciones .guia-lista li { animation: none; }
 .mp-nota { margin: -4px 0 0; text-align: center; font-size: 12px; color: var(--texto-3); }
 .mp-botones { display: flex; gap: var(--e2); margin-top: var(--e2); }
 .mp-botones > * { flex: 1; }
+
+/* ===================================================== Fin de partida: resumen con pestañas (fin.js) */
+#fin .fin-tarjeta { width: min(880px, 100%); padding: var(--e5); display: flex; flex-direction: column; gap: var(--e3); }
+.fin-cab { display: flex; align-items: center; gap: var(--e4); }
+.fin-sello { flex: none; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; font-size: 32px; background: radial-gradient(circle at 35% 30%, rgba(233, 185, 85, 0.45), rgba(233, 185, 85, 0.08)); border: 1px solid rgba(233, 185, 85, 0.55); box-shadow: 0 0 24px rgba(233, 185, 85, 0.25); }
+.fin-sello.derrota { background: radial-gradient(circle at 35% 30%, rgba(224, 72, 63, 0.4), rgba(224, 72, 63, 0.08)); border-color: rgba(224, 72, 63, 0.55); box-shadow: 0 0 24px rgba(224, 72, 63, 0.2); }
+.fin-sello.victoria { animation: selloVictoria 1.2s var(--ease-spring) both; }
+@keyframes selloVictoria { 0% { transform: scale(0.4) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.12) rotate(4deg); opacity: 1; } 100% { transform: none; } }
+.fin-cab-textos { min-width: 0; }
+#fin .fin-cab h2 { margin: 0; text-align: left; font-size: 26px; }
+#fin .fin-cab #fin-texto { margin: 2px 0 0; text-align: left; }
+.dialogo .fin-pestanas, #fin .fin-pestanas { margin: var(--e1) 0 0; }
+.fin-cuerpo { min-height: 0; }
+.fin-panel[hidden] { display: none; }
+.fin-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--e2); }
+.fin-cifra { display: flex; flex-direction: column; gap: 2px; padding: var(--e3); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--borde-1); animation: subir var(--dur-3) var(--ease-out) both; }
+.fin-cifra:nth-child(2) { animation-delay: 60ms; }
+.fin-cifra:nth-child(3) { animation-delay: 120ms; }
+.fin-cifra:nth-child(4) { animation-delay: 180ms; }
+.fin-cifra:nth-child(5) { animation-delay: 240ms; }
+.fc-valor { font-family: var(--serif); font-weight: 800; font-size: 22px; color: var(--texto-1); font-variant-numeric: tabular-nums; }
+.fin-cifra.oro .fc-valor { color: var(--oro-200); }
+.fc-etq { font-size: 12px; color: var(--texto-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.fin-rango { margin-top: var(--e3); }
+#fin .fin-progreso { margin-top: var(--e3); }
+.fin-panel h3 { margin: var(--e2) 0 var(--e1); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-500); }
+.fin-grafica { display: block; width: 100%; height: 220px; border-radius: var(--r-s); background: rgba(0, 0, 0, 0.18); }
+.fin-grafica.baja { height: 130px; }
+.fin-graf-doble { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
+.fin-leyenda { list-style: none; margin: var(--e2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--texto-2); }
+.fin-leyenda li { display: inline-flex; align-items: center; gap: 6px; }
+.fin-leyenda li.yo { color: var(--texto-1); font-weight: 700; }
+.fl-color { width: 12px; height: 4px; border-radius: 2px; }
+.momentos { list-style: none; margin: 0; padding: 0 0 0 4px; display: flex; flex-direction: column; gap: 2px; max-height: 340px; overflow-y: auto; position: relative; }
+.momento { position: relative; display: grid; grid-template-columns: 48px 28px minmax(0, 1fr); align-items: center; gap: var(--e2); padding: 7px 10px; border-radius: var(--r-s); animation: subir var(--dur-3) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.momento:nth-child(odd) { background: rgba(255, 255, 255, 0.025); }
+.mo-tiempo { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--texto-3); }
+.mo-icono { font-size: 17px; text-align: center; }
+.mo-texto { font-size: 13.5px; color: var(--texto-1); }
+.momento.bien .mo-texto { color: #bff3d2; }
+.momento.mal .mo-texto { color: #ffc9c4; }
+.momento-vacio { color: var(--texto-2); padding: var(--e3); }
+.repe-marco { position: relative; border-radius: var(--r-m); overflow: hidden; border: 1px solid var(--borde-2); background: #16365f; line-height: 0; }
+#fin-repe { width: 100%; height: auto; image-rendering: pixelated; }
+.repe-tiempo { position: absolute; top: 8px; left: 8px; padding: 3px 9px; border-radius: var(--r-pildora); font: 700 13px/1.4 system-ui, sans-serif; color: var(--texto-1); background: rgba(0, 0, 0, 0.55); }
+.repe-controles { display: flex; align-items: center; gap: var(--e3); margin-top: var(--e2); }
+#repe-play { width: 44px; height: 38px; padding: 0; flex: none; font-size: 15px; }
+#repe-barra { flex: 1; min-width: 0; }
+.repe-vel { flex: none; }
+.repe-vel button { padding: 6px 10px; }
+.fin-botones { flex-wrap: wrap; }
+#fin-compartir { margin-right: auto; }
+body.sin-animaciones .fin-cifra, body.sin-animaciones .momento, body.sin-animaciones .fin-sello { animation: none; }
+@media (max-width: 720px) {
+  #fin .fin-tarjeta { padding: var(--e4); }
+  .fin-sello { width: 48px; height: 48px; font-size: 24px; }
+  #fin .fin-cab h2 { font-size: 21px; }
+  .fin-graf-doble { grid-template-columns: 1fr; }
+  .fin-grafica { height: 180px; }
+  #fin-compartir { margin-right: 0; flex: 1 0 100%; order: 5; }
+}
+/* Curva de tu territorio en el historial */
+canvas.curva { display: block; width: 100%; height: 28px; margin-top: 4px; }
+.celda-curva { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.celda-curva canvas.curva { width: 72px; height: 22px; margin: 0; }

@@ -676,11 +676,49 @@
 
   <!-- Fin de partida -->
   <div id="fin" class="pantalla" role="dialog" aria-labelledby="fin-titulo" hidden>
-    <div class="tarjeta">
-      <h2 id="fin-titulo"></h2>
-      <p id="fin-texto"></p>
-      <div id="fin-progreso" class="fin-progreso"></div>
-      <div class="botones">
+    <div class="tarjeta fin-tarjeta">
+      <header class="fin-cab">
+        <span class="fin-sello" id="fin-sello" aria-hidden="true">🏆</span>
+        <div class="fin-cab-textos">
+          <h2 id="fin-titulo"></h2>
+          <p id="fin-texto"></p>
+        </div>
+      </header>
+      <div class="sub-pestanas fin-pestanas" id="fin-pestanas" role="tablist" aria-label="Resumen de la partida">
+        <button type="button" role="tab" id="fin-tab-resumen" data-fin="resumen" aria-selected="true" aria-controls="fin-resumen">Resumen</button>
+        <button type="button" role="tab" id="fin-tab-graficas" data-fin="graficas" aria-selected="false" aria-controls="fin-graficas">Gráficas</button>
+        <button type="button" role="tab" id="fin-tab-momentos" data-fin="momentos" aria-selected="false" aria-controls="fin-momentos">Momentos clave</button>
+        <button type="button" role="tab" id="fin-tab-repeticion" data-fin="repeticion" aria-selected="false" aria-controls="fin-repeticion">Repetición</button>
+      </div>
+      <div class="fin-cuerpo">
+        <section id="fin-resumen" class="fin-panel" role="tabpanel" aria-labelledby="fin-tab-resumen">
+          <div class="fin-cifras" id="fin-cifras"></div>
+          <div class="fin-rango" id="fin-rango" hidden></div>
+          <div id="fin-progreso" class="fin-progreso"></div>
+        </section>
+        <section id="fin-graficas" class="fin-panel" role="tabpanel" aria-labelledby="fin-tab-graficas" hidden>
+          <h3>Territorio</h3>
+          <canvas class="fin-grafica" id="fin-graf-terr" aria-label="Territorio a lo largo de la partida"></canvas>
+          <ul class="fin-leyenda" id="fin-leyenda"></ul>
+          <div class="fin-graf-doble">
+            <div><h3>Tus tropas</h3><canvas class="fin-grafica baja" id="fin-graf-tropas" aria-label="Tus tropas a lo largo de la partida"></canvas></div>
+            <div><h3>Tu oro</h3><canvas class="fin-grafica baja" id="fin-graf-oro" aria-label="Tu oro a lo largo de la partida"></canvas></div>
+          </div>
+        </section>
+        <section id="fin-momentos" class="fin-panel" role="tabpanel" aria-labelledby="fin-tab-momentos" hidden>
+          <ol class="momentos" id="fin-lista-momentos"></ol>
+        </section>
+        <section id="fin-repeticion" class="fin-panel" role="tabpanel" aria-labelledby="fin-tab-repeticion" hidden>
+          <div class="repe-marco"><canvas id="fin-repe" aria-label="Repetición del mapa"></canvas><span class="repe-tiempo" id="repe-tiempo">0:00</span></div>
+          <div class="repe-controles">
+            <button type="button" id="repe-play" class="btn-sec" aria-label="Reproducir">▶</button>
+            <input type="range" id="repe-barra" min="0" max="0" value="0" aria-label="Momento de la partida">
+            <span class="segmentos repe-vel" id="repe-vel" role="radiogroup" aria-label="Velocidad"></span>
+          </div>
+        </section>
+      </div>
+      <div class="botones fin-botones">
+        <button type="button" id="fin-compartir" class="btn-fantasma">Compartir</button>
         <button type="button" id="fin-seguir">Seguir mirando</button>
         <button type="button" id="fin-menu">Menú</button>
         <button type="button" id="fin-nueva" class="principal">Revancha</button>

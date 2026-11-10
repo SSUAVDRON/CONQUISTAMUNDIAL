@@ -16,6 +16,7 @@ import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
+import { drawSparkline } from './resumen.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -439,6 +440,20 @@ function underline(nav, anim) {
   u.style.width = `${tab.offsetWidth}px`;
   u.style.transform = `translateX(${tab.offsetLeft}px)`;
   u.style.opacity = '1';
+}
+
+/** Mini gráfica de tu territorio en una partida del historial (o nada si no hay curva). */
+function sparkline(curve, cls = 'curva') {
+  if (!Array.isArray(curve) || curve.length < 2) return null;
+  const c = el('canvas', { class: cls, 'aria-hidden': 'true' });
+  // Se pinta cuando ya tiene tamaño en pantalla
+  requestAnimationFrame(() => requestAnimationFrame(() => drawSparkline(c, curve)));
+  return c;
+}
+
+/** «3.º de 91» si la partida guardó su puesto. */
+function placeText(g) {
+  return g && g.puesto ? `${g.puesto}.º de ${g.de}` : '';
 }
 
 /** Estado vacío con diseño: icono, título, texto y acciones opcionales. */
@@ -933,7 +948,8 @@ export class Home {
         'div',
         { class: 'ultima-datos' },
         el('strong', { text: mapLabel(g.mapa) }),
-        el('span', { text: `${formatPercent(g.pct)} del mapa · ${formatTime(g.duracion)}` }),
+        el('span', { text: `${placeText(g) ? `${placeText(g)} · ` : ''}${formatPercent(g.pct)} del mapa · ${formatTime(g.duracion)}` }),
+        sparkline(g.curva),
         el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}${g.rivales ? ` · ${g.rivales} rivales` : ''}${g.online ? ' · online' : ''}` }),
       ),
       el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': 'Jugar otra vez en este mapa', title: 'Jugar otra vez en este mapa', onclick: () => this._replay(g) },
@@ -1601,7 +1617,7 @@ export class Home {
           const win = g.resultado.startsWith('victoria');
           return el('li', {},
             el('span', { class: `hc-resultado${win ? ' gana' : ''}`, text: win ? 'Victoria' : 'Derrota' }),
-            el('span', { class: 'hc-mapa' }, el('strong', { text: mapLabel(g.mapa) }), el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}${g.online ? ' · online' : ''}` })),
+            el('span', { class: 'hc-mapa' }, el('strong', { text: mapLabel(g.mapa) }), el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}${placeText(g) ? ` · ${placeText(g)}` : ''}${g.online ? ' · online' : ''}` })),
             el('span', { class: 'hc-dato', text: formatPercent(g.pct) }),
             el('span', { class: 'hc-dato', text: formatTime(g.duracion) }));
         })),
@@ -1838,7 +1854,7 @@ export class Home {
 
   _gamesTable(games) {
     const table = el('table', { class: 'tabla' });
-    table.append(el('thead', {}, el('tr', {}, ...['Fecha', 'Resultado', 'Territorio', 'Duración', 'Mapa'].map((x) => el('th', { text: x })))));
+    table.append(el('thead', {}, el('tr', {}, ...['Fecha', 'Resultado', 'Puesto', 'Territorio', 'Duración', 'Mapa'].map((x) => el('th', { text: x })))));
     const body = el('tbody');
     for (const g of games) {
       body.append(
@@ -1847,7 +1863,8 @@ export class Home {
           {},
           el('td', { text: new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) }),
           el('td', { text: `${g.resultado}${g.online ? ' · online' : ''}` }),
-          el('td', { class: 'num', text: formatPercent(g.pct) }),
+          el('td', { class: 'num', text: placeText(g) || '—' }),
+          el('td', { class: 'num celda-curva' }, sparkline(g.curva), el('span', { text: formatPercent(g.pct) })),
           el('td', { class: 'num', text: formatTime(g.duracion) }),
           el('td', { text: mapLabel(g.mapa) }),
         ),
