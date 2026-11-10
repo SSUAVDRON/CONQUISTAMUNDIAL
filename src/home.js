@@ -668,6 +668,9 @@ export class Home {
         }
       });
       for (const pie of document.querySelectorAll('.pantalla-sala .sala-pie')) ro.observe(pie);
+      // Alto de la cabecera del inicio: la vista previa de «Aspecto» se queda fija justo debajo
+      const bar = document.querySelector('.ini-barra');
+      if (bar) new ResizeObserver(() => { if (bar.offsetHeight) $('inicio').style.setProperty('--alto-cabecera', `${bar.offsetHeight}px`); }).observe(bar);
     }
 
     // Sala
