@@ -14,6 +14,7 @@ import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame } from './icons.js
 import { drawTransport, drawWarship } from './barcos.js';
 import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
+import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
   buyItem, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -46,12 +47,16 @@ const ARSENAL_CATS = [
   { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 
-/** Novedades del carrusel de la portada. */
+/** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Mapa', title: 'Cámara fluida', text: 'El zoom y el desplazamiento se deslizan con suavidad, con inercia al soltar, y la cámara vuela hasta cada frente.', art: 2 },
+  { tag: 'Partida', title: 'Fin de partida y revancha', text: 'Al acabar, la cámara enseña el mapa entero y puedes jugar la revancha con las mismas reglas.', art: 1 },
+  { tag: 'Menús', title: 'Menús renovados', text: 'Transiciones suaves, Perfil y Aspecto juntos, guía de juego y un menú en partida con ajustes rápidos.', art: 0 },
   { tag: 'Reglas', title: 'Mecánicas nuevas', text: 'Techo de tropas, regeneración, combate, cerco y retirada siguen ahora la especificación al pie de la letra.', art: 0 },
   { tag: 'Arsenal', title: 'Bomba H y MIRV', text: 'El silo lanza dos bombas nuevas: la H arrasa una zona enorme y el MIRV reparte 24 cabezas por un país.', art: 1 },
   { tag: 'Mapas', title: 'El mundo, más grande', text: 'Mapa del mundo de 3000 × 1500 casillas con 156 países y sus ríos de verdad.', art: 2 },
 ];
+const NEWS_SLIDES = 3;
 
 const $ = (id) => document.getElementById(id);
 const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
@@ -282,11 +287,14 @@ function segmented(box, options, current, onChange) {
       const btn = el('button', { type: 'button', role: 'radio', 'aria-checked': String(value === current), text: label });
       btn.addEventListener('click', () => {
         for (const b of box.children) b.setAttribute('aria-checked', String(b === btn));
+        rodar(box);
         onChange(value);
       });
       return btn;
     }),
   );
+  teclasGrupo(box);
+  rodar(box);
 }
 
 /** Resumen de las reglas para la sala: "Victoria 70 % · sin misiles…". */
@@ -367,9 +375,20 @@ export class Home {
     this.global = { available: false, rows: [], error: '', stale: false, myId: null };
     this.rooms = [];
 
-    for (const tab of document.querySelectorAll('.ini-pestanas [data-vista]')) {
+    const nav = document.querySelector('.ini-pestanas');
+    for (const tab of nav.querySelectorAll('[data-vista]')) {
+      tab.setAttribute('aria-controls', `vista-${tab.dataset.vista}`);
       tab.addEventListener('click', () => this.setView(tab.dataset.vista));
     }
+    for (const sec of document.querySelectorAll('.vista[data-vista]')) sec.id ||= `vista-${sec.dataset.vista}`;
+    teclasGrupo(nav, '[role="tab"]');
+    // Subrayado de la pestaña activa: se desliza de una a otra
+    this._underline = el('span', { class: 'ini-subrayado', 'aria-hidden': 'true' });
+    nav.append(this._underline);
+    nav.classList.add('con-subrayado');
+    requestAnimationFrame(() => this._moveUnderline(false));
+    document.fonts?.ready.then(() => this._moveUnderline(false));
+    window.addEventListener('resize', () => this._moveUnderline(false));
     $('chip-perfil').addEventListener('click', () => this.setView('perfil'));
 
     // Tarjetas de modo
@@ -466,11 +485,7 @@ export class Home {
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
     $('btn-repetir').addEventListener('click', () => this._replay());
     $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
-    $('novedades-todas').addEventListener('click', () => {
-      const box = $('novedades').closest('.tarjeta-ini');
-      const all = box.classList.toggle('todas');
-      $('novedades-todas').firstChild.textContent = all ? 'Ver menos ' : 'Ver todas ';
-    });
+    $('novedades-todas').addEventListener('click', () => this._allNews());
     for (const b of document.querySelectorAll('[data-ir]')) {
       if (b.id !== 'chip-perfil') b.addEventListener('click', () => this.setView(b.dataset.ir));
     }
@@ -588,9 +603,15 @@ export class Home {
     this._paintHero();
     this._paintBackdrop();
     const data = { world: realPreviewData('mundo'), europe: realPreviewData('europa') };
+    // A la densidad de la pantalla (tope 2): nítidas en móviles y pantallas retina
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
       const c = card.querySelector('.modo-arte');
-      if (c) drawModeArt(card.dataset.modo, c, data);
+      if (!c) continue;
+      c.width = Math.round(360 * dpr);
+      c.height = Math.round(200 * dpr);
+      c._escala = dpr;
+      drawModeArt(card.dataset.modo, c, data);
     }
   }
 
@@ -813,39 +834,70 @@ export class Home {
     );
   }
 
-  /** Carrusel de novedades (pasa solo cada 7 s mientras se ve el inicio). */
+  /** Carrusel de novedades (pasa solo cada 7 s mientras se ve el inicio): fundido entre una y otra. */
   _buildNews() {
-    const slides = NEWS.map((n, i) => {
-      const c = el('canvas', { width: 320, height: 150, 'aria-hidden': 'true' });
-      drawNewsArt(c, n.art);
-      return el(
+    const slides = NEWS.slice(0, NEWS_SLIDES).map((n, i) =>
+      el(
         'article',
-        { class: 'novedad', 'data-i': String(i), hidden: i !== 0 },
-        el('div', { class: 'novedad-arte' }, c, el('span', { class: 'novedad-tag', text: n.tag })),
+        { class: `novedad${i === 0 ? ' activa' : ''}`, 'data-i': String(i), 'aria-hidden': String(i !== 0) },
+        el('div', { class: 'novedad-arte' }, this._newsArt(n), el('span', { class: 'novedad-tag', text: n.tag })),
         el('div', { class: 'novedad-texto' }, el('strong', { text: n.title }), el('p', { text: n.text })),
-      );
-    });
+      ),
+    );
     $('novedades').replaceChildren(...slides);
-    const dots = NEWS.map((n, i) =>
+    const dots = NEWS.slice(0, NEWS_SLIDES).map((n, i) =>
       el('button', { type: 'button', role: 'tab', 'aria-label': n.title, 'aria-selected': String(i === 0), onclick: () => this._news(i, true) }),
     );
     $('novedades-puntos').replaceChildren(...dots);
+    teclasGrupo($('novedades-puntos'), '[role="tab"]');
     this.newsIndex = 0;
     this._newsTimer = setInterval(() => {
-      if (!$('inicio').hidden && this.view === 'jugar' && !document.hidden) this._news((this.newsIndex + 1) % NEWS.length);
+      if (!$('inicio').hidden && this.view === 'jugar' && !document.hidden) this._news((this.newsIndex + 1) % NEWS_SLIDES);
     }, 7000);
+  }
+
+  /** Dibujo de una novedad, nítido en pantallas densas. */
+  _newsArt(n) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const c = el('canvas', { width: Math.round(320 * dpr), height: Math.round(150 * dpr), 'aria-hidden': 'true' });
+    c._escala = dpr;
+    drawNewsArt(c, n.art);
+    return c;
   }
 
   _news(i, manual = false) {
     this.newsIndex = i;
-    for (const s of $('novedades').children) s.hidden = Number(s.dataset.i) !== i;
+    for (const s of $('novedades').children) {
+      const on = Number(s.dataset.i) === i;
+      s.classList.toggle('activa', on);
+      s.setAttribute('aria-hidden', String(!on));
+    }
     [...$('novedades-puntos').children].forEach((d, k) => d.setAttribute('aria-selected', String(k === i)));
+    rodar($('novedades-puntos'));
     if (manual) {
       clearInterval(this._newsTimer);
       this._newsTimer = setInterval(() => {
-        if (!$('inicio').hidden && this.view === 'jugar' && !document.hidden) this._news((this.newsIndex + 1) % NEWS.length);
+        if (!$('inicio').hidden && this.view === 'jugar' && !document.hidden) this._news((this.newsIndex + 1) % NEWS_SLIDES);
       }, 9000);
     }
+  }
+
+  /** «Ver todas»: todas las novedades en un diálogo. */
+  _allNews() {
+    const list = $('dn-lista');
+    if (!list.children.length) {
+      list.replaceChildren(
+        ...NEWS.map((n) =>
+          el(
+            'article',
+            { class: 'novedad-fila' },
+            el('div', { class: 'novedad-arte' }, this._newsArt(n), el('span', { class: 'novedad-tag', text: n.tag })),
+            el('div', { class: 'novedad-texto' }, el('strong', { text: n.title }), el('p', { text: n.text })),
+          ),
+        ),
+      );
+    }
+    abrirDialogo($('dialogo-novedades'));
   }
 
   /** Un dibujo del juego para el arsenal (edificio, barco o bomba). */
@@ -1030,10 +1082,19 @@ export class Home {
     return !$('inicio').hidden && $('sala').hidden && $('crear-sala').hidden;
   }
 
+  /** Entrada de una pantalla: se desliza desde un lado (`dir` 1 derecha, -1 izquierda, 0 fundido). */
+  _slideIn(screen, dir) {
+    if (!screen || sinMovimiento() || !screen.animate) return;
+    screen.animate([{ opacity: 0, transform: `translateX(${dir * 32}px)` }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+  }
+
   show() {
+    const was = $('inicio').hidden;
+    const from = !$('sala').hidden || !$('crear-sala').hidden;
     $('inicio').hidden = false;
     $('sala').hidden = true;
     $('crear-sala').hidden = true;
+    if (was) this._slideIn($('inicio'), from ? -1 : 0);
     this.renderAll();
     if (this.view === 'jugar' || !this.view) this.cover?.start();
     requestAnimationFrame(() => this._paintHero());
@@ -1045,18 +1106,60 @@ export class Home {
   }
 
   setView(view) {
+    const prev = this.view;
     this.view = view;
-    for (const tab of document.querySelectorAll('.ini-pestanas [data-vista]')) {
+    const nav = document.querySelector('.ini-pestanas');
+    for (const tab of nav.querySelectorAll('[data-vista]')) {
       tab.setAttribute('aria-selected', String(tab.dataset.vista === view));
     }
-    for (const sec of document.querySelectorAll('.vista[data-vista]')) sec.hidden = sec.dataset.vista !== view;
+    rodar(nav);
+    this._moveUnderline(true);
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
-    if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
     else this.cover?.stop();
-    $('inicio').scrollTo?.({ top: 0 });
+    // La vista que se va sale (rápido) y luego entra la nueva
+    const secs = Array.from(document.querySelectorAll('.vista[data-vista]'));
+    const next = secs.find((sec) => sec.dataset.vista === view);
+    const leaving = secs.filter((sec) => sec !== next && !sec.hidden && !sec._salida);
+    clearTimeout(this._viewTimer);
+    const enter = () => {
+      for (const sec of secs) if (sec !== next && !sec._salida) sec.hidden = true;
+      $('inicio').scrollTo?.({ top: 0 });
+      mostrar(next, { y: 10, scale: 1, ms: 240 });
+      if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
+      llenarAlVer(next);
+    };
+    if (prev === view || $('inicio').hidden || sinMovimiento() || !leaving.length) {
+      for (const sec of secs) sec.hidden = sec !== next;
+      enter();
+      return;
+    }
+    for (const sec of leaving) ocultar(sec, { y: -4, scale: 1, ms: 110 });
+    this._viewTimer = setTimeout(enter, 110);
+  }
+
+  /** Coloca el subrayado bajo la pestaña activa (deslizándose si `anim`). */
+  _moveUnderline(anim) {
+    const u = this._underline;
+    if (!u) return;
+    const tab = document.querySelector('.ini-pestanas [aria-selected="true"]');
+    if (!tab || !tab.offsetWidth) {
+      u.style.opacity = '0';
+      return;
+    }
+    const inset = Math.min(12, tab.offsetWidth * 0.12);
+    u.classList.toggle('sin-transicion', !anim || sinMovimiento());
+    u.style.width = `${tab.offsetWidth - inset * 2}px`;
+    u.style.transform = `translateX(${tab.offsetLeft + inset}px)`;
+    u.style.opacity = '1';
+    // Si la pestaña queda fuera (barra con scroll en pantallas estrechas), se trae a la vista
+    const nav = tab.parentElement;
+    if (nav.scrollWidth > nav.clientWidth + 2) {
+      const l = tab.offsetLeft - nav.scrollLeft;
+      if (l < 0 || l + tab.offsetWidth > nav.clientWidth) nav.scrollTo({ left: tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2, behavior: anim && !sinMovimiento() ? 'smooth' : 'auto' });
+    }
   }
 
   renderAll() {
@@ -1089,11 +1192,16 @@ export class Home {
     const title = titleName(p);
     $('chip-nivel').textContent = `Nivel ${info.level}${title ? ` · ${title}` : ''}`;
     $('chip-xp').style.width = `${Math.round(info.progress * 100)}%`;
-    $('chip-xp-txt').textContent = `${formatNumber(p.xp)} / ${formatNumber(info.next)} XP`;
+    contar($('chip-xp-txt'), p.xp, { formato: (n) => `${formatNumber(Math.round(n))} / ${formatNumber(info.next)} XP` });
     const total = ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length;
     $('cuenta-logros').textContent = `${total}/${ACHIEVEMENTS.length}`;
-    $('chip-monedas').textContent = `🪙 ${formatNumber(p.monedas || 0)}`;
-    $('bolsa-monedas').textContent = `🪙 ${formatNumber(p.monedas || 0)}`;
+    const coins = (n) => `🪙 ${formatNumber(Math.round(n))}`;
+    const before = $('chip-monedas')._cifra;
+    contar($('chip-monedas'), p.monedas || 0, { formato: coins });
+    if (before != null && (p.monedas || 0) > before && !sinMovimiento()) {
+      $('chip-monedas').animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' });
+    }
+    contar($('bolsa-monedas'), p.monedas || 0, { formato: coins });
   }
 
   // ---------------------------------------------------------------- tienda
@@ -1606,7 +1714,10 @@ export class Home {
       };
     }
     $('inicio').hidden = true;
-    $('crear-sala').hidden = false;
+    if ($('crear-sala').hidden) {
+      $('crear-sala').hidden = false;
+      this._slideIn($('crear-sala'), 1);
+    }
     $('crear-nombre').value = this.create.name;
     $('crear-error').textContent = '';
     this._busyCreate(false);
@@ -1616,6 +1727,7 @@ export class Home {
   hideCreate() {
     $('crear-sala').hidden = true;
     $('inicio').hidden = false;
+    this._slideIn($('inicio'), -1);
     this.openPanel('online');
   }
 
@@ -1716,9 +1828,14 @@ export class Home {
 
   showLobby() {
     this._lobbyMode = null;
+    this._lobbyPeers = null;
+    this._lobbyReady = null;
     $('inicio').hidden = true;
     $('crear-sala').hidden = true;
-    $('sala').hidden = false;
+    if ($('sala').hidden) {
+      $('sala').hidden = false;
+      this._slideIn($('sala'), 1);
+    }
     $('sala-ajustes').hidden = true;
     $('btn-editar-reglas').textContent = 'Editar reglas';
     $('sala-copia').hidden = true;
@@ -1819,12 +1936,19 @@ export class Home {
       $('sala-mapa-nombre').textContent = mapLabel(s.mapSize);
       this._chips($('sala-chips'), s);
     }
-    // Jugadores: anfitrión, invitados y plazas libres
+    // Jugadores: anfitrión, invitados y plazas libres. Los que acaban de
+    // entrar aparecen con una animación y la marca de «listo» da un saltito
+    const seen = this._lobbyPeers;
+    const wasReady = this._lobbyReady;
+    this._lobbyPeers = new Set(st.players.map((p) => p.peer));
+    this._lobbyReady = new Set(st.players.filter((p) => p.ready).map((p) => p.peer));
     const rows = st.players.map((p) => {
       const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
+      const fresh = seen && !seen.has(p.peer);
+      const pop = wasReady && p.ready && !wasReady.has(p.peer);
       return el(
         'li',
-        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}` },
+        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''}` },
         el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
         el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
         el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),
@@ -1852,6 +1976,9 @@ export class Home {
       const hostOk = st.host && st.host.presence.version === RULES_FINGERPRINT;
       const ready = !!me && me.ready;
       $('btn-listo').disabled = !me || !hostOk || counting;
+      if (ready && wasReady && !wasReady.has(me.peer) && !sinMovimiento()) {
+        $('btn-listo').animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(0.98)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' });
+      }
       $('btn-listo').textContent = ready ? 'Cancelar listo' : 'Estoy listo';
       $('btn-listo').classList.toggle('secundario', ready);
       $('btn-listo').classList.toggle('principal', !ready);
@@ -1925,11 +2052,18 @@ export class Home {
     const box = $('sala-cuenta-atras');
     clearInterval(this._cdTimer);
     const end = performance.now() + ms;
+    const num = $('sala-cuenta-num');
     const paint = () => {
       const left = Math.max(0, end - performance.now());
-      $('sala-cuenta-num').textContent = String(Math.max(1, Math.ceil(left / 1000)));
+      const txt = String(Math.max(1, Math.ceil(left / 1000)));
+      if (num.textContent !== txt) {
+        num.textContent = txt;
+        // Cada cifra entra girando
+        if (!sinMovimiento()) num.animate?.([{ transform: 'perspective(400px) rotateX(-90deg)', opacity: 0 }, { transform: 'perspective(400px) rotateX(12deg)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: 'ease-out' });
+      }
       if (left <= 0) clearInterval(this._cdTimer);
     };
+    num.textContent = '';
     box.hidden = false;
     paint();
     this._cdTimer = setInterval(paint, 100);

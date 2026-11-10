@@ -512,8 +512,11 @@ function artCustom(ctx, W, H, europeData) {
  */
 export function drawModeArt(kind, canvas, data = {}) {
   const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  // `canvas._escala`: lienzo a la densidad de la pantalla; se dibuja en medidas lógicas
+  const k = canvas._escala || 1;
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  const W = canvas.width / k;
+  const H = canvas.height / k;
   if (kind === 'rapida') artQuick(ctx, W, H);
   else if (kind === 'ia') artAI(ctx, W, H, data.world);
   else if (kind === 'online') artOnline(ctx, W, H);
@@ -523,8 +526,10 @@ export function drawModeArt(kind, canvas, data = {}) {
 /** Miniatura de una novedad: una pequeña escena de la portada. */
 export function drawNewsArt(canvas, variant = 0) {
   const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  const k = canvas._escala || 1;
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  const W = canvas.width / k;
+  const H = canvas.height / k;
   if (variant === 1) {
     artQuick(ctx, W, H);
     return;

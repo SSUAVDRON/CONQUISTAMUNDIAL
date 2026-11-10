@@ -653,7 +653,7 @@
   </div>
 
   <!-- Fin de partida -->
-  <div id="fin" class="pantalla" hidden>
+  <div id="fin" class="pantalla" role="dialog" aria-labelledby="fin-titulo" hidden>
     <div class="tarjeta">
       <h2 id="fin-titulo"></h2>
       <p id="fin-texto"></p>
@@ -666,10 +666,18 @@
     </div>
   </div>
 
+  <!-- Todas las novedades -->
+  <div id="dialogo-novedades" class="pantalla dialogo" aria-labelledby="dn-titulo" hidden>
+    <div class="dialogo-caja">
+      <header class="dialogo-cab"><h2 id="dn-titulo">Novedades</h2><button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button></header>
+      <div class="dialogo-cuerpo novedades-lista" id="dn-lista"></div>
+    </div>
+  </div>
+
   <!-- Confirmación para salir (los diálogos del navegador no funcionan en todas partes) -->
-  <div id="confirmar" class="pantalla" hidden>
+  <div id="confirmar" class="pantalla" role="alertdialog" aria-labelledby="conf-titulo" hidden>
     <div class="tarjeta">
-      <h2>¿Abandonar la partida?</h2>
+      <h2 id="conf-titulo">¿Abandonar la partida?</h2>
       <p class="centrado">Volverás al menú y se perderá esta partida.</p>
       <div class="botones">
         <button type="button" id="conf-no">Seguir jugando</button>

@@ -11,7 +11,7 @@
   --oro-700: #b47f22;
   /* Texto: principal, secundario y terciario */
   --texto-1: #e9eef7;
-  --texto-2: var(--texto-2);
+  --texto-2: #a9b5ca;
   --texto-3: #7f8ba1;
   /* Estados */
   --ok: #5fd38d;
@@ -772,7 +772,9 @@ select option:checked { background-color: #2a3550; color: #fff; }
 .fin-progreso { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .fin-progreso:empty { display: none; }
 .fin-xp { margin: 0; text-align: center; font-weight: 700; color: var(--acento); }
-.fin-logro { margin: 0; text-align: center; }
+.fin-logro { margin: 0; text-align: center; animation: subir var(--dur-3) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 90ms + 700ms); }
+.fin-xp b { font-variant-numeric: tabular-nums; }
+body.sin-animaciones .fin-logro { animation: none; }
 
 @media (max-width: 760px) {
   .jugar-rejilla, .perfil-rejilla { grid-template-columns: 1fr; }
@@ -2383,8 +2385,26 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 #inicio .ini-pestanas::-webkit-scrollbar { display: none; }
 /* Centradas si caben; si no, desde la izquierda (con scroll) sin cortar la primera */
-#inicio .ini-pestanas > :first-child { margin-left: auto; }
-#inicio .ini-pestanas > :last-child { margin-right: auto; }
+#inicio .ini-pestanas > button:first-of-type { margin-left: auto; }
+#inicio .ini-pestanas > button:last-of-type { margin-right: auto; }
+/* La barra ocupa todo el alto de la cabecera: el subrayado queda sobre su borde */
+#inicio .ini-pestanas { position: relative; align-self: stretch; margin: -10px 0; }
+/* Subrayado que se desliza de una pestaña a otra (home.js) */
+.ini-subrayado {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, var(--oro-700), var(--oro-200), var(--oro-700));
+  box-shadow: 0 0 12px rgba(233, 185, 85, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--dur-3) var(--ease-spring), width var(--dur-3) var(--ease-spring), opacity var(--dur-2);
+}
+.ini-subrayado.sin-transicion { transition: opacity var(--dur-2); }
+#inicio .ini-pestanas.con-subrayado button[aria-selected="true"]::after { content: none; }
 #inicio .ini-pestanas button {
   position: relative;
   flex: 0 0 auto;
@@ -2617,9 +2637,21 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #inicio .ultima-jugar:hover { filter: brightness(1.08); transform: scale(1.05); background: linear-gradient(180deg, var(--oro-claro), var(--oro) 60%, var(--oro-osc)); }
 .ultima-jugar span { margin-left: 3px; }
 
-.novedades { min-height: 0; }
-.novedad { display: grid; grid-template-columns: 46% 1fr; gap: 12px; align-items: start; animation: subir 0.35s ease-out both; }
-.novedad[hidden] { display: none; }
+.novedades { min-height: 0; display: grid; }
+/* Carrusel: todas en la misma celda (altura fija, la de la más alta) y fundido entre ellas */
+.novedad {
+  grid-area: 1 / 1;
+  display: grid;
+  grid-template-columns: 46% 1fr;
+  gap: 12px;
+  align-items: start;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(14px);
+  transition: opacity var(--dur-3) ease, transform var(--dur-3) var(--ease-out), visibility 0s linear var(--dur-3);
+}
+.novedad.activa { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-3) ease, transform var(--dur-3) var(--ease-out), visibility 0s; }
+body.sin-animaciones .novedad { transition: none; }
 .novedad-arte { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid rgba(233, 185, 85, 0.25); line-height: 0; }
 .novedad-arte canvas { width: 100%; height: auto; aspect-ratio: 320 / 150; }
 .novedad-tag { position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 800; line-height: 1.5; letter-spacing: 0.06em; text-transform: uppercase; color: #241703; background: var(--oro); }
@@ -2628,10 +2660,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 .novedades-puntos { display: flex; justify-content: center; gap: 8px; margin-top: auto; }
 #inicio .novedades-puntos button { width: 8px; height: 8px; min-height: 0; padding: 0; border-radius: 999px; border: 0; box-shadow: none; background: rgba(255, 255, 255, 0.22); transition: width 0.25s, background 0.25s; }
 #inicio .novedades-puntos button[aria-selected="true"] { width: 22px; background: var(--oro); }
-.tarjeta-ini.todas .novedad[hidden] { display: grid; }
-.tarjeta-ini.todas .novedad { grid-template-columns: 1fr; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-.tarjeta-ini.todas .novedad-arte, .tarjeta-ini.todas .novedades-puntos { display: none; }
-.tarjeta-ini.todas .novedades { display: flex; flex-direction: column; gap: 10px; }
 
 /* ---------- Arsenal (portada y vista) ---------- */
 .arsenal-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -2689,7 +2717,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 #inicio .bloque h3, #sala .bloque h3 { color: var(--oro); letter-spacing: 0.04em; }
 #inicio .sub-pestanas button.activo, #inicio .segmentos button[aria-checked="true"] { border-color: var(--oro); color: var(--oro-claro); }
-#inicio .vista:not([data-vista="jugar"]) { animation: subir 0.3s ease-out both; }
 
 /* ---------- Pantallas medianas ---------- */
 @media (max-width: 1360px) {
@@ -2712,7 +2739,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #inicio .modos { grid-template-columns: repeat(2, 1fr); }
   .arsenal-cats { grid-template-columns: 1fr; }
   .ini-barra-dentro { flex-wrap: wrap; row-gap: 0; }
-  #inicio .ini-pestanas { order: 3; flex: 1 0 100%; margin: 4px -8px 0; }
+  #inicio .ini-pestanas { order: 3; flex: 1 0 100%; margin: 4px -8px -10px; }
   #inicio .ini-pestanas button[aria-selected="true"]::after { bottom: 0; }
   #inicio .chip-perfil { margin-left: auto; }
 }
@@ -2752,7 +2779,8 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   .novedad { grid-template-columns: 40% 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .heroe, .arsenal-cat, .novedad { animation: none !important; }
+  .heroe, .arsenal-cat { animation: none !important; }
+  .novedad { transition: none; }
 }
 /* Al saltar a un panel, que no quede bajo la barra fija */
 #inicio .panel-modo, #reglas-ia, #inicio .vista { scroll-margin-top: 96px; }
@@ -3023,3 +3051,46 @@ button.btn-peligro:hover:not(:disabled) { background: rgba(255, 107, 107, 0.24);
 button.btn-peligro:active:not(:disabled) { transform: translateY(1px); }
 button:disabled { cursor: not-allowed; }
 button:focus-visible, [role="tab"]:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--oro-200); outline-offset: 2px; }
+
+/* ===================================================== Diálogos (movimiento.js: abrirDialogo)
+   Un velo sobre todo y una caja centrada con cabecera, cuerpo con scroll y pie. */
+.pantalla.dialogo { z-index: 60; background: rgba(4, 8, 18, 0.66); }
+.dialogo-caja {
+  width: min(640px, 100%);
+  max-height: min(86vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-v2);
+  border: 1px solid var(--oro-linea);
+  border-radius: var(--r-l);
+  box-shadow: var(--sombra-3);
+  overflow: hidden;
+}
+.dialogo-cab { display: flex; align-items: center; gap: var(--e3); padding: var(--e4) var(--e5); border-bottom: 1px solid var(--borde-1); }
+.dialogo-cab h2 { margin: 0; flex: 1; font-family: var(--serif); font-weight: 800; font-size: 20px; letter-spacing: 0.04em; color: var(--oro-200); }
+.dialogo-cerrar {
+  width: 36px; height: 36px; min-height: 0; padding: 0; display: grid; place-items: center;
+  border-radius: var(--r-s); border: 1px solid var(--borde-2); background: rgba(255, 255, 255, 0.05); color: var(--texto-2); font-size: 15px;
+}
+.dialogo-cerrar:hover { color: var(--texto-1); background: rgba(255, 255, 255, 0.1); }
+.dialogo-cuerpo { padding: var(--e4) var(--e5) var(--e5); overflow-y: auto; overscroll-behavior: contain; }
+.dialogo-pie { display: flex; justify-content: flex-end; gap: var(--e2); padding: var(--e3) var(--e5); border-top: 1px solid var(--borde-1); }
+.novedades-lista { display: flex; flex-direction: column; gap: var(--e4); }
+.novedad-fila { display: grid; grid-template-columns: 200px 1fr; gap: var(--e4); align-items: center; }
+@media (max-width: 480px) {
+  .pantalla.dialogo { padding: 8px; align-items: end; }
+  .dialogo-caja { max-height: 92vh; border-radius: var(--r-l) var(--r-l) 0 0; }
+  .dialogo-cab { padding: var(--e3) var(--e4); }
+  .dialogo-cuerpo { padding: var(--e3) var(--e4) var(--e4); }
+  .novedad-fila { grid-template-columns: 1fr; }
+}
+
+/* ===================================================== Movimiento (fase 2) */
+#sala .sala-jugadores li.entra { animation: entraJugador var(--dur-3) var(--ease-spring) both; }
+@keyframes entraJugador { from { opacity: 0; transform: translateX(-14px) scale(0.97); } }
+#sala .sala-jugadores li.pop .check-sala { animation: popListo 420ms var(--ease-spring); }
+@keyframes popListo { 0% { transform: scale(0.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+/* Barras que se llenan al aparecer (movimiento.js: llenarAlVer). El relleno lleva --p de 0 a 1 */
+.llena-al-ver > span { display: block; height: 100%; transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 0.8s var(--ease-out); }
+.llena-al-ver:not(.vista) > span { transform: scaleX(0); }
+body.sin-animaciones #sala .sala-jugadores li, body.sin-animaciones .check-sala, body.sin-animaciones .llena-al-ver > span { animation: none; transition: none; }

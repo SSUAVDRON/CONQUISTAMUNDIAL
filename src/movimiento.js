@@ -122,3 +122,210 @@ function parchear(a, b) {
   }
   for (let i = bn.length; i < an.length; i++) an[i].remove();
 }
+
+// ------------------------------------------------------------- diálogos
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+/** Diálogos abiertos, el último encima. */
+const abiertos = [];
+
+function enfocables(el) {
+  return Array.from(el.querySelectorAll(FOCUSABLE)).filter((x) => !x.closest('[hidden]') && x.offsetParent !== null);
+}
+
+function teclaDialogo(e) {
+  const top = abiertos[abiertos.length - 1];
+  if (!top) return;
+  if (e.key === 'Escape') {
+    if (top.o.sinEscape) return;
+    e.preventDefault();
+    e.stopPropagation();
+    cerrarDialogo(top.el, 'escape');
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const f = enfocables(top.el);
+  if (!f.length) {
+    e.preventDefault();
+    return;
+  }
+  const first = f[0];
+  const last = f[f.length - 1];
+  const a = document.activeElement;
+  if (!top.el.contains(a)) {
+    e.preventDefault();
+    first.focus();
+  } else if (e.shiftKey && a === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && a === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+/** ¿Hay algún diálogo abierto? (para que Escape no haga otra cosa a la vez) */
+export function hayDialogo() {
+  return abiertos.length > 0;
+}
+
+/**
+ * Abre `el` como diálogo modal: aparece con una transición, el foco pasa
+ * dentro (a `o.foco` o al primer control) y Tab no sale de él. Escape lo
+ * cierra (salvo `o.sinEscape`) y el foco vuelve a donde estaba.
+ * `o.alCerrar(motivo)` se llama al cerrarlo ('escape' o lo que se pase a
+ * `cerrarDialogo`).
+ */
+export function abrirDialogo(el, o = {}) {
+  if (!el) return;
+  const ya = abiertos.findIndex((d) => d.el === el);
+  if (ya >= 0) abiertos.splice(ya, 1);
+  const prev = ya >= 0 ? null : document.activeElement;
+  abiertos.push({ el, o, prev });
+  if (!el.hasAttribute('role')) el.setAttribute('role', 'dialog');
+  // Clic en el fondo o en un botón [data-cerrar]: cerrar
+  if (!el._dialogo) {
+    el._dialogo = true;
+    el.addEventListener('click', (e) => {
+      const d = abiertos.find((x) => x.el === el);
+      if (!d) return;
+      if (e.target.closest?.('[data-cerrar]')) cerrarDialogo(el, 'cerrar');
+      else if (e.target === el && !d.o.sinFondo) cerrarDialogo(el, 'fondo');
+    });
+  }
+  el.setAttribute('aria-modal', 'true');
+  if (abiertos.length === 1) document.addEventListener('keydown', teclaDialogo, true);
+  mostrar(el, { y: 0, scale: 1, ms: o.ms ?? 200 });
+  const card = o.tarjeta === false ? null : el.querySelector(o.tarjeta || '.tarjeta, .dialogo-caja');
+  if (card && card.animate && !sinMovimiento()) {
+    card.animate(
+      [{ opacity: 0, transform: 'translateY(10px) scale(0.96)' }, { opacity: 1, transform: 'none' }],
+      { duration: o.ms ? o.ms + 60 : 280, easing: 'cubic-bezier(0.2, 1.2, 0.4, 1)' },
+    );
+  }
+  const foco = (typeof o.foco === 'string' ? el.querySelector(o.foco) : o.foco) || enfocables(el)[0];
+  if (foco) foco.focus({ preventScroll: true });
+  else {
+    el.tabIndex = -1;
+    el.focus({ preventScroll: true });
+  }
+}
+
+/** Cierra el diálogo `el` (si está abierto) y devuelve el foco. */
+export function cerrarDialogo(el, motivo = 'cerrar') {
+  const i = abiertos.findIndex((d) => d.el === el);
+  if (i < 0) {
+    if (el && !el.hidden) ocultar(el, { y: 0, scale: 1 });
+    return;
+  }
+  const [d] = abiertos.splice(i, 1);
+  if (!abiertos.length) document.removeEventListener('keydown', teclaDialogo, true);
+  ocultar(el, { y: 0, scale: 1, ms: 150 });
+  const back = d.prev;
+  if (back && back.isConnected && back.offsetParent !== null && typeof back.focus === 'function') back.focus({ preventScroll: true });
+  d.o.alCerrar?.(motivo);
+}
+
+/** Quita todos los diálogos sin animación (al cambiar de pantalla). */
+export function cerrarDialogos() {
+  while (abiertos.length) {
+    const d = abiertos.pop();
+    d.el.hidden = true;
+  }
+  document.removeEventListener('keydown', teclaDialogo, true);
+}
+
+// ------------------------------------------------------------- cifras
+
+/**
+ * Pone el número `a` en `el` contando desde el que tenía (o `o.de`) en
+ * `o.ms` (por defecto ~600 ms). `o.formato(n)` da el texto.
+ */
+export function contar(el, a, o = {}) {
+  if (!el) return;
+  const fmt = o.formato || ((n) => String(Math.round(n)));
+  const de = o.de ?? el._cifra ?? a;
+  el._cifra = a;
+  cancelAnimationFrame(el._cuenta || 0);
+  if (de === a || sinMovimiento()) {
+    el.textContent = fmt(a);
+    return;
+  }
+  const ms = o.ms ?? Math.min(900, 380 + Math.abs(a - de) * 4);
+  const t0 = performance.now();
+  const paso = (now) => {
+    const t = Math.min(1, (now - t0) / ms);
+    const k = 1 - (1 - t) ** 3;
+    el.textContent = fmt(de + (a - de) * k);
+    if (t < 1) el._cuenta = requestAnimationFrame(paso);
+  };
+  el._cuenta = requestAnimationFrame(paso);
+}
+
+// ------------------------------------------------------------- barras
+
+let vigia = null;
+
+/**
+ * Las barras `.llena-al-ver` de `raiz` se llenan (clase `vista`) cuando
+ * aparecen en pantalla. El relleno es su hijo con `--p` (0 a 1).
+ */
+export function llenarAlVer(raiz = document) {
+  const barras = raiz.querySelectorAll('.llena-al-ver:not(.vista)');
+  if (!barras.length) return;
+  if (sinMovimiento() || typeof IntersectionObserver === 'undefined') {
+    for (const b of barras) b.classList.add('vista');
+    return;
+  }
+  vigia ??= new IntersectionObserver((entradas) => {
+    for (const e of entradas) {
+      if (!e.isIntersecting) continue;
+      e.target.classList.add('vista');
+      vigia.unobserve(e.target);
+    }
+  }, { threshold: 0.2 });
+  for (const b of barras) vigia.observe(b);
+}
+
+// ------------------------------------------------------------- teclado
+
+/**
+ * Flechas, Inicio y Fin en un grupo de botones (pestañas o radios): el foco
+ * se mueve al siguiente activo y lo elige (clic). Solo el elegido entra en
+ * el orden de Tab. `sel`: selector de los botones del grupo.
+ */
+export function teclasGrupo(box, sel = '[role="tab"], [role="radio"]') {
+  if (!box || box._teclas) return;
+  box._teclas = sel;
+  box.addEventListener('keydown', (e) => {
+    const items = Array.from(box.querySelectorAll(sel)).filter((b) => !b.disabled && !b.hidden && b.offsetParent !== null);
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    let j = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % items.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + items.length) % items.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = items.length - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    items[j].focus();
+    items[j].click();
+    // Si el clic ha rehecho los botones, el foco va al nuevo de la misma posición
+    if (!box.contains(document.activeElement)) {
+      const again = Array.from(box.querySelectorAll(sel)).filter((b) => !b.disabled && !b.hidden);
+      again[j]?.focus();
+    }
+    rodar(box);
+  });
+  rodar(box);
+}
+
+/** Orden de Tab del grupo: solo el elegido (o el primero) tiene tabindex 0. */
+export function rodar(box) {
+  if (!box) return;
+  const sel = box._teclas || '[role="tab"], [role="radio"]';
+  const items = Array.from(box.querySelectorAll(sel));
+  if (!items.length) return;
+  const on = items.find((b) => b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-checked') === 'true') || items.find((b) => !b.disabled) || items[0];
+  for (const b of items) b.tabIndex = b === on ? 0 : -1;
+}

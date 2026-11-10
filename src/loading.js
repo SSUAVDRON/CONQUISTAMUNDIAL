@@ -1,6 +1,8 @@
 // Pantalla de carga: muestra los pasos reales de preparar la partida, una
 // barra de progreso y un consejo. Dura un mínimo para que dé tiempo a leerlo.
 
+import { mostrar } from './movimiento.js';
+
 const $ = (id) => document.getElementById(id);
 
 export const TIPS = [
@@ -44,7 +46,8 @@ export async function withLoading(title, steps, { minMs = 1300 } = {}) {
   $('carga-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
   $('carga-progreso').style.width = '0%';
   box.classList.remove('saliendo');
-  box.hidden = false;
+  clearTimeout(box._fuera);
+  mostrar(box, { y: 0, scale: 1.02, ms: 260 });
   let result;
   try {
     for (let i = 0; i < steps.length; i++) {
@@ -59,7 +62,7 @@ export async function withLoading(title, steps, { minMs = 1300 } = {}) {
     if (left > 0) await wait(left);
   } finally {
     box.classList.add('saliendo');
-    setTimeout(() => {
+    box._fuera = setTimeout(() => {
       box.hidden = true;
     }, 350);
   }

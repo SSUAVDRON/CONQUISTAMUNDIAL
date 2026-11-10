@@ -7,7 +7,7 @@ import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
-import { actualizarHtml, alternar, mostrar, ocultar } from './movimiento.js';
+import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, contar, mostrar, ocultar } from './movimiento.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -157,11 +157,9 @@ export class UI {
     $('fin-menu').addEventListener('click', () => this.handlers.onExit?.(true));
     // Revancha: la misma partida (mapa, rivales y reglas) con otra semilla
     $('fin-nueva').addEventListener('click', () => this.handlers.onRematch?.());
-    $('conf-no').addEventListener('click', () => {
-      ocultar($('confirmar'), { y: 0, scale: 1 });
-    });
+    $('conf-no').addEventListener('click', () => cerrarDialogo($('confirmar')));
     $('conf-si').addEventListener('click', () => {
-      ocultar($('confirmar'), { y: 0, scale: 1 });
+      cerrarDialogo($('confirmar'));
       this.handlers.onExit?.(true);
     });
 
@@ -370,6 +368,7 @@ export class UI {
 
   /** Oculta la interfaz de partida (al volver al inicio). */
   hideHud() {
+    cerrarDialogos();
     $('hud').hidden = true;
     $('fin').hidden = true;
     $('confirmar').hidden = true;
@@ -392,6 +391,7 @@ export class UI {
   }
 
   showHud() {
+    cerrarDialogos();
     $('hud').hidden = false;
     $('fin').hidden = true;
     $('eventos').replaceChildren();
@@ -564,8 +564,7 @@ export class UI {
   }
 
   confirmExit() {
-    mostrar($('confirmar'), { y: 0, scale: 1 });
-    $('conf-no').focus();
+    abrirDialogo($('confirmar'), { foco: '#conf-no' });
   }
 
   /** `progress`: { xp, level, levelUp, achievements: [{icon, name}] } o null. */
@@ -574,32 +573,35 @@ export class UI {
     $('fin-texto').textContent = text;
     const box = $('fin-progreso');
     box.replaceChildren();
+    let counters = null;
     if (progress) {
+      // Recompensas que suben desde cero cuando aparece la tarjeta
       const xp = document.createElement('p');
       xp.className = 'fin-xp';
-      xp.textContent = `+${progress.xp} XP · +${progress.coins || 0} 🪙${progress.levelUp ? ` · ¡Subes al nivel ${progress.level}!` : ''}`;
+      const nXp = document.createElement('b');
+      const nCoins = document.createElement('b');
+      nXp.textContent = '+0';
+      nCoins.textContent = '+0';
+      xp.append(nXp, ' XP · ', nCoins, ' 🪙', progress.levelUp ? ` · ¡Subes al nivel ${progress.level}!` : '');
       box.append(xp);
-      for (const d of progress.daily || []) {
+      counters = () => {
+        contar(nXp, progress.xp, { de: 0, ms: 900, formato: (n) => `+${Math.round(n)}` });
+        contar(nCoins, progress.coins || 0, { de: 0, ms: 900, formato: (n) => `+${Math.round(n)}` });
+      };
+      const line = (text, i) => {
         const li = document.createElement('p');
         li.className = 'fin-logro';
-        li.textContent = `${d.icon} Reto diario: ${d.name} (+${d.coins} 🪙)`;
+        li.style.setProperty('--i', String(i));
+        li.textContent = text;
         box.append(li);
-      }
-      if (progress.dailyBonus) {
-        const li = document.createElement('p');
-        li.className = 'fin-logro';
-        li.textContent = `📅 ¡Los tres retos de hoy! (+${progress.dailyBonus} 🪙)`;
-        box.append(li);
-      }
-      for (const a of progress.achievements) {
-        const li = document.createElement('p');
-        li.className = 'fin-logro';
-        li.textContent = `${a.icon} Logro conseguido: ${a.name}${a.coins ? ` (+${a.coins} 🪙)` : ''}`;
-        box.append(li);
-      }
+      };
+      let i = 0;
+      for (const d of progress.daily || []) line(`${d.icon} Reto diario: ${d.name} (+${d.coins} 🪙)`, i++);
+      if (progress.dailyBonus) line(`📅 ¡Los tres retos de hoy! (+${progress.dailyBonus} 🪙)`, i++);
+      for (const a of progress.achievements) line(`${a.icon} Logro conseguido: ${a.name}${a.coins ? ` (+${a.coins} 🪙)` : ''}`, i++);
     }
     // Entra en dos tiempos: el velo sobre el mapa y luego la tarjeta
-    mostrar($('fin'), { y: 0, scale: 1, ms: 450 });
+    abrirDialogo($('fin'), { ms: 450, tarjeta: false, foco: '#fin-nueva' });
     const card = $('fin').querySelector('.tarjeta');
     if (card && card.animate && !document.body.classList.contains('sin-animaciones')) {
       card.animate(
@@ -607,11 +609,11 @@ export class UI {
         { duration: 420, delay: 120, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' },
       );
     }
-    $('fin-nueva').focus({ preventScroll: true });
+    if (counters) setTimeout(counters, 420);
   }
 
   hideEnd() {
-    ocultar($('fin'), { y: 0, scale: 1 });
+    cerrarDialogo($('fin'));
   }
 
   /** Rótulo del reparto: «70 % soldados · 30 % trabajadores». */
