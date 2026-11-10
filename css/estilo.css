@@ -3090,7 +3090,7 @@ button:focus-visible, [role="tab"]:focus-visible, a:focus-visible, summary:focus
 @keyframes popListo { 0% { transform: scale(0.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
 /* Barras que se llenan al aparecer (movimiento.js: llenarAlVer). El relleno lleva --p de 0 a 1 */
 .llena-al-ver > span { display: block; height: 100%; transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 0.8s var(--ease-out); }
-.llena-al-ver:not(.vista) > span { transform: scaleX(0); }
+.llena-al-ver:not(.llena) > span { transform: scaleX(0); }
 body.sin-animaciones #sala .sala-jugadores li, body.sin-animaciones .check-sala, body.sin-animaciones .llena-al-ver > span { animation: none; transition: none; }
 
 /* ===================================================== Jugar y multijugador (fase 2) */

@@ -273,20 +273,20 @@ export function contar(el, a, o = {}) {
 let vigia = null;
 
 /**
- * Las barras `.llena-al-ver` de `raiz` se llenan (clase `vista`) cuando
+ * Las barras `.llena-al-ver` de `raiz` se llenan (clase `llena`) cuando
  * aparecen en pantalla. El relleno es su hijo con `--p` (0 a 1).
  */
 export function llenarAlVer(raiz = document) {
-  const barras = raiz.querySelectorAll('.llena-al-ver:not(.vista)');
+  const barras = raiz.querySelectorAll('.llena-al-ver:not(.llena)');
   if (!barras.length) return;
   if (sinMovimiento() || typeof IntersectionObserver === 'undefined') {
-    for (const b of barras) b.classList.add('vista');
+    for (const b of barras) b.classList.add('llena');
     return;
   }
   vigia ??= new IntersectionObserver((entradas) => {
     for (const e of entradas) {
       if (!e.isIntersecting) continue;
-      e.target.classList.add('vista');
+      e.target.classList.add('llena');
       vigia.unobserve(e.target);
     }
   }, { threshold: 0.2 });
