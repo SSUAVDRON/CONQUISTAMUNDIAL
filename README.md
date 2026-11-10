@@ -231,9 +231,13 @@ Con el webhook de «Despliegue automático» (GitHub → Settings → Webhooks),
 subida a esas ramas se publica sola. El `.htaccess` de las ramas no deja leer
 `.git` y pide revalidar el HTML siempre (`no-cache, must-revalidate`).
 
-**Rama `main` tal cual** (desaconsejado: módulos sueltos que la caché puede mezclar): el `.htaccess` de
-la raíz no deja leer `.git`, `tests/`, `herramientas/`, `docs/` ni los `.md`, y
-pide al navegador comprobar siempre la última versión.
+**Rama `main` tal cual** (módulos sueltos): el `.htaccess` de la raíz no deja
+leer `.git`, `tests/`, `herramientas/`, `docs/` ni los `.md`, y pide comprobar
+siempre la última versión. Para que la CDN no mezcle módulos de versiones
+distintas, `index.html` lleva un *import map* con la huella del contenido de
+cada módulo (`src/render.js?v=…`): cada archivo cambia de dirección solo cuando
+cambia. Tras tocar `src/` o `css/`: `node herramientas/versionar.js` (un test
+falla si se olvida).
 
 **A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
 
