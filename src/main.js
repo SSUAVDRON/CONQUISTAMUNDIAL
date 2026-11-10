@@ -275,6 +275,8 @@ function enterGame(game) {
 async function startGame(opts) {
   if (state.loading) return;
   state.loading = true;
+  // Para la revancha: la misma partida con otra semilla (el tutorial no)
+  state.lastOpts = opts.tutorial ? null : { ...opts, seed: '' };
   leaveOnline();
   tutorial.stop();
   const seed = opts.seed ? hashString(opts.seed) : randomSeed();
@@ -608,20 +610,36 @@ function checkEnd() {
   if (game.phase === 'ended' && !state.endShown) {
     state.endShown = true;
     const progress = finishGame();
+    let title;
+    let text;
     if (game.winningAlliance && game.winningAlliance.includes(human)) {
       const others = game.winningAlliance.filter((p) => p !== human).map((p) => p.name).join(', ');
-      ui.showEnd('¡Victoria en alianza!', `Solo quedáis tú y tus aliados (${others}) en ${formatTime(seconds)}.\nTu territorio: ${formatPercent(human.tiles / land)}.`, progress);
+      title = '¡Victoria en alianza!';
+      text = `Solo quedáis tú y tus aliados (${others}) en ${formatTime(seconds)}.\nTu territorio: ${formatPercent(human.tiles / land)}.`;
     } else if (game.winner === human) {
-      ui.showEnd('¡Victoria!', `${winText(game, true, human, land)} en ${formatTime(seconds)}.`, progress);
+      title = '¡Victoria!';
+      text = `${winText(game, true, human, land)} en ${formatTime(seconds)}.`;
     } else if (game.winningAlliance) {
-      ui.showEnd('Fin de la partida', `La alianza de ${game.winningAlliance.map((p) => p.name).join(', ')} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+      title = 'Fin de la partida';
+      text = `La alianza de ${game.winningAlliance.map((p) => p.name).join(', ')} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`;
     } else {
-      ui.showEnd('Fin de la partida', `${winText(game, false, game.winner, land)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+      title = 'Fin de la partida';
+      text = `${winText(game, false, game.winner, land)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`;
     }
+    // Un momento para ver el final: la cámara se aleja hasta ver todo el
+    // mapa y después aparece el resultado
+    const map = game.map;
+    const fit = Math.min(camera.viewW / map.width, camera.viewH / map.height) * 0.9;
+    camera.flyTo(map.width / 2, map.height / 2, fit, 1300);
+    setTimeout(() => {
+      if (state.game === game) ui.showEnd(title, text, progress);
+    }, 1500);
   } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
     state.defeatShown = true;
     const progress = finishGame();
-    ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+    setTimeout(() => {
+      if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+    }, 1200);
   }
 }
 
@@ -1042,6 +1060,17 @@ ui.on({
     tutorial.stop();
     startDemo();
   },
+  /** Revancha: misma partida contra la IA (en multijugador, volver a la sala). */
+  onRematch() {
+    finishGame();
+    ui.hideEnd();
+    if (state.online || !state.lastOpts) {
+      tutorial.stop();
+      startDemo();
+      return;
+    }
+    startGame(state.lastOpts);
+  },
   onBuildMode: setBuildMode,
   onFocusPlayer(id) {
     const label = state.renderer?.labels.find((l) => l.player.id === id);
@@ -1155,6 +1184,10 @@ state.profile = profile;
 
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
 state.demo = true;
+// La cabecera (tu ficha, nivel y monedas) y el saludo, ya desde el primer
+// fotograma: antes salían vacíos hasta que se cargaba la partida de fondo
+home.renderChip();
+home.renderHero();
 requestAnimationFrame(() => setTimeout(() => {
   if (!state.game) startDemo({ background: true });
 }, 30));

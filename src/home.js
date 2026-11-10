@@ -1,7 +1,7 @@
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
 import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } from './config.js';
-import { PROFILES, rulesetId } from './mecanicas.js';
+import { PROFILES } from './mecanicas.js';
 import { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } from './multiplayer.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { decodeRelief, generateMap, markRivers } from './map.js';
@@ -217,8 +217,9 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   const syncProfileNote = () => {
     const P = PROFILES[rules.profile] || PROFILES.trinchera;
     profileNote.textContent = rules.profile === 'clasico'
-      ? `Ritmo de FrontWars, sin puntos estratégicos ni tecnologías (${P.id})`
-      : `Ritmo lento, con puntos estratégicos y tecnologías (${P.id})`;
+      ? 'Ritmo ágil, sin puntos estratégicos ni tecnologías'
+      : 'Ritmo lento, con puntos estratégicos y tecnologías';
+    profileNote.title = `Versión de las reglas: ${P.id}`;
   };
   syncProfileNote();
   const profileBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Perfil de reglas' });
@@ -292,7 +293,7 @@ function segmented(box, options, current, onChange) {
 export function rulesSummary(r) {
   if (!r) return '';
   const modes = { capitales: 'victoria por capitales', economia: 'victoria económica', supervivencia: 'supervivencia' };
-  const parts = [`${(PROFILES[r.profile] || PROFILES.trinchera).name} (${rulesetId(r)})`, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
+  const parts = [(PROFILES[r.profile] || PROFILES.trinchera).name, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.economy === 'workers') parts.push('economía con trabajadores');
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
@@ -498,13 +499,15 @@ export class Home {
     $('plazas-mas').addEventListener('click', () => this._seats(1));
 
     // Perfil
+    // Escribir el nombre o arrastrar el color: como mucho un redibujado por
+    // fotograma (cada uno rehace decenas de miniaturas)
     $('in-nombre').addEventListener('input', () => {
       this.profile.nombre = $('in-nombre').value.trim().slice(0, 18);
-      this._profileChanged();
+      this._profileChangedSoon();
     });
     $('in-color').addEventListener('input', () => {
       this.profile.color = $('in-color').value;
-      this._profileChanged();
+      this._profileChangedSoon();
     });
     $('in-titulo').addEventListener('change', () => {
       const t = TITLES.find((x) => x.id === $('in-titulo').value);
@@ -689,13 +692,37 @@ export class Home {
   }
 
   _profileChanged() {
-    this.renderChip();
-    this.renderIdentity();
-    this.renderCard();
-    this.renderPatterns();
-    this.renderAppearance();
-    this.renderHero();
+    this._keepFocus(() => {
+      this.renderChip();
+      this.renderIdentity();
+      this.renderCard();
+      this.renderPatterns();
+      this.renderAppearance();
+      this.renderHero();
+    });
     this.h.onProfileChange?.(true);
+  }
+
+  _profileChangedSoon() {
+    if (this._changeRaf) return;
+    this._changeRaf = requestAnimationFrame(() => {
+      this._changeRaf = 0;
+      this._profileChanged();
+    });
+  }
+
+  /**
+   * Rehace partes del menú sin perder el foco del teclado: si el foco estaba
+   * en una opción (data-k), vuelve a la misma opción ya redibujada.
+   */
+  _keepFocus(fn) {
+    const a = document.activeElement;
+    const key = a && a.dataset ? a.dataset.k : null;
+    const box = key ? a.parentElement && a.parentElement.id : null;
+    fn();
+    if (!key || !box) return;
+    const again = document.getElementById(box)?.querySelector(`[data-k="${CSS.escape(key)}"]`);
+    if (again && again !== document.activeElement) again.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------- portada y arsenal
@@ -937,6 +964,7 @@ export class Home {
             role: 'radio',
             'aria-checked': String(b.id === p.estandarte),
             class: `estandarte est-${b.id}${s.cls}`,
+            'data-k': itemKey(b),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(b, () => (p.estandarte = b.id)),
@@ -962,6 +990,7 @@ export class Home {
             role: 'radio',
             'aria-checked': String(f.id === p.marco),
             class: `opcion${s.cls}`,
+            'data-k': itemKey(f),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(f, () => (p.marco = f.id)),
@@ -983,6 +1012,7 @@ export class Home {
             role: 'radio',
             'aria-checked': String(n.id === p.colorNombre),
             class: `color-nombre${s.cls}`,
+            'data-k': itemKey(n),
             disabled: s.disabled,
             style: `--c:${color}`,
             title: s.title,
@@ -1005,7 +1035,7 @@ export class Home {
     $('sala').hidden = true;
     $('crear-sala').hidden = true;
     this.renderAll();
-    this.cover?.start();
+    if (this.view === 'jugar' || !this.view) this.cover?.start();
     requestAnimationFrame(() => this._paintHero());
   }
 
@@ -1023,6 +1053,9 @@ export class Home {
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
     if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
+    // El mapa animado de la portada solo corre mientras se ve «Jugar»
+    if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
+    else this.cover?.stop();
     $('inicio').scrollTo?.({ top: 0 });
   }
 
@@ -1095,9 +1128,11 @@ export class Home {
       }
       if (this.buying !== itemKey(item)) {
         this.buying = itemKey(item);
-        this.renderAppearance();
-        this.renderPatterns();
-        this.renderIdentity();
+        this._keepFocus(() => {
+          this.renderAppearance();
+          this.renderPatterns();
+          this.renderIdentity();
+        });
         return;
       }
       this.buying = null;
@@ -1206,6 +1241,7 @@ export class Home {
             role: 'radio',
             'aria-checked': String(item.id === current),
             class: `opcion${s.cls}`,
+            'data-k': itemKey(item),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(item, () => apply(item.id)),
@@ -1257,6 +1293,7 @@ export class Home {
             role: 'radio',
             'aria-checked': String(item.id === p.patron),
             class: `patron${s.cls}`,
+            'data-k': itemKey(item),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(item, () => (p.patron = item.id)),

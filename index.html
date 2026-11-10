@@ -184,7 +184,7 @@
         <details class="ayuda">
           <summary>Cómo se juega</summary>
           <ul>
-            <li><b>Perfiles de reglas:</b> <i>Clásico</i> (el de Partida rápida) sigue el ritmo de FrontWars: regeneración con la fórmula base, expansión y guerras rápidas, sin puntos estratégicos ni tecnologías. <i>Trinchera</i> va más despacio (expansión ×0,07, guerras ×0,5, regeneración ×0,6) y añade puntos estratégicos, tecnologías y especialización. Se elige en las reglas de «Contra IA» y de la sala.</li>
+            <li><b>Perfiles de reglas:</b> <i>Clásico</i> (el de Partida rápida) tiene un ritmo ágil: regeneración con la fórmula base, expansión y guerras rápidas, sin puntos estratégicos ni tecnologías. <i>Trinchera</i> va más despacio (expansión ×0,07, guerras ×0,5, regeneración ×0,6) y añade puntos estratégicos, tecnologías y especialización. Se elige en las reglas de «Contra IA» y de la sala.</li>
             <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas: un disco de <i>52 casillas</i> (menos si toca el mar u otro país) y <i>2500 tropas</i>.</li>
             <li><b>Tropas:</b> se regeneran solas, lo más rápido hacia el <i>42 %</i> de tu techo y nada al llenarlo. El techo es 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad (unas 12 000 al empezar): más territorio y ciudades, más tropas. No esperes con la barra llena: ataca.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Sale el % de tus tropas de <i>Fuerza de ataque</i> (20 % al empezar) y la reserva se regenera aparte. En tierra libre cada casilla cuesta 1,6 tropas en llanura, 2 en meseta y 2,4 en montaña; tu territorio crece parejo, en círculo (hacia donde haces clic, algo más), y con pocas tropas avanza más despacio. Contra otro país, cuanto más defensores tenga por casilla, más caro y lento; él pierde sus tropas por casilla a cada casilla que le quitas.</li>
@@ -204,7 +204,7 @@
             <li><b>Pactos y paz:</b> en la ficha de otra nación puedes proponer un pacto de no agresión de 5 min, ofrecer la paz si estáis en guerra (con un tributo en oro si quieres) y pedir ayuda a tus aliados. Romper un pacto te marca como traidor.</li>
             <li><b>Victoria:</b> según el modo de la partida: dominación (el 70 % de la tierra), capitales (solo en Trinchera: controlar el 40 % de todas durante 60 s), economía (900.000 de oro por minuto durante 2 min) o supervivencia (al acabar el tiempo, la mejor puntuación). También ganas si quedas en pie solo con tus aliados.</li>
             <li><b>Minimapa:</b> abajo a la izquierda ves todo el mapa en pequeño (tu nación late en blanco y el recuadro dorado es lo que ves); haz clic o arrastra en él para ir a ese sitio. Se pliega con su botón.</li>
-            <li><b>Monedas y retos:</b> cada partida da monedas, y más los logros y los 3 retos de cada día (en «Logros»). Gástalas en «Apariencia» en estandartes, marcos, patrones, símbolos, colores y títulos.</li>
+            <li><b>Monedas y retos:</b> cada partida da monedas, y más los logros y los 3 retos de cada día (en «Progreso»). Gástalas en «Apariencia» en estandartes, marcos, patrones, símbolos, colores y títulos.</li>
             <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R puesto defensivo · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M bomba atómica · J bomba H · K MIRV · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido · I = desarrollo.</li>
           </ul>
         </details>
@@ -341,7 +341,7 @@
             <label class="campo"><span>Volumen de la música <strong id="out-vol-musica">50</strong></span>
               <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
             <label class="campo"><span>Volumen de los efectos <strong id="out-vol-efectos">60</strong></span>
-              <input id="aj-vol-efectos" type="range" min="0" max="100" value="60"></label>
+              <input id="aj-vol-efectos" type="range" min="0" max="100" value="80"></label>
           </div>
           <div class="botones-izq">
             <button type="button" id="aj-tutorial">Repetir el tutorial</button>
@@ -524,6 +524,8 @@
       <span class="puntero-txt">TÚ</span>
     </button>
 
+    <!-- Últimos segundos del despliegue (3-2-1) y «¡Comienza!» -->
+    <div id="cuenta-atras" class="cuenta-atras" aria-hidden="true" hidden></div>
     <div id="aviso" hidden><span id="aviso-texto"></span><button type="button" id="aviso-auto" class="aviso-auto" hidden>🎲 Elegir por mí</button></div>
     <!-- Respuesta breve a tus acciones (no es un aviso importante) -->
     <div id="pista" class="pista" hidden role="status"></div>
@@ -658,7 +660,8 @@
       <div id="fin-progreso" class="fin-progreso"></div>
       <div class="botones">
         <button type="button" id="fin-seguir">Seguir mirando</button>
-        <button type="button" id="fin-nueva" class="principal">Nueva partida</button>
+        <button type="button" id="fin-menu">Menú</button>
+        <button type="button" id="fin-nueva" class="principal">Revancha</button>
       </div>
     </div>
   </div>

@@ -167,16 +167,26 @@ export class CoverArt {
     this.ships = ships;
   }
 
+  /** ¿Animaciones apagadas? (Ajustes o el sistema; se mira en cada fotograma) */
+  _still() {
+    return document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  }
+
   start() {
     if (this.raf) return;
-    const still = document.body.classList.contains('sin-animaciones') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const loop = (now) => {
-      this.raf = still ? 0 : requestAnimationFrame(loop);
+      if (this._still()) {
+        // Se apagaron las animaciones: una imagen fija y se para
+        this.raf = 0;
+        this.draw(1.2);
+        return;
+      }
+      this.raf = requestAnimationFrame(loop);
       if (now - this.last < 33) return;
       this.last = now;
       this.draw(now / 1000);
     };
-    if (still) this.draw(1.2);
+    if (this._still()) this.draw(1.2);
     else this.raf = requestAnimationFrame(loop);
   }
 

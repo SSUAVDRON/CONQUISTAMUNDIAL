@@ -352,7 +352,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   box-shadow: inset 0 0 calc(24px + var(--amenaza) * 60px) rgba(255, 30, 30, calc(0.15 + var(--amenaza) * 0.45));
   opacity: 0;
 }
-#alerta-roja.activa::after { animation: latidoRojo calc(2s - var(--amenaza) * 1.2s) ease-in-out infinite; }
+#alerta-roja.activa::after { animation: latidoRojo 1.7s ease-in-out infinite; }
+#alerta-roja.activa[data-nivel="2"]::after { animation-duration: 1.2s; }
+#alerta-roja.activa[data-nivel="3"]::after { animation-duration: 0.85s; }
 @keyframes latidoRojo { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #alerta-roja.activa::after { animation: none; opacity: 0.6; } }
 
@@ -447,6 +449,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
 /* ---------- Tooltip ---------- */
 #tooltip {
   position: fixed;
+  left: 0;
+  top: 0;
+  will-change: transform;
   pointer-events: none;
   padding: 6px 10px;
   border-radius: 8px;
@@ -975,7 +980,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 #lista-clasificacion .marcas { font-size: 11px; }
 #lista-clasificacion .marcas:empty { display: none; }
 .lb-barra { position: absolute; left: 4px; right: 4px; bottom: 1px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, 0.05); pointer-events: none; }
-.lb-barra span { display: block; height: 100%; border-radius: 1px; background: rgba(242, 179, 61, 0.55); transition: width 0.4s ease-out; }
+.lb-barra span { display: block; height: 100%; border-radius: 1px; background: rgba(242, 179, 61, 0.55); transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
 #lista-clasificacion li.yo .lb-barra span { background: var(--acento); }
 #lista-clasificacion li.sube { animation: sube 0.9s ease-out; }
 #lista-clasificacion li.baja { animation: baja 0.9s ease-out; }
@@ -990,7 +995,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 .frente.saliendo { opacity: 0.45; filter: saturate(0.3); pointer-events: none; }
 .frente.saliendo .f-vs { background: rgba(255, 255, 255, 0.06); color: var(--texto-suave); }
 .f-barra { display: flex; gap: 2px; height: 5px; background: transparent; }
-.f-barra span { display: block; height: 100%; border-radius: 3px; transition: width 0.4s ease-out; }
+.f-barra span { display: block; height: 100%; border-radius: 3px; transition: width 0.22s linear; } /* se actualiza 5 veces por segundo: lineal y corto, sin «latidos» */
 .f-barra-a { background: var(--acento); box-shadow: 0 0 8px rgba(255, 255, 255, 0.15); }
 .f-barra .f-barra-d { background: rgba(255, 255, 255, 0.24); }
 .frente.entrante .f-barra-a { background: linear-gradient(90deg, #ff3b3b, #ff8a7a); box-shadow: 0 0 10px rgba(255, 70, 70, 0.55); }
@@ -1050,7 +1055,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 /* ---------- Aviso central, tooltip y propuestas ---------- */
 #aviso:not([hidden]) { animation: avisoEntra 0.3s ease-out; }
 #tooltip:not([hidden]) { animation: tipEntra 0.12s ease-out; }
-@keyframes tipEntra { from { opacity: 0; transform: translateY(3px); } }
+@keyframes tipEntra { from { opacity: 0; } } /* solo opacidad: la posición va en transform */
 .solicitud { transition: transform 0.15s; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1252,7 +1257,7 @@ body.con-tutorial #eventos { top: auto; }
   width: var(--progreso, 100%);
   background: var(--acento);
   opacity: 0.65;
-  transition: width 0.4s ease;
+  transition: width 0.22s linear;
 }
 #construir button:not(.caro)::after { background: var(--bien); opacity: 0.55; }
 #construir canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
@@ -1399,14 +1404,14 @@ body.con-tutorial #eventos { top: auto; }
   inset: 0;
   background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 4px, transparent 4px 8px);
   background-size: 11.3px 100%;
-  animation: avance 0.6s linear infinite;
+  animation: avanceFrente 0.6s linear infinite;
 }
 #combates .frente.saliendo { opacity: 0.4; transform: translateX(-6px) scale(0.97); }
 .golpe { animation: golpe 0.45s ease-out; }
 @keyframes entrarIzq { from { opacity: 0; transform: translateX(-26px) scale(0.95); } }
 @keyframes barrido { from { background-position: 120% 0; } to { background-position: -60% 0; opacity: 0; } }
 @keyframes vsPulso { 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 10px rgba(255, 255, 255, 0.18); } }
-@keyframes avance { to { background-position: 11.3px 0; } }
+@keyframes avanceFrente { to { background-position: 11.3px 0; } }
 @keyframes golpe { 35% { color: #fff; text-shadow: 0 0 8px rgba(255, 90, 90, 0.8); } }
 
 /* Avisos: el recuadro es #avisos (con cabecera plegable); #eventos es solo la lista */
@@ -1548,12 +1553,24 @@ button.principal {
 }
 button.principal:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(242, 179, 61, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 0 rgba(120, 70, 0, 0.35); filter: brightness(1.05); }
 button.principal:active:not(:disabled) { transform: translateY(1px) scale(0.99); box-shadow: 0 3px 10px rgba(242, 179, 61, 0.3), inset 0 2px 4px rgba(120, 70, 0, 0.35); }
-.pantalla-inicio button:not(.principal):not(.modo):not(.opcion):not(.patron):not(.estandarte):not(.color-nombre):not(.muestra-color):not(.chip-perfil):not(.mapa-tarjeta) {
+/* Botón de cristal por defecto en el inicio. Con :where() solo cuenta como
+   «button» (gana al estilo base por ir después), así que los estados
+   (hover, activo, seleccionado) y las clases de cada control mandan sobre
+   él (antes, con nueve :not(), los anulaba) */
+:where(.pantalla-inicio) button:where(:not(.principal, .modo, .opcion, .patron, .estandarte, .color-nombre, .muestra-color, .chip-perfil, .mapa-tarjeta)) {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: background 0.2s, border-color 0.2s, transform 0.12s;
+  transition: background 0.2s, border-color 0.2s, transform 0.12s, box-shadow 0.2s;
 }
+:where(.pantalla-inicio) button:where(:not(.principal, .modo, .opcion, .patron, .estandarte, .color-nombre, .muestra-color, .chip-perfil, .mapa-tarjeta)):hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+  border-color: rgba(255, 255, 255, 0.22);
+}
+:where(.pantalla-inicio) button:where(:not(.principal, .modo, .opcion, .patron, .estandarte, .color-nombre, .muestra-color, .chip-perfil, .mapa-tarjeta)):active:not(:disabled) {
+  transform: translateY(1px);
+}
+:where(.pantalla-inicio) button:focus-visible { outline: 2px solid var(--oro-claro, #ffe3a1); outline-offset: 2px; }
 .pantalla-inicio .ini-pestanas button[aria-selected="true"] {
   background: linear-gradient(180deg, rgba(242, 179, 61, 0.26), rgba(242, 179, 61, 0.1));
   border-color: rgba(242, 179, 61, 0.55);
@@ -1603,7 +1620,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .portada-botones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .portada-botones .principal.grande { width: auto; padding: 12px 26px; display: inline-flex; align-items: center; gap: 10px; border-radius: 12px; }
 .portada-botones svg { width: 16px; height: 16px; }
-@keyframes ondear { 50% { transform: skewY(4deg) scaleX(0.94); } }
 
 /* Tarjetas de modo (solo texto) */
 .modo { padding: 14px 0; overflow: hidden; gap: 4px; }
@@ -2267,7 +2283,12 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   --panel-v2: linear-gradient(180deg, rgba(18, 28, 48, 0.94), rgba(10, 16, 30, 0.94));
   --serif: 'Cinzel', 'Trajan Pro', Georgia, serif;
 }
-#inicio.pantalla-inicio, #sala.pantalla, #fin.pantalla {
+/* La pantalla final deja ver el mapa con el que acabó la partida */
+#fin.pantalla {
+  background: radial-gradient(ellipse at center, rgba(5, 10, 20, 0.25) 0%, rgba(5, 10, 20, 0.62) 70%, rgba(5, 10, 20, 0.8) 100%);
+}
+#fin .tarjeta { background: var(--panel-v2, rgba(12, 18, 30, 0.94)); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+#inicio.pantalla-inicio, #sala.pantalla {
   background:
     radial-gradient(1200px 520px at 70% -10%, rgba(60, 90, 160, 0.22), transparent 70%),
     radial-gradient(900px 600px at 0% 100%, rgba(140, 90, 30, 0.12), transparent 70%),
@@ -2906,7 +2927,23 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 .entrada-buscando { margin: 0; padding: 10px 14px; border-radius: 10px; color: var(--marfil); background: rgba(95, 140, 220, 0.12); border: 1px solid rgba(95, 140, 220, 0.4); }
 .entrada-buscando::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 10px; border-radius: 50%; border: 2px solid var(--marfil); border-right-color: transparent; vertical-align: -1px; animation: girar 0.9s linear infinite; }
-@keyframes girar { to { transform: rotate(360deg); } }
 .entrada-botones { display: flex; flex-wrap: wrap; gap: 10px; }
 .entrada-botones .principal { flex: 1; }
 .sala-invitar:has(#btn-copiar-enlace[hidden]) .codigo { border-right: 0; }
+
+/* ---------- Cuenta atrás del despliegue (3-2-1) y «¡Comienza!» ---------- */
+.cuenta-atras {
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  pointer-events: none;
+  font-family: var(--logo, Impact, sans-serif);
+  font-size: clamp(64px, 14vw, 140px);
+  line-height: 1;
+  color: #ffe3a1;
+  text-shadow: 0 6px 0 rgba(90, 50, 0, 0.55), 0 0 40px rgba(242, 179, 61, 0.55), 0 12px 40px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.02em;
+}
+.cuenta-atras.sello { font-size: clamp(40px, 8vw, 84px); color: #fff3cf; }

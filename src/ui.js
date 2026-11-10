@@ -7,6 +7,7 @@ import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
+import { actualizarHtml, alternar, mostrar, ocultar } from './movimiento.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -83,12 +84,18 @@ class Counter {
     this.text = '';
   }
 
+  /** Durante `ms` la cifra no se mueve (p. ej. hasta que llegan las monedas del botín). */
+  hold(ms) {
+    this.holdUntil = performance.now() + ms;
+  }
+
   set(target) {
     if (this.value === null) {
       this.value = this.target = this.from = target;
       this._write();
       return;
     }
+    if (this.holdUntil && performance.now() < this.holdUntil) return;
     if (target === this.target) return;
     this.target = target;
     this.from = this.value;
@@ -147,12 +154,14 @@ export class UI {
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
-    $('fin-nueva').addEventListener('click', () => this.handlers.onExit?.(true));
+    $('fin-menu').addEventListener('click', () => this.handlers.onExit?.(true));
+    // Revancha: la misma partida (mapa, rivales y reglas) con otra semilla
+    $('fin-nueva').addEventListener('click', () => this.handlers.onRematch?.());
     $('conf-no').addEventListener('click', () => {
-      $('confirmar').hidden = true;
+      ocultar($('confirmar'), { y: 0, scale: 1 });
     });
     $('conf-si').addEventListener('click', () => {
-      $('confirmar').hidden = true;
+      ocultar($('confirmar'), { y: 0, scale: 1 });
       this.handlers.onExit?.(true);
     });
 
@@ -273,9 +282,21 @@ export class UI {
 
     // Panel inferior: se puede minimizar (botón o tecla V); se recuerda
     const panel = $('panel-jugador');
-    const setFolded = (folded) => {
+    const setFolded = (folded, animate = false) => {
+      // La altura pasa de una a otra con una transición (antes saltaba)
+      const h0 = animate && !panel.hidden && !document.body.classList.contains('sin-animaciones') ? panel.getBoundingClientRect().height : 0;
       panel.classList.toggle('plegado', folded);
       $('hud').classList.toggle('pj-plegado', folded);
+      if (h0 && panel.animate) {
+        const h1 = panel.getBoundingClientRect().height;
+        if (Math.abs(h1 - h0) > 2) {
+          panel.style.overflow = 'hidden';
+          const a = panel.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+          a.onfinish = a.oncancel = () => {
+            panel.style.overflow = '';
+          };
+        }
+      }
       $('pj-plegar').setAttribute('aria-expanded', String(!folded));
       $('pj-plegar').title = folded ? 'Mostrar el panel completo (tecla V)' : 'Minimizar el panel (tecla V)';
       try {
@@ -291,12 +312,12 @@ export class UI {
       folded = false;
     }
     setFolded(folded);
-    $('pj-plegar').addEventListener('click', () => setFolded(!panel.classList.contains('plegado')));
+    $('pj-plegar').addEventListener('click', () => setFolded(!panel.classList.contains('plegado'), true));
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || $('hud').hidden) return;
       if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       // Atajos: V panel, I desarrollo
-      if (e.code === 'KeyV') setFolded(!panel.classList.contains('plegado'));
+      if (e.code === 'KeyV') setFolded(!panel.classList.contains('plegado'), true);
       else if (e.code === 'KeyI') this.toggleDev();
     });
     // En el ordenador (pantalla ancha y ratón): edificios en una barra propia
@@ -395,12 +416,12 @@ export class UI {
   openNation(id) {
     this.nationId = id;
     this._breakArmedUntil = 0;
-    $('panel-nacion').hidden = false;
+    mostrar($('panel-nacion'), { x: 12, y: 0 });
   }
 
   closeNation() {
     this.nationId = 0;
-    $('panel-nacion').hidden = true;
+    ocultar($('panel-nacion'), { x: 12, y: 0 });
   }
 
   _updateNation(game, human, ratio) {
@@ -514,13 +535,19 @@ export class UI {
         <button type="button" class="principal" data-from="${p.id}" data-offer="${kind}" data-accept="1">Aceptar</button>
       </div>
       <div class="sol-tiempo"><div></div></div>`;
+    card.hidden = true;
     $('solicitudes').prepend(card);
+    mostrar(card, { x: 16, y: 0 });
     this._requests.set(key, card);
   }
 
   _removeRequest(key) {
-    this._requests.get(key)?.remove();
+    const card = this._requests.get(key);
     this._requests.delete(key);
+    if (!card) return;
+    // Sale deslizándose y luego se quita
+    ocultar(card, { x: 16, y: 0 });
+    setTimeout(() => card.remove(), 200);
   }
 
   _updateRequests(game, human) {
@@ -537,7 +564,7 @@ export class UI {
   }
 
   confirmExit() {
-    $('confirmar').hidden = false;
+    mostrar($('confirmar'), { y: 0, scale: 1 });
     $('conf-no').focus();
   }
 
@@ -571,11 +598,20 @@ export class UI {
         box.append(li);
       }
     }
-    $('fin').hidden = false;
+    // Entra en dos tiempos: el velo sobre el mapa y luego la tarjeta
+    mostrar($('fin'), { y: 0, scale: 1, ms: 450 });
+    const card = $('fin').querySelector('.tarjeta');
+    if (card && card.animate && !document.body.classList.contains('sin-animaciones')) {
+      card.animate(
+        [{ opacity: 0, transform: 'translateY(18px) scale(0.96)' }, { opacity: 1, transform: 'none' }],
+        { duration: 420, delay: 120, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' },
+      );
+    }
+    $('fin-nueva').focus({ preventScroll: true });
   }
 
   hideEnd() {
-    $('fin').hidden = true;
+    ocultar($('fin'), { y: 0, scale: 1 });
   }
 
   /** Rótulo del reparto: «70 % soldados · 30 % trabajadores». */
@@ -749,6 +785,8 @@ export class UI {
     const tx = r.left + Math.min(24, r.width / 2);
     const ty = r.top + r.height / 2;
     const n = small ? 7 : 12;
+    // El oro sube cuando llegan las monedas, no antes
+    this._gold.hold(820);
     for (let i = 0; i < n; i++) {
       const c = document.createElement('div');
       c.className = 'moneda-vuela';
@@ -763,7 +801,11 @@ export class UI {
         ],
         { duration: 850 + i * 40, delay: i * 40, easing: 'cubic-bezier(0.45, 0, 0.7, 0.5)', fill: 'both' },
       );
-      anim.onfinish = () => c.remove();
+      anim.onfinish = () => {
+        c.remove();
+        // Cada moneda que llega da un pequeño salto a la cifra
+        target.animate?.([{ transform: 'scale(1.12)' }, { transform: 'none' }], { duration: 160, easing: 'ease-out' });
+      };
     }
     clearTimeout(this._goldHit);
     this._goldHit = setTimeout(() => {
@@ -794,9 +836,43 @@ export class UI {
     this._gold.set(human.gold);
   }
 
+  /**
+   * Cuenta atrás grande en los últimos 3 s del despliegue y, al empezar la
+   * conquista, el sello «¡Comienza!».
+   */
+  _countdown(game) {
+    const box = $('cuenta-atras');
+    let text = '';
+    if (game.phase === 'spawn') {
+      const left = Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000);
+      if (left >= 1 && left <= 3) text = String(left);
+    } else if (game.phase === 'playing' && game.ticks - CONFIG.spawnTicks < 9) text = '¡Comienza!';
+    if (text === (this._countText || '')) return;
+    const prev = this._countText;
+    this._countText = text;
+    if (!text) {
+      ocultar(box, { y: 0, scale: 1.1, ms: 260, base: 'translate(-50%, -50%)' });
+      return;
+    }
+    box.textContent = text;
+    box.classList.toggle('sello', text.length > 1);
+    box.hidden = false;
+    if (box._salida) {
+      box._salida.cancel();
+      box._salida = null;
+    }
+    if (box.animate && !document.body.classList.contains('sin-animaciones')) {
+      box.animate(
+        [{ opacity: 0, transform: 'translate(-50%, -50%) scale(1.8)' }, { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: 0.35 }, { opacity: 1, transform: 'translate(-50%, -50%) scale(0.96)' }],
+        { duration: prev && prev.length > 1 ? 400 : 700, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+      );
+    }
+  }
+
   /** Avanza las cifras animadas (llamar en cada frame). */
   animate(dt) {
     for (const c of this._counters) c.step(dt);
+    this._stepTextTweens();
   }
 
   update(game, human, ratio, buildMode) {
@@ -810,6 +886,7 @@ export class UI {
     const setAviso = (text) => {
       if (avisoTxt.textContent !== text) avisoTxt.textContent = text;
     };
+    this._countdown(game);
     // «Elegir por mí»: solo en el despliegue
     const showAuto = !aviso.dataset.red && game.phase === 'spawn' && human.alive;
     if (auto.hidden === showAuto) auto.hidden = !showAuto;
@@ -820,7 +897,7 @@ export class UI {
       setAviso(human.spawned
         ? `Posición elegida. Puedes cambiarla. Empieza en ${left} s`
         : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`);
-      aviso.hidden = false;
+      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));
@@ -833,41 +910,45 @@ export class UI {
         const up = ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
         setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`);
       }
-      aviso.hidden = false;
+      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (game.inTruce?.()) {
       // Regla de tregua: recordatorio con la cuenta atrás
       const left = Math.ceil(((game.truceUntil() - game.ticks) * TICK_MS) / 1000);
       setAviso(`Tregua: nadie puede atacar a otras naciones durante ${formatTime(left)}. Expándete y conquista colonias`);
-      aviso.hidden = false;
+      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else {
-      aviso.hidden = true;
+      ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
     }
 
     const playingTicks = Math.max(0, game.ticks - CONFIG.spawnTicks);
     const limit = game._timeLimitMin ? game._timeLimitMin() : game.rules?.timeLimitMin || 0;
     // Con límite de tiempo, el reloj muestra cuánto queda
-    $('reloj').textContent = limit
+    txt('reloj', limit
       ? `${formatTime(Math.max(0, limit * 60 - (playingTicks * TICK_MS) / 1000))} restantes`
-      : formatTime((playingTicks * TICK_MS) / 1000);
+      : formatTime((playingTicks * TICK_MS) / 1000));
 
     // Panel del jugador
-    $('pj-color').style.background = rgbToCss(human.color);
-    $('panel-jugador').style.setProperty('--pj-color', rgbToCss(human.color));
-    $('pj-nombre').textContent = human.name;
+    const pc = rgbToCss(human.color);
+    if (this._pjColor !== pc) {
+      this._pjColor = pc;
+      $('pj-color').style.background = pc;
+      $('panel-jugador').style.setProperty('--pj-color', pc);
+    }
+    txt('pj-nombre', human.name);
     const max = human.maxTroops();
     const coop = this.coop;
     const roleName = coop?.role === 'militar' ? 'Mando militar' : coop?.role === 'economia' ? 'Economía y diplomacia' : '';
-    $('pj-estado').textContent = !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '';
+    txt('pj-estado', !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '');
     // Economía fija (la del documento): solo tropas, sin reparto ni trabajadores
     const workersMode = human.economy === 'workers';
     $('panel-jugador').classList.toggle('economia-fija', !workersMode);
     const label = workersMode ? 'Población' : 'Tropas';
-    if ($('pj-pob-etq').textContent !== label) $('pj-pob-etq').textContent = label;
+    if ($('pj-pob-etq').textContent !== label) txt('pj-pob-etq', label);
     const pop = human.population();
     const fill = Math.min(1, pop / max);
-    $('pj-barra').style.width = `${fill * 100}%`;
+    cssProp($('pj-barra'), 'width', `${(fill * 100).toFixed(1)}%`);
     // Dentro de la barra: la parte de soldados (dorada) y la de trabajadores
-    $('pj-barra').style.setProperty('--soldados', `${pop > 0 ? Math.round((100 * human.troops) / pop) : 100}%`);
+    cssProp($('pj-barra'), '--soldados', `${pop > 0 ? Math.round((100 * human.troops) / pop) : 100}%`);
     // Casi al máximo: la barra brilla (buen momento para atacar)
     $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
@@ -877,21 +958,21 @@ export class UI {
     if (human.economy === 'workers') this._pop.set(pop);
     this._troopsMax.set(max);
     const growth = human.growthPerTick() * perSecond;
-    $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '';
+    txt('pj-crec', playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '');
     $('pj-crec').classList.toggle('baja', growth < 0);
-    $('pj-trab').textContent = `${fmtTroops(human.workers)} trab.`;
+    txt('pj-trab', `${fmtTroops(human.workers)} trab.`);
     // El deslizador sigue al reparto real salvo mientras lo estás moviendo
     if (!(performance.now() - (this._shareDragAt || 0) < 1500)) {
       $('reparto').value = Math.round(human.soldierShare * 100);
       this._showShare(human.soldierShare);
     }
     this._gold.set(human.gold);
-    $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
-    $('pj-terr').textContent = formatShare(human.tiles, landCount);
-    $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
-    $('pj-buques').textContent = human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
-    $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
-    $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
+    txt('pj-oro-ritmo', playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '');
+    txt('pj-terr', formatShare(human.tiles, landCount));
+    txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
+    txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
+    txt('ratio-valor', `${Math.round(ratio * 100)}%`);
+    cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
 
     const works = {};
     for (const b of game.sites) if (b.owner === human.id) works[b.kind] = (works[b.kind] || 0) + 1;
@@ -951,8 +1032,8 @@ export class UI {
 
   toggleDev(force) {
     const panel = $('panel-desarrollo');
-    const open = force ?? panel.hidden;
-    panel.hidden = !open;
+    const open = force ?? (panel.hidden || !!panel._salida);
+    alternar(panel, open, { y: 10, base: 'translateX(-50%)' });
     $('btn-desarrollo').setAttribute('aria-pressed', String(open));
     if (open) {
       this._devAt = 0;
@@ -1032,7 +1113,7 @@ export class UI {
       const bar = (v) => `<span class="pd-barra"><span style="width:${total > 0 ? Math.round((100 * (v || 0)) / total) : 0}%"></span></span>`;
       const roi = this._roi(game, h);
       const specCost = h.spec ? formatNumber(CONFIG.specChangeCost * game.rules.priceMult) : 'gratis';
-      $('pd-economia').innerHTML = `
+      actualizarHtml($('pd-economia'), `
         <div class="pd-total"><span>Oro por minuto</span><strong>${formatNumber(total)}</strong><small>último minuto · ahora tienes ${formatNumber(h.gold)}</small></div>
         <table class="pd-tabla"><tbody>
           ${rows.map(([n, v]) => `<tr><td>${n}</td><td>${formatNumber(v || 0)}</td><td>${bar(v)}</td></tr>`).join('')}
@@ -1044,7 +1125,7 @@ export class UI {
         ${techs ? `<h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
         <div class="pd-specs">${SPEC_IDS.map((id) => `
           <button type="button" class="pd-spec${h.spec === id ? ' activa' : ''}" data-spec="${id}" ${h.spec === id || game.phase !== 'playing' ? 'disabled' : ''}>
-            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>` : `<p class="pd-nota">Perfil ${game.profile.name}: sin tecnologías ni especialización.</p>`}`;
+            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>` : `<p class="pd-nota">Perfil ${game.profile.name}: sin tecnologías ni especialización.</p>`}`);
     } else {
       const cost = game.techCost(h);
       const time = Math.round(game.techTime(h) / 10);
@@ -1062,7 +1143,7 @@ export class UI {
         return `<button type="button" class="pd-tec${done ? ' hecha' : ''}${doing ? ' marcha' : ''}" data-tech="${id}" ${dis ? 'disabled' : ''}>
           <span class="pd-nivel">Nv ${t.tier}</span><strong>${t.name}</strong><span>${t.desc}</span>${state}</button>`;
       }).join('');
-      $('pd-tecnologias').innerHTML = `${head}<div class="pd-ramas">${Object.keys(BRANCHES).map((b) => `<div class="pd-rama"><h4>${BRANCHES[b]}</h4>${col(b)}</div>`).join('')}</div>`;
+      actualizarHtml($('pd-tecnologias'), `${head}<div class="pd-ramas">${Object.keys(BRANCHES).map((b) => `<div class="pd-rama"><h4>${BRANCHES[b]}</h4>${col(b)}</div>`).join('')}</div>`);
     }
   }
 
@@ -1144,8 +1225,17 @@ export class UI {
     }
     this._threat = (this._threat || 0) + (target - (this._threat || 0)) * 0.35;
     if (this._threat < 0.02) this._threat = 0;
-    box.style.setProperty('--amenaza', this._threat.toFixed(3));
-    box.classList.toggle('activa', this._threat > 0);
+    // En pasos de 0,05 y solo si cambia: repintar el degradado de toda la
+    // pantalla 5 veces por segundo costaba, y cambiar la duración del latido
+    // a mitad lo hacía saltar (ahora va por niveles fijos)
+    const q = Math.round(this._threat * 20) / 20;
+    if (q !== this._threatShown) {
+      this._threatShown = q;
+      box.style.setProperty('--amenaza', q.toFixed(2));
+      box.classList.toggle('activa', q > 0);
+      const lvl = q >= 0.66 ? 3 : q >= 0.33 ? 2 : 1;
+      if (box.dataset.nivel !== String(lvl)) box.dataset.nivel = String(lvl);
+    }
   }
 
   /**
@@ -1230,6 +1320,11 @@ export class UI {
 
     const shown = cards.slice(0, MAX_FRONTS);
     const live = new Set();
+    // Posición de cada tarjeta antes de reordenar (para que se deslicen)
+    const flip = !document.body.classList.contains('sin-animaciones') && !$('combates').hidden;
+    const before = new Map();
+    if (flip) for (const f of this._fronts.values()) if (f.li.isConnected) before.set(f.li, f.li.getBoundingClientRect().top);
+    let moved = false;
     shown.forEach((c, i) => {
       live.add(c.key);
       let f = this._fronts.get(c.key);
@@ -1279,8 +1374,19 @@ export class UI {
       f.barA.style.width = `${pct}%`;
       f.barD.style.width = `${100 - pct}%`;
       // Solo se mueve si no está ya en su sitio (moverla reiniciaría animaciones)
-      if (list.children[i] !== f.li) list.insertBefore(f.li, list.children[i] || null);
+      if (list.children[i] !== f.li) {
+        list.insertBefore(f.li, list.children[i] || null);
+        moved = true;
+      }
     });
+    // Las que cambiaron de sitio se deslizan desde donde estaban
+    if (flip && moved) {
+      for (const [li, top] of before) {
+        if (!li.isConnected || !li.animate) continue;
+        const dy = top - li.getBoundingClientRect().top;
+        if (Math.abs(dy) >= 1) li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+      }
+    }
     for (const [key, f] of this._fronts) {
       if (live.has(key)) continue;
       if (!f.gone) {
@@ -1296,9 +1402,13 @@ export class UI {
     const inc = cards.filter((c) => c.incoming).length;
     const out = cards.length - inc;
     const box = $('combates');
-    box.hidden = !list.querySelector('.frente');
+    alternar(box, !!list.querySelector('.frente'), { x: -10, y: 0 });
     box.classList.toggle('amenaza', inc > 0);
-    $('cab-combates').innerHTML = `${inc ? `<span class="cc-rojo">🛡 ${inc}</span>` : ''}${out ? `<span class="cc-verde">⚔ ${out}</span>` : ''}`;
+    const cab = `${inc ? `<span class="cc-rojo">🛡 ${inc}</span>` : ''}${out ? `<span class="cc-verde">⚔ ${out}</span>` : ''}`;
+    if (cab !== this._cabCombates) {
+      this._cabCombates = cab;
+      $('cab-combates').innerHTML = cab;
+    }
     let more = this._moreFronts;
     if (cards.length > MAX_FRONTS) {
       if (!more) {
@@ -1331,7 +1441,14 @@ export class UI {
   _newFront(c) {
     const li = document.createElement('li');
     li.className = `frente ${c.incoming ? 'entrante' : 'saliente'} tipo-${c.kind} nueva`;
-    li.addEventListener('animationend', () => li.classList.remove('nueva'), { once: true });
+    // Se quita al acabar el barrido de brillo (el último): la entrada de la
+    // tarjeta acaba antes y, si se quitaba entonces, el barrido se cortaba
+    const done = (e) => {
+      if (e.animationName !== 'barrido') return;
+      li.classList.remove('nueva');
+      li.removeEventListener('animationend', done);
+    };
+    li.addEventListener('animationend', done);
     li.dataset.key = c.key;
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
@@ -1487,9 +1604,10 @@ export class UI {
         if (el.textContent !== text) el.textContent = text;
       };
       set('.pos', String(rank));
-      set('.pct', formatPercent(p.tiles / landCount));
-      set('.oro', formatNumber(p.gold));
-      set('.tro', fmtTroops(p.troops));
+      // Las cifras van hasta su nuevo valor poco a poco (se actualizan una vez por segundo)
+      this._tweenText(li.querySelector('.pct'), p.tiles / landCount, formatPercent);
+      this._tweenText(li.querySelector('.oro'), p.gold, formatNumber);
+      this._tweenText(li.querySelector('.tro'), p.troops, fmtTroops);
       set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
       li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;
       li.classList.toggle('yo', p === human);
@@ -1503,7 +1621,12 @@ export class UI {
         li.classList.add(rank < prev ? 'sube' : 'baja');
       }
       this._lbIndex.set(p.id, rank);
+      const fresh = !li.isConnected;
       if (list.children[i] !== li) list.insertBefore(li, list.children[i] || null);
+      // Una fila nueva entra deslizándose
+      if (fresh && animate && li.animate) {
+        li.animate([{ opacity: 0, transform: 'translateX(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+      }
     });
     const keep = new Set(rows.map((p) => p.id));
     for (const [id, li] of this._lbRows) {
@@ -1512,20 +1635,55 @@ export class UI {
         this._lbRows.delete(id);
       }
     }
-    // FLIP: cada fila que cambió de posición parte de donde estaba
+    // FLIP: cada fila que cambió de posición parte de donde estaba (con la
+    // Web Animations API: no deja estilos en línea que anulen el hover)
     if (animate) {
       for (const [id, top] of before) {
         const li = this._lbRows.get(id);
-        if (!li) continue;
+        if (!li || !li.animate) continue;
         const dy = top - li.getBoundingClientRect().top;
         if (Math.abs(dy) < 1) continue;
-        li.style.transition = 'none';
-        li.style.transform = `translateY(${dy}px)`;
-        requestAnimationFrame(() => {
-          li.style.transition = 'transform 0.35s ease';
-          li.style.transform = '';
-        });
+        li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 350, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
       }
+    }
+  }
+
+  /**
+   * Cifra de texto que va hasta `value` en ~0,6 s (la avanza `animate`). La
+   * primera vez, o sin animaciones, se pone directamente.
+   */
+  _tweenText(el, value, fmt) {
+    const t = (this._textTweens ??= new Map());
+    const cur = t.get(el);
+    const still = document.body.classList.contains('sin-animaciones');
+    if (!cur || still) {
+      t.set(el, { from: value, to: value, shown: value, t0: 0, fmt });
+      const text = fmt(value);
+      if (el.textContent !== text) el.textContent = text;
+      return;
+    }
+    if (cur.to === value) return;
+    cur.from = cur.shown;
+    cur.to = value;
+    cur.t0 = performance.now();
+    cur.fmt = fmt;
+  }
+
+  _stepTextTweens() {
+    const t = this._textTweens;
+    if (!t || !t.size) return;
+    const now = performance.now();
+    for (const [el, tw] of t) {
+      if (!el.isConnected) {
+        t.delete(el);
+        continue;
+      }
+      if (tw.shown === tw.to) continue;
+      const k = Math.min(1, (now - tw.t0) / 600);
+      const e = 1 - (1 - k) ** 3;
+      tw.shown = k >= 1 ? tw.to : tw.from + (tw.to - tw.from) * e;
+      const text = tw.fmt(tw.shown);
+      if (el.textContent !== text) el.textContent = text;
     }
   }
 
@@ -1553,14 +1711,50 @@ export class UI {
     const tip = $('tooltip');
     if (tile < 0) {
       tip.hidden = true;
+      this._tipTile = -1;
       return;
     }
     const map = game.map;
-    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
     if (!map.isLand(tile)) {
       tip.hidden = true;
+      this._tipTile = -1;
       return;
     }
+    // El texto se rehace al cambiar de casilla o, en la misma, cada 150 ms
+    // (las tropas cambian); moverse por la misma casilla solo lo recoloca
+    const now = performance.now();
+    if (tile !== this._tipTile || now - (this._tipAt || 0) > 150) {
+      this._tipTile = tile;
+      this._tipAt = now;
+      const html = this._tipHtml(game, tile);
+      if (html !== this._tipLast) {
+        this._tipLast = html;
+        tip.innerHTML = html;
+        this._tipSize = null;
+      }
+    }
+    if (tip.hidden) {
+      tip.hidden = false;
+      this._tipSize = null;
+    }
+    // Dentro de la ventana: se mide la caja (solo si cambió el texto) y, si
+    // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
+    const size = (this._tipSize ??= [tip.offsetWidth, tip.offsetHeight]);
+    const [w, h] = size;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
+    let top = sy + 16 + h > vh - 8 ? sy - 16 - h : sy + 16;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    top = Math.max(8, Math.min(vh - h - 8, top));
+    // Con transform (sin recolocar la página)
+    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+  }
+
+  /** Texto del tooltip de una casilla de tierra. */
+  _tipHtml(game, tile) {
+    const map = game.map;
+    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
     const o = game.owner[tile];
     if (o) {
       const p = game.players[o];
@@ -1575,26 +1769,26 @@ export class UI {
       extra.push(terrain);
       const human = game.human;
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
-      tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
+      return `<b>${escapeHtml(p.name)}</b>${tag}<br>
         ${fmtTroops(p.troops)} tropas · ${formatShare(p.tiles, map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
-    } else {
-      tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
     }
-    tip.hidden = false;
-    // Dentro de la ventana: se mide la caja (ya con el texto ajustado) y, si
-    // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
-    const w = tip.offsetWidth;
-    const h = tip.offsetHeight;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
-    let top = sy + 16 + h > vh - 8 ? sy - 16 - h : sy + 16;
-    left = Math.max(8, Math.min(vw - w - 8, left));
-    top = Math.max(8, Math.min(vh - h - 8, top));
-    tip.style.left = `${left}px`;
-    tip.style.top = `${top}px`;
+    return `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
   }
+}
+
+/** Escribe el texto de #id solo si cambia (no obliga al navegador a repintar). */
+function txt(id, text) {
+  const e = $(id);
+  if (e && e.textContent !== text) e.textContent = text;
+}
+
+/** Pone una propiedad de estilo (o variable CSS) solo si cambia. */
+function cssProp(el, prop, value) {
+  const cache = (el._css ??= {});
+  if (cache[prop] === value) return;
+  cache[prop] = value;
+  el.style.setProperty(prop, value);
 }
 
 function escapeHtml(s) {
