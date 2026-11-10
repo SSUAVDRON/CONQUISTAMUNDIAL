@@ -12,8 +12,12 @@
 // Límite de escrituras por id y por IP. Los datos se validan (longitudes,
 // colores, emblema, puntos plausibles respecto a la fila anterior).
 //
-// Configuración: `trinchera-config.php` FUERA de public_html (no se puede
-// descargar), en la carpeta de tu usuario:
+// Base de datos: sin configurar nada, una SQLite que se crea sola FUERA de
+// public_html (junto a esa carpeta, donde la web no la puede servir):
+// trinchera-rangos.sqlite (y trinchera-rangos-prueba.sqlite para …/prueba/).
+//
+// Para usar MySQL en su lugar: `trinchera-config.php` FUERA de public_html
+// (no se puede descargar), en la carpeta de tu usuario:
 //
 //   <?php return [
 //     'dsn'  => 'mysql:host=localhost;dbname=uXXXX_trinchera;charset=utf8mb4',
@@ -55,7 +59,46 @@ function configuracion(): array {
             if (is_array($c) && !empty($c['dsn'])) return $c + ['user' => null, 'pass' => null, 'sal' => ''];
         }
     }
+    // Sin configuración: SQLite fuera de public_html
+    $sqlite = ruta_sqlite();
+    if ($sqlite && in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+        return ['dsn' => 'sqlite:' . $sqlite, 'user' => null, 'pass' => null, 'sal' => sal_local(dirname($sqlite)), 'sqlite' => true];
+    }
     responder(503, ['error' => 'La tabla de rangos no está configurada en este servidor.']);
+}
+
+/**
+ * Dónde guardar la SQLite: en la carpeta que contiene public_html (fuera de
+ * la web). Cada despliegue en una subcarpeta (p. ej. …/prueba/) tiene la suya.
+ * null si no se encuentra public_html o no se puede escribir allí.
+ */
+function ruta_sqlite(): ?string {
+    $dir = __DIR__;
+    $sub = [];
+    while ($dir !== dirname($dir)) {
+        if (basename($dir) === 'public_html') {
+            $fuera = dirname($dir);
+            if (!is_writable($fuera)) return null;
+            array_shift($sub); // la carpeta «api»
+            $sufijo = $sub ? '-' . preg_replace('/[^a-z0-9]+/', '-', strtolower(implode('-', array_reverse($sub)))) : '';
+            return $fuera . '/trinchera-rangos' . $sufijo . '.sqlite';
+        }
+        $sub[] = basename($dir);
+        $dir = dirname($dir);
+    }
+    return null;
+}
+
+/** Sal para los hashes (secretos e IP): se crea una vez, junto a la base de datos. */
+function sal_local(string $dir): string {
+    $ruta = $dir . '/trinchera-rangos.sal';
+    $sal = is_file($ruta) ? trim((string) file_get_contents($ruta)) : '';
+    if (strlen($sal) < 32) {
+        $sal = bin2hex(random_bytes(32));
+        @file_put_contents($ruta, $sal, LOCK_EX);
+        @chmod($ruta, 0600);
+    }
+    return $sal;
 }
 
 function conectar(array $c): PDO {
@@ -69,6 +112,11 @@ function conectar(array $c): PDO {
         responder(503, ['error' => 'No se puede abrir la base de datos.']);
     }
     $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+    if (!$mysql) {
+        // SQLite: varios lectores a la vez y espera corta si otro escribe
+        $pdo->exec('PRAGMA journal_mode = WAL');
+        $pdo->exec('PRAGMA busy_timeout = 3000');
+    }
     $pdo->exec('CREATE TABLE IF NOT EXISTS rangos (
         id VARCHAR(32) PRIMARY KEY,
         secreto CHAR(64) NOT NULL,

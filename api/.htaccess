@@ -1,0 +1,4 @@
+# Solo se sirve rangos.php: nada de bases de datos ni otros archivos
+<FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|sal|db|log)$">
+  Require all denied
+</FilesMatch>
