@@ -3432,3 +3432,67 @@ body.sin-animaciones .fin-cifra, body.sin-animaciones .momento, body.sin-animaci
 canvas.curva { display: block; width: 100%; height: 28px; margin-top: 4px; }
 .celda-curva { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .celda-curva canvas.curva { width: 72px; height: 22px; margin: 0; }
+
+/* ===================================================== Rangos (rangos.js) */
+.clasificatoria {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e5);
+  padding: var(--e4) var(--e5);
+  border-radius: var(--r-l);
+  overflow: hidden;
+  background: radial-gradient(ellipse at 0% 50%, rgba(196, 126, 255, 0.18), transparent 55%), linear-gradient(100deg, rgba(40, 30, 70, 0.92), rgba(12, 18, 34, 0.94));
+  border: 1px solid rgba(196, 126, 255, 0.35);
+  box-shadow: var(--sombra-2);
+}
+.clasificatoria::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.06) 50%, transparent 60%); transform: translateX(-100%); animation: brilloHecha 3s ease-in-out 1.2s 1 both; pointer-events: none; }
+.cl-insignia { width: 84px; height: 84px; display: grid; place-items: center; }
+.cl-insignia canvas { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
+.cl-datos { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cl-temporada { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #c9a8ff; }
+#inicio .cl-titulo { margin: 0; font-family: var(--serif); font-weight: 800; font-size: 20px; color: var(--oro-200); }
+.cl-rango { font-size: 17px; }
+.cl-barra { height: 8px; max-width: 420px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin: 4px 0 2px; }
+.cl-barra > span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8f5cff, #d6b8ff); border-radius: 4px; }
+.cl-nota { color: var(--texto-2); font-size: 12px; line-height: 1.4; }
+.cl-botones { display: flex; flex-direction: column; gap: var(--e2); }
+.cl-botones .principal { padding: 12px 22px; white-space: nowrap; }
+@media (max-width: 720px) {
+  .clasificatoria { grid-template-columns: auto minmax(0, 1fr); gap: var(--e3); padding: var(--e3) var(--e4); }
+  .cl-insignia { width: 60px; height: 60px; }
+  .cl-insignia canvas { width: 60px !important; height: 60px !important; }
+  .cl-botones { grid-column: 1 / -1; flex-direction: row; }
+  .cl-botones > * { flex: 1; }
+}
+body.sin-animaciones .clasificatoria::after { display: none; }
+/* Insignia en la ficha de la cabecera */
+.chip-avatar { position: relative; overflow: visible; }
+#chip-emblema { border-radius: 50%; }
+#inicio .chip-rango canvas { width: 22px !important; height: 22px !important; }
+.chip-rango { position: absolute; right: -6px; bottom: -6px; line-height: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7)); }
+.chip-rango[hidden] { display: none; }
+/* Tabla de rangos */
+.rango-yo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--e4); padding: var(--e3) var(--e4); margin-bottom: var(--e4); border-radius: var(--r-m); background: rgba(196, 126, 255, 0.08); border: 1px solid rgba(196, 126, 255, 0.3); }
+.ry-textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ry-textos small { font-size: 11px; color: #c9a8ff; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+.ry-textos strong { font-size: 18px; }
+.ry-textos span { color: var(--texto-2); font-size: 13px; }
+.rango-yo .principal { width: auto; padding: 10px 18px; }
+@media (max-width: 720px) { .rango-yo { grid-template-columns: auto minmax(0, 1fr); } .rango-yo .principal { grid-column: 1 / -1; } }
+.celda-rango { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+/* Cambio de rango en el resumen */
+.fin-rango { padding: var(--e3) var(--e4); border-radius: var(--r-m); background: rgba(196, 126, 255, 0.08); border: 1px solid rgba(196, 126, 255, 0.3); }
+.fr-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--e3); }
+.fr-textos { display: flex; flex-direction: column; min-width: 0; }
+.fr-textos strong { font-size: 17px; }
+.fr-textos small { color: var(--texto-2); }
+.fr-delta { font-family: var(--serif); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; }
+.fr-delta.sube { color: var(--ok); }
+.fr-delta.baja { color: #ff8c84; }
+.fr-barra { height: 8px; margin-top: var(--e2); border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.fr-barra > span { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--p, 0)); transition: transform 1.1s var(--ease-out); background: linear-gradient(90deg, #8f5cff, #d6b8ff); }
+.fin-rango.fr-ascenso { animation: ascenso 1.2s var(--ease-spring) 0.4s both; box-shadow: 0 0 0 1px rgba(214, 184, 255, 0.5), 0 0 30px rgba(196, 126, 255, 0.35); }
+@keyframes ascenso { 0% { transform: scale(0.94); opacity: 0; } 60% { transform: scale(1.03); opacity: 1; } 100% { transform: none; } }
+body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }

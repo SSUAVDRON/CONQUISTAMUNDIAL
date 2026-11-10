@@ -565,7 +565,10 @@ export class UI {
     }
   }
 
-  confirmExit() {
+  confirmExit(ranked = false) {
+    $('conf-texto').textContent = ranked
+      ? 'Es una clasificatoria: abandonar cuenta como quedar el último y pierdes PL.'
+      : 'Volverás al menú y se perderá esta partida.';
     abrirDialogo($('confirmar'), { foco: '#conf-no' });
   }
 

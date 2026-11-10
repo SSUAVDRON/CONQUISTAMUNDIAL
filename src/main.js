@@ -29,6 +29,8 @@ import { Minimap } from './minimapa.js';
 import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
 import { Grabador, compactCurve, placement } from './resumen.js';
+import { Ladder } from './ladder.js';
+import { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf } from './rangos.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -283,6 +285,10 @@ async function startGame(opts) {
   state.loading = true;
   // Para la revancha: la misma partida con otra semilla (el tutorial no)
   state.lastOpts = opts.tutorial ? null : { ...opts, seed: '' };
+  // Clasificatoria: queda «pendiente» hasta que se aplique su resultado
+  state.ranked = opts.ranked || null;
+  state.rankedDone = false;
+  state.rankOut = null;
   leaveOnline();
   tutorial.stop();
   const seed = opts.seed ? hashString(opts.seed) : randomSeed();
@@ -588,6 +594,7 @@ function finishGame() {
   state.recorded = true;
   if (state.rec && state.rec.game === game) state.rec.finish();
   const result = gameResult();
+  applyRanked(result);
   // Abandonos de menos de un minuto no cuentan
   if (game.phase !== 'ended' && human.alive && result.seconds < 60) return null;
   const out = recordGame(profile, result);
@@ -614,6 +621,123 @@ function winText(game, mine, who, land) {
   }
 }
 
+// ------------------------------------------------------------ clasificatoria
+
+const ladder = new Ladder((st) => home.setLadder(st));
+/** Sube tu fila a la tabla de rangos (y al perfil de la nube). */
+function pushRankRow() {
+  ladder.push(profile);
+  scheduleCloudSync(0);
+}
+
+/** Clasificatoria contra la IA: el mundo, 90 naciones, perfil Clásico; la dificultad, según tu liga. */
+function startRanked() {
+  const r = profile.rango;
+  const reward = ensureSeason(r);
+  if (reward) grantSeasonReward(reward);
+  const difficulty = aiDifficultyFor(r);
+  r.pendiente = { tipo: 'ia', inicio: Date.now() };
+  saveProfile(profile);
+  state.rankedDifficulty = difficulty;
+  startGame({
+    ranked: 'ia',
+    title: 'Clasificatoria',
+    mapSize: RANKED_AI.mapSize,
+    bots: RANKED_AI.bots,
+    difficulty,
+    seed: '',
+    rules: { ...DEFAULT_RULES, profile: RANKED_AI.profile },
+  });
+}
+
+/** Recompensa de la temporada anterior (al cambiar de temporada). */
+function grantSeasonReward(reward) {
+  profile.monedas = (profile.monedas || 0) + reward.coins;
+  saveProfile(profile);
+  home.flash?.(`Nueva temporada. Por tu ${reward.league.name} de la anterior: +🪙 ${reward.coins}`, true);
+}
+
+/**
+ * Aplica (una sola vez) el resultado de una clasificatoria: al acabar, al
+ * caer o al abandonarla (cuenta como quedar el último).
+ */
+function applyRanked(result) {
+  if (!state.ranked || state.rankedDone || !state.human) return;
+  state.rankedDone = true;
+  const r = profile.rango;
+  const abandon = state.game.phase !== 'ended' && state.human.alive;
+  const place = { place: result.place, of: result.of };
+  const before = { puntos: r.puntos, colocacion: r.colocacion };
+  let out;
+  if (state.ranked === 'sala') out = applyRoomResult(r, place, state.rankedRivals ? state.rankedRivals() : [], { abandon });
+  else out = applyAiResult(r, place, { difficulty: state.rankedDifficulty, abandon });
+  r.pendiente = null;
+  saveProfile(profile);
+  state.rankOut = { ...out, abandon, before, rank: { ...r } };
+  pushRankRow();
+  home.renderRanked?.();
+  home.renderChip();
+}
+
+/** Partida clasificatoria que quedó a medias (se cerró la página): cuenta como abandono. */
+function settlePendingRanked() {
+  const r = profile.rango;
+  const reward = ensureSeason(r);
+  if (reward) grantSeasonReward(reward);
+  if (!r.pendiente) return;
+  const tipo = r.pendiente.tipo;
+  const out = tipo === 'sala' ? applyRoomResult(r, null, [], { abandon: true }) : applyAiResult(r, null, { abandon: true });
+  r.pendiente = null;
+  saveProfile(profile);
+  pushRankRow();
+  setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 1200);
+}
+
+/** Cambio de rango en el resumen de la partida: insignia, liga, barra de PL y el motivo. */
+function renderRankChange(box, o) {
+  const r = o.rank;
+  const k = rankOf(o.after);
+  const head = document.createElement('div');
+  head.className = 'fr-cab';
+  head.append(badgeCanvas(r, 44));
+  const texts = document.createElement('div');
+  texts.className = 'fr-textos';
+  const title = document.createElement('strong');
+  const sub = document.createElement('small');
+  const placing = inPlacement(r);
+  if (o.placing && !o.placementDone) {
+    title.textContent = `Colocación ${r.colocacion}/5`;
+    sub.textContent = o.mmrDelta >= 0 ? 'Buena partida: tu nivel oculto sube.' : 'Tu nivel oculto baja un poco.';
+  } else if (o.placementDone) {
+    title.textContent = `¡Colocación terminada: ${k.label}!`;
+    sub.textContent = `Empiezas con ${k.pl} PL.`;
+  } else {
+    title.textContent = k.label;
+    const pl = `${k.pl} PL${k.league.apex ? '' : ' de 100'}`;
+    sub.textContent = o.promoted ? `¡Subes a ${k.label}! Tienes escudo durante 3 partidas.` : o.demoted ? `Bajas a ${k.label}.` : o.shieldUsed ? `🛡 El escudo te ha librado de bajar · ${pl}` : o.abandon ? `Abandonar cuenta como derrota · ${pl}` : pl;
+  }
+  title.style.color = placing ? '' : `rgb(${k.league.color.join(',')})`;
+  texts.append(title, sub);
+  const delta = document.createElement('span');
+  delta.className = `fr-delta ${o.delta > 0 ? 'sube' : o.delta < 0 ? 'baja' : ''}`;
+  delta.textContent = o.placing && !o.placementDone ? '' : `${o.delta > 0 ? '+' : ''}${o.delta} PL`;
+  head.append(texts, delta);
+  box.append(head);
+  if (!placing) {
+    // Barra de PL de la división: se llena desde donde estaba
+    const bar = document.createElement('div');
+    bar.className = 'fr-barra';
+    const fill = document.createElement('span');
+    const from = o.promoted ? 0 : o.demoted ? 1 : rankOf(o.before).pl / (k.league.apex ? 300 : 100);
+    const to = Math.min(1, k.league.apex ? k.pl / 300 : k.pl / 100);
+    fill.style.setProperty('--p', String(Math.max(0, Math.min(1, from))));
+    bar.append(fill);
+    box.append(bar);
+    setTimeout(() => fill.style.setProperty('--p', String(to)), 700);
+  }
+  if (o.promoted || o.placementDone) box.classList.add('fr-ascenso');
+}
+
 /** Lo que necesita la pantalla de fin: grabación, puesto y cifras de la partida. */
 function endExtra(outcome) {
   const { game, human } = state;
@@ -626,6 +750,7 @@ function endExtra(outcome) {
     place: { place: r.place, of: r.of },
     stats: { seconds: outcome === 'derrota' ? r.survivedSeconds : r.seconds, maxShare: r.maxShare, kills: r.kills, built: r.built },
     share: { map: mapLabel(state.mapSize), online: !!state.online },
+    renderRank: state.rankOut ? (box) => renderRankChange(box, state.rankOut) : null,
   };
 }
 
@@ -687,6 +812,12 @@ const home = new Home(profile, {
   },
   onSettings: applySettings,
   sound: (name) => sound.play(name, 0.9, 0),
+  /** «Jugar clasificatoria» (contra la IA) o «Sala clasificatoria» (multijugador). */
+  onRanked(kind) {
+    if (kind === 'sala') home.showCreate({ ranked: true });
+    else startRanked();
+  },
+  onLadderRefresh: () => ladder.refresh(),
   /** «Reintentar» en Multijugador: vuelve a buscar el servidor de salas. */
   onRetryNet() {
     if (connecting) return;
@@ -1120,7 +1251,8 @@ ui.on({
       startDemo();
       return;
     }
-    startGame(state.lastOpts);
+    if (state.lastOpts.ranked === 'ia') startRanked();
+    else startGame(state.lastOpts);
   },
   onBuildMode: setBuildMode,
   onFocusPlayer(id) {
@@ -1235,7 +1367,7 @@ for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) {
 document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
 document.getElementById('mp-salir').addEventListener('click', () => {
   cerrarDialogo(document.getElementById('menu-partida'));
-  if (stillPlaying()) ui.confirmExit();
+  if (stillPlaying()) ui.confirmExit(!!state.ranked);
   else {
     finishGame();
     tutorial.stop();
@@ -1274,6 +1406,8 @@ state.demo = true;
 // fotograma: antes salían vacíos hasta que se cargaba la partida de fondo
 home.renderChip();
 home.renderHero();
+// Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
+settlePendingRanked();
 requestAnimationFrame(() => setTimeout(() => {
   // El resto de apartados (perfil, aspecto, progreso, clasificación…), justo
   // después del primer pintado: antes quedaban vacíos hasta volver de una partida
@@ -1340,6 +1474,8 @@ function connectNet() {
 // Nube: perfil entre dispositivos y clasificación global
 getCloud().then(async (c) => {
   cloud = c;
+  // Tabla de rangos: en Claude, su base de datos; en la web, la API PHP; si no, local
+  ladder.start(c, profile.rango.temporada);
   if (!c) {
     home.setCloudNote('Tu perfil se guarda en este navegador.');
     home.setGlobal({ available: false });

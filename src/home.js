@@ -17,6 +17,7 @@ import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
 import { drawSparkline } from './resumen.js';
+import { PLACEMENT_GAMES, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } from './rangos.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -473,7 +474,8 @@ export class Home {
     this.profile = profile;
     this.h = handlers;
     this.view = 'jugar';
-    this.table = 'global';
+    this.table = 'rangos';
+    this.ladder = { available: false, rows: [], error: '', myId: null, source: '' };
     this.global = { available: false, rows: [], error: '', stale: false, myId: null };
     this.rooms = [];
 
@@ -600,6 +602,8 @@ export class Home {
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
+    $('btn-clasif-ia').addEventListener('click', () => this.h.onRanked?.('ia'));
+    $('btn-clasif-sala').addEventListener('click', () => this.h.onRanked?.('sala'));
     $('btn-repetir').addEventListener('click', () => this._replay());
     $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
     $('novedades-todas').addEventListener('click', () => this._allNews());
@@ -1327,6 +1331,7 @@ export class Home {
 
   renderAll() {
     this.renderChip();
+    this.renderRanked();
     this.renderHero();
     this.renderCard();
     this.renderAppearance();
@@ -1338,6 +1343,82 @@ export class Home {
     this.renderAchievements();
     this.renderTable();
     this.renderRooms();
+  }
+
+  // ------------------------------------------------------------ rangos
+
+  /** Tarjeta «Clasificatoria» de Jugar: insignia, rango, PL de la división y temporada. */
+  renderRanked() {
+    const r = this.profile.rango;
+    if (!r || !$('clasificatoria')) return;
+    const box = $('cl-insignia');
+    let c = box.querySelector('canvas');
+    if (!c) {
+      c = badgeCanvas(r, 64);
+      box.replaceChildren(c);
+    } else paintBadge(c, r);
+    const placing = inPlacement(r);
+    const k = rankOf(r.puntos);
+    $('cl-temporada').textContent = seasonName(r.temporada);
+    $('cl-rango').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.label;
+    $('cl-rango').style.color = placing ? '' : `rgb(${k.league.color.join(',')})`;
+    const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
+    $('cl-barra').style.setProperty('--p', frac.toFixed(3));
+    $('cl-barra').parentElement.classList.add('llena-al-ver');
+    llenarAlVer($('clasificatoria'));
+    const days = Math.max(0, Math.ceil((seasonEnd(r.temporada) - Date.now()) / 86400000));
+    const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
+    $('cl-nota').textContent = placing
+      ? `Tras ${PLACEMENT_GAMES} partidas de colocación sabrás tu liga. El mundo, 90 naciones, perfil Clásico; IA ${dif}. Abandonar cuenta como derrota.`
+      : `${k.pl} PL${k.league.apex ? '' : ' / 100'}${r.escudo ? ` · 🛡 escudo ${r.escudo}` : ''} · ${r.victorias}/${r.partidas} victorias · IA ${dif} · la temporada acaba en ${days} día${days === 1 ? '' : 's'}`;
+  }
+
+  /** Clasificación global de rangos: { available, rows, error, myId, source }. */
+  setLadder(state) {
+    this.ladder = { ...this.ladder, ...state };
+    if (this.view === 'clasificacion' && this.table === 'rangos') this.renderTable();
+  }
+
+  _ranksTable() {
+    const r = this.profile.rango;
+    const placing = inPlacement(r);
+    const k = rankOf(r.puntos);
+    const me = el('div', { class: 'rango-yo' },
+      badgeCanvas(r, 56),
+      el('div', { class: 'ry-textos' },
+        el('small', { text: seasonName(r.temporada) }),
+        el('strong', { text: placing ? `Colocación ${r.colocacion}/${PLACEMENT_GAMES}` : k.label, style: placing ? '' : `color: rgb(${k.league.color.join(',')})` }),
+        el('span', { text: placing ? 'Juega las partidas de colocación para tener liga.' : `${k.pl} PL · ${r.victorias} victorias en ${r.partidas} partidas · mejor: ${rankOf(r.mejor).label}` })),
+      el('button', { type: 'button', class: 'principal', onclick: () => this.h.onRanked?.('ia'), text: 'Jugar clasificatoria' }));
+    const out = [me];
+    const L = this.ladder;
+    if (!L.available) {
+      out.push(emptyState('🏅', 'La tabla de rangos global estará disponible pronto', L.error || 'Tu rango se guarda en este navegador y sube a la tabla cuando haya conexión.'));
+      return out;
+    }
+    const rows = L.rows.filter((x) => x.temporada === r.temporada);
+    if (!rows.length) {
+      out.push(emptyState('🏅', 'Nadie tiene rango todavía esta temporada', 'Juega una clasificatoria para estrenar la tabla.'));
+      return out;
+    }
+    const table = el('table', { class: 'tabla tabla-rangos' });
+    table.append(el('thead', {}, el('tr', {}, ...['#', 'Nación', 'Rango', 'PL', 'Partidas'].map((h) => el('th', { text: h })))));
+    const body = el('tbody');
+    rows.forEach((row, i) => {
+      const rk = rankOf(row.puntos);
+      body.append(
+        el('tr', { class: row.id === L.myId ? 'yo' : '' },
+          el('td', { class: 'num', text: String(i + 1) }),
+          el('td', {}, el('span', { class: 'celda-nacion' }, emblemCanvas(row.emblema, 22), el('span', {}, el('strong', { text: row.nombre }), row.titulo ? el('small', { text: row.titulo }) : null))),
+          el('td', {}, el('span', { class: 'celda-rango' }, badgeCanvas(row.puntos, 18), el('span', { text: rk.label, style: `color: rgb(${rk.league.color.join(',')})` }))),
+          el('td', { class: 'num', text: String(rk.pl) }),
+          el('td', { class: 'num', text: String(row.partidas) })),
+      );
+    });
+    table.append(body);
+    out.push(table);
+    if (L.source) out.push(el('p', { class: 'nota', text: L.source }));
+    return out;
   }
 
   // ------------------------------------------------------------- cabecera
@@ -1367,6 +1448,21 @@ export class Home {
       $('chip-monedas').animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' });
     }
     contar($('bolsa-monedas'), p.monedas || 0, { formato: coins });
+    // Insignia del rango junto al emblema
+    const chipRank = $('chip-rango');
+    if (chipRank) {
+      const r = p.rango;
+      const show = r && (r.partidas > 0 || r.colocacion > 0);
+      chipRank.hidden = !show;
+      if (show) {
+        let c = chipRank.querySelector('canvas');
+        if (!c) {
+          c = badgeCanvas(r, 18);
+          chipRank.replaceChildren(c);
+        } else paintBadge(c, r);
+        chipRank.title = rankText(r);
+      }
+    }
   }
 
   // ---------------------------------------------------------------- tienda
@@ -1452,6 +1548,11 @@ export class Home {
     drawEmblem(cx, emb, 96, 96, 110);
     if (item.cat === 'marco') drawFrame(cx, item.id, 96, 96, 110);
     return c;
+  }
+
+  /** Aviso breve encima de todo (para main.js). */
+  flash(text, good = false) {
+    this._flash(text, good);
   }
 
   /** Aviso breve encima de todo (compras, monedas que faltan). */
@@ -1777,7 +1878,11 @@ export class Home {
     underline($('tabla-pestanas'), anim);
     const box = $('tabla-clasificacion');
     if (anim && !sinMovimiento()) box.animate?.([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'ease-out' });
-    if (this.table === 'global') box.replaceChildren(...this._globalTable());
+    if (this.table === 'rangos') {
+      box.replaceChildren(...this._ranksTable());
+      if (anim) this.h.onLadderRefresh?.();
+    }
+    else if (this.table === 'global') box.replaceChildren(...this._globalTable());
     else if (this.table === 'records') box.replaceChildren(...this._recordsTable());
     else box.replaceChildren(...this._historyTable());
   }

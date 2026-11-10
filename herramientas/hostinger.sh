@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Publica la web del juego (index.html = el juego empaquetado en un solo
-# archivo, con su JavaScript y su CSS dentro, más .htaccess) en dos pasos:
+# archivo, con su JavaScript y su CSS dentro, más .htaccess y la API de
+# rangos api/rangos.php) en dos pasos:
 #
 #   bash herramientas/hostinger.sh prueba       → rama «hostinger-prueba»
 #        (Hostinger la despliega en …/prueba/: se valida ahí primero)
@@ -39,6 +40,9 @@ if [ "$DESTINO" = prueba ]; then
   fi
   npm run empaquetar >/dev/null
   cp dist/dominia.html "$SRC/index.html"
+  # API de la tabla de rangos (PHP); su configuración va fuera de public_html
+  mkdir -p "$SRC/api"
+  cp api/rangos.php "$SRC/api/rangos.php"
 else
   # Producción: el mismo archivo que se validó en prueba, byte a byte
   fetch_rama hostinger-prueba
@@ -47,6 +51,8 @@ else
     exit 1
   fi
   git -C "$RAIZ" show origin/hostinger-prueba:index.html > "$SRC/index.html"
+  mkdir -p "$SRC/api"
+  git -C "$RAIZ" show origin/hostinger-prueba:api/rangos.php > "$SRC/api/rangos.php" 2>/dev/null || rm -rf "$SRC/api"
 fi
 BUILD=$(grep -o '<meta name="trinchera-build" content="[^"]*"' "$SRC/index.html" | sed 's/.*content="//; s/"$//')
 
@@ -62,6 +68,11 @@ fi
 
 cp "$SRC/index.html" "$TMP/index.html"
 cp herramientas/hostinger.htaccess "$TMP/.htaccess"
+if [ -d "$SRC/api" ]; then
+  mkdir -p "$TMP/api"
+  cp "$SRC/api/rangos.php" "$TMP/api/rangos.php"
+  git -C "$TMP" add api
+fi
 git -C "$TMP" add index.html .htaccess
 if git -C "$TMP" diff --cached --quiet; then
   echo "La rama $RAMA ya tiene la compilación $BUILD."

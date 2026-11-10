@@ -47,7 +47,7 @@
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
         <button type="button" id="chip-perfil" class="chip-perfil" data-ir="perfil" aria-label="Abrir tu perfil">
-          <span class="chip-avatar"><canvas id="chip-emblema" width="80" height="80"></canvas></span>
+          <span class="chip-avatar"><canvas id="chip-emblema" width="80" height="80"></canvas><span class="chip-rango" id="chip-rango"></span></span>
           <span class="chip-textos">
             <strong id="chip-nombre"></strong>
             <span class="chip-linea"><small id="chip-nivel"></small><small id="chip-xp-txt" class="chip-xp-txt"></small></span>
@@ -81,6 +81,21 @@
             </div>
           </div>
         </div>
+        <!-- Clasificatoria: tu rango de la temporada y las partidas que cuentan -->
+        <section class="clasificatoria" id="clasificatoria" aria-labelledby="cl-titulo">
+          <div class="cl-insignia" id="cl-insignia"></div>
+          <div class="cl-datos">
+            <span class="cl-temporada" id="cl-temporada"></span>
+            <h2 class="cl-titulo" id="cl-titulo">Clasificatoria</h2>
+            <strong class="cl-rango" id="cl-rango"></strong>
+            <div class="cl-barra" aria-hidden="true"><span id="cl-barra"></span></div>
+            <small class="cl-nota" id="cl-nota"></small>
+          </div>
+          <div class="cl-botones">
+            <button type="button" class="principal" id="btn-clasif-ia">Jugar clasificatoria</button>
+            <button type="button" class="btn-sec" id="btn-clasif-sala">Sala clasificatoria</button>
+          </div>
+        </section>
         <h2 class="titulo-seccion"><span>Elige cómo jugar</span></h2>
         <div class="modos">
           <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
@@ -319,7 +334,8 @@
       <section class="vista" data-vista="clasificacion" role="tabpanel" aria-labelledby="tab-clasificacion" hidden>
         <div class="bloque">
           <div class="sub-pestanas" id="tabla-pestanas" role="tablist" aria-label="Tabla">
-            <button type="button" role="tab" data-tabla="global" aria-selected="true" aria-controls="tabla-clasificacion">Global</button>
+            <button type="button" role="tab" data-tabla="rangos" aria-selected="true" aria-controls="tabla-clasificacion">Rangos</button>
+            <button type="button" role="tab" data-tabla="global" aria-selected="false" aria-controls="tabla-clasificacion">Global</button>
             <button type="button" role="tab" data-tabla="records" aria-selected="false" aria-controls="tabla-clasificacion">Tus récords</button>
             <button type="button" role="tab" data-tabla="historial" aria-selected="false" aria-controls="tabla-clasificacion">Historial</button>
           </div>
@@ -790,7 +806,7 @@
   <div id="confirmar" class="pantalla" role="alertdialog" aria-labelledby="conf-titulo" hidden>
     <div class="tarjeta">
       <h2 id="conf-titulo">¿Abandonar la partida?</h2>
-      <p class="centrado">Volverás al menú y se perderá esta partida.</p>
+      <p class="centrado" id="conf-texto">Volverás al menú y se perderá esta partida.</p>
       <div class="botones">
         <button type="button" id="conf-no">Seguir jugando</button>
         <button type="button" id="conf-si" class="principal">Abandonar</button>

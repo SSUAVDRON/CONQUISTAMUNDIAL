@@ -3,6 +3,7 @@
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
 import { DEFAULT_RULES, migrateRules } from './config.js';
+import { newRank, normalizeRank } from './rangos.js';
 import { Rng, hashString } from './rng.js';
 
 // (Las claves conservan el nombre de la primera versión para no perder perfiles.)
@@ -351,6 +352,7 @@ export function defaultProfile() {
       silencio: false, // botón de la barra superior
     },
     tutorial: false,
+    rango: newRank(), // partidas clasificatorias (ver rangos.js)
     actualizado: 0,
   };
 }
@@ -379,6 +381,7 @@ export function normalizeProfile(p) {
     monedas: Number.isFinite(p.monedas) ? Math.max(0, Math.floor(p.monedas)) : 0,
     comprados: p.comprados && typeof p.comprados === 'object' ? { ...p.comprados } : {},
     diarios: p.diarios && typeof p.diarios === 'object' && Array.isArray(p.diarios.retos) ? p.diarios : null,
+    rango: normalizeRank(p.rango),
     // Reglas guardadas antes de los perfiles: se migran (perfil histórico) ANTES de combinarlas con los valores por defecto
     ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...(migrateRules(p.ajustes && p.ajustes.reglas) || {}) } },
   };
@@ -429,6 +432,10 @@ export function mergeProfiles(a, b) {
     else out.stats[k] = Math.max(x || 0, y || 0);
   }
   out.logros = { ...older.logros, ...newer.logros };
+  // Rango: el de la temporada más reciente; en la misma, el que tiene más partidas
+  const ra = a.rango;
+  const rb = b.rango;
+  out.rango = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb);
   out.comprados = { ...older.comprados, ...newer.comprados };
   const seen = new Set();
   out.historial = [...a.historial, ...b.historial]
