@@ -76,15 +76,6 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-/** Opciones del selector de mapa: mundo real primero, luego aleatorios. */
-function fillMapSelect(select) {
-  const real = el('optgroup', { label: 'Mundo real (los bots son países)' },
-    ...Object.entries(REAL_MAPS).map(([id, name]) => el('option', { value: id, text: name })));
-  const random = el('optgroup', { label: 'Aleatorio' },
-    ...Object.entries(MAP_SIZES).map(([id, m]) => el('option', { value: id, text: m.label })));
-  select.replaceChildren(real, random);
-}
-
 /** Datos de un mapa real ya decodificados (terreno y relieve), para miniaturas y portada. */
 const realCache = new Map();
 function realPreviewData(id) {
@@ -136,6 +127,76 @@ function mapThumb(id, width = 168) {
   const c = el('canvas', { width, height, 'aria-hidden': 'true' });
   paintMapPreview(c, data);
   return c;
+}
+
+/** Miniaturas ya pintadas (una por mapa y ancho): se copian en vez de rehacerlas. */
+const thumbCache = new Map();
+function thumbCopy(id, width) {
+  const key = `${id}:${width}`;
+  let src = thumbCache.get(key);
+  if (!src) {
+    src = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', width);
+    thumbCache.set(key, src);
+  }
+  const c = el('canvas', { width: src.width, height: src.height, 'aria-hidden': 'true' });
+  c.getContext('2d').drawImage(src, 0, 0);
+  return c;
+}
+
+/** Todos los mapas: [id, nombre, detalle]. */
+function mapEntries() {
+  return [
+    ...Object.entries(REAL_MAPS).map(([id, name]) => [id, name, `${REAL_MAP_DATA[id].countries.length} países`]),
+    ...Object.entries(MAP_SIZES).map(([id, m]) => [id, `Aleatorio ${m.label.toLowerCase()}`, 'Nuevo mundo cada vez']),
+  ];
+}
+
+/**
+ * Selector de mapa (el mismo en «Contra la IA», «Crear sala» y el editor de
+ * la sala): tarjetas con miniatura en una tira. Devuelve { set(id) }.
+ */
+function mapPicker(box, value, onChange) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  box.classList.add('selector-mapas');
+  box.setAttribute('role', 'radiogroup');
+  if (!box.hasAttribute('aria-labelledby')) box.setAttribute('aria-label', 'Mapa');
+  const show = (id, smooth) => {
+    const b = box.querySelector(`[data-map="${id}"]`);
+    if (!b || box.scrollWidth <= box.clientWidth) return;
+    const l = b.offsetLeft - box.offsetLeft;
+    if (l < box.scrollLeft || l + b.offsetWidth > box.scrollLeft + box.clientWidth) box.scrollTo({ left: l - 8, behavior: smooth && !sinMovimiento() ? 'smooth' : 'auto' });
+  };
+  const set = (id, smooth = false) => {
+    for (const b of box.children) b.setAttribute('aria-checked', String(b.dataset.map === id));
+    rodar(box);
+    show(id, smooth);
+  };
+  box.replaceChildren(
+    ...mapEntries().map(([id, name, sub]) => {
+      const thumb = thumbCopy(id, Math.round(168 * dpr));
+      return el(
+        'button',
+        {
+          type: 'button',
+          role: 'radio',
+          class: 'mapa-tarjeta',
+          'aria-checked': String(id === value),
+          'data-map': id,
+          onclick: () => {
+            set(id, true);
+            onChange(id);
+          },
+        },
+        el('span', { class: 'mapa-mini' }, thumb),
+        el('strong', { text: name }),
+        el('small', { text: sub }),
+      );
+    }),
+  );
+  teclasGrupo(box);
+  rodar(box);
+  requestAnimationFrame(() => show(value, false));
+  return { set };
 }
 
 /** HSL (h en grados, s y l de 0 a 1) a [r, g, b]. */
@@ -400,7 +461,10 @@ export class Home {
     // Partida contra la IA
     const a = this.profile.ajustes;
     this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } };
-    this._buildGallery();
+    this._galleryIA = mapPicker($('galeria-mapas'), this.choice.map, (id) => {
+      this.choice.map = id;
+      this._syncBots();
+    });
     // Portada con nuestro mapa (un poco después, para que el menú salga al instante)
     const cover = $('portada-mapa');
     if (cover) {
@@ -419,9 +483,10 @@ export class Home {
     });
     segmented($('seg-dificultad'), Object.entries(DIFFICULTY), this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
+      this._syncSummaryIA();
     });
     // Reglas (las mismas que en la sala multijugador)
-    this._rulesIA = rulesEditor('ia', this.choice.rules, () => {}, {
+    this._rulesIA = rulesEditor('ia', this.choice.rules, () => this._syncSummaryIA(), {
       autoColonies: () => colonyCount(landTilesOf(this.choice.map), Number($('in-bots').value)),
     });
     $('reglas-ia').replaceChildren(this._rulesIA);
@@ -434,6 +499,7 @@ export class Home {
       $('nota-rivales').textContent = flags ? `(${flags} países reales; el resto, inventados)` : '';
       $('campo-semilla').hidden = !!REAL_MAPS[this.choice.map];
       this._rulesIA?.refresh();
+      this._syncSummaryIA();
     };
     $('in-bots').addEventListener('input', this._syncBots);
     $('form-rapida').addEventListener('submit', (e) => {
@@ -503,6 +569,7 @@ export class Home {
       const b = e.target.closest('button[data-code]');
       if (b && !b.disabled) this.h.onJoinRoom?.(b.dataset.code);
       if (e.target.closest('[data-crear]')) this.showCreate();
+      if (e.target.closest('[data-reintentar]')) this.h.onRetryNet?.();
     });
     // Crear sala
     for (const id of ['crear-atras', 'crear-volver']) $(id).addEventListener('click', () => this.hideCreate());
@@ -557,6 +624,17 @@ export class Home {
       });
     }
 
+    // Pie fijo de «Crear sala» y de la sala: el contenido acaba justo encima
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver((entries) => {
+        for (const e of entries) {
+          const h = e.target.offsetHeight;
+          if (h) e.target.closest('.pantalla-sala')?.style.setProperty('--alto-pie', `${h}px`);
+        }
+      });
+      for (const pie of document.querySelectorAll('.pantalla-sala .sala-pie')) ro.observe(pie);
+    }
+
     // Sala
     $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
     $('btn-empezar').addEventListener('click', () => this.h.onStartRoom?.());
@@ -582,10 +660,12 @@ export class Home {
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
     } else if (mode === 'personalizada') {
-      // El mismo panel que «Contra IA», directamente en las reglas
+      // El mismo panel que «Contra IA», con las reglas avanzadas desplegadas
+      $('ia-avanzadas').open = true;
       this._openPanel('ia', false);
-      setTimeout(() => $('reglas-ia').scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+      setTimeout(() => $('ia-avanzadas').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }), 30);
     } else {
+      if (mode === 'ia' && this.panel !== 'ia') $('ia-avanzadas').open = false;
       this._openPanel(this.panel === mode ? null : mode);
     }
   }
@@ -669,7 +749,10 @@ export class Home {
 
   _openPanel(name, scroll = true) {
     this.panel = name;
-    for (const p of document.querySelectorAll('.panel-modo')) p.hidden = p.dataset.panel !== name;
+    for (const p of document.querySelectorAll('.panel-modo')) {
+      if (p.dataset.panel === name) mostrar(p, { y: 12, scale: 1, ms: 260 });
+      else p.hidden = true;
+    }
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
       if (card.dataset.modo === 'ia' || card.dataset.modo === 'online') card.setAttribute('aria-expanded', String(card.dataset.modo === name));
     }
@@ -677,33 +760,16 @@ export class Home {
     if (panel && scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  _buildGallery() {
-    const entries = [
-      ...Object.entries(REAL_MAPS).map(([id, name]) => [id, name, `${REAL_MAP_DATA[id].countries.length} países`]),
-      ...Object.entries(MAP_SIZES).map(([id, m]) => [id, `Aleatorio ${m.label.toLowerCase()}`, 'Nuevo mundo cada vez']),
-    ];
-    $('galeria-mapas').replaceChildren(
-      ...entries.map(([id, name, sub]) =>
-        el(
-          'button',
-          {
-            type: 'button',
-            role: 'radio',
-            class: 'mapa-tarjeta',
-            'aria-checked': String(id === this.choice.map),
-            'data-map': id,
-            onclick: () => {
-              this.choice.map = id;
-              for (const b of $('galeria-mapas').children) b.setAttribute('aria-checked', String(b.dataset.map === id));
-              this._syncBots();
-            },
-          },
-          mapThumb(id),
-          el('strong', { text: name }),
-          el('small', { text: sub }),
-        ),
-      ),
+  /** Resumen de la partida contra la IA (barra de abajo) y de sus reglas (cabecera de «Reglas avanzadas»). */
+  _syncSummaryIA() {
+    const c = this.choice;
+    const n = Number($('in-bots').value);
+    $('ia-resumen').replaceChildren(
+      el('strong', { text: mapLabel(c.map) }),
+      ` · ${n} rival${n === 1 ? '' : 'es'} · ${DIFFICULTY[c.difficulty] || 'Normal'}`,
+      el('small', { text: rulesSummary(c.rules) }),
     );
+    $('ia-reglas-resumen').textContent = rulesSummary(c.rules);
   }
 
   /** Abre directamente un panel (por ejemplo, el multijugador al volver de una sala). */
@@ -787,6 +853,7 @@ export class Home {
         el('span', { class: 'mision-nombre', text: r.name }),
         el('span', { class: 'mision-prog', text: `${prog}/${r.need}` }),
         el('b', { class: 'mision-premio', text: `🪙 ${r.coins}` }),
+        el('span', { class: 'mision-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
       );
     });
     const doneCount = d.retos.filter((id) => d.hechos[id]).length;
@@ -801,6 +868,7 @@ export class Home {
       ),
     );
     $('misiones-lista').replaceChildren(...items);
+    llenarAlVer($('misiones-lista'));
   }
 
   /** Tarjeta de la última partida: mapa, resultado y «jugar otra vez». */
@@ -1614,13 +1682,31 @@ export class Home {
     this.renderRooms();
   }
 
-  /** Vestíbulo público: tarjetas con miniatura, mapa, modo y plazas libres. */
+  /** Vestíbulo público: tarjetas con miniatura, mapa, modo y plazas libres (o un estado vacío con diseño). */
   renderRooms() {
     const list = $('lista-salas');
+    const kind = this.netKind;
+    const empty = (cls, icon, title, text, ...buttons) =>
+      el('li', { class: `vacia estado-vacio ${cls}` },
+        el('span', { class: 'ev-icono', 'aria-hidden': 'true', text: icon }),
+        el('span', { class: 'ev-textos' }, el('strong', { text: title }), el('small', { text })),
+        el('span', { class: 'ev-botones' }, ...buttons));
+    if (kind === 'connecting' || kind === undefined) {
+      // Conectando: tarjetas de carga
+      list.replaceChildren(...[0, 1].map(() => el('li', { class: 'sala-esqueleto', 'aria-hidden': 'true' }, el('span'), el('span'), el('span'))));
+      list.setAttribute('aria-busy', 'true');
+      return;
+    }
+    list.removeAttribute('aria-busy');
+    if (!kind || kind === 'none') {
+      list.replaceChildren(empty('sin-red', '📡', 'Sin conexión con el servidor de salas', 'Comprueba tu conexión a internet y vuelve a intentarlo.',
+        el('button', { type: 'button', class: 'principal', 'data-reintentar': '1', text: 'Reintentar' })));
+      return;
+    }
     if (!this.rooms.length) {
-      list.replaceChildren(
-        el('li', { class: 'vacia' }, el('span', { text: 'No hay salas públicas ahora mismo.' }), ' ', el('button', { type: 'button', class: 'enlace-ini', 'data-crear': '1', text: 'Crea una' })),
-      );
+      list.replaceChildren(empty('sin-salas', '🏳', 'No hay salas públicas ahora mismo', kind === 'local' ? 'Prueba entre pestañas: crea una sala y ábrela en otra pestaña.' : 'Crea una pública y aparecerá aquí para que entren otros.',
+        el('button', { type: 'button', class: 'principal', 'data-crear': '1', text: 'Crea la primera' }),
+        kind === 'local' ? el('button', { type: 'button', class: 'secundario', 'data-reintentar': '1', text: 'Reintentar conexión' }) : null));
       return;
     }
     list.replaceChildren(
@@ -1651,28 +1737,14 @@ export class Home {
 
   /** Miniatura de un mapa, una sola vez por mapa y tamaño. */
   _thumb(id, width) {
-    const key = `${id}:${width}`;
-    this._thumbs ??= new Map();
-    let src = this._thumbs.get(key);
-    if (!src) {
-      src = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', width);
-      this._thumbs.set(key, src);
-    }
-    const c = el('canvas', { width: src.width, height: src.height, 'aria-hidden': 'true' });
-    c.getContext('2d').drawImage(src, 0, 0);
-    return c;
+    return thumbCopy(id, width);
   }
 
   /** Pinta el mapa `id` en un lienzo grande (recortado para llenarlo). */
   _paintMapInto(canvas, id) {
     if (canvas.dataset.mapa === id) return;
     canvas.dataset.mapa = id;
-    const src = this._thumbs?.get(`${id}:640`) || (() => {
-      this._thumbs ??= new Map();
-      const c = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', 640);
-      this._thumbs.set(`${id}:640`, c);
-      return c;
-    })();
+    const src = thumbCopy(id, 640);
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
@@ -1736,21 +1808,12 @@ export class Home {
     // Mapas: el grande y una tira con todos
     this._paintMapInto($('crear-mapa-img'), c.map);
     $('crear-mapa-nombre').textContent = mapLabel(c.map);
-    const maps = [...Object.keys(REAL_MAPS), ...Object.keys(MAP_SIZES)];
-    $('crear-mapas').replaceChildren(
-      ...maps.map((id) =>
-        el('button', {
-          type: 'button',
-          role: 'radio',
-          'aria-checked': String(id === c.map),
-          text: REAL_MAPS[id] || `Aleatorio ${MAP_SIZES[id].label.toLowerCase()}`,
-          onclick: () => {
-            c.map = id;
-            this._renderCreate();
-          },
-        }),
-      ),
-    );
+    if (!this._createPicker) {
+      this._createPicker = mapPicker($('crear-mapas'), c.map, (id) => {
+        c.map = id;
+        this._renderCreate();
+      });
+    } else this._createPicker.set(c.map);
     segmented($('crear-visibilidad'), [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], c.visibility, (v) => {
       c.visibility = v;
       this._renderCreate();
@@ -1999,7 +2062,7 @@ export class Home {
     else this._notice('');
   }
 
-  /** Editor del anfitrión (nombre, visibilidad, plazas, mapa, naciones, dificultad y reglas). */
+  /** Editor del anfitrión (nombre, visibilidad, plazas, mapa, naciones, dificultad y reglas): los mismos controles que «Crear sala». */
   _hostEditor(sala, s) {
     const box = $('sala-ajustes');
     if (box.dataset.host) return;
@@ -2009,27 +2072,34 @@ export class Home {
     name.addEventListener('change', () => this.h.onRoomInfo?.({ nombre: name.value.trim() || info.nombre }));
     const vis = el('div', { class: 'segmentos visibilidad', role: 'radiogroup', 'aria-label': 'Visibilidad' });
     segmented(vis, [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], info.visibilidad, (v) => this.h.onRoomInfo?.({ visibilidad: v }));
-    const seats = el('select', { 'aria-label': 'Plazas' }, ...Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => el('option', { value: String(i + MIN_HUMANS), text: `${i + MIN_HUMANS} plazas` })));
-    seats.value = String(info.plazas);
-    seats.addEventListener('change', () => this.h.onRoomInfo?.({ plazas: Number(seats.value) }));
+    const seats = el('div', { class: 'segmentos plazas', role: 'radiogroup', 'aria-label': 'Plazas' });
+    segmented(seats, Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => [i + MIN_HUMANS, String(i + MIN_HUMANS)]), info.plazas, (v) => this.h.onRoomInfo?.({ plazas: v }));
     this.choice.rules = { ...DEFAULT_RULES, ...migrateRules(s.rules) };
+    this._salaMap = s.mapSize;
+    this._salaDifficulty = s.difficulty;
+    const maps = el('div', { class: 'crear-mapas', 'aria-label': 'Mapa' });
+    mapPicker(maps, s.mapSize, (id) => {
+      this._salaMap = id;
+      this._lobbyChanged();
+    });
+    const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
+    segmented(dif, Object.entries(DIFFICULTY), s.difficulty, (v) => {
+      this._salaDifficulty = v;
+      this._lobbyChanged();
+    });
     box.replaceChildren(
       el('p', { class: 'nota', text: 'Si cambias el mapa, las naciones, la dificultad o las reglas, los invitados tienen que confirmar de nuevo. El nombre, la visibilidad y las plazas no.' }),
-      el('div', { class: 'fila-2' }, el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name), el('label', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
-      el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis),
-      el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
-        el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(Math.min(ONLINE_MAX_BOTS, s.bots)), oninput: () => this._lobbyChanged() })),
+      el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name),
+      el('div', { class: 'fila-2' }, el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis), el('div', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
+      el('div', { class: 'campo' }, el('span', { text: 'Mapa' }), maps),
       el('div', { class: 'fila-2' },
-        el('label', { class: 'campo' }, el('span', { text: 'Mapa' }), el('select', { id: 'sala-mapa', onchange: () => this._lobbyChanged() })),
-        el('label', { class: 'campo' }, el('span', { text: 'Dificultad' }),
-          el('select', { id: 'sala-dificultad', onchange: () => this._lobbyChanged() }, ...Object.entries(DIFFICULTY).map(([k, v]) => el('option', { value: k, text: v }))))),
+        el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
+          el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(Math.min(ONLINE_MAX_BOTS, s.bots)), oninput: () => this._lobbyChanged() })),
+        el('div', { class: 'campo' }, el('span', { text: 'Dificultad' }), dif)),
       (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
-        autoColonies: () => colonyCount(landTilesOf($('sala-mapa')?.value || 'mundo'), Number($('sala-bots')?.value || 0)),
+        autoColonies: () => colonyCount(landTilesOf(this._salaMap || 'mundo'), Number($('sala-bots')?.value || 0)),
       })),
     );
-    fillMapSelect($('sala-mapa'));
-    $('sala-mapa').value = s.mapSize;
-    $('sala-dificultad').value = s.difficulty;
     this._rulesSala.refresh();
   }
 
@@ -2041,8 +2111,8 @@ export class Home {
     this.h.onProfileChange?.(false);
     this.h.onRoomSettings?.({
       bots: Number($('sala-bots').value),
-      mapSize: $('sala-mapa').value,
-      difficulty: $('sala-dificultad').value,
+      mapSize: this._salaMap,
+      difficulty: this._salaDifficulty,
       rules: { ...this.choice.rules },
     });
   }

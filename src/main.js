@@ -657,6 +657,18 @@ const home = new Home(profile, {
   },
   onSettings: applySettings,
   sound: (name) => sound.play(name, 0.9, 0),
+  /** «Reintentar» en Multijugador: vuelve a buscar el servidor de salas. */
+  onRetryNet() {
+    if (connecting) return;
+    try {
+      transport?.close?.();
+    } catch {
+      /* ya estaba cerrado */
+    }
+    transport = null;
+    state.transport = null;
+    connectNet();
+  },
   /** «Crear sala» (devuelve una promesa: el formulario espera y, si falla, permite reintentar). */
   onCreateRoom({ settings, info }) {
     return openSala(newRoomCode(), true, { settings, info });

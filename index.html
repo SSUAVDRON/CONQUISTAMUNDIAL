@@ -88,6 +88,7 @@
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M9 1.5 L3.5 9 H7.5 L6.5 14.5 L12.5 6.5 H8.5 Z" fill="currentColor"/></svg>
             <span class="modo-titulo">Partida rápida</span>
             <span class="modo-texto">Una partida equilibrada en el mundo, lista para jugar.</span>
+            <span class="modo-corto">El mundo, 90 naciones</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button type="button" class="modo " data-modo="ia" style="--i:1">
@@ -96,6 +97,7 @@
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="5" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 5 V2.5 M6 9 h0.01 M10 9 h0.01 M6 11.5 h4 M1.5 8 v3 M14.5 8 v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="2" r="1" fill="currentColor"/></svg>
             <span class="modo-titulo">Contra IA</span>
             <span class="modo-texto">Enfréntate a la inteligencia artificial y perfecciona tu estrategia.</span>
+            <span class="modo-corto">Tú eliges mapa y rivales</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button type="button" class="modo " data-modo="online" style="--i:2">
@@ -104,6 +106,7 @@
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.2" fill="currentColor"/><circle cx="3.5" cy="6" r="1.7" fill="currentColor"/><circle cx="12.5" cy="6" r="1.7" fill="currentColor"/><path d="M4.5 13.5 c0 -2.5 1.6 -4 3.5 -4 s3.5 1.5 3.5 4 Z M0.8 13 c0 -2 1.2 -3.2 2.7 -3.2 c0.6 0 1 0.1 1.4 0.3 M15.2 13 c0 -2 -1.2 -3.2 -2.7 -3.2 c-0.6 0 -1 0.1 -1.4 0.3" fill="currentColor"/></svg>
             <span class="modo-titulo">Multijugador</span>
             <span class="modo-texto">Compite con otros jugadores en tiempo real.</span>
+            <span class="modo-corto">Juega con tus amigos</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button type="button" class="modo " data-modo="personalizada" style="--i:3">
@@ -112,6 +115,7 @@
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="modo-titulo">Partida personalizada</span>
             <span class="modo-texto">Define las reglas, el mapa y la duración a tu medida.</span>
+            <span class="modo-corto">Todas las reglas</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
@@ -121,19 +125,25 @@
             <h2>Partida contra la IA</h2>
             <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
           </div>
-          <h3>Mapa</h3>
-          <div id="galeria-mapas" class="galeria" role="radiogroup" aria-label="Mapa"></div>
-          <div class="opciones">
+          <h3 id="ia-mapa-tit">Mapa</h3>
+          <div id="galeria-mapas" aria-labelledby="ia-mapa-tit"></div>
+          <div class="opciones ia-basico">
             <label class="campo"><span>Naciones rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
               <input id="in-bots" type="range" min="1" max="200" value="70">
             </label>
             <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
-            <div id="reglas-ia" class="reglas"></div>
             <label class="campo" id="campo-semilla"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
               <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
             </label>
           </div>
-          <button type="submit" class="principal grande">Empezar partida</button>
+          <details class="reglas-avanzadas" id="ia-avanzadas">
+            <summary><span class="ra-tit">Reglas avanzadas</span><small class="ra-resumen" id="ia-reglas-resumen"></small></summary>
+            <div id="reglas-ia" class="reglas"></div>
+          </details>
+          <div class="form-pie">
+            <p class="form-resumen" id="ia-resumen"></p>
+            <button type="submit" class="principal grande">Empezar partida</button>
+          </div>
         </form>
 
         <div id="bloque-online" class="bloque panel-modo" data-panel="online" hidden>
@@ -395,7 +405,7 @@
         <section class="sala-caja crear-mapa" aria-labelledby="crear-mapa-tit">
           <h2 id="crear-mapa-tit">Mapa</h2>
           <div class="mapa-vista"><canvas id="crear-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="crear-mapa-nombre"></span></div>
-          <div class="crear-mapas" id="crear-mapas" role="radiogroup" aria-label="Mapa"></div>
+          <div class="crear-mapas" id="crear-mapas" aria-labelledby="crear-mapa-tit"></div>
         </section>
         <section class="sala-caja crear-datos">
           <label class="campo"><span class="campo-tit">Nombre de la sala</span><input id="crear-nombre" maxlength="28" autocomplete="off" spellcheck="false"></label>
