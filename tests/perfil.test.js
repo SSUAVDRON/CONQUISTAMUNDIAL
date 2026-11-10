@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ACHIEVEMENTS, PATTERNS, SYMBOLS, defaultProfile, hasAchievement, isUnlocked,
+  ACHIEVEMENTS, PATTERNS, SYMBOLS, achievementProgress, defaultProfile, hasAchievement, isUnlocked,
   levelInfo, mergeProfiles, normalizeProfile, recordGame,
 } from '../src/profile.js';
 
@@ -153,4 +153,24 @@ test('compras y bandera del emblema sobreviven a la fusión y a la limpieza', ()
   assert.equal(m.emblema.flag, 'es');
   assert.equal(normalizeProfile({ emblema: { flag: '<script>' } }).emblema.flag, '');
   assert.equal(normalizeProfile({ monedas: -50 }).monedas, 0);
+});
+
+test('logros medibles: progreso «7/10» según la estadística, completo al conseguirlo', () => {
+  const p = defaultProfile();
+  const ach = (id) => ACHIEVEMENTS.find((a) => a.id === id);
+  assert.equal(achievementProgress(p, ach('relampago')), null, 'los de una sola partida no tienen meta');
+  p.stats.partidas = 7;
+  assert.deepEqual(achievementProgress(p, ach('veterano')), { have: 7, need: 10 });
+  p.stats.partidas = 25;
+  assert.deepEqual(achievementProgress(p, ach('veterano')), { have: 10, need: 10 }, 'no pasa del objetivo');
+  p.comprados = { 'marco:oro': 1, 'patron:rayas': 2 };
+  assert.deepEqual(achievementProgress(p, ach('coleccionista')), { have: 2, need: 5 });
+  assert.equal(achievementProgress(p, ach('nivel10')).have, levelInfo(p.xp).level);
+  // Conseguido (p. ej. de la nube) aunque la estadística local sea menor: lleno
+  p.logros.centurion = Date.now();
+  assert.deepEqual(achievementProgress(p, ach('centurion')), { have: 100, need: 100 });
+  // Todas las metas apuntan a una estadística que existe
+  for (const a of ACHIEVEMENTS.filter((x) => x.meta)) {
+    assert.ok(['nivel', 'comprados'].includes(a.meta.stat) || a.meta.stat in defaultProfile().stats, a.id);
+  }
 });

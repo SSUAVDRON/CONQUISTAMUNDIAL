@@ -17,7 +17,7 @@ import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
-  buyItem, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
+  achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
 } from './profile.js';
 
 /** Colores rápidos para el territorio y el emblema. */
@@ -423,6 +423,31 @@ function patternCanvas(patternId, color, w = 96, h = 56) {
   return c;
 }
 
+/** Subrayado que se desliza bajo la pestaña elegida de un grupo de sub-pestañas. */
+function underline(nav, anim) {
+  if (!nav) return;
+  let u = nav.querySelector(':scope > .subrayado-pestana');
+  if (!u) {
+    u = el('span', { class: 'subrayado-pestana', 'aria-hidden': 'true' });
+    nav.append(u);
+    nav.classList.add('con-subrayado');
+  }
+  const tab = nav.querySelector('[aria-selected="true"]');
+  if (!tab || !tab.offsetWidth) return;
+  u.classList.toggle('sin-transicion', !anim || sinMovimiento());
+  u.style.width = `${tab.offsetWidth}px`;
+  u.style.transform = `translateX(${tab.offsetLeft}px)`;
+  u.style.opacity = '1';
+}
+
+/** Estado vacío con diseño: icono, título, texto y acciones opcionales. */
+function emptyState(icon, title, text, ...actions) {
+  return el('div', { class: 'estado-vacio' },
+    el('span', { class: 'ev-icono', 'aria-hidden': 'true', text: icon }),
+    el('span', { class: 'ev-textos' }, el('strong', { text: title }), text ? el('small', { text }) : null),
+    actions.length ? el('span', { class: 'ev-botones' }, ...actions) : null);
+}
+
 export class Home {
   /**
    * handlers: onProfileChange(), onQuickPlay(opts), onCreateRoom(), onJoinRoom(code),
@@ -531,6 +556,7 @@ export class Home {
       $(id).checked = this.profile.ajustes[key] !== false;
       $(id).addEventListener('change', () => {
         this.profile.ajustes[key] = $(id).checked;
+        this._syncVolumes();
         this.h.onProfileChange?.(false);
       });
     }
@@ -546,6 +572,14 @@ export class Home {
       $(id).addEventListener('change', () => this.h.onProfileChange?.(false));
     }
     $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
+    $('aj-guia').addEventListener('click', () => this.h.onGuide?.());
+    $('aj-restablecer').addEventListener('click', () => abrirDialogo($('dialogo-restablecer'), { foco: '[data-cerrar]' }));
+    $('dr-si').addEventListener('click', () => {
+      this._resetSettings();
+      cerrarDialogo($('dialogo-restablecer'));
+      this._flash('Ajustes restablecidos.', true);
+    });
+    this._syncVolumes();
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
@@ -591,18 +625,6 @@ export class Home {
       this.profile.color = $('in-color').value;
       this._profileChangedSoon();
     });
-    $('in-titulo').addEventListener('change', () => {
-      const t = TITLES.find((x) => x.id === $('in-titulo').value);
-      if (t && !isUnlocked(this.profile, t)) {
-        // Título de la tienda: se ofrece comprarlo y el selector vuelve al actual
-        $('in-titulo').value = this.profile.titulo;
-        this._offerTitle(t);
-        return;
-      }
-      $('titulo-compra').hidden = true;
-      this.profile.titulo = $('in-titulo').value;
-      this._profileChanged();
-    });
     $('in-bandera').addEventListener('change', () => {
       this.profile.emblema.flag = $('in-bandera').value;
       this._profileChanged();
@@ -616,13 +638,24 @@ export class Home {
       this._profileChanged();
     });
 
+    // Perfil: sub-pestañas Resumen y Aspecto
+    this.profileTab = 'resumen';
+    for (const b of document.querySelectorAll('#perfil-pestanas [data-perfil]')) b.addEventListener('click', () => this._profileTab(b.dataset.perfil));
+    teclasGrupo($('perfil-pestanas'), '[role="tab"]');
+    $('ir-aspecto').addEventListener('click', () => this._profileTab('aspecto'));
+    $('dc-comprar').addEventListener('click', () => this._confirmBuy());
+
     // Clasificación
-    for (const b of document.querySelectorAll('.sub-pestanas [data-tabla]')) {
+    for (const b of document.querySelectorAll('#tabla-pestanas [data-tabla]')) {
       b.addEventListener('click', () => {
         this.table = b.dataset.tabla;
-        this.renderTable();
+        this.renderTable(true);
       });
     }
+    teclasGrupo($('tabla-pestanas'), '[role="tab"]');
+    window.addEventListener('resize', () => {
+      for (const nav of document.querySelectorAll('.vista:not([hidden]) .sub-pestanas')) underline(nav, false);
+    });
 
     // Pie fijo de «Crear sala» y de la sala: el contenido acaba justo encima
     if (typeof ResizeObserver !== 'undefined') {
@@ -785,6 +818,7 @@ export class Home {
       this.renderCard();
       this.renderPatterns();
       this.renderAppearance();
+      this.renderPreview();
       this.renderHero();
     });
     this.h.onProfileChange?.(true);
@@ -985,6 +1019,11 @@ export class Home {
   _buildArsenal() {
     const nameOf = (kind) => ARSENAL[kind].name || BUILDINGS[kind]?.name || kind;
     const priceOf = (kind) => ARSENAL[kind].price || (BUILDINGS[kind] ? `${formatNumber(BUILDINGS[kind].base)} oro` : '');
+    const keyOf = (kind, short = false) => {
+      const k = BUILDINGS[kind]?.key?.replace('Key', '');
+      if (short) return k || 'Clic';
+      return k ? `Tecla ${k} en la partida` : 'Clic en otra costa';
+    };
     $('arsenal-cats').replaceChildren(
       ...ARSENAL_CATS.map((cat, i) =>
         el(
@@ -1017,11 +1056,14 @@ export class Home {
           ...cat.items.map((kind) =>
             el(
               'div',
-              { class: 'arma', style: `--i:${n++}` },
+              { class: 'arma', style: `--i:${n++}`, tabindex: '0', 'aria-label': `${nameOf(kind)}: ${ARSENAL[kind].text}. ${priceOf(kind)}. ${keyOf(kind)}` },
+              el('span', { class: 'arma-tecla', title: 'Tecla en la partida', text: keyOf(kind, true) }),
               el('div', { class: 'arma-dibujo' }, this._weaponArt(kind)),
               el('strong', { text: nameOf(kind) }),
               el('span', { class: 'arma-texto', text: ARSENAL[kind].text }),
               el('span', { class: 'arma-precio', text: priceOf(kind) }),
+              // Detalle al pasar el ratón o al tocar (enfocar) la tarjeta
+              el('span', { class: 'arma-detalle', 'aria-hidden': 'true' }, el('strong', { text: nameOf(kind) }), el('span', { text: BUILDINGS[kind]?.desc || 'Haz clic en una costa enemiga o libre sin frontera por tierra: sale un barco con tropas desde tu costa (máximo 3 a la vez).' }), el('small', { text: keyOf(kind) })),
             ),
           ),
         ),
@@ -1143,6 +1185,31 @@ export class Home {
         );
       }),
     );
+    // Títulos: fichas en vez de un desplegable
+    $('sel-titulos').replaceChildren(
+      ...TITLES.map((t) => {
+        const s = this._shop(t);
+        return el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(t.id === p.titulo),
+            class: `ficha-titulo${s.cls}`,
+            'data-k': itemKey(t),
+            disabled: s.disabled,
+            title: s.title,
+            onclick: () => this._pick(t, () => (p.titulo = t.id)),
+          },
+          el('span', { class: 'ft-nombre', text: t.name }),
+          s.ok ? null : el('small', { class: 'ft-req', text: s.label }),
+        );
+      }),
+    );
+    for (const id of ['sel-estandartes', 'sel-marcos', 'sel-color-nombre', 'sel-titulos', 'sel-patrones', 'sel-formas', 'sel-simbolos']) {
+      teclasGrupo($(id));
+      rodar($(id));
+    }
   }
 
   /** ¿Se ve el menú de inicio (y no una sala o «Crear sala»)? */
@@ -1174,6 +1241,11 @@ export class Home {
   }
 
   setView(view) {
+    // «Apariencia» ahora es la sub-pestaña «Aspecto» del perfil
+    if (view === 'apariencia') {
+      this._profileTab('aspecto', false);
+      view = 'perfil';
+    }
     const prev = this.view;
     this.view = view;
     const nav = document.querySelector('.ini-pestanas');
@@ -1197,6 +1269,8 @@ export class Home {
       $('inicio').scrollTo?.({ top: 0 });
       mostrar(next, { y: 10, scale: 1, ms: 240 });
       if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
+      if (view === 'perfil' && this.profileTab === 'resumen') this.renderProgress(true);
+      for (const nav of next.querySelectorAll('.sub-pestanas')) underline(nav, false);
       llenarAlVer(next);
     };
     if (prev === view || $('inicio').hidden || sinMovimiento() || !leaving.length) {
@@ -1238,6 +1312,8 @@ export class Home {
     this.renderIdentity();
     this.renderProgress();
     this.renderPatterns();
+    this.renderPreview();
+    this.renderHistoryShort();
     this.renderAchievements();
     this.renderTable();
     this.renderRooms();
@@ -1282,76 +1358,79 @@ export class Home {
     if (ok) return { ok, cls: '', disabled: false, label: item.name, title: item.name };
     if (!price) return { ok, cls: ' bloqueada', disabled: true, label: `🔒 ${unlockText(item)}`, title: `${item.name}: ${unlockText(item)}` };
     const afford = (p.monedas || 0) >= price;
-    const asking = this.buying === itemKey(item);
     return {
       ok,
-      cls: ` bloqueada en-venta${afford ? '' : ' cara'}${asking ? ' confirmar' : ''}`,
+      cls: ` bloqueada en-venta${afford ? '' : ' cara'}`,
       disabled: false,
-      label: asking ? `¿Comprar? 🪙 ${formatNumber(price)}` : `🪙 ${formatNumber(price)}`,
+      label: `🪙 ${formatNumber(price)}`,
       title: afford ? `${item.name}: cómpralo por ${formatNumber(price)} monedas` : `${item.name}: te faltan ${formatNumber(price - (p.monedas || 0))} monedas`,
     };
   }
 
-  /** Clic en un objeto: si es tuyo, se equipa; si está a la venta, primer clic pregunta y el segundo compra. */
+  /** Clic en un objeto: si es tuyo, se equipa; si está a la venta, se abre la ficha de compra. */
   _pick(item, equip) {
     const p = this.profile;
     if (!isUnlocked(p, item)) {
-      const price = item.unlock && item.unlock.price;
-      if (!price) return;
-      if ((p.monedas || 0) < price) {
-        this._flash(`Te faltan 🪙 ${formatNumber(price - (p.monedas || 0))} para «${item.name}». Gánalas con partidas, logros y retos diarios.`);
-        return;
-      }
-      if (this.buying !== itemKey(item)) {
-        this.buying = itemKey(item);
-        this._keepFocus(() => {
-          this.renderAppearance();
-          this.renderPatterns();
-          this.renderIdentity();
-        });
-        return;
-      }
-      this.buying = null;
-      if (!buyItem(p, item)) return;
-      this._flash(`¡Comprado! «${item.name}» ya es tuyo.`, true);
-      this.h.sound?.('coins');
-      if (Object.keys(p.comprados).length >= 5) {
-        const a = grantAchievement(p, 'coleccionista');
-        if (a) this._flash(`¡Logro: ${a.name}! +🪙 ${a.coins}`, true);
-      }
+      if (!(item.unlock && item.unlock.price)) return;
+      this._buying = { item, equip };
+      this._openBuy(item);
+      return;
     }
-    this.buying = null;
     equip();
     this._profileChanged();
     this.renderAchievements();
   }
 
-  /** Ofrece comprar un título de la tienda (los títulos van en un desplegable). */
-  _offerTitle(t) {
+  /** Ficha de compra: muestra del objeto, precio y «Comprar» (o cuánto falta). */
+  _openBuy(item) {
     const p = this.profile;
-    const box = $('titulo-compra');
-    box.hidden = false;
-    const price = t.unlock && t.unlock.price;
-    if (!price) {
-      box.replaceChildren(el('span', { text: `«${t.name}»: ${unlockText(t)}` }));
-      return;
-    }
-    const afford = (p.monedas || 0) >= price;
-    box.replaceChildren(
-      el('span', { text: afford ? `«${t.name}» cuesta 🪙 ${formatNumber(price)}` : `«${t.name}» cuesta 🪙 ${formatNumber(price)}: te faltan ${formatNumber(price - (p.monedas || 0))}` }),
-      afford
-        ? el('button', {
-            type: 'button',
-            class: 'btn-comprar',
-            text: 'Comprar',
-            onclick: () => {
-              this.buying = itemKey(t);
-              this._pick(t, () => (p.titulo = t.id));
-              box.hidden = true;
-            },
-          })
-        : null,
+    const price = item.unlock.price;
+    const have = p.monedas || 0;
+    const afford = have >= price;
+    $('dc-titulo').textContent = item.name;
+    $('dc-muestra').replaceChildren(this._itemPreview(item));
+    $('dc-texto').replaceChildren(
+      el('span', { class: 'compra-precio', text: `🪙 ${formatNumber(price)}` }),
+      el('small', { text: afford ? `Tienes 🪙 ${formatNumber(have)}; te quedarán ${formatNumber(have - price)}.` : `Tienes 🪙 ${formatNumber(have)}: te faltan ${formatNumber(price - have)}. Gánalas con partidas, logros y retos diarios.` }),
     );
+    const buy = $('dc-comprar');
+    buy.disabled = !afford;
+    buy.textContent = afford ? `Comprar por 🪙 ${formatNumber(price)}` : 'Monedas insuficientes';
+    abrirDialogo($('dialogo-compra'), { foco: afford ? '#dc-comprar' : '[data-cerrar]' });
+  }
+
+  _confirmBuy() {
+    const b = this._buying;
+    if (!b) return;
+    const p = this.profile;
+    if (!buyItem(p, b.item)) return;
+    this._buying = null;
+    cerrarDialogo($('dialogo-compra'));
+    this._flash(`¡Comprado! «${b.item.name}» ya es tuyo.`, true);
+    this.h.sound?.('coins');
+    if (Object.keys(p.comprados).length >= 5) {
+      const a = grantAchievement(p, 'coleccionista');
+      if (a) this._flash(`¡Logro: ${a.name}! +🪙 ${a.coins}`, true);
+    }
+    b.equip();
+    this._profileChanged();
+    this.renderAchievements();
+  }
+
+  /** Muestra pequeña de un objeto de la tienda (para la ficha de compra). */
+  _itemPreview(item) {
+    const p = this.profile;
+    if (item.cat === 'estandarte') return el('div', { class: `estandarte est-${item.id} compra-estandarte` }, el('span', { class: 'est-nombre', text: p.nombre || 'Mi nación' }));
+    if (item.cat === 'patron') return patternCanvas(item.id, p.color, 192, 96);
+    if (item.cat === 'color') return el('span', { class: 'compra-nombre', style: `color:${item.color || nameColorOf(p)}`, text: p.nombre || 'Mi nación' });
+    if (item.cat === 'titulo') return el('span', { class: 'compra-titulo-txt' }, el('strong', { text: p.nombre || 'Mi nación' }), el('span', { text: item.name }));
+    const c = el('canvas', { width: 192, height: 192, class: 'emblema', 'aria-hidden': 'true' });
+    c.style.width = c.style.height = '96px';
+    const cx = c.getContext('2d');
+    const emb = item.cat === 'forma' ? { ...p.emblema, shape: item.id, flag: '' } : item.cat === 'simbolo' ? { ...p.emblema, symbol: item.id, flag: '' } : p.emblema;
+    drawEmblem(cx, emb, 96, 96, 110);
+    if (item.cat === 'marco') drawFrame(cx, item.id, 96, 96, 110);
+    return c;
   }
 
   /** Aviso breve encima de todo (compras, monedas que faltan). */
@@ -1374,24 +1453,11 @@ export class Home {
 
   renderIdentity() {
     const p = this.profile;
-    const c = $('perfil-emblema');
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
-    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.92);
     if (document.activeElement !== $('in-nombre')) $('in-nombre').value = p.nombre;
     $('in-color').value = p.color;
     $('in-emb-fondo').value = p.emblema.bg;
     $('in-emb-figura').value = p.emblema.fg;
 
-    const sel = $('in-titulo');
-    sel.replaceChildren(
-      ...TITLES.map((t) => {
-        const ok = isUnlocked(p, t);
-        const price = !ok && t.unlock && t.unlock.price;
-        return el('option', { value: t.id, disabled: !ok && !price, text: ok ? t.name : `${price ? '🪙' : '🔒'} ${t.name} (${unlockText(t)})` });
-      }),
-    );
-    sel.value = p.titulo;
     const flags = $('in-bandera');
     if (!flags.options.length) {
       flags.replaceChildren(el('option', { value: '', text: 'Ninguna (forma y símbolo)' }), ...countryList().map(([iso, name]) => el('option', { value: iso, text: name })));
@@ -1430,25 +1496,141 @@ export class Home {
     );
   }
 
-  renderProgress() {
+  /** Nivel, XP y estadísticas; con `count`, las cifras suben desde cero. */
+  renderProgress(count = false) {
     const p = this.profile;
     const info = levelInfo(p.xp);
     $('perfil-nivel').textContent = info.level;
-    $('perfil-xp-barra').style.width = `${Math.round(info.progress * 100)}%`;
+    $('perfil-xp-barra').style.setProperty('--p', String(Math.max(0, Math.min(1, info.progress))));
     $('perfil-xp').textContent = `${p.xp - info.start} / ${info.next - info.start} XP para el nivel ${info.level + 1}`;
     const s = p.stats;
+    const int = (n) => formatNumber(Math.round(n));
     const rows = [
-      ['Partidas', s.partidas],
-      ['Victorias', `${s.victorias}${s.partidas ? ` (${Math.round((100 * s.victorias) / s.partidas)} %)` : ''}`],
-      ['Naciones eliminadas', s.eliminaciones],
-      ['Edificios construidos', s.edificios],
-      ['Alianzas firmadas', s.alianzas],
-      ['Partidas online', s.online],
-      ['Mayor territorio', formatPercent(s.mejorPct)],
-      ['Victoria más rápida', s.mejorTiempo == null ? '—' : formatTime(s.mejorTiempo)],
-      ['Tiempo jugado', formatTime(s.tiempoJugado)],
+      ['Partidas', s.partidas, int],
+      ['Victorias', s.victorias, (n) => `${int(n)}${s.partidas ? ` (${Math.round((100 * s.victorias) / s.partidas)} %)` : ''}`],
+      ['Naciones eliminadas', s.eliminaciones, int],
+      ['Edificios construidos', s.edificios, int],
+      ['Alianzas firmadas', s.alianzas, int],
+      ['Partidas online', s.online, int],
+      ['Mayor territorio', s.mejorPct || 0, formatPercent],
+      ['Victoria más rápida', s.mejorTiempo, (n) => (n == null ? '—' : formatTime(n))],
+      ['Tiempo jugado', s.tiempoJugado || 0, (n) => formatTime(Math.round(n))],
     ];
-    $('estadisticas').replaceChildren(...rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: String(v) })]));
+    $('estadisticas').replaceChildren(
+      ...rows.flatMap(([k, v, fmt]) => {
+        const dd = el('dd', { text: fmt(v) });
+        if (count && typeof v === 'number' && v > 0) contar(dd, v, { de: 0, ms: 800, formato: fmt });
+        return [el('dt', { text: k }), dd];
+      }),
+    );
+    llenarAlVer($('perfil-resumen'));
+  }
+
+  /** Sub-pestaña del perfil: 'resumen' o 'aspecto'. */
+  _profileTab(tab, anim = true) {
+    this.profileTab = tab;
+    for (const b of document.querySelectorAll('#perfil-pestanas [data-perfil]')) b.setAttribute('aria-selected', String(b.dataset.perfil === tab));
+    rodar($('perfil-pestanas'));
+    const on = $(`perfil-${tab}`);
+    const off = $(`perfil-${tab === 'resumen' ? 'aspecto' : 'resumen'}`);
+    off.hidden = true;
+    if (anim && this.view === 'perfil') mostrar(on, { y: 8, scale: 1, ms: 220 });
+    else on.hidden = false;
+    underline($('perfil-pestanas'), anim);
+    if (tab === 'resumen' && this.view === 'perfil') this.renderProgress(true);
+  }
+
+  /** Vista previa fija de tu nación en «Aspecto»: estandarte, emblema con marco, nombre, título y patrón. */
+  renderPreview() {
+    const p = this.profile;
+    $('vp-estandarte').className = `vp-estandarte est-${p.estandarte}`;
+    const c = $('vp-emblema');
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.62);
+    drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.62);
+    $('vp-nombre').textContent = p.nombre || 'Mi nación';
+    $('vp-nombre').style.color = nameColorOf(p);
+    $('vp-titulo').textContent = titleName(p) || 'Sin título';
+    // El patrón sobre tu color, con un trozo de costa, como se ve en el mapa
+    const pc = $('vp-patron');
+    const src = patternCanvas(p.patron, p.color, pc.width, pc.height);
+    const g = pc.getContext('2d');
+    g.fillStyle = '#16365f';
+    g.fillRect(0, 0, pc.width, pc.height);
+    g.save();
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(pc.width * 0.78, 0);
+    g.bezierCurveTo(pc.width * 0.7, pc.height * 0.3, pc.width * 0.86, pc.height * 0.62, pc.width * 0.74, pc.height);
+    g.lineTo(0, pc.height);
+    g.closePath();
+    g.clip();
+    g.drawImage(src, 0, 0);
+    g.restore();
+    g.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(pc.width * 0.78, 0);
+    g.bezierCurveTo(pc.width * 0.7, pc.height * 0.3, pc.width * 0.86, pc.height * 0.62, pc.width * 0.74, pc.height);
+    g.stroke();
+    $('vp-etiqueta').textContent = p.nombre || 'Mi nación';
+    $('vp-etiqueta').style.color = nameColorOf(p);
+  }
+
+  /** Últimas partidas en el resumen del perfil (el historial entero, en Clasificación). */
+  renderHistoryShort() {
+    const h = this.profile.historial;
+    const box = $('perfil-historial');
+    const all = el('button', { type: 'button', class: 'enlace-ini', onclick: () => {
+      this.table = 'historial';
+      this.setView('clasificacion');
+    } }, 'Ver todo el historial ', el('span', { 'aria-hidden': 'true', text: '›' }));
+    if (!h.length) {
+      box.replaceChildren(emptyState('📜', 'Aún no hay partidas', 'Juega una y aquí verás cómo te fue.', el('button', { type: 'button', class: 'principal', onclick: () => this._mode('rapida'), text: 'Partida rápida' })));
+      return;
+    }
+    box.replaceChildren(
+      el('ul', { class: 'historial-corto' },
+        ...h.slice(0, 5).map((g) => {
+          const win = g.resultado.startsWith('victoria');
+          return el('li', {},
+            el('span', { class: `hc-resultado${win ? ' gana' : ''}`, text: win ? 'Victoria' : 'Derrota' }),
+            el('span', { class: 'hc-mapa' }, el('strong', { text: mapLabel(g.mapa) }), el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}${g.online ? ' · online' : ''}` })),
+            el('span', { class: 'hc-dato', text: formatPercent(g.pct) }),
+            el('span', { class: 'hc-dato', text: formatTime(g.duracion) }));
+        })),
+      all,
+    );
+  }
+
+  /** Ajustes: el volumen de la música o de los efectos se apaga con su sonido. */
+  _syncVolumes() {
+    for (const [tog, vol] of [['aj-musica', 'aj-vol-musica'], ['aj-efectos', 'aj-vol-efectos']]) {
+      const on = $(tog).checked;
+      $(vol).disabled = !on;
+      $(vol).closest('.aj-volumen')?.classList.toggle('apagado', !on);
+    }
+  }
+
+  /** «Restablecer ajustes»: opciones de partida, interfaz y sonido como venían (el perfil no cambia). */
+  _resetSettings() {
+    const d = defaultProfile().ajustes;
+    const a = this.profile.ajustes;
+    for (const k of ['alerta', 'puntero', 'marcadores', 'emojis', 'animaciones', 'consejos', 'musica', 'efectos', 'volMusica', 'volEfectos', 'silencio']) {
+      if (k in d) a[k] = d[k];
+      else delete a[k];
+    }
+    const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos', 'aj-musica': 'musica', 'aj-efectos': 'efectos' };
+    for (const [id, key] of Object.entries(toggles)) $(id).checked = a[key] !== false;
+    for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
+      const v = Math.round((a[key] ?? def) * 100);
+      $(id).value = String(v);
+      $(out).textContent = String(v);
+    }
+    this._syncVolumes();
+    this.h.onProfileChange?.(false);
+    this.h.onSettings?.();
   }
 
   setCloudNote(text) {
@@ -1493,26 +1675,31 @@ export class Home {
       ...ACHIEVEMENTS.map((a) => {
         const when = hasAchievement(p, a.id) ? p.logros[a.id] : 0;
         const rewards = rewardsOf(a.id);
+        const prog = when ? null : achievementProgress(p, a);
         return el(
           'li',
-          { class: when ? 'conseguido' : '' },
+          { class: when ? 'conseguido' : 'pendiente' },
           el('span', { class: 'logro-icono', 'aria-hidden': 'true', text: a.icon }),
           el(
             'div',
             { class: 'logro-texto' },
             el('strong', { text: a.name }),
             el('span', { text: a.desc }),
-            rewards.length ? el('small', { text: `Recompensa: ${rewards.join(' · ')}` }) : null,
+            prog ? el('span', { class: 'logro-progreso' },
+              el('span', { class: 'logro-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog.have / prog.need).toFixed(3)}` })),
+              el('small', { text: `${formatNumber(prog.have)}/${formatNumber(prog.need)}` })) : null,
+            rewards.length ? el('small', { class: 'logro-premio', text: `Recompensa: ${rewards.join(' · ')}` }) : null,
           ),
           el(
             'span',
             { class: 'logro-estado' },
             a.coins ? el('b', { class: 'logro-monedas', text: `🪙 ${a.coins}` }) : null,
-            el('span', { text: when ? new Date(when).toLocaleDateString('es-ES') : 'Pendiente' }),
+            el('span', { class: 'logro-fecha', text: when ? `✓ ${new Date(when).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : '🔒' }),
           ),
         );
       }),
     );
+    llenarAlVer($('lista-logros'));
   }
 
   /** Retos de hoy: tres al día, con su progreso, su premio y el bonus por hacer los tres. */
@@ -1537,7 +1724,7 @@ export class Home {
             'div',
             { class: 'reto-texto' },
             el('strong', { text: r.name }),
-            el('span', { class: 'reto-barra' }, el('span', { style: `width:${Math.round((100 * prog) / r.need)}%` })),
+            el('span', { class: 'reto-barra llena-al-ver' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
             el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}` }),
           ),
           el('b', { class: 'reto-premio', text: `🪙 ${r.coins}` }),
@@ -1547,6 +1734,7 @@ export class Home {
     const all = d.retos.every((id) => d.hechos[id]);
     $('retos-bonus').textContent = d.bonus ? `¡Los tres hechos! Bonus de 🪙 ${DAILY_BONUS} conseguido. Mañana, más.` : `Completa los tres y ganas 🪙 ${DAILY_BONUS} más.${all ? '' : ` Llevas ${d.retos.filter((id) => d.hechos[id]).length} de 3.`}`;
     $('retos-bonus').classList.toggle('bien', !!d.bonus);
+    llenarAlVer($('retos-diarios'));
   }
 
   // --------------------------------------------------------- clasificación
@@ -1556,9 +1744,12 @@ export class Home {
     if (this.view === 'clasificacion' && this.table === 'global') this.renderTable();
   }
 
-  renderTable() {
-    for (const b of document.querySelectorAll('.sub-pestanas [data-tabla]')) b.classList.toggle('activo', b.dataset.tabla === this.table);
+  renderTable(anim = false) {
+    for (const b of document.querySelectorAll('#tabla-pestanas [data-tabla]')) b.setAttribute('aria-selected', String(b.dataset.tabla === this.table));
+    rodar($('tabla-pestanas'));
+    underline($('tabla-pestanas'), anim);
     const box = $('tabla-clasificacion');
+    if (anim && !sinMovimiento()) box.animate?.([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'ease-out' });
     if (this.table === 'global') box.replaceChildren(...this._globalTable());
     else if (this.table === 'records') box.replaceChildren(...this._recordsTable());
     else box.replaceChildren(...this._historyTable());
@@ -1566,13 +1757,17 @@ export class Home {
 
   _globalTable() {
     const g = this.global;
+    const records = () => el('button', { type: 'button', class: 'btn-sec', onclick: () => {
+      this.table = 'records';
+      this.renderTable(true);
+    }, text: 'Ver tus récords' });
     if (!g.available) {
-      return [el('p', { class: 'nota', text: g.error || 'La clasificación global funciona al jugar desde el enlace de Claude. Aquí ves tus récords y tu historial.' })];
+      return [emptyState('🌐', 'La tabla global estará disponible pronto', 'Mientras tanto, aquí tienes tus récords y tu historial.', records())];
     }
     const out = [];
     if (g.error) out.push(el('p', { class: 'nota', text: g.error }));
     if (!g.rows.length) {
-      out.push(el('p', { class: 'nota', text: 'Todavía no hay nadie. Termina una partida para aparecer aquí.' }));
+      out.push(emptyState('🏁', 'Todavía no hay nadie', 'Juega una partida para aparecer aquí.', el('button', { type: 'button', class: 'principal', onclick: () => this._mode('rapida'), text: 'Partida rápida' })));
       return out;
     }
     const table = el('table', { class: 'tabla' });
@@ -1619,14 +1814,14 @@ export class Home {
       ].flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]),
     );
     const out = [records, el('h3', { text: 'Mejores partidas' })];
-    if (!best.length) out.push(el('p', { class: 'nota', text: 'Juega una partida para ver tus récords.' }));
+    if (!best.length) out.push(emptyState('🏆', 'Sin récords todavía', 'Juega una partida para ver aquí tus mejores marcas.'));
     else out.push(this._gamesTable(best));
     return out;
   }
 
   _historyTable() {
     const h = this.profile.historial;
-    if (!h.length) return [el('p', { class: 'nota', text: 'Aún no has terminado ninguna partida.' })];
+    if (!h.length) return [emptyState('📜', 'Aún no has terminado ninguna partida', 'Cuando acabes una, saldrá aquí con su resultado, territorio y duración.', el('button', { type: 'button', class: 'principal', onclick: () => this._mode('rapida'), text: 'Partida rápida' }))];
     return [this._gamesTable(h)];
   }
 

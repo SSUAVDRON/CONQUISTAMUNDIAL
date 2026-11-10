@@ -170,11 +170,13 @@ export const itemKey = (item) => `${item.cat}:${item.id}`;
 
 /**
  * Logros. `check(r, profile)` recibe el resultado de la partida (ver
- * gameResult en main.js) y el perfil ya actualizado con ella.
+ * gameResult en main.js) y el perfil ya actualizado con ella. `meta`
+ * (opcional): los que dependen de una cifra acumulada ({ stat, n }) muestran
+ * su progreso («7/10»); ver achievementProgress.
  */
 export const ACHIEVEMENTS = [
-  { id: 'primera_partida', icon: '🌱', name: 'Primeros pasos', desc: 'Juega una partida', coins: 50, check: () => true },
-  { id: 'primera_victoria', icon: '🏆', name: 'Conquistador', desc: 'Gana una partida', coins: 200, check: (r) => r.won || r.alliedWin },
+  { id: 'primera_partida', icon: '🌱', name: 'Primeros pasos', desc: 'Juega una partida', coins: 50, meta: { stat: 'partidas', n: 1 }, check: () => true },
+  { id: 'primera_victoria', icon: '🏆', name: 'Conquistador', desc: 'Gana una partida', coins: 200, meta: { stat: 'victorias', n: 1 }, check: (r) => r.won || r.alliedWin },
   { id: 'gran_victoria', icon: '🌍', name: 'Señor del mundo', desc: 'Gana en el mapa del mundo o en uno grande', coins: 400, check: (r) => (r.won || r.alliedWin) && (r.mapSize === 'grande' || r.mapSize === 'mundo') },
   { id: 'relampago', icon: '⚡', name: 'Guerra relámpago', desc: 'Gana en menos de 12 minutos', coins: 300, check: (r) => r.won && r.seconds < 720 },
   { id: 'alianza_victoriosa', icon: '🤝', name: 'Juntos somos más', desc: 'Gana en alianza', coins: 250, check: (r) => r.alliedWin },
@@ -186,8 +188,8 @@ export const ACHIEVEMENTS = [
   { id: 'traidor', icon: '🗡️', name: 'Puñal en la espalda', desc: 'Rompe una alianza', coins: 100, check: (r) => r.betrayals >= 1 },
   { id: 'superviviente', icon: '🛡️', name: 'Superviviente', desc: 'Sigue en pie a los 15 minutos', coins: 150, check: (r) => r.survivedSeconds >= 900 },
   { id: 'medio_mundo', icon: '🗺️', name: 'Medio mundo', desc: 'Controla el 50 % de la tierra', coins: 300, check: (r) => r.maxShare >= 0.5 },
-  { id: 'en_compania', icon: '👥', name: 'En compañía', desc: 'Juega una partida online', coins: 150, check: (r) => r.online },
-  { id: 'veterano', icon: '🎖️', name: 'Veterano', desc: 'Juega 10 partidas', coins: 250, check: (r, p) => p.stats.partidas >= 10 },
+  { id: 'en_compania', icon: '👥', name: 'En compañía', desc: 'Juega una partida online', coins: 150, meta: { stat: 'online', n: 1 }, check: (r) => r.online },
+  { id: 'veterano', icon: '🎖️', name: 'Veterano', desc: 'Juega 10 partidas', coins: 250, meta: { stat: 'partidas', n: 10 }, check: (r, p) => p.stats.partidas >= 10 },
   { id: 'tesoro', icon: '💰', name: 'Tesoro real', desc: 'Reúne 2,5 millones de oro', coins: 200, check: (r) => r.maxGold >= 2500000 },
   { id: 'recluta', icon: '🎓', name: 'Recluta', desc: 'Completa el tutorial', coins: 100, check: () => false },
   { id: 'industrial', icon: '🏭', name: 'Revolución industrial', desc: 'Ten 5 fábricas a la vez', coins: 250, check: (r) => (r.maxFactories || 0) >= 5 },
@@ -206,12 +208,12 @@ export const ACHIEVEMENTS = [
   { id: 'saqueador', icon: '🏴‍☠️', name: 'Saqueador', desc: 'Consigue 500.000 de botín en una partida', coins: 250, check: (r) => (r.loot || 0) >= 500000 },
   { id: 'almirante', icon: '🚢', name: 'Almirante', desc: 'Hunde 5 barcos o buques en una partida', coins: 250, check: (r) => (r.sunk || 0) >= 5 },
   { id: 'millonario', icon: '💎', name: 'Millonario', desc: 'Reúne 10 millones de oro', coins: 400, check: (r) => r.maxGold >= 10000000 },
-  { id: 'invicto', icon: '🥇', name: 'Invicto', desc: 'Gana 5 partidas', coins: 400, check: (r, p) => p.stats.victorias >= 5 },
-  { id: 'centurion', icon: '💀', name: 'Centurión', desc: 'Elimina 100 naciones en total', coins: 400, check: (r, p) => p.stats.eliminaciones >= 100 },
-  { id: 'maraton', icon: '🏃', name: 'Maratón', desc: 'Juega 50 partidas', coins: 500, check: (r, p) => p.stats.partidas >= 50 },
-  { id: 'nivel10', icon: '🔟', name: 'Curtido', desc: 'Llega al nivel 10', coins: 300, check: (r, p) => levelInfo(p.xp).level >= 10 },
-  { id: 'diario', icon: '📅', name: 'Constante', desc: 'Completa 10 retos diarios', coins: 300, check: (r, p) => (p.stats.retosDiarios || 0) >= 10 },
-  { id: 'coleccionista', icon: '🛍️', name: 'Coleccionista', desc: 'Compra 5 objetos en la tienda', coins: 200, check: (r, p) => Object.keys(p.comprados || {}).length >= 5 },
+  { id: 'invicto', icon: '🥇', name: 'Invicto', desc: 'Gana 5 partidas', coins: 400, meta: { stat: 'victorias', n: 5 }, check: (r, p) => p.stats.victorias >= 5 },
+  { id: 'centurion', icon: '💀', name: 'Centurión', desc: 'Elimina 100 naciones en total', coins: 400, meta: { stat: 'eliminaciones', n: 100 }, check: (r, p) => p.stats.eliminaciones >= 100 },
+  { id: 'maraton', icon: '🏃', name: 'Maratón', desc: 'Juega 50 partidas', coins: 500, meta: { stat: 'partidas', n: 50 }, check: (r, p) => p.stats.partidas >= 50 },
+  { id: 'nivel10', icon: '🔟', name: 'Curtido', desc: 'Llega al nivel 10', coins: 300, meta: { stat: 'nivel', n: 10 }, check: (r, p) => levelInfo(p.xp).level >= 10 },
+  { id: 'diario', icon: '📅', name: 'Constante', desc: 'Completa 10 retos diarios', coins: 300, meta: { stat: 'retosDiarios', n: 10 }, check: (r, p) => (p.stats.retosDiarios || 0) >= 10 },
+  { id: 'coleccionista', icon: '🛍️', name: 'Coleccionista', desc: 'Compra 5 objetos en la tienda', coins: 200, meta: { stat: 'comprados', n: 5 }, check: (r, p) => Object.keys(p.comprados || {}).length >= 5 },
 ];
 
 /**
@@ -437,6 +439,22 @@ export function mergeProfiles(a, b) {
 }
 
 /** ¿Tiene el logro? (Object.hasOwn: un id como "constructor" no debe colarse por el prototipo.) */
+/**
+ * Progreso de un logro medible: { have, need } (have como mucho need), o
+ * null si el logro no tiene `meta`. Estadísticas especiales: 'nivel' (el
+ * nivel actual) y 'comprados' (objetos de la tienda).
+ */
+export function achievementProgress(profile, a) {
+  if (!a || !a.meta) return null;
+  const { stat, n } = a.meta;
+  let have;
+  if (stat === 'nivel') have = levelInfo(profile.xp || 0).level;
+  else if (stat === 'comprados') have = Object.keys(profile.comprados || {}).length;
+  else have = Number((profile.stats || {})[stat]) || 0;
+  if (hasAchievement(profile, a.id)) have = n;
+  return { have: Math.min(n, Math.max(0, Math.floor(have))), need: n };
+}
+
 export function hasAchievement(profile, id) {
   return Object.hasOwn(profile.logros, id);
 }

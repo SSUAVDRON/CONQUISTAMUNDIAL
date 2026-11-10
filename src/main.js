@@ -1201,6 +1201,9 @@ state.demo = true;
 home.renderChip();
 home.renderHero();
 requestAnimationFrame(() => setTimeout(() => {
+  // El resto de apartados (perfil, aspecto, progreso, clasificación…), justo
+  // después del primer pintado: antes quedaban vacíos hasta volver de una partida
+  home.renderAll();
   if (!state.game) startDemo({ background: true });
 }, 30));
 requestAnimationFrame(frame);

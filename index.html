@@ -41,7 +41,7 @@
         <nav class="ini-pestanas" role="tablist" aria-label="Secciones">
           <button type="button" role="tab" id="tab-jugar" data-vista="jugar" aria-selected="true"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3 L13 8 L5 13 Z" fill="currentColor"/></svg><span>Jugar</span></button>
           <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5 V9 M6.5 13.5 V5 M10 13.5 V7.5 M13.5 13.5 V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Progreso</span> <span id="cuenta-logros" class="cuenta"></span></button>
-          <button type="button" role="tab" id="tab-apariencia" data-vista="apariencia" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 a6 6 0 1 0 0 12 c1 0 1.4 -0.7 1 -1.6 c-0.5 -1 0.2 -2 1.3 -2 H12 a2 2 0 0 0 2 -2 C14 4.6 11.3 2 8 2 Z M5 7 h0.01 M7.5 4.8 h0.01 M10.5 5.5 h0.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Apariencia</span></button>
+          <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span></button>
           <button type="button" role="tab" id="tab-arsenal" data-vista="arsenal" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></button>
           <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clasificación</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
@@ -225,86 +225,106 @@
         <div id="arsenal" class="arsenal-vista"></div>
       </section>
 
-      <!-- Perfil -->
-      <section class="vista" data-vista="perfil" role="tabpanel" aria-labelledby="chip-perfil" hidden>
-        <div id="tarjeta-perfil" class="tarjeta-perfil est-noche">
-          <canvas id="tarjeta-emblema" width="240" height="240" aria-hidden="true"></canvas>
-          <div class="tp-textos">
-            <span class="tp-titulo" id="tp-titulo"></span>
-            <strong class="tp-nombre" id="tp-nombre"></strong>
-            <span class="tp-datos" id="tp-datos"></span>
-          </div>
-          <span class="tp-nivel" id="tp-nivel">1</span>
+      <!-- Perfil: resumen (tarjeta, nombre, estadísticas, últimas partidas) y aspecto (todo lo que se ve de tu nación) -->
+      <section class="vista" data-vista="perfil" role="tabpanel" aria-labelledby="tab-perfil" hidden>
+        <div class="sub-pestanas" id="perfil-pestanas" role="tablist" aria-label="Perfil">
+          <button type="button" role="tab" id="pp-resumen" data-perfil="resumen" aria-selected="true" aria-controls="perfil-resumen">Resumen</button>
+          <button type="button" role="tab" id="pp-aspecto" data-perfil="aspecto" aria-selected="false" aria-controls="perfil-aspecto">Aspecto</button>
         </div>
-        <div class="perfil-rejilla">
-          <div class="bloque">
-            <h2>Identidad</h2>
-            <div class="identidad">
-              <canvas id="perfil-emblema" width="200" height="200" aria-label="Tu emblema"></canvas>
-              <div class="identidad-campos">
-                <label class="campo"><span>Nombre de tu nación</span>
-                  <input id="in-nombre" maxlength="18" placeholder="Mi nación">
-                </label>
-                <div class="fila-2">
-                  <label class="campo"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
-                  <label class="campo"><span>Título</span><select id="in-titulo"></select></label>
+        <div id="perfil-resumen" class="perfil-panel" role="tabpanel" aria-labelledby="pp-resumen">
+          <div id="tarjeta-perfil" class="tarjeta-perfil est-noche">
+            <canvas id="tarjeta-emblema" width="240" height="240" aria-hidden="true"></canvas>
+            <div class="tp-textos">
+              <span class="tp-titulo" id="tp-titulo"></span>
+              <strong class="tp-nombre" id="tp-nombre"></strong>
+              <span class="tp-datos" id="tp-datos"></span>
+            </div>
+            <span class="tp-nivel" id="tp-nivel">1</span>
+          </div>
+          <div class="perfil-rejilla">
+            <div class="bloque">
+              <h2>Tu nación</h2>
+              <label class="campo"><span>Nombre de tu nación</span>
+                <input id="in-nombre" maxlength="18" placeholder="Mi nación">
+              </label>
+              <label class="campo campo-color"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
+              <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
+              <button type="button" class="enlace-ini" id="ir-aspecto">Emblema, marco, estandarte y más en «Aspecto» <span aria-hidden="true">›</span></button>
+            </div>
+            <div class="bloque">
+              <h2>Progreso</h2>
+              <div class="nivel">
+                <span class="nivel-num" id="perfil-nivel">1</span>
+                <div class="nivel-datos">
+                  <div class="nivel-barra llena-al-ver"><span id="perfil-xp-barra"></span></div>
+                  <small id="perfil-xp"></small>
                 </div>
-                <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
-                <div id="titulo-compra" class="compra-titulo" hidden></div>
+              </div>
+              <dl id="estadisticas" class="estadisticas"></dl>
+              <p id="nota-nube" class="nota"></p>
+            </div>
+          </div>
+          <div class="bloque">
+            <h2>Últimas partidas</h2>
+            <div id="perfil-historial"></div>
+          </div>
+        </div>
+        <div id="perfil-aspecto" class="perfil-panel" role="tabpanel" aria-labelledby="pp-aspecto" hidden>
+          <div class="bolsa">
+            <span class="bolsa-monedas" id="bolsa-monedas"></span>
+            <span class="bolsa-texto">Gana monedas con partidas, logros y retos diarios. Lo marcado con 🪙 se compra; lo que tiene 🔒 se gana con logros o subiendo de nivel.</span>
+          </div>
+          <div class="aspecto-rejilla">
+            <aside class="vista-previa" aria-label="Vista previa de tu nación">
+              <div id="vp-estandarte" class="vp-estandarte est-noche">
+                <canvas id="vp-emblema" width="240" height="240" aria-hidden="true"></canvas>
+                <strong id="vp-nombre" class="vp-nombre"></strong>
+                <span id="vp-titulo" class="vp-titulo"></span>
+              </div>
+              <div class="vp-mapa"><canvas id="vp-patron" width="320" height="120" aria-hidden="true"></canvas><span class="vp-etiqueta" id="vp-etiqueta"></span></div>
+              <p class="nota">Así te ven los demás en el menú, en las salas y en el mapa.</p>
+            </aside>
+            <div class="aspecto-opciones">
+              <div class="bloque">
+                <h2>Emblema</h2>
                 <label class="campo"><span>Bandera de un país como emblema</span><select id="in-bandera"></select></label>
+                <h3>Forma</h3>
+                <div id="sel-formas" class="selector" role="radiogroup" aria-label="Forma"></div>
+                <h3>Símbolo</h3>
+                <div id="sel-simbolos" class="selector" role="radiogroup" aria-label="Símbolo"></div>
+                <div class="fila-2">
+                  <label class="campo"><span>Fondo del emblema</span><input id="in-emb-fondo" type="color" value="#2f7dff"></label>
+                  <label class="campo"><span>Color del símbolo</span><input id="in-emb-figura" type="color" value="#ffffff"></label>
+                </div>
+                <div class="fila-2">
+                  <div class="muestras" id="mu-emb-fondo" data-campo="in-emb-fondo" role="group" aria-label="Fondos rápidos"></div>
+                  <div class="muestras" id="mu-emb-figura" data-campo="in-emb-figura" role="group" aria-label="Colores de símbolo rápidos"></div>
+                </div>
+              </div>
+              <div class="bloque">
+                <h2>Marco del emblema</h2>
+                <div id="sel-marcos" class="selector" role="radiogroup" aria-label="Marco"></div>
+              </div>
+              <div class="bloque">
+                <h2>Estandarte</h2>
+                <p class="nota">El fondo de tu tarjeta de perfil y de tu insignia en el menú.</p>
+                <div id="sel-estandartes" class="estandartes" role="radiogroup" aria-label="Estandarte"></div>
+              </div>
+              <div class="bloque">
+                <h2>Patrón del territorio</h2>
+                <p class="nota">Se ve en tu territorio durante la partida, también para los demás jugadores online.</p>
+                <div id="sel-patrones" class="patrones" role="radiogroup" aria-label="Patrón"></div>
+              </div>
+              <div class="bloque">
+                <h2>Color de tu nombre en el mapa</h2>
+                <div id="sel-color-nombre" class="colores-nombre" role="radiogroup" aria-label="Color del nombre"></div>
+              </div>
+              <div class="bloque">
+                <h2>Título</h2>
+                <div id="sel-titulos" class="titulos" role="radiogroup" aria-label="Título"></div>
               </div>
             </div>
-            <h3>Forma del emblema</h3>
-            <div id="sel-formas" class="selector" role="radiogroup" aria-label="Forma"></div>
-            <h3>Símbolo</h3>
-            <div id="sel-simbolos" class="selector" role="radiogroup" aria-label="Símbolo"></div>
-            <div class="fila-2">
-              <label class="campo"><span>Fondo del emblema</span><input id="in-emb-fondo" type="color" value="#2f7dff"></label>
-              <label class="campo"><span>Color del símbolo</span><input id="in-emb-figura" type="color" value="#ffffff"></label>
-            </div>
-            <div class="fila-2">
-              <div class="muestras" id="mu-emb-fondo" data-campo="in-emb-fondo" role="group" aria-label="Fondos rápidos"></div>
-              <div class="muestras" id="mu-emb-figura" data-campo="in-emb-figura" role="group" aria-label="Colores de símbolo rápidos"></div>
-            </div>
           </div>
-          <div class="bloque">
-            <h2>Progreso</h2>
-            <div class="nivel">
-              <span class="nivel-num" id="perfil-nivel">1</span>
-              <div class="nivel-datos">
-                <div class="nivel-barra"><span id="perfil-xp-barra"></span></div>
-                <small id="perfil-xp"></small>
-              </div>
-            </div>
-            <dl id="estadisticas" class="estadisticas"></dl>
-            <p id="nota-nube" class="nota"></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Apariencia -->
-      <section class="vista" data-vista="apariencia" role="tabpanel" aria-labelledby="tab-apariencia" hidden>
-        <div class="bolsa">
-          <span class="bolsa-monedas" id="bolsa-monedas"></span>
-          <span class="bolsa-texto">Gana monedas con partidas, logros y retos diarios. Lo marcado con 🪙 se compra: pulsa una vez y otra para confirmar.</span>
-        </div>
-        <div class="apariencia-rejilla">
-          <div class="bloque">
-            <h2>Estandarte</h2>
-            <p class="nota">El fondo de tu tarjeta de perfil y de tu insignia en el menú.</p>
-            <div id="sel-estandartes" class="estandartes" role="radiogroup" aria-label="Estandarte"></div>
-          </div>
-          <div class="bloque">
-            <h2>Marco del emblema</h2>
-            <div id="sel-marcos" class="selector" role="radiogroup" aria-label="Marco"></div>
-            <h2 class="h2-sep">Color de tu nombre en el mapa</h2>
-            <div id="sel-color-nombre" class="colores-nombre" role="radiogroup" aria-label="Color del nombre"></div>
-          </div>
-        </div>
-        <div class="bloque">
-          <h2>Patrón del territorio</h2>
-          <p class="nota">Se ve en tu territorio durante la partida, también para los demás jugadores online. Los bloqueados se ganan con logros o subiendo de nivel.</p>
-          <div id="sel-patrones" class="patrones" role="radiogroup" aria-label="Patrón"></div>
         </div>
       </section>
 
@@ -324,40 +344,58 @@
       <!-- Clasificación -->
       <section class="vista" data-vista="clasificacion" role="tabpanel" aria-labelledby="tab-clasificacion" hidden>
         <div class="bloque">
-          <div class="sub-pestanas" role="group" aria-label="Tabla">
-            <button type="button" data-tabla="global" class="activo">Global</button>
-            <button type="button" data-tabla="records">Tus récords</button>
-            <button type="button" data-tabla="historial">Historial</button>
+          <div class="sub-pestanas" id="tabla-pestanas" role="tablist" aria-label="Tabla">
+            <button type="button" role="tab" data-tabla="global" aria-selected="true" aria-controls="tabla-clasificacion">Global</button>
+            <button type="button" role="tab" data-tabla="records" aria-selected="false" aria-controls="tabla-clasificacion">Tus récords</button>
+            <button type="button" role="tab" data-tabla="historial" aria-selected="false" aria-controls="tabla-clasificacion">Historial</button>
           </div>
-          <div id="tabla-clasificacion" class="tabla-envoltura"></div>
+          <div id="tabla-clasificacion" class="tabla-envoltura" role="tabpanel"></div>
         </div>
       </section>
 
-      <!-- Ajustes -->
+      <!-- Ajustes: agrupados -->
       <section class="vista" data-vista="ajustes" role="tabpanel" aria-labelledby="tab-ajustes" hidden>
-        <div class="bloque">
-          <h2>Ajustes</h2>
-          <div class="interruptores columna">
-            <label class="interruptor"><input type="checkbox" id="aj-alerta"><span>Borde rojo en la pantalla cuando te atacan</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-puntero"><span>Puntero hacia tu nación (marca «TÚ» y flecha en el borde)</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-consejos"><span>Consejos durante la partida (💡 población al máximo, oro sin usar, vecinos peligrosos…)</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones del menú</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-musica"><span>Música de fondo</span></label>
-            <label class="interruptor"><input type="checkbox" id="aj-efectos"><span>Efectos de sonido</span></label>
+        <div class="ajustes-rejilla">
+          <div class="bloque aj-grupo">
+            <h2><span class="aj-icono" aria-hidden="true">⚔</span>Partida</h2>
+            <div class="interruptores columna">
+              <label class="interruptor"><input type="checkbox" id="aj-alerta"><span>Borde rojo en la pantalla cuando te atacan</span></label>
+              <label class="interruptor"><input type="checkbox" id="aj-puntero"><span>Puntero hacia tu nación (marca «TÚ» y flecha en el borde)</span></label>
+              <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
+              <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
+              <label class="interruptor"><input type="checkbox" id="aj-consejos"><span>Consejos durante la partida (💡 población al máximo, oro sin usar, vecinos peligrosos…)</span></label>
+            </div>
           </div>
-          <div class="fila-2 volumenes">
-            <label class="campo"><span>Volumen de la música <strong id="out-vol-musica">50</strong></span>
-              <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
-            <label class="campo"><span>Volumen de los efectos <strong id="out-vol-efectos">60</strong></span>
-              <input id="aj-vol-efectos" type="range" min="0" max="100" value="80"></label>
+          <div class="bloque aj-grupo">
+            <h2><span class="aj-icono" aria-hidden="true">✦</span>Interfaz</h2>
+            <div class="interruptores columna">
+              <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones y transiciones de los menús</span></label>
+            </div>
+            <p class="nota">Si tu sistema pide reducir el movimiento, las animaciones se quitan igualmente.</p>
           </div>
-          <div class="botones-izq">
-            <button type="button" id="aj-tutorial">Repetir el tutorial</button>
+          <div class="bloque aj-grupo">
+            <h2><span class="aj-icono" aria-hidden="true">♪</span>Sonido</h2>
+            <div class="aj-sonido">
+              <label class="interruptor"><input type="checkbox" id="aj-musica"><span>Música de fondo</span></label>
+              <label class="campo aj-volumen"><span>Volumen <strong id="out-vol-musica">50</strong></span>
+                <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
+            </div>
+            <div class="aj-sonido">
+              <label class="interruptor"><input type="checkbox" id="aj-efectos"><span>Efectos de sonido</span></label>
+              <label class="campo aj-volumen"><span>Volumen <strong id="out-vol-efectos">80</strong></span>
+                <input id="aj-vol-efectos" type="range" min="0" max="100" value="80"></label>
+            </div>
           </div>
-          <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
-          <p class="nota version-reglas" id="version-reglas"></p>
+          <div class="bloque aj-grupo">
+            <h2><span class="aj-icono" aria-hidden="true">…</span>Más</h2>
+            <div class="botones-izq">
+              <button type="button" id="aj-tutorial" class="btn-sec">Repetir el tutorial</button>
+              <button type="button" id="aj-guia" class="btn-sec">📖 Guía del juego</button>
+              <button type="button" id="aj-restablecer" class="btn-peligro">Restablecer ajustes</button>
+            </div>
+            <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
+            <p class="nota version-reglas" id="version-reglas"></p>
+          </div>
         </div>
       </section>
     </div>
@@ -681,6 +719,27 @@
     <div class="dialogo-caja">
       <header class="dialogo-cab"><h2 id="dn-titulo">Novedades</h2><button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button></header>
       <div class="dialogo-cuerpo novedades-lista" id="dn-lista"></div>
+    </div>
+  </div>
+
+  <!-- Comprar un objeto de la tienda -->
+  <div id="dialogo-compra" class="pantalla dialogo" aria-labelledby="dc-titulo" hidden>
+    <div class="dialogo-caja dialogo-pequeno">
+      <header class="dialogo-cab"><h2 id="dc-titulo">Comprar</h2><button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button></header>
+      <div class="dialogo-cuerpo compra-cuerpo">
+        <div id="dc-muestra" class="compra-muestra"></div>
+        <p id="dc-texto" class="compra-texto"></p>
+      </div>
+      <div class="dialogo-pie"><button type="button" class="btn-sec" data-cerrar>Cancelar</button><button type="button" id="dc-comprar" class="principal">Comprar</button></div>
+    </div>
+  </div>
+
+  <!-- Restablecer los ajustes -->
+  <div id="dialogo-restablecer" class="pantalla dialogo" role="alertdialog" aria-labelledby="dr-titulo" hidden>
+    <div class="dialogo-caja dialogo-pequeno">
+      <header class="dialogo-cab"><h2 id="dr-titulo">¿Restablecer los ajustes?</h2></header>
+      <div class="dialogo-cuerpo"><p class="nota">Las opciones de partida, interfaz y sonido vuelven a como venían. Tu perfil, tu progreso y tus compras no cambian.</p></div>
+      <div class="dialogo-pie"><button type="button" class="btn-sec" data-cerrar>Cancelar</button><button type="button" id="dr-si" class="principal">Restablecer</button></div>
     </div>
   </div>
 
