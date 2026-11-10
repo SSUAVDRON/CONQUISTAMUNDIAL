@@ -169,6 +169,14 @@ for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'e
 }
 export const itemKey = (item) => `${item.cat}:${item.id}`;
 
+/** Mejores puntos de la clasificatoria (esta temporada o las anteriores). */
+function rankBest(p) {
+  const r = p.rango;
+  if (!r) return 0;
+  const placed = r.colocacion >= 5 ? Math.max(r.mejor || 0, r.puntos || 0) : 0;
+  return Math.max(placed, ...(r.anteriores || []).map((x) => x.mejor || x.puntos || 0));
+}
+
 /**
  * Logros. `check(r, profile)` recibe el resultado de la partida (ver
  * gameResult en main.js) y el perfil ya actualizado con ella. `meta`
@@ -214,6 +222,26 @@ export const ACHIEVEMENTS = [
   { id: 'maraton', icon: '🏃', name: 'Maratón', desc: 'Juega 50 partidas', coins: 500, meta: { stat: 'partidas', n: 50 }, check: (r, p) => p.stats.partidas >= 50 },
   { id: 'nivel10', icon: '🔟', name: 'Curtido', desc: 'Llega al nivel 10', coins: 300, meta: { stat: 'nivel', n: 10 }, check: (r, p) => levelInfo(p.xp).level >= 10 },
   { id: 'diario', icon: '📅', name: 'Constante', desc: 'Completa 10 retos diarios', coins: 300, meta: { stat: 'retosDiarios', n: 10 }, check: (r, p) => (p.stats.retosDiarios || 0) >= 10 },
+  // Fase 3: puesto, rangos, rachas, retos semanales y por enlace
+  { id: 'top10', icon: '🔟', name: 'Entre los diez', desc: 'Termina una partida entre las 10 primeras naciones', coins: 100, check: (r) => r.place > 0 && r.place <= 10 && r.of >= 20 },
+  { id: 'podio', icon: '🥉', name: 'Podio', desc: 'Termina una partida entre las 3 primeras naciones', coins: 200, check: (r) => r.place > 0 && r.place <= 3 && r.of >= 10 },
+  { id: 'remontada', icon: '📈', name: 'Remontada', desc: 'Gana tras haber bajado del 1 % del mapa', coins: 400, check: (r) => r.won && Array.isArray(r.curve) && r.curve.some((v, i) => i >= 3 && v < 10) },
+  { id: 'tormenta', icon: '🌪️', name: 'Tormenta', desc: 'Elimina a 15 naciones o colonias en una partida', coins: 300, check: (r) => r.kills >= 15 },
+  { id: 'constructor', icon: '🧱', name: 'Constructor', desc: 'Construye 25 edificios en una partida', coins: 250, check: (r) => r.built >= 25 },
+  { id: 'diplomatico_total', icon: '🌐', name: 'Gran diplomático', desc: 'Firma 5 alianzas en una partida', coins: 250, check: (r) => r.alliances >= 5 },
+  { id: 'magnate_oro', icon: '🏦', name: 'Magnate', desc: 'Reúne 25 millones de oro', coins: 500, check: (r) => r.maxGold >= 25000000 },
+  { id: 'aguante', icon: '⏱️', name: 'Aguante', desc: 'Sigue en pie a los 30 minutos', coins: 300, check: (r) => r.survivedSeconds >= 1800 },
+  { id: 'clasificado', icon: '🎯', name: 'Clasificado', desc: 'Termina las partidas de colocación', coins: 200, check: (r, p) => (p.rango ? p.rango.colocacion >= 5 : false) },
+  { id: 'liga_bronce', icon: '🥉', name: 'Liga de Bronce', desc: 'Llega a Bronce en la clasificatoria', coins: 100, check: (r, p) => rankBest(p) >= 400 },
+  { id: 'liga_plata', icon: '🥈', name: 'Liga de Plata', desc: 'Llega a Plata en la clasificatoria', coins: 200, check: (r, p) => rankBest(p) >= 800 },
+  { id: 'liga_oro', icon: '🥇', name: 'Liga de Oro', desc: 'Llega a Oro en la clasificatoria', coins: 300, check: (r, p) => rankBest(p) >= 1200 },
+  { id: 'liga_platino', icon: '💠', name: 'Liga de Platino', desc: 'Llega a Platino en la clasificatoria', coins: 400, check: (r, p) => rankBest(p) >= 1600 },
+  { id: 'liga_diamante', icon: '💎', name: 'Liga de Diamante', desc: 'Llega a Diamante en la clasificatoria', coins: 600, check: (r, p) => rankBest(p) >= 2000 },
+  { id: 'liga_maestro', icon: '🏵️', name: 'Maestro', desc: 'Llega a Maestro en la clasificatoria', coins: 1000, check: (r, p) => rankBest(p) >= 2400 },
+  { id: 'racha', icon: '🔥', name: 'En racha', desc: 'Gana 3 clasificatorias seguidas', coins: 400, check: (r, p) => !!p.rango && p.rango.historial.length >= 3 && p.rango.historial.slice(0, 3).every((h) => h.puesto === 1) },
+  { id: 'semanal', icon: '🗓️', name: 'Semana a semana', desc: 'Completa 5 retos semanales', coins: 400, meta: { stat: 'retosSemanales', n: 5 }, check: (r, p) => (p.stats.retosSemanales || 0) >= 5 },
+  { id: 'retador', icon: '🎯', name: 'Reto superado', desc: 'Supera el reto que te manda otro jugador por enlace', coins: 250, check: (r) => !!r.challengeBeaten },
+  { id: 'leyenda_viva', icon: '🏛️', name: 'Leyenda viva', desc: 'Juega 100 partidas', coins: 800, meta: { stat: 'partidas', n: 100 }, check: (r, p) => p.stats.partidas >= 100 },
   { id: 'coleccionista', icon: '🛍️', name: 'Coleccionista', desc: 'Compra 5 objetos en la tienda', coins: 200, meta: { stat: 'comprados', n: 5 }, check: (r, p) => Object.keys(p.comprados || {}).length >= 5 },
 ];
 
@@ -238,6 +266,45 @@ export const DAILY = [
   { id: 'oro1m', icon: '💰', name: 'Reúne 1 millón de oro en una partida', need: 1, coins: 120, step: (r) => (r.maxGold >= 1000000 ? 1 : 0) },
 ];
 export const DAILY_BONUS = 150; // por completar los tres del día
+
+/** Retos semanales: 3 por semana (de lunes a domingo), más largos y mejor pagados. */
+export const WEEKLY = [
+  { id: 'w_partidas', icon: '🎮', name: 'Juega 10 partidas', need: 10, coins: 300, step: () => 1 },
+  { id: 'w_victorias', icon: '🏆', name: 'Gana 3 partidas', need: 3, coins: 500, step: (r) => (r.won || r.alliedWin ? 1 : 0) },
+  { id: 'w_eliminar', icon: '⚔️', name: 'Elimina 40 naciones o colonias', need: 40, coins: 350, step: (r) => r.kills },
+  { id: 'w_construir', icon: '🏗️', name: 'Construye 60 edificios', need: 60, coins: 300, step: (r) => r.built },
+  { id: 'w_clasif', icon: '🏅', name: 'Juega 5 clasificatorias', need: 5, coins: 400, step: (r) => (r.ranked ? 1 : 0) },
+  { id: 'w_podio', icon: '🥉', name: 'Termina 3 veces entre los 3 primeros', need: 3, coins: 450, step: (r) => (r.place > 0 && r.place <= 3 && r.of >= 10 ? 1 : 0) },
+  { id: 'w_online', icon: '👥', name: 'Juega 3 partidas online', need: 3, coins: 350, step: (r) => (r.online ? 1 : 0) },
+  { id: 'w_territorio', icon: '🗺️', name: 'Llega al 30 % del mapa en una partida', need: 1, coins: 300, step: (r) => (r.maxShare >= 0.3 ? 1 : 0) },
+];
+export const WEEKLY_BONUS = 400; // por completar los tres de la semana
+
+/** Semana «AAAA-Snn» (lunes a domingo, numeración ISO). */
+export function weekKey(d = new Date()) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear();
+  const week = Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7);
+  return `${y}-S${String(week).padStart(2, '0')}`;
+}
+
+/** Los 3 retos de una semana: siempre los mismos esa semana. */
+export function weeklyFor(week) {
+  const rng = new Rng(hashString(`trinchera-semana-${week}`));
+  const pool = WEEKLY.map((d) => d.id);
+  const out = [];
+  while (out.length < 3) out.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
+  return out;
+}
+
+/** Los retos de esta semana en el perfil (si cambió la semana, empiezan de cero). */
+export function ensureWeekly(profile, week = weekKey()) {
+  const w = profile.semanales;
+  if (!w || w.semana !== week) profile.semanales = { semana: week, retos: weeklyFor(week), progreso: {}, hechos: {}, bonus: false };
+  return profile.semanales;
+}
 
 /** Día local «AAAA-MM-DD» (los retos cambian a medianoche). */
 export function dayKey(d = new Date()) {
@@ -328,12 +395,15 @@ export function defaultProfile() {
       mejorTiempo: null, // segundos de la victoria más rápida
       tiempoJugado: 0, // segundos
       retosDiarios: 0,
+      retosSemanales: 0,
+      clasificatorias: 0, // partidas clasificatorias jugadas (todas las temporadas)
       monedasGanadas: 0,
     },
     logros: {}, // id → fecha (ms)
     monedas: 0, // se ganan con logros, retos diarios y partidas; se gastan en la tienda
     comprados: {}, // «catálogo:id» → fecha de compra
     diarios: null, // { dia, retos: [ids], progreso: {id: n}, hechos: {id: true}, bonus }
+    semanales: null, // lo mismo por semana: { semana, retos, progreso, hechos, bonus }
     historial: [], // { fecha, resultado, pct, duracion, mapa, rivales, online }
     ajustes: {
       bots: 70,
@@ -381,6 +451,7 @@ export function normalizeProfile(p) {
     monedas: Number.isFinite(p.monedas) ? Math.max(0, Math.floor(p.monedas)) : 0,
     comprados: p.comprados && typeof p.comprados === 'object' ? { ...p.comprados } : {},
     diarios: p.diarios && typeof p.diarios === 'object' && Array.isArray(p.diarios.retos) ? p.diarios : null,
+    semanales: p.semanales && typeof p.semanales === 'object' && Array.isArray(p.semanales.retos) ? p.semanales : null,
     rango: normalizeRank(p.rango),
     // Reglas guardadas antes de los perfiles: se migran (perfil histórico) ANTES de combinarlas con los valores por defecto
     ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...(migrateRules(p.ajustes && p.ajustes.reglas) || {}) } },
@@ -508,6 +579,7 @@ export function recordGame(profile, r) {
   const s = profile.stats;
   s.partidas++;
   if (r.won || r.alliedWin) s.victorias++;
+  if (r.ranked) s.clasificatorias = (s.clasificatorias || 0) + 1;
   if (r.online) s.online++;
   s.eliminaciones += r.kills;
   s.edificios += r.built;
@@ -542,6 +614,26 @@ export function recordGame(profile, r) {
     coins += DAILY_BONUS;
   }
 
+  // Retos de la semana
+  const weekly = ensureWeekly(profile);
+  const doneWeekly = [];
+  for (const id of weekly.retos) {
+    const w = WEEKLY.find((x) => x.id === id);
+    if (!w || weekly.hechos[id]) continue;
+    weekly.progreso[id] = Math.min(w.need, (weekly.progreso[id] || 0) + Math.max(0, w.step(r) || 0));
+    if (weekly.progreso[id] >= w.need) {
+      weekly.hechos[id] = true;
+      coins += w.coins;
+      s.retosSemanales = (s.retosSemanales || 0) + 1;
+      doneWeekly.push(w);
+    }
+  }
+  if (!weekly.bonus && weekly.retos.every((id) => weekly.hechos[id])) {
+    weekly.bonus = true;
+    coins += WEEKLY_BONUS;
+    doneWeekly.push({ icon: '🗓️', name: '¡Los tres de la semana!', coins: WEEKLY_BONUS });
+  }
+
   const fresh = [];
   for (const a of ACHIEVEMENTS) {
     if (hasAchievement(profile, a.id)) continue;
@@ -568,9 +660,11 @@ export function recordGame(profile, r) {
     elim: r.kills || 0,
     edif: r.built || 0,
     curva: Array.isArray(r.curve) ? r.curve.slice(0, 40) : [],
+    clasif: r.ranked || undefined,
+    reto: r.challenge ? { de: String(r.challenge.n || '').slice(0, 18), meta: r.challenge.p, superado: !!r.challengeBeaten } : undefined,
   });
   profile.historial.length = Math.min(profile.historial.length, HISTORY_MAX);
   saveProfile(profile);
 
-  return { xp: gained, coins, daily: doneDaily, dailyBonus, achievements: fresh, levelUp: levelInfo(profile.xp).level > before };
+  return { xp: gained, coins, daily: doneDaily, dailyBonus, weekly: doneWeekly, achievements: fresh, levelUp: levelInfo(profile.xp).level > before };
 }

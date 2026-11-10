@@ -230,16 +230,27 @@ export function drawChart(canvas, series, opts = {}) {
   const pw = w - pad.l - pad.r;
   const ph = h - pad.t - pad.b;
   let tMax = 1;
+  let tMin = opts.fitX ? Infinity : 0;
   let vMax = opts.max || 0;
+  let vMin = opts.fitY ? Infinity : 0;
   for (const s of series) {
     for (const [t, v] of s.points) {
       if (t > tMax) tMax = t;
+      if (opts.fitX && t < tMin) tMin = t;
       if (!opts.max && v != null && v > vMax) vMax = v;
+      if (opts.fitY && v != null && v < vMin) vMin = v;
     }
   }
-  vMax = vMax > 0 ? vMax * 1.08 : 1;
-  const X = (t) => pad.l + (t / tMax) * pw;
-  const Y = (v) => pad.t + ph - (v / vMax) * ph;
+  if (!Number.isFinite(tMin) || tMin >= tMax) tMin = 0;
+  if (opts.fitY) {
+    // Eje ajustado a los valores (con margen), para que se vean las subidas y bajadas
+    if (!Number.isFinite(vMin)) vMin = 0;
+    const span = Math.max(20, vMax - vMin);
+    vMin = Math.max(0, vMin - span * 0.15);
+    vMax = vMin + span * 1.3;
+  } else vMax = vMax > 0 ? vMax * 1.08 : 1;
+  const X = (t) => pad.l + ((t - tMin) / (tMax - tMin)) * pw;
+  const Y = (v) => pad.t + ph - ((v - vMin) / (vMax - vMin)) * ph;
   ctx.clearRect(0, 0, w, h);
   // Rejilla y ejes
   ctx.font = '11px system-ui, sans-serif';
@@ -249,7 +260,7 @@ export function drawChart(canvas, series, opts = {}) {
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= 4; i++) {
-    const v = (vMax / 1.08) * (i / 4);
+    const v = opts.fitY ? vMin + (vMax - vMin) * (i / 4) : (vMax / 1.08) * (i / 4);
     const y = Math.round(Y(v)) + 0.5;
     ctx.beginPath();
     ctx.moveTo(pad.l, y);
@@ -260,7 +271,11 @@ export function drawChart(canvas, series, opts = {}) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   const steps = Math.min(6, Math.max(2, Math.floor(pw / 90)));
-  for (let i = 0; i <= steps; i++) ctx.fillText(mmss((tMax * i) / steps), X((tMax * i) / steps), h - pad.b + 6);
+  const xf = opts.xFormat || mmss;
+  for (let i = 0; i <= steps; i++) {
+    const t = tMin + ((tMax - tMin) * i) / steps;
+    ctx.fillText(xf(t), X(t), h - pad.b + 6);
+  }
   // Líneas: primero las demás, la tuya encima y más gruesa
   const ordered = [...series.filter((s) => !s.me), ...series.filter((s) => s.me)];
   for (const s of ordered) {
@@ -297,9 +312,9 @@ export function drawChart(canvas, series, opts = {}) {
     const pts = me.points.filter(([, v]) => v != null);
     if (pts.length > 1) {
       ctx.beginPath();
-      ctx.moveTo(X(pts[0][0]), Y(0));
+      ctx.moveTo(X(pts[0][0]), Y(vMin));
       for (const [t, v] of pts) ctx.lineTo(X(t), Y(v));
-      ctx.lineTo(X(pts[pts.length - 1][0]), Y(0));
+      ctx.lineTo(X(pts[pts.length - 1][0]), Y(vMin));
       const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ph);
       grad.addColorStop(0, opts.fillColor || 'rgba(255, 227, 161, 0.22)');
       grad.addColorStop(1, 'rgba(255, 227, 161, 0)');

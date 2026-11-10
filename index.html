@@ -253,6 +253,12 @@
               <p id="nota-nube" class="nota"></p>
             </div>
           </div>
+          <div class="bloque perfil-clasif">
+            <h2>Clasificatoria</h2>
+            <div class="pc-cab" id="pc-cab"></div>
+            <canvas class="fin-grafica baja" id="perfil-graf-pl" aria-label="Tus puntos de liga en las últimas clasificatorias"></canvas>
+            <p class="nota" id="pc-nota"></p>
+          </div>
           <div class="bloque">
             <h2>Últimas partidas</h2>
             <div id="perfil-historial"></div>
@@ -323,6 +329,11 @@
           <h2>Retos de hoy <small id="retos-reloj" class="nota-inline"></small></h2>
           <ul id="retos-diarios" class="retos"></ul>
           <p id="retos-bonus" class="retos-bonus"></p>
+        </div>
+        <div class="bloque retos-bloque semana-bloque">
+          <h2>Retos de la semana <small id="semana-reloj" class="nota-inline"></small></h2>
+          <ul id="retos-semanales" class="retos"></ul>
+          <p id="semana-bonus" class="retos-bonus"></p>
         </div>
         <div class="bloque">
           <h2>Logros <small id="logros-resumen" class="nota-inline"></small></h2>
@@ -779,6 +790,31 @@
           <button type="button" class="btn-peligro" id="mp-salir">Abandonar</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Reto por enlace: «Supera mi partida» -->
+  <div id="dialogo-reto" class="pantalla dialogo" aria-labelledby="dre-titulo" hidden>
+    <div class="dialogo-caja dialogo-pequeno">
+      <header class="dialogo-cab"><h2 id="dre-titulo">Te han retado</h2><button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button></header>
+      <div class="dialogo-cuerpo reto-cuerpo" id="dre-cuerpo"></div>
+      <div class="dialogo-pie"><button type="button" class="btn-sec" data-cerrar>Ahora no</button><button type="button" id="dre-aceptar" class="principal">Aceptar el reto</button></div>
+    </div>
+  </div>
+
+  <!-- Ficha pública de un jugador -->
+  <div id="dialogo-jugador" class="pantalla dialogo" aria-labelledby="dj-nombre" hidden>
+    <div class="dialogo-caja dialogo-pequeno ficha-jugador">
+      <header class="dialogo-cab"><h2 id="dj-titulo">Ficha</h2><button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button></header>
+      <div class="dialogo-cuerpo" id="dj-cuerpo"></div>
+    </div>
+  </div>
+
+  <!-- Ficha de una partida del historial -->
+  <div id="dialogo-partida" class="pantalla dialogo" aria-labelledby="dp-titulo" hidden>
+    <div class="dialogo-caja">
+      <header class="dialogo-cab"><h2 id="dp-titulo">Partida</h2><button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button></header>
+      <div class="dialogo-cuerpo" id="dp-cuerpo"></div>
     </div>
   </div>
 

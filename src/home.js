@@ -16,10 +16,10 @@ import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
-import { drawSparkline } from './resumen.js';
+import { drawChart, drawSparkline } from './resumen.js';
 import { PLACEMENT_GAMES, RANKED_ROOM, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } from './rangos.js';
 import {
-  ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
+  ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
 } from './profile.js';
 
@@ -1388,7 +1388,7 @@ export class Home {
       el('div', { class: 'ry-textos' },
         el('small', { text: seasonName(r.temporada) }),
         el('strong', { text: placing ? `Colocación ${r.colocacion}/${PLACEMENT_GAMES}` : k.label, style: placing ? '' : `color: rgb(${k.league.color.join(',')})` }),
-        el('span', { text: placing ? 'Juega las partidas de colocación para tener liga.' : `${k.pl} PL · ${r.victorias} victorias en ${r.partidas} partidas · mejor: ${rankOf(r.mejor).label}` })),
+        el('span', { text: placing ? 'Juega las partidas de colocación para tener liga.' : `${k.pl} PL · ${r.victorias} victorias en ${r.partidas} partidas · mejor: ${rankOf(Math.max(r.mejor, r.puntos)).label}` })),
       el('button', { type: 'button', class: 'principal', onclick: () => this.h.onRanked?.('ia'), text: 'Jugar clasificatoria' }));
     const out = [me];
     const L = this.ladder;
@@ -1409,7 +1409,7 @@ export class Home {
       body.append(
         el('tr', { class: row.id === L.myId ? 'yo' : '' },
           el('td', { class: 'num', text: String(i + 1) }),
-          el('td', {}, el('span', { class: 'celda-nacion' }, emblemCanvas(row.emblema, 22), el('span', {}, el('strong', { text: row.nombre }), row.titulo ? el('small', { text: row.titulo }) : null))),
+          el('td', {}, el('button', { type: 'button', class: 'celda-nacion celda-boton', title: 'Ver su ficha', onclick: () => this.openPlayerCard(row, 'rango') }, emblemCanvas(row.emblema, 22), el('span', {}, el('strong', { text: row.nombre }), row.titulo ? el('small', { text: row.titulo }) : null))),
           el('td', {}, el('span', { class: 'celda-rango' }, badgeCanvas(row.puntos, 18), el('span', { text: rk.label, style: `color: rgb(${rk.league.color.join(',')})` }))),
           el('td', { class: 'num', text: String(rk.pl) }),
           el('td', { class: 'num', text: String(row.partidas) })),
@@ -1638,6 +1638,15 @@ export class Home {
       ['Victoria más rápida', s.mejorTiempo, (n) => (n == null ? '—' : formatTime(n))],
       ['Tiempo jugado', s.tiempoJugado || 0, (n) => formatTime(Math.round(n))],
     ];
+    // Puesto medio y mejor puesto (de las partidas del historial que lo guardaron)
+    const placed = p.historial.filter((g) => g.puesto > 0 && g.de > 1);
+    if (placed.length) {
+      rows.push(['Puesto medio', placed.reduce((a, g) => a + g.puesto, 0) / placed.length, (n) => `${Math.round(n)}.º`]);
+      rows.push(['Mejor puesto', Math.min(...placed.map((g) => g.puesto)), (n) => `${Math.round(n)}.º`]);
+    }
+    rows.push(['Clasificatorias', s.clasificatorias || 0, int]);
+    rows.push(['Retos completados', (s.retosDiarios || 0) + (s.retosSemanales || 0), int]);
+    rows.push(['Monedas ganadas', s.monedasGanadas || 0, int]);
     $('estadisticas').replaceChildren(
       ...rows.flatMap(([k, v, fmt]) => {
         const dd = el('dd', { text: fmt(v) });
@@ -1646,6 +1655,89 @@ export class Home {
       }),
     );
     llenarAlVer($('perfil-resumen'));
+    this.renderProfileRank();
+  }
+
+  /** Bloque «Clasificatoria» del perfil: rango, cifras y la gráfica de tus PL. */
+  renderProfileRank() {
+    const r = this.profile.rango;
+    if (!r || !$('pc-cab')) return;
+    const placing = inPlacement(r);
+    const k = rankOf(r.puntos);
+    $('pc-cab').replaceChildren(
+      badgeCanvas(r, 40),
+      el('div', { class: 'ry-textos' },
+        el('strong', { text: placing ? `Colocación ${r.colocacion}/${PLACEMENT_GAMES}` : k.label, style: placing ? '' : `color: rgb(${k.league.color.join(',')})` }),
+        el('span', { text: placing ? 'Sin liga todavía' : `${k.pl} PL · mejor esta temporada: ${rankOf(Math.max(r.mejor, r.puntos)).label}` })),
+    );
+    const hist = [...r.historial].reverse();
+    const c = $('perfil-graf-pl');
+    c.hidden = hist.length < 2;
+    $('pc-nota').textContent = hist.length < 2 ? 'Juega clasificatorias para ver aquí cómo evolucionan tus puntos.' : `${r.victorias} victorias en ${r.partidas} partidas esta temporada${r.anteriores.length ? ` · temporada anterior: ${r.anteriores[0].liga}` : ''}.`;
+    if (hist.length >= 2 && !$('perfil-resumen').hidden && this.view === 'perfil') {
+      requestAnimationFrame(() => drawChart(c, [{ me: true, stroke: '#d6b8ff', points: hist.map((h, i) => [i + 1, h.puntos]) }], {
+        format: (v) => String(Math.round(v)),
+        xFormat: (v) => `${Math.round(v)}`,
+        fitX: true,
+        fitY: true,
+        fillColor: 'rgba(196, 126, 255, 0.25)',
+      }));
+    }
+  }
+
+  // ------------------------------------------------------------ fichas
+
+  /** Ficha pública de un jugador (de una tabla o de la sala). `kind`: 'rango', 'global' o 'sala'. */
+  openPlayerCard(row, kind) {
+    const emb = emblemCanvas(row.emblema || row.emblem || {}, 64);
+    const head = el('div', { class: 'fj-cab' }, emb,
+      el('div', { class: 'fj-textos' },
+        el('strong', { class: 'fj-nombre', text: row.nombre || row.name || 'Jugador' }),
+        row.titulo || row.title ? el('small', { text: row.titulo || row.title }) : null));
+    const facts = [];
+    if (kind === 'rango') {
+      const rk = rankOf(row.puntos);
+      head.append(badgeCanvas(row.puntos, 40));
+      facts.push(['Rango', rk.label], ['PL', String(rk.pl)], ['Partidas', String(row.partidas)], ['Victorias', String(row.victorias)]);
+      if (row.partidas) facts.push(['% de victorias', `${Math.round((100 * row.victorias) / row.partidas)} %`]);
+    } else if (kind === 'global') {
+      facts.push(['Nivel', String(row.nivel)], ['Victorias', String(row.victorias)], ['Partidas', String(row.partidas)], ['Mayor territorio', formatPercent(row.mejorPct)]);
+    } else {
+      facts.push(['Nivel', String(row.level || 1)]);
+      if (row.rank) facts.push(['Rango', row.rank]);
+    }
+    $('dj-titulo').textContent = kind === 'sala' ? 'Jugador de la sala' : 'Ficha de jugador';
+    $('dj-cuerpo').replaceChildren(head, el('dl', { class: 'estadisticas fj-datos' }, ...facts.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })])));
+    abrirDialogo($('dialogo-jugador'));
+  }
+
+  /** Ficha de una partida del historial: resultado, cifras y la curva de tu territorio. */
+  openGameCard(g) {
+    const win = g.resultado.startsWith('victoria');
+    $('dp-titulo').textContent = `${win ? 'Victoria' : g.resultado === 'abandonada' ? 'Abandonada' : 'Derrota'} · ${mapLabel(g.mapa)}`;
+    const facts = [
+      ['Fecha', new Date(g.fecha).toLocaleString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })],
+      ['Puesto', placeText(g) || '—'],
+      ['Duración', formatTime(g.duracion)],
+      ['Máximo territorio', formatPercent(g.pct)],
+      ['Eliminaciones', g.elim != null ? String(g.elim) : '—'],
+      ['Edificios', g.edif != null ? String(g.edif) : '—'],
+      ['Rivales', g.rivales ? String(g.rivales) : '—'],
+      ['Tipo', `${g.clasif ? '🏅 Clasificatoria' : 'Normal'}${g.online ? ' · online' : ''}`],
+    ];
+    if (g.reto) facts.push(['Reto', `de ${g.reto.de}: superar el ${formatPercent(g.reto.meta / 1000)} · ${g.reto.superado ? '✓ superado' : '✗ no'}`]);
+    const parts = [el('dl', { class: 'estadisticas dp-datos' }, ...facts.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]))];
+    let chart = null;
+    if (Array.isArray(g.curva) && g.curva.length > 1) {
+      chart = el('canvas', { class: 'fin-grafica baja', 'aria-label': 'Tu territorio a lo largo de la partida' });
+      parts.unshift(el('h3', { text: 'Tu territorio' }), chart);
+    }
+    $('dp-cuerpo').replaceChildren(...parts);
+    abrirDialogo($('dialogo-partida'));
+    if (chart) {
+      const step = g.duracion / (g.curva.length - 1);
+      requestAnimationFrame(() => drawChart(chart, [{ me: true, points: g.curva.map((v, i) => [i * step, v / 1000]) }], { format: (v, max) => `${(v * 100).toLocaleString('es-ES', { maximumFractionDigits: max < 0.1 ? 1 : 0 })} %` }));
+    }
   }
 
   /** Sub-pestaña del perfil: 'resumen' o 'aspecto'. */
@@ -1716,7 +1808,7 @@ export class Home {
       el('ul', { class: 'historial-corto' },
         ...h.slice(0, 5).map((g) => {
           const win = g.resultado.startsWith('victoria');
-          return el('li', {},
+          return el('li', { class: 'fila-boton', tabindex: '0', title: 'Ver la partida', onclick: () => this.openGameCard(g), onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), this.openGameCard(g)) },
             el('span', { class: `hc-resultado${win ? ' gana' : ''}`, text: win ? 'Victoria' : 'Derrota' }),
             el('span', { class: 'hc-mapa' }, el('strong', { text: mapLabel(g.mapa) }), el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}${placeText(g) ? ` · ${placeText(g)}` : ''}${g.online ? ' · online' : ''}` })),
             el('span', { class: 'hc-dato', text: formatPercent(g.pct) }),
@@ -1863,6 +1955,39 @@ export class Home {
     $('retos-bonus').textContent = d.bonus ? `¡Los tres hechos! Bonus de 🪙 ${DAILY_BONUS} conseguido. Mañana, más.` : `Completa los tres y ganas 🪙 ${DAILY_BONUS} más.${all ? '' : ` Llevas ${d.retos.filter((id) => d.hechos[id]).length} de 3.`}`;
     $('retos-bonus').classList.toggle('bien', !!d.bonus);
     llenarAlVer($('retos-diarios'));
+    this.renderWeekly();
+  }
+
+  /** Retos de la semana: tres, más largos y mejor pagados, con su bonus. */
+  renderWeekly() {
+    const p = this.profile;
+    const w = ensureWeekly(p);
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((8 - (now.getDay() || 7)) % 7 || 7));
+    const hours = Math.max(1, Math.round((monday - now) / 3600000));
+    $('semana-reloj').textContent = `cambian en ${Math.floor(hours / 24)} d ${hours % 24} h`;
+    $('retos-semanales').replaceChildren(
+      ...w.retos.map((id) => {
+        const r = WEEKLY.find((x) => x.id === id);
+        if (!r) return null;
+        const prog = Math.min(r.need, w.progreso[id] || 0);
+        const hecho = !!w.hechos[id];
+        return el(
+          'li',
+          { class: hecho ? 'hecho' : '' },
+          el('span', { class: 'reto-icono', 'aria-hidden': 'true', text: r.icon }),
+          el('div', { class: 'reto-texto' },
+            el('strong', { text: r.name }),
+            el('span', { class: 'reto-barra llena-al-ver' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
+            el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}` })),
+          el('b', { class: 'reto-premio', text: `🪙 ${r.coins}` }),
+        );
+      }),
+    );
+    const done = w.retos.filter((id) => w.hechos[id]).length;
+    $('semana-bonus').textContent = w.bonus ? `¡Los tres de la semana! Bonus de 🪙 ${WEEKLY_BONUS} conseguido.` : `Completa los tres y ganas 🪙 ${WEEKLY_BONUS} más. Llevas ${done} de 3.`;
+    $('semana-bonus').classList.toggle('bien', !!w.bonus);
+    llenarAlVer($('retos-semanales'));
   }
 
   // --------------------------------------------------------- clasificación
@@ -1916,7 +2041,7 @@ export class Home {
           el(
             'td',
             {},
-            el('span', { class: 'celda-nacion' }, emblemCanvas(r.emblema, 22), el('span', {}, el('strong', { text: r.nombre }), r.titulo ? el('small', { text: r.titulo }) : null)),
+            el('button', { type: 'button', class: 'celda-nacion celda-boton', title: 'Ver su ficha', onclick: () => this.openPlayerCard(r, 'global') }, emblemCanvas(r.emblema, 22), el('span', {}, el('strong', { text: r.nombre }), r.titulo ? el('small', { text: r.titulo }) : null)),
           ),
           el('td', { class: 'num', text: String(r.nivel) }),
           el('td', { class: 'num', text: String(r.victorias) }),
@@ -1965,7 +2090,7 @@ export class Home {
       body.append(
         el(
           'tr',
-          {},
+          { class: 'fila-boton', tabindex: '0', title: 'Ver la partida', onclick: () => this.openGameCard(g), onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), this.openGameCard(g)) },
           el('td', { text: new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) }),
           el('td', { text: `${g.resultado}${g.online ? ' · online' : ''}` }),
           el('td', { class: 'num', text: placeText(g) || '—' }),
@@ -2348,13 +2473,16 @@ export class Home {
     const wasReady = this._lobbyReady;
     this._lobbyPeers = new Set(st.players.map((p) => p.peer));
     this._lobbyReady = new Set(st.players.filter((p) => p.ready).map((p) => p.peer));
+    const claims = sala.rankClaims ? sala.rankClaims() : new Map();
     const rows = st.players.map((p) => {
+      const claim = claims.get(p.peer);
+      const card = () => this.openPlayerCard({ ...p, rank: claim && Number.isFinite(claim.puntos) ? rankOf(claim.puntos).label : '' }, 'sala');
       const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
       const fresh = seen && !seen.has(p.peer);
       const pop = wasReady && p.ready && !wasReady.has(p.peer);
       return el(
         'li',
-        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''}` },
+        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''} fila-boton`, tabindex: '0', title: 'Ver su ficha', onclick: card, onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), card()) },
         el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
         el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
         el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),

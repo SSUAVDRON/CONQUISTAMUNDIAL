@@ -31,6 +31,7 @@ import { abrirGuia } from './guia.js';
 import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
 import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js';
+import { challengeBeaten, challengeLink, parseChallenge } from './reto.js';
 import { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf } from './rangos.js';
 
 const canvas = document.getElementById('lienzo');
@@ -284,15 +285,17 @@ function enterGame(game) {
 async function startGame(opts) {
   if (state.loading) return;
   state.loading = true;
-  // Para la revancha: la misma partida con otra semilla (el tutorial no)
-  state.lastOpts = opts.tutorial ? null : { ...opts, seed: '' };
+  // Para la revancha: la misma partida con otra semilla (el tutorial no; un reto, sin el reto)
+  state.lastOpts = opts.tutorial ? null : { ...opts, seed: '', seedNum: undefined, challenge: undefined, title: opts.challenge ? undefined : opts.title };
+  state.challenge = opts.challenge || null;
   // Clasificatoria: queda «pendiente» hasta que se aplique su resultado
   state.ranked = opts.ranked || null;
   state.rankedDone = false;
   state.rankOut = null;
   leaveOnline();
   tutorial.stop();
-  const seed = opts.seed ? hashString(opts.seed) : randomSeed();
+  const seed = Number.isFinite(opts.seedNum) ? opts.seedNum >>> 0 : opts.seed ? hashString(opts.seed) : randomSeed();
+  state.lastSeed = opts.tutorial ? null : seed;
   try {
     const game = await withLoading(opts.title || mapLabel(opts.mapSize), [
       { label: 'Levantando el relieve…', run: () => loadMap(opts.mapSize, seed) },
@@ -589,7 +592,11 @@ function gameResult() {
   const alliedWin = !!(game.winningAlliance && game.winningAlliance.includes(human));
   const place = placement(game, human);
   const rec = state.rec && state.rec.game === game ? state.rec : null;
+  const maxShare = human.maxTilesReached / game.map.landCount;
   return {
+    ranked: state.ranked || null,
+    challenge: state.challenge || null,
+    challengeBeaten: challengeBeaten(state.challenge, maxShare),
     place: place.place,
     of: place.of,
     curve: rec ? compactCurve(rec.samples) : [],
@@ -778,6 +785,45 @@ function renderRankChange(box, o) {
   if (o.promoted || o.placementDone) box.classList.add('fr-ascenso');
 }
 
+/**
+ * Enlace «Supera mi partida»: la misma partida contra la IA (mapa, rivales,
+ * dificultad, semilla y reglas) y tu máximo de territorio como meta. Solo en
+ * la web (en el enlace de Claude, la dirección de la página no sirve para
+ * abrirla) y no en multijugador.
+ */
+function challengeUrl(r) {
+  if (state.online || state.lastSeed == null || !state.lastOpts || !Ladder.webAvailable()) return '';
+  const o = state.lastOpts;
+  return challengeLink(`${location.origin}${location.pathname}`, {
+    m: state.mapSize, b: o.bots, d: o.difficulty, s: state.lastSeed, r: state.game.rules, p: r.maxShare * 1000, n: profile.nombre || 'Alguien', t: r.place, o: r.of,
+  });
+}
+
+/** Al abrir un enlace con ?reto=…: la ficha del reto para aceptarlo. */
+function offerChallenge(c) {
+  const map = mapLabel(c.m);
+  const pct = (c.p / 10).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+  document.getElementById('dre-titulo').textContent = `${c.n} te reta`;
+  const box = document.getElementById('dre-cuerpo');
+  const meta = document.createElement('div');
+  meta.className = 'reto-meta';
+  const num = document.createElement('span');
+  num.className = 'rm-num';
+  num.textContent = `${pct} %`;
+  const txt = document.createElement('span');
+  txt.textContent = `Supera su máximo de territorio en ${map}${c.t ? ` (quedó ${c.t}.º de ${c.o})` : ''}.`;
+  meta.append(num, txt);
+  const info = document.createElement('p');
+  info.className = 'nota';
+  info.textContent = `La misma partida: ${map}, ${c.b} rivales, IA ${{ facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[c.d]} y las mismas reglas y semilla.`;
+  box.replaceChildren(meta, info);
+  document.getElementById('dre-aceptar').onclick = () => {
+    cerrarDialogo(document.getElementById('dialogo-reto'));
+    startGame({ mapSize: c.m, bots: c.b, difficulty: c.d, seedNum: c.s, rules: c.r, challenge: c, title: `Reto de ${c.n}` });
+  };
+  abrirDialogo(document.getElementById('dialogo-reto'), { foco: '#dre-aceptar' });
+}
+
 /** Lo que necesita la pantalla de fin: grabación, puesto y cifras de la partida. */
 function endExtra(outcome) {
   const { game, human } = state;
@@ -789,7 +835,8 @@ function endExtra(outcome) {
     outcome,
     place: { place: r.place, of: r.of },
     stats: { seconds: outcome === 'derrota' ? r.survivedSeconds : r.seconds, maxShare: r.maxShare, kills: r.kills, built: r.built },
-    share: { map: mapLabel(state.mapSize), online: !!state.online },
+    share: { map: mapLabel(state.mapSize), online: !!state.online, url: challengeUrl(r) },
+    challenge: state.challenge ? { de: state.challenge.n, meta: state.challenge.p, superado: r.challengeBeaten } : null,
     renderRank: state.rankOut ? (box) => renderRankChange(box, state.rankOut) : null,
   };
 }
@@ -1459,6 +1506,20 @@ requestAnimationFrame(frame);
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
 // En la web: servidor MQTT público (?b=N el del anfitrión, ?broker=ws… uno propio, ?red=local solo pestañas)
 const startParams = new URLSearchParams(location.search);
+{
+  // ?reto=…: «Supera mi partida» (se quita de la dirección para no volver a preguntarlo al recargar)
+  const reto = parseChallenge(startParams.get('reto'));
+  if (startParams.has('reto')) {
+    try {
+      const u = new URL(location.href);
+      u.searchParams.delete('reto');
+      history.replaceState(null, '', u.toString());
+    } catch {
+      /* sin history: no pasa nada */
+    }
+  }
+  if (reto) setTimeout(() => offerChallenge(reto), 900);
+}
 const transportOpts = (() => {
   const b = Number(startParams.get('b'));
   return { prefer: startParams.get('red') === 'local' ? 'local' : Number.isInteger(b) && startParams.has('b') ? b : null, brokerUrl: startParams.get('broker') };

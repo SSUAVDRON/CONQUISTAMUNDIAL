@@ -64,7 +64,8 @@ export class PantallaFin {
     const d = this.data;
     const s = d.stats || {};
     const where = d.share && d.share.map ? ` en ${d.share.map}` : '';
-    const head = d.outcome === 'victoria' ? '¡He ganado' : d.outcome === 'derrota' ? 'He caído' : 'He terminado';
+    const url = d.share && d.share.url;
+    const head = url ? '¿Me superas? He jugado' : d.outcome === 'victoria' ? '¡He ganado' : d.outcome === 'derrota' ? 'He caído' : 'He terminado';
     const place = d.place ? `${ordinal(d.place.place)} de ${d.place.of}` : '';
     return `${head} una partida de Trinchera${where}: ${place}${place ? ', ' : ''}${formatPercent(s.maxShare || 0)} del mapa como máximo y ${formatNumber(s.kills || 0)} eliminaciones en ${formatTime(s.seconds || 0)}.`;
   }
@@ -156,6 +157,14 @@ export class PantallaFin {
     cells.push(cell('Eliminaciones', formatNumber(s.kills || 0)));
     cells.push(cell('Edificios', formatNumber(s.built || 0)));
     $('fin-cifras').replaceChildren(...cells);
+    // Reto por enlace: ¿superado?
+    const old = $('fin-cifras').parentElement.querySelector('.fin-reto');
+    old?.remove();
+    if (d.challenge) {
+      const ok = d.challenge.superado;
+      const r = el('p', `fin-reto ${ok ? 'si' : 'no'}`, ok ? `🎯 ¡Reto superado! Has pasado el ${formatPercent(d.challenge.meta / 1000)} de ${d.challenge.de}.` : `🎯 Reto de ${d.challenge.de}: superar el ${formatPercent(d.challenge.meta / 1000)}. Esta vez no.`);
+      $('fin-cifras').after(r);
+    }
   }
 
   /** Recompensas que suben desde cero cuando aparece la tarjeta. */

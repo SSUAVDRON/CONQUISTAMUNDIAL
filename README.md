@@ -28,11 +28,52 @@ Ajustes y la preferencia del sistema de reducir el movimiento.
 | Pestaña | Qué hay |
 |---|---|
 | Jugar | Portada animada con nuestro mapa del mundo (solo se anima mientras se ve), «Jugar ahora», **Guía** y Tutorial; los cuatro modos; misiones diarias con barras, la última partida y las novedades (fundido entre ellas y «Ver todas» en un diálogo); el arsenal por categorías. **Contra la IA** es un solo formulario: mapa (selector de tarjetas con miniatura, el mismo que en «Crear sala» y en el editor de la sala), rivales y dificultad arriba; «Reglas avanzadas» plegables con su resumen; y una barra fija abajo con el resumen de la partida y «Empezar partida». «Partida personalizada» abre el mismo formulario con las reglas desplegadas. **Multijugador** muestra tarjetas de carga al conectar, «Crea la primera» si no hay salas públicas y «Reintentar» si no hay conexión. |
-| Progreso | **Retos de hoy** (3 al día, cambian a medianoche; cada uno da monedas y hacer los tres da un bonus) y 38 logros en rejilla: conseguidos en color con su fecha y pendientes en gris; los que dependen de una cifra acumulada muestran su progreso («7/10», campo `meta` de los logros). |
-| Perfil | **Resumen**: tarjeta (estandarte, emblema con marco, nombre, título y nivel), nombre y color del territorio (16 colores rápidos), nivel y estadísticas que suben al abrirlo, y tus últimas partidas. **Aspecto**: una vista previa fija de tu nación que cambia en directo; emblema (9 formas, 27 símbolos y colores, o la **bandera de un país**), marco (12), estandarte (20, algunos animados), patrón del territorio (15; lo ven también los demás online), color del nombre en el mapa (14) y títulos en fichas. Se desbloquean con nivel, con logros o **comprándolos con monedas**: al pulsar uno a la venta sale una ficha con la muestra, el precio y lo que te queda. La ficha de la cabecera también lleva aquí. |
+| Progreso | **Retos de hoy** (3 al día, cambian a medianoche; cada uno da monedas y hacer los tres da un bonus), **retos de la semana** (3 por semana, de lunes a domingo, más largos y mejor pagados, con su bonus) y 57 logros en rejilla (entre ellos los de puesto, ligas, rachas, retos semanales y retos por enlace): conseguidos en color con su fecha y pendientes en gris; los que dependen de una cifra acumulada muestran su progreso («7/10», campo `meta` de los logros). |
+| Perfil | **Resumen**: tarjeta (estandarte, emblema con marco, nombre, título y nivel), nombre y color del territorio (16 colores rápidos), nivel y estadísticas que suben al abrirlo (también puesto medio, mejor puesto, clasificatorias, retos y monedas ganadas), tu rango con la gráfica de tus PL y tus últimas partidas (cada una abre su ficha con la curva de tu territorio). **Aspecto**: una vista previa fija de tu nación que cambia en directo; emblema (9 formas, 27 símbolos y colores, o la **bandera de un país**), marco (12), estandarte (20, algunos animados), patrón del territorio (15; lo ven también los demás online), color del nombre en el mapa (14) y títulos en fichas. Se desbloquean con nivel, con logros o **comprándolos con monedas**: al pulsar uno a la venta sale una ficha con la muestra, el precio y lo que te queda. La ficha de la cabecera también lleva aquí. |
 | Arsenal | Todo lo que se construye o lanza, con su precio, su tecla y, al pasar el ratón o enfocar la tarjeta, el detalle. |
-| Clasificación | Global (todos los jugadores del enlace), tus récords y tu historial, en sub-pestañas; estados vacíos con diseño. |
+| Clasificación | **Rangos** (tu rango y la tabla global de la temporada), Global (todos los jugadores del enlace), tus récords y tu historial (con puesto y la curva de tu territorio), en sub-pestañas. Pulsar a un jugador abre su ficha pública; pulsar una partida, su ficha. |
 | Ajustes | En grupos: **Partida** (borde rojo al ser atacado, puntero, tropas de los ataques, emojis, consejos), **Interfaz** (animaciones), **Sonido** (música y efectos, cada uno con su volumen, que se apaga con su sonido) y **Más** (tutorial, guía, «Restablecer ajustes» con confirmación, créditos y versión). |
+
+**Clasificatoria** (tarjeta en Jugar): partidas que cuentan para tu rango de
+la temporada.
+
+- **Ligas**: Hierro, Bronce, Plata, Oro, Platino y Diamante, con divisiones IV–I
+  de 100 puntos de liga (PL); luego Maestro, Gran Maestro y Leyenda, sin
+  divisiones. Insignia propia de cada liga (también junto a tu emblema en la
+  cabecera).
+- **Colocación**: las 5 primeras partidas no dan rango visible: miden tu nivel
+  oculto (MMR, empieza en 1000) y te colocan en una liga.
+- **PL**: según tu puesto entre las naciones frente a lo esperado de tu rango
+  (ganar da unos +20; quedar a media tabla o abajo, resta), ajustados si tu MMR
+  va por delante o por detrás de tu rango. Tras ascender, **escudo** de 3
+  partidas: no bajas de división.
+- **Contra la IA**: el mundo, 90 naciones, perfil Clásico y reglas fijas; la IA
+  es más difícil cuanto más alta tu liga. **Abandonar cuenta como quedar el
+  último**, también si cierras la página a medias (al volver se resuelve).
+- **Salas clasificatorias** (multijugador): el mundo, Clásico, 40 naciones de la
+  IA y reglas fijas. Elo entre las personas (quién quedó por delante de quién) y
+  una parte pequeña según tu puesto entre todas las naciones. Cada navegador
+  firma su rango para la sala con una clave ECDSA P-256 y los demás lo
+  comprueban. Si se va el anfitrión, no cuenta para nadie.
+- **Temporadas** de dos meses: al cambiar, recompensa en monedas según tu mejor
+  liga y reinicio suave (el MMR se acerca a 1000 y repites 2 partidas de
+  colocación).
+- **Tabla global**: en el enlace de Claude, en su base de datos; en la web, con
+  `api/rangos.php` (ver «Publicarlo en la web»); si no hay ninguna, el rango se
+  guarda en tu perfil.
+
+**Al acabar una partida** sale su **resumen** sobre el mapa, en pestañas:
+Resumen (puesto «3.º de 91», duración, máximo de territorio, eliminaciones,
+edificios, recompensas que suben y el cambio de rango), Gráficas (tu territorio y
+el de las 6 primeras naciones, tus tropas y tu oro), Momentos clave
+(eliminaciones, alianzas, traiciones, capitales, bombas…) y Repetición (el mapa
+cada 6 s, con reproducir, barra y ×1/×2/×4). La grabación solo observa la
+partida, así que vale también en multijugador.
+
+**Social**: «Compartir» (el menú del sistema o copiar el texto) y, en la web,
+un **reto por enlace** («¿Me superas?»): quien lo abre juega exactamente esa
+partida (mapa, rivales, dificultad, reglas y semilla) y ve si supera tu máximo
+de territorio.
 
 **En partida**, el botón «Menú» (o Escape, si no hay nada que cancelar) abre
 un menú con «Continuar», ajustes rápidos (música, efectos, animaciones y
@@ -156,7 +197,9 @@ funciona: los módulos ES necesitan HTTP; para eso está `dist/dominia.html`.
 
 ## Publicarlo en la web (Hostinger u otro hosting)
 
-Son ficheros estáticos: no hace falta PHP ni base de datos.
+El juego son ficheros estáticos. La **tabla global de rangos** de la web usa
+además un PHP pequeño (`api/rangos.php`, PHP 8 + PDO con MySQL); sin él, el
+juego funciona igual y el rango se guarda en cada navegador.
 
 **Con Git (Hostinger), en dos pasos.** Se sirve el juego **empaquetado en un
 solo archivo** (`index.html` con su JavaScript y su CSS dentro): no puede
@@ -194,9 +237,35 @@ pide al navegador comprobar siempre la última versión.
 
 **A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
 
-Fuera del enlace de Claude no hay multijugador entre ordenadores (solo entre
-pestañas del mismo navegador), ni clasificación global ni perfil en la nube:
-el progreso se guarda en cada navegador.
+**Tabla de rangos en Hostinger** (opcional): `hostinger.sh` publica también
+`api/rangos.php`.
+
+1. En hPanel → Bases de datos → MySQL, crea una base de datos y su usuario.
+2. Crea, **fuera de `public_html`** (en la carpeta de tu usuario, junto a
+   `public_html`), el archivo `trinchera-config.php`:
+
+   ```php
+   <?php return [
+     'dsn'  => 'mysql:host=localhost;dbname=uXXXX_trinchera;charset=utf8mb4',
+     'user' => 'uXXXX_trinchera',
+     'pass' => 'la contraseña del usuario',
+     'sal'  => 'una cadena larga al azar',
+   ];
+   ```
+
+3. Abre `https://tu-web/api/rangos.php?temporada=2026-6`: debe responder
+   `{"filas":[]}`. Las tablas se crean solas la primera vez.
+
+Cada navegador tiene un id y un secreto aleatorios; el servidor guarda solo el
+hash del secreto, limita las escrituras (una cada 8 s por jugador y 120 por hora
+por conexión), valida los datos y rechaza cambios de rango que no cuadran con
+las partidas jugadas. Para probarla en local:
+`TRINCHERA_DSN=sqlite:/tmp/rangos.db php -S localhost:8000` (los tests lo hacen
+solos si hay PHP).
+
+Fuera del enlace de Claude, el perfil y la clasificación general se guardan en
+cada navegador; el multijugador entre ordenadores va por el servidor de salas
+público.
 
 ## Reglas
 
@@ -289,6 +358,7 @@ CONQUISTAMUNDIAL/
 ├── index.html          Menú, HUD y pantalla de fin
 ├── css/estilo.css
 ├── servidor.js         Servidor estático para desarrollo (npm start)
+├── api/rangos.php      Tabla global de rangos para la web (PHP 8 + PDO; configuración fuera de public_html)
 ├── herramientas/
 │   ├── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
 │   ├── mapas.js        Genera src/mapas-reales.js desde Natural Earth
@@ -310,6 +380,12 @@ CONQUISTAMUNDIAL/
 │   ├── home.js         Pantallas de inicio (modos, selector de mapa, perfil y aspecto, tienda, progreso, ajustes) y sala
 │   ├── movimiento.js   Transiciones de la interfaz: mostrar/ocultar, diálogos, cifras que suben, barras, teclado en pestañas
 │   ├── guia.js         Guía del juego (diálogo con pestañas)
+│   ├── resumen.js      Grabación de la partida (muestras, momentos, fotos del mapa), puesto final y gráficas
+│   ├── fin.js          Pantalla de fin: resumen, gráficas, momentos clave, repetición y compartir
+│   ├── rangos.js       Ligas, PL, MMR, colocación, escudo, temporadas e insignias
+│   ├── ladder.js       Tabla global de rangos (base de datos de Claude o api/rangos.php)
+│   ├── identidad.js    Identidad firmada (ECDSA P-256) para las salas clasificatorias
+│   ├── reto.js         Retos por enlace («Supera mi partida»)
 │   ├── portada.js      Portada animada del inicio
 │   ├── minimapa.js     Minimapa de la partida (clic para ir)
 │   ├── loading.js      Pantalla de carga

@@ -3499,3 +3499,25 @@ body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }
 .crear-clasif { margin: 0; padding: var(--e3) var(--e4); border-radius: var(--r-m); background: rgba(196, 126, 255, 0.1); border: 1px solid rgba(196, 126, 255, 0.35); color: var(--texto-1); font-size: 14px; line-height: 1.45; }
 .crear-clasif[hidden], #crear-mapas[hidden], #crear-avanzadas[hidden] { display: none; }
 .chip-sala.chip-clasif { border-color: rgba(196, 126, 255, 0.55); color: #e3d0ff; }
+
+/* ===================================================== Progresión y social (fase 3) */
+.semana-bloque { background: linear-gradient(120deg, rgba(196, 126, 255, 0.14), transparent 60%), var(--panel); }
+.semana-bloque .reto-barra span { background: linear-gradient(90deg, #8f5cff, #d6b8ff); }
+.perfil-clasif .pc-cab { display: flex; align-items: center; gap: var(--e3); }
+.perfil-clasif canvas.fin-grafica { margin-top: var(--e2); }
+.fila-boton { cursor: pointer; transition: background var(--dur-1); }
+.fila-boton:hover { background: rgba(255, 255, 255, 0.06) !important; }
+.fila-boton:focus-visible { outline: 2px solid var(--oro-200); outline-offset: -2px; }
+#inicio .celda-boton { display: inline-flex; align-items: center; gap: 8px; padding: 2px 6px 2px 2px; margin: -2px; min-height: 0; border: 0; border-radius: var(--r-s); background: none; box-shadow: none; color: inherit; text-align: left; font: inherit; }
+#inicio .celda-boton:hover { background: rgba(255, 255, 255, 0.06); }
+.fj-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--e3); margin-bottom: var(--e3); }
+.fj-textos { display: flex; flex-direction: column; min-width: 0; }
+.fj-nombre { font-family: var(--serif); font-size: 20px; color: var(--oro-200); }
+.fj-textos small { color: var(--texto-2); letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; font-weight: 700; }
+.dp-datos { margin-top: var(--e3); }
+.reto-cuerpo { display: flex; flex-direction: column; gap: var(--e3); }
+.reto-meta { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--e3); align-items: center; padding: var(--e3); border-radius: var(--r-m); background: rgba(233, 185, 85, 0.08); border: 1px solid rgba(233, 185, 85, 0.3); }
+.reto-meta .rm-num { font-family: var(--serif); font-weight: 800; font-size: 28px; color: var(--oro-200); }
+.fin-reto { margin-top: var(--e3); padding: var(--e2) var(--e3); border-radius: var(--r-s); text-align: center; font-weight: 700; }
+.fin-reto.si { background: rgba(95, 211, 141, 0.14); color: #bff3d2; border: 1px solid rgba(95, 211, 141, 0.4); }
+.fin-reto.no { background: rgba(255, 255, 255, 0.04); color: var(--texto-2); border: 1px solid var(--borde-1); }
