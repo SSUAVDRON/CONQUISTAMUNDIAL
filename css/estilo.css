@@ -3496,3 +3496,6 @@ body.sin-animaciones .clasificatoria::after { display: none; }
 .fin-rango.fr-ascenso { animation: ascenso 1.2s var(--ease-spring) 0.4s both; box-shadow: 0 0 0 1px rgba(214, 184, 255, 0.5), 0 0 30px rgba(196, 126, 255, 0.35); }
 @keyframes ascenso { 0% { transform: scale(0.94); opacity: 0; } 60% { transform: scale(1.03); opacity: 1; } 100% { transform: none; } }
 body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }
+.crear-clasif { margin: 0; padding: var(--e3) var(--e4); border-radius: var(--r-m); background: rgba(196, 126, 255, 0.1); border: 1px solid rgba(196, 126, 255, 0.35); color: var(--texto-1); font-size: 14px; line-height: 1.45; }
+.crear-clasif[hidden], #crear-mapas[hidden], #crear-avanzadas[hidden] { display: none; }
+.chip-sala.chip-clasif { border-color: rgba(196, 126, 255, 0.55); color: #e3d0ff; }

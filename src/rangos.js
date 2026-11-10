@@ -31,6 +31,8 @@ export const AI_RATING = { facil: 800, normal: 1100, dificil: 1400, imposible: 1
 
 /** Partida clasificatoria contra la IA: siempre la misma (reglas bloqueadas). */
 export const RANKED_AI = { mapSize: 'mundo', bots: 90, profile: 'clasico' };
+/** Sala clasificatoria (multijugador): también fija; menos bots para que el lockstep vaya holgado. */
+export const RANKED_ROOM = { mapSize: 'mundo', bots: 40, profile: 'clasico', difficulty: 'normal' };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 

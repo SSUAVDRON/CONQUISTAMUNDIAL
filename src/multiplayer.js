@@ -51,6 +51,7 @@ export function checkStartPayload(d) {
         bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
         difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
         rules,
+        clasificatoria: !!d.settings.clasificatoria,
       },
       players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
     },
@@ -132,7 +133,7 @@ export function roomName(profileName, tag) {
 /** Lo que sí cambia la partida: si cambia, los invitados tienen que confirmar de nuevo. */
 export function gameplayKey(settings) {
   const s = settings || {};
-  return JSON.stringify([s.mapSize, s.bots, s.difficulty, cleanRules(s.rules)]);
+  return JSON.stringify([s.mapSize, s.bots, s.difficulty, cleanRules(s.rules), !!s.clasificatoria]);
 }
 
 /** Salas públicas que anuncian en el vestíbulo quienes las han creado. Las «Solo con enlace» no aparecen. */
@@ -255,7 +256,7 @@ export class Sala {
     this.unsubs.push(this.room.on('cancelar', (m) => this._onCancelMsg(m)));
     if (this.room.onConnection) this.unsubs.push(this.room.onConnection((on) => this.onConnection?.(on)) || (() => {}));
     if (this.isHost) {
-      await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now() });
+      await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now(), rango: this.rankClaim || null });
       this._advertise();
     } else if (!this.observer) await this.join();
     this._tick = setInterval(() => this._watchCountdown(), 250);
@@ -265,7 +266,15 @@ export class Sala {
   async join() {
     this.observer = false;
     this.ready = false;
-    await this.room.presence({ jugador: this.me, listo: null, version: FINGERPRINT, desde: Date.now() });
+    await this.room.presence({ jugador: this.me, listo: null, version: FINGERPRINT, desde: Date.now(), rango: this.rankClaim || null });
+  }
+
+  /** Rango firmado que anuncia cada par de la sala (presencia `rango`): Map peer → datos sin comprobar. */
+  rankClaims() {
+    const out = new Map();
+    if (!this.room) return out;
+    for (const p of this.room.peers()) if (p.presence && p.presence.rango) out.set(p.peer, p.presence.rango);
+    return out;
   }
 
   myPeer() {
@@ -368,6 +377,7 @@ export class Sala {
             bots: this.settings.bots,
             perfil: this.settings.rules && this.settings.rules.profile,
             victoria: this.settings.rules && this.settings.rules.victory,
+            clasificatoria: !!this.settings.clasificatoria,
             version: FINGERPRINT,
             abierta: true,
           }

@@ -17,7 +17,7 @@ import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
 import { drawSparkline } from './resumen.js';
-import { PLACEMENT_GAMES, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } from './rangos.js';
+import { PLACEMENT_GAMES, RANKED_ROOM, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } from './rangos.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -2053,7 +2053,7 @@ export class Home {
               'span',
               { class: 'sala-info' },
               el('strong', { text: String(r.nombre || 'Sala').slice(0, 28) }),
-              el('small', { text: `${mapLabel(r.mapa)} · ${P.name} · ${VICTORY_NAMES[r.victoria] || 'Dominación'}` }),
+              el('small', { text: `${r.clasificatoria ? '🏅 Clasificatoria · ' : ''}${mapLabel(r.mapa)} · ${P.name} · ${VICTORY_NAMES[r.victoria] || 'Dominación'}` }),
               el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} bots` }),
             ),
             el('span', { class: 'sala-entrar', text: r.otraVersion ? 'Otra versión' : full ? 'Llena' : 'Entrar' }),
@@ -2085,12 +2085,18 @@ export class Home {
     ctx.drawImage(src, (W - w) / 2, (H - h) / 2, w, h);
   }
 
+  /** Ajustes fijos de una sala clasificatoria. */
+  _rankedSettings() {
+    return { bots: RANKED_ROOM.bots, mapSize: RANKED_ROOM.mapSize, difficulty: RANKED_ROOM.difficulty, rules: { ...DEFAULT_RULES, profile: RANKED_ROOM.profile }, clasificatoria: true };
+  }
+
   /** Chips del resumen: perfil, bots y modo de victoria. */
   _chips(box, settings) {
     const s = settings || {};
     const r = s.rules || {};
     const P = PROFILES[r.profile] || PROFILES.trinchera;
     box.replaceChildren(
+      s.clasificatoria ? el('span', { class: 'chip-sala chip-clasif' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🏅' }), 'Clasificatoria') : null,
       el('span', { class: 'chip-sala', title: `Perfil de reglas ${P.id}` }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚙' }), P.name),
       el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${Number(s.bots) || 0} bots`),
       el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚑' }), VICTORY_NAMES[r.victory] || 'Dominación'),
@@ -2100,7 +2106,7 @@ export class Home {
   // --------------------------------------------------------- crear sala
 
   /** Pantalla «Crear sala»: mapa y quién entra; las reglas, en «Reglas avanzadas». */
-  showCreate() {
+  showCreate({ ranked = false } = {}) {
     const a = this.profile.ajustes;
     if (!this.create) {
       this.create = {
@@ -2113,6 +2119,12 @@ export class Home {
         rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) },
       };
     }
+    this.create.ranked = ranked;
+    // Sala clasificatoria: mapa y reglas fijos
+    $('crear-h1').textContent = ranked ? 'Crear sala clasificatoria' : 'Crear sala';
+    $('crear-clasif').hidden = !ranked;
+    $('crear-mapas').hidden = ranked;
+    $('crear-avanzadas').hidden = ranked;
     $('inicio').hidden = true;
     if ($('crear-sala').hidden) {
       $('crear-sala').hidden = false;
@@ -2134,8 +2146,9 @@ export class Home {
   _renderCreate() {
     const c = this.create;
     // Mapas: el grande y una tira con todos
-    this._paintMapInto($('crear-mapa-img'), c.map);
-    $('crear-mapa-nombre').textContent = mapLabel(c.map);
+    const shownMap = c.ranked ? RANKED_ROOM.mapSize : c.map;
+    this._paintMapInto($('crear-mapa-img'), shownMap);
+    $('crear-mapa-nombre').textContent = mapLabel(shownMap);
     if (!this._createPicker) {
       this._createPicker = mapPicker($('crear-mapas'), c.map, (id) => {
         c.map = id;
@@ -2150,7 +2163,7 @@ export class Home {
     $('plazas-valor').textContent = String(c.seats);
     $('plazas-menos').disabled = c.seats <= MIN_HUMANS;
     $('plazas-mas').disabled = c.seats >= MAX_HUMANS;
-    this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+    this._chips($('crear-resumen'), c.ranked ? this._rankedSettings() : { bots: c.bots, rules: c.rules });
     // Reglas avanzadas: naciones, dificultad y el editor de reglas
     if (!this._createRules) {
       const out = el('strong', { text: String(c.bots) });
@@ -2196,12 +2209,14 @@ export class Home {
     c.name = $('crear-nombre').value.trim() || `Sala de ${this.profile.nombre || 'Trinchera'}`;
     this._busyCreate(true);
     $('crear-error').textContent = '';
-    // Las reglas elegidas pasan a ser las del jugador
-    Object.assign(this.profile.ajustes, { mapa: c.map, dificultad: c.difficulty, reglas: { ...c.rules } });
-    this.h.onProfileChange?.(false);
+    // Las reglas elegidas pasan a ser las del jugador (las de una clasificatoria son fijas)
+    if (!c.ranked) {
+      Object.assign(this.profile.ajustes, { mapa: c.map, dificultad: c.difficulty, reglas: { ...c.rules } });
+      this.h.onProfileChange?.(false);
+    }
     try {
       await this.h.onCreateRoom?.({
-        settings: { bots: c.bots, mapSize: c.map, difficulty: c.difficulty, rules: { ...c.rules } },
+        settings: c.ranked ? this._rankedSettings() : { bots: c.bots, mapSize: c.map, difficulty: c.difficulty, rules: { ...c.rules } },
         info: { nombre: c.name, visibilidad: c.visibility, plazas: c.seats },
       });
       $('crear-sala').hidden = true;
@@ -2402,6 +2417,15 @@ export class Home {
     segmented(vis, [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], info.visibilidad, (v) => this.h.onRoomInfo?.({ visibilidad: v }));
     const seats = el('div', { class: 'segmentos plazas', role: 'radiogroup', 'aria-label': 'Plazas' });
     segmented(seats, Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => [i + MIN_HUMANS, String(i + MIN_HUMANS)]), info.plazas, (v) => this.h.onRoomInfo?.({ plazas: v }));
+    if (s.clasificatoria) {
+      // Clasificatoria: solo nombre, visibilidad y plazas
+      box.replaceChildren(
+        el('p', { class: 'nota', text: 'Sala clasificatoria: el mapa, las naciones de la IA y las reglas son fijos.' }),
+        el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name),
+        el('div', { class: 'fila-2' }, el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis), el('div', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
+      );
+      return;
+    }
     this.choice.rules = { ...DEFAULT_RULES, ...migrateRules(s.rules) };
     this._salaMap = s.mapSize;
     this._salaDifficulty = s.difficulty;

@@ -30,6 +30,7 @@ import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
 import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
+import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js';
 import { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf } from './rangos.js';
 
 const canvas = document.getElementById('lienzo');
@@ -407,6 +408,15 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
   leaveOnline();
   const sala = new Sala(transport, { code, isHost, me: { ...myIdentity(), name: roomName(profile.nombre, RECRUIT_TAG) }, settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
+  // Tu rango, firmado para esta sala (en una clasificatoria, los demás lo usan en el Elo)
+  try {
+    const ident = await getIdentity();
+    const r = profile.rango;
+    const signed = ident ? await signClaim(claimText(code, r.mmr, r.puntos), ident) : null;
+    if (signed) sala.rankClaim = { mmr: Math.round(r.mmr), puntos: r.puntos, ...signed };
+  } catch {
+    /* sin WebCrypto: sin firma (cuenta como 1000) */
+  }
   const kind = transport.kind;
   const render = (status = '') => {
     if (state.sala !== sala || sala.started) return;
@@ -499,6 +509,23 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     return;
   }
   state.online = true;
+  // Sala clasificatoria: cuenta para el rango (abandonarla, como derrota)
+  state.ranked = payload.settings.clasificatoria ? 'sala' : null;
+  state.rankedDone = false;
+  state.rankedVoid = false;
+  state.rankOut = null;
+  state.lastOpts = null;
+  if (state.ranked) {
+    profile.rango.pendiente = { tipo: 'sala', inicio: Date.now() };
+    saveProfile(profile);
+    // MMR de los demás: el que anuncian firmado para esta sala (si no cuadra, 1000)
+    const claims = sala.rankClaims();
+    state.rankedMmr = new Map();
+    Promise.all(payload.players.map(async (p) => {
+      const v = await verifiedRank(sala.code, claims.get(p.peer)).catch(() => null);
+      state.rankedMmr.set(p.peer, v ? v.mmr : 1000);
+    }));
+  }
   const game = await withLoading(
     `${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
@@ -527,8 +554,16 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
   state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer });
+  // Rivales humanos para el Elo: su MMR (verificado) y su puesto al acabar
+  state.rankedRivals = () =>
+    payload.players
+      .map((p, i) => ({ p, player: game.players[playerOf(i)] }))
+      .filter(({ p }) => p.peer !== myPeer)
+      .map(({ p, player }) => ({ mmr: state.rankedMmr?.get(p.peer) ?? 1000, place: player ? placement(game, player).place : Infinity }));
   state.net.onHostLeft = () => {
     if (game.phase === 'ended') return;
+    // Si se va el anfitrión, la clasificatoria no cuenta para nadie
+    if (state.ranked) state.rankedVoid = true;
     const progress = finishGame();
     ui.showEnd('Partida interrumpida', 'El anfitrión ha abandonado la partida.', progress);
   };
@@ -665,6 +700,11 @@ function applyRanked(result) {
   if (!state.ranked || state.rankedDone || !state.human) return;
   state.rankedDone = true;
   const r = profile.rango;
+  if (state.rankedVoid) {
+    r.pendiente = null;
+    saveProfile(profile);
+    return;
+  }
   const abandon = state.game.phase !== 'ended' && state.human.alive;
   const place = { place: result.place, of: result.of };
   const before = { puntos: r.puntos, colocacion: r.colocacion };
