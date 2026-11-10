@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="a807f6d 2026-11-09 16:29 UTC">
+<meta name="trinchera-build" content="d9d6c8d 2026-11-10 14:00 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Cinzel:wght@700;800;900&display=swap">
 <style>
 :root {
@@ -176,7 +176,26 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
   pointer-events: none;
   text-align: center;
   max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
+#aviso[hidden] { display: none; }
+.aviso-auto {
+  pointer-events: auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 20, 5, 0.35);
+  background: rgba(27, 20, 5, 0.12);
+  color: var(--acento-texto);
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.aviso-auto:hover { background: rgba(27, 20, 5, 0.22); transform: translateY(-1px); }
+.aviso-auto:active { transform: translateY(1px); }
 
 #eventos {
   position: fixed;
@@ -342,7 +361,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   box-shadow: inset 0 0 calc(24px + var(--amenaza) * 60px) rgba(255, 30, 30, calc(0.15 + var(--amenaza) * 0.45));
   opacity: 0;
 }
-#alerta-roja.activa::after { animation: latidoRojo calc(2s - var(--amenaza) * 1.2s) ease-in-out infinite; }
+#alerta-roja.activa::after { animation: latidoRojo 1.7s ease-in-out infinite; }
+#alerta-roja.activa[data-nivel="2"]::after { animation-duration: 1.2s; }
+#alerta-roja.activa[data-nivel="3"]::after { animation-duration: 0.85s; }
 @keyframes latidoRojo { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #alerta-roja.activa::after { animation: none; opacity: 0.6; } }
 
@@ -437,6 +458,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
 /* ---------- Tooltip ---------- */
 #tooltip {
   position: fixed;
+  left: 0;
+  top: 0;
+  will-change: transform;
   pointer-events: none;
   padding: 6px 10px;
   border-radius: 8px;
@@ -965,7 +989,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 #lista-clasificacion .marcas { font-size: 11px; }
 #lista-clasificacion .marcas:empty { display: none; }
 .lb-barra { position: absolute; left: 4px; right: 4px; bottom: 1px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, 0.05); pointer-events: none; }
-.lb-barra span { display: block; height: 100%; border-radius: 1px; background: rgba(242, 179, 61, 0.55); transition: width 0.4s ease-out; }
+.lb-barra span { display: block; height: 100%; border-radius: 1px; background: rgba(242, 179, 61, 0.55); transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
 #lista-clasificacion li.yo .lb-barra span { background: var(--acento); }
 #lista-clasificacion li.sube { animation: sube 0.9s ease-out; }
 #lista-clasificacion li.baja { animation: baja 0.9s ease-out; }
@@ -980,7 +1004,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 .frente.saliendo { opacity: 0.45; filter: saturate(0.3); pointer-events: none; }
 .frente.saliendo .f-vs { background: rgba(255, 255, 255, 0.06); color: var(--texto-suave); }
 .f-barra { display: flex; gap: 2px; height: 5px; background: transparent; }
-.f-barra span { display: block; height: 100%; border-radius: 3px; transition: width 0.4s ease-out; }
+.f-barra span { display: block; height: 100%; border-radius: 3px; transition: width 0.22s linear; } /* se actualiza 5 veces por segundo: lineal y corto, sin «latidos» */
 .f-barra-a { background: var(--acento); box-shadow: 0 0 8px rgba(255, 255, 255, 0.15); }
 .f-barra .f-barra-d { background: rgba(255, 255, 255, 0.24); }
 .frente.entrante .f-barra-a { background: linear-gradient(90deg, #ff3b3b, #ff8a7a); box-shadow: 0 0 10px rgba(255, 70, 70, 0.55); }
@@ -1040,7 +1064,7 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 /* ---------- Aviso central, tooltip y propuestas ---------- */
 #aviso:not([hidden]) { animation: avisoEntra 0.3s ease-out; }
 #tooltip:not([hidden]) { animation: tipEntra 0.12s ease-out; }
-@keyframes tipEntra { from { opacity: 0; transform: translateY(3px); } }
+@keyframes tipEntra { from { opacity: 0; } } /* solo opacidad: la posición va en transform */
 .solicitud { transition: transform 0.15s; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1242,7 +1266,7 @@ body.con-tutorial #eventos { top: auto; }
   width: var(--progreso, 100%);
   background: var(--acento);
   opacity: 0.65;
-  transition: width 0.4s ease;
+  transition: width 0.22s linear;
 }
 #construir button:not(.caro)::after { background: var(--bien); opacity: 0.55; }
 #construir canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
@@ -1389,14 +1413,14 @@ body.con-tutorial #eventos { top: auto; }
   inset: 0;
   background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 4px, transparent 4px 8px);
   background-size: 11.3px 100%;
-  animation: avance 0.6s linear infinite;
+  animation: avanceFrente 0.6s linear infinite;
 }
 #combates .frente.saliendo { opacity: 0.4; transform: translateX(-6px) scale(0.97); }
 .golpe { animation: golpe 0.45s ease-out; }
 @keyframes entrarIzq { from { opacity: 0; transform: translateX(-26px) scale(0.95); } }
 @keyframes barrido { from { background-position: 120% 0; } to { background-position: -60% 0; opacity: 0; } }
 @keyframes vsPulso { 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 10px rgba(255, 255, 255, 0.18); } }
-@keyframes avance { to { background-position: 11.3px 0; } }
+@keyframes avanceFrente { to { background-position: 11.3px 0; } }
 @keyframes golpe { 35% { color: #fff; text-shadow: 0 0 8px rgba(255, 90, 90, 0.8); } }
 
 /* Avisos: el recuadro es #avisos (con cabecera plegable); #eventos es solo la lista */
@@ -1538,12 +1562,24 @@ button.principal {
 }
 button.principal:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(242, 179, 61, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 0 rgba(120, 70, 0, 0.35); filter: brightness(1.05); }
 button.principal:active:not(:disabled) { transform: translateY(1px) scale(0.99); box-shadow: 0 3px 10px rgba(242, 179, 61, 0.3), inset 0 2px 4px rgba(120, 70, 0, 0.35); }
-.pantalla-inicio button:not(.principal):not(.modo):not(.opcion):not(.patron):not(.estandarte):not(.color-nombre):not(.muestra-color):not(.chip-perfil):not(.mapa-tarjeta) {
+/* Botón de cristal por defecto en el inicio. Con :where() solo cuenta como
+   «button» (gana al estilo base por ir después), así que los estados
+   (hover, activo, seleccionado) y las clases de cada control mandan sobre
+   él (antes, con nueve :not(), los anulaba) */
+:where(.pantalla-inicio) button:where(:not(.principal, .modo, .opcion, .patron, .estandarte, .color-nombre, .muestra-color, .chip-perfil, .mapa-tarjeta)) {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: background 0.2s, border-color 0.2s, transform 0.12s;
+  transition: background 0.2s, border-color 0.2s, transform 0.12s, box-shadow 0.2s;
 }
+:where(.pantalla-inicio) button:where(:not(.principal, .modo, .opcion, .patron, .estandarte, .color-nombre, .muestra-color, .chip-perfil, .mapa-tarjeta)):hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+  border-color: rgba(255, 255, 255, 0.22);
+}
+:where(.pantalla-inicio) button:where(:not(.principal, .modo, .opcion, .patron, .estandarte, .color-nombre, .muestra-color, .chip-perfil, .mapa-tarjeta)):active:not(:disabled) {
+  transform: translateY(1px);
+}
+:where(.pantalla-inicio) button:focus-visible { outline: 2px solid var(--oro-claro, #ffe3a1); outline-offset: 2px; }
 .pantalla-inicio .ini-pestanas button[aria-selected="true"] {
   background: linear-gradient(180deg, rgba(242, 179, 61, 0.26), rgba(242, 179, 61, 0.1));
   border-color: rgba(242, 179, 61, 0.55);
@@ -1593,7 +1629,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .portada-botones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .portada-botones .principal.grande { width: auto; padding: 12px 26px; display: inline-flex; align-items: center; gap: 10px; border-radius: 12px; }
 .portada-botones svg { width: 16px; height: 16px; }
-@keyframes ondear { 50% { transform: skewY(4deg) scaleX(0.94); } }
 
 /* Tarjetas de modo (solo texto) */
 .modo { padding: 14px 0; overflow: hidden; gap: 4px; }
@@ -2257,7 +2292,12 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   --panel-v2: linear-gradient(180deg, rgba(18, 28, 48, 0.94), rgba(10, 16, 30, 0.94));
   --serif: 'Cinzel', 'Trajan Pro', Georgia, serif;
 }
-#inicio.pantalla-inicio, #sala.pantalla, #fin.pantalla {
+/* La pantalla final deja ver el mapa con el que acabó la partida */
+#fin.pantalla {
+  background: radial-gradient(ellipse at center, rgba(5, 10, 20, 0.25) 0%, rgba(5, 10, 20, 0.62) 70%, rgba(5, 10, 20, 0.8) 100%);
+}
+#fin .tarjeta { background: var(--panel-v2, rgba(12, 18, 30, 0.94)); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+#inicio.pantalla-inicio, #sala.pantalla {
   background:
     radial-gradient(1200px 520px at 70% -10%, rgba(60, 90, 160, 0.22), transparent 70%),
     radial-gradient(900px 600px at 0% 100%, rgba(140, 90, 30, 0.12), transparent 70%),
@@ -2896,10 +2936,35 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 .entrada-buscando { margin: 0; padding: 10px 14px; border-radius: 10px; color: var(--marfil); background: rgba(95, 140, 220, 0.12); border: 1px solid rgba(95, 140, 220, 0.4); }
 .entrada-buscando::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 10px; border-radius: 50%; border: 2px solid var(--marfil); border-right-color: transparent; vertical-align: -1px; animation: girar 0.9s linear infinite; }
-@keyframes girar { to { transform: rotate(360deg); } }
 .entrada-botones { display: flex; flex-wrap: wrap; gap: 10px; }
 .entrada-botones .principal { flex: 1; }
 .sala-invitar:has(#btn-copiar-enlace[hidden]) .codigo { border-right: 0; }
+
+/* ---------- Cuenta atrás del despliegue (3-2-1) y «¡Comienza!» ---------- */
+.cuenta-atras {
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  pointer-events: none;
+  font-family: var(--logo, Impact, sans-serif);
+  font-size: clamp(64px, 14vw, 140px);
+  line-height: 1;
+  color: #ffe3a1;
+  text-shadow: 0 6px 0 rgba(90, 50, 0, 0.55), 0 0 40px rgba(242, 179, 61, 0.55), 0 12px 40px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.02em;
+}
+.cuenta-atras.sello { font-size: clamp(40px, 8vw, 84px); color: #fff3cf; }
+
+/* En partida, sin desenfoque detrás de los paneles también en el ordenador:
+   con el mapa moviéndose, la gráfica tenía que volver a desenfocar cada panel
+   en cada fotograma. Fondos algo más opacos para que se sigan leyendo bien */
+#hud .panel, #hud #avisos, #hud #combates, #hud #panel-jugador, #hud #panel-desarrollo, #hud #panel-nacion {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+#hud { --panel: rgba(12, 18, 30, 0.9); }
 
 </style>
 </head>
@@ -3079,7 +3144,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
         <details class="ayuda">
           <summary>Cómo se juega</summary>
           <ul>
-            <li><b>Perfiles de reglas:</b> <i>Clásico</i> (el de Partida rápida) sigue el ritmo de FrontWars: regeneración con la fórmula base, expansión y guerras rápidas, sin puntos estratégicos ni tecnologías. <i>Trinchera</i> va más despacio (expansión ×0,07, guerras ×0,5, regeneración ×0,6) y añade puntos estratégicos, tecnologías y especialización. Se elige en las reglas de «Contra IA» y de la sala.</li>
+            <li><b>Perfiles de reglas:</b> <i>Clásico</i> (el de Partida rápida) tiene un ritmo ágil: regeneración con la fórmula base, expansión y guerras rápidas, sin puntos estratégicos ni tecnologías. <i>Trinchera</i> va más despacio (expansión ×0,07, guerras ×0,5, regeneración ×0,6) y añade puntos estratégicos, tecnologías y especialización. Se elige en las reglas de «Contra IA» y de la sala.</li>
             <li><b>Despliegue:</b> durante los primeros segundos, haz clic en el mapa para elegir dónde empiezas: un disco de <i>52 casillas</i> (menos si toca el mar u otro país) y <i>2500 tropas</i>.</li>
             <li><b>Tropas:</b> se regeneran solas, lo más rápido hacia el <i>42 %</i> de tu techo y nada al llenarlo. El techo es 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad (unas 12 000 al empezar): más territorio y ciudades, más tropas. No esperes con la barra llena: ataca.</li>
             <li><b>Atacar:</b> clic en tierra libre o en una nación vecina. Sale el % de tus tropas de <i>Fuerza de ataque</i> (20 % al empezar) y la reserva se regenera aparte. En tierra libre cada casilla cuesta 1,6 tropas en llanura, 2 en meseta y 2,4 en montaña; tu territorio crece parejo, en círculo (hacia donde haces clic, algo más), y con pocas tropas avanza más despacio. Contra otro país, cuanto más defensores tenga por casilla, más caro y lento; él pierde sus tropas por casilla a cada casilla que le quitas.</li>
@@ -3099,7 +3164,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
             <li><b>Pactos y paz:</b> en la ficha de otra nación puedes proponer un pacto de no agresión de 5 min, ofrecer la paz si estáis en guerra (con un tributo en oro si quieres) y pedir ayuda a tus aliados. Romper un pacto te marca como traidor.</li>
             <li><b>Victoria:</b> según el modo de la partida: dominación (el 70 % de la tierra), capitales (solo en Trinchera: controlar el 40 % de todas durante 60 s), economía (900.000 de oro por minuto durante 2 min) o supervivencia (al acabar el tiempo, la mejor puntuación). También ganas si quedas en pie solo con tus aliados.</li>
             <li><b>Minimapa:</b> abajo a la izquierda ves todo el mapa en pequeño (tu nación late en blanco y el recuadro dorado es lo que ves); haz clic o arrastra en él para ir a ese sitio. Se pliega con su botón.</li>
-            <li><b>Monedas y retos:</b> cada partida da monedas, y más los logros y los 3 retos de cada día (en «Logros»). Gástalas en «Apariencia» en estandartes, marcos, patrones, símbolos, colores y títulos.</li>
+            <li><b>Monedas y retos:</b> cada partida da monedas, y más los logros y los 3 retos de cada día (en «Progreso»). Gástalas en «Apariencia» en estandartes, marcos, patrones, símbolos, colores y títulos.</li>
             <li><b>Controles:</b> arrastrar = mover · rueda = zoom · 1–9/0 = fuerza 10–100% · Mayús+rueda = ajustar fuerza · Q ciudad · E puerto · R puesto defensivo · F fábrica · G silo · H antimisiles · T buque (luego clic en el mar = su zona fija) · M bomba atómica · J bomba H · K MIRV · Esc o clic derecho = cancelar · C o botón «Mi nación» = ir a tu nación (si la pierdes de vista, sigue la flecha del borde) · clic en una tarjeta de combate = ir a ese frente · V = minimizar el panel de abajo · N = silenciar el sonido · I = desarrollo.</li>
           </ul>
         </details>
@@ -3236,7 +3301,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
             <label class="campo"><span>Volumen de la música <strong id="out-vol-musica">50</strong></span>
               <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
             <label class="campo"><span>Volumen de los efectos <strong id="out-vol-efectos">60</strong></span>
-              <input id="aj-vol-efectos" type="range" min="0" max="100" value="60"></label>
+              <input id="aj-vol-efectos" type="range" min="0" max="100" value="80"></label>
           </div>
           <div class="botones-izq">
             <button type="button" id="aj-tutorial">Repetir el tutorial</button>
@@ -3395,6 +3460,10 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         <span id="dato-lider">—</span>
       </span>
+      <!-- Solo al mirar la partida después de perder (sin conexión): ir más deprisa -->
+      <span id="velocidad" class="velocidad" role="group" aria-label="Velocidad al mirar" hidden>
+        <button type="button" data-v="1" class="activo">×1</button><button type="button" data-v="2">×2</button><button type="button" data-v="4">×4</button>
+      </span>
       <button type="button" id="btn-sonido" class="btn-sonido" title="Silenciar o activar el sonido (tecla N)" aria-pressed="false">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3H2.5z" fill="currentColor"/><path class="ondas" d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="tachado" d="M10.5 5.5l4 5M14.5 5.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -3415,7 +3484,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
       <span class="puntero-txt">TÚ</span>
     </button>
 
-    <div id="aviso" hidden></div>
+    <!-- Últimos segundos del despliegue (3-2-1) y «¡Comienza!» -->
+    <div id="cuenta-atras" class="cuenta-atras" aria-hidden="true" hidden></div>
+    <div id="aviso" hidden><span id="aviso-texto"></span><button type="button" id="aviso-auto" class="aviso-auto" hidden>🎲 Elegir por mí</button></div>
     <!-- Respuesta breve a tus acciones (no es un aviso importante) -->
     <div id="pista" class="pista" hidden role="status"></div>
     <section id="avisos" class="plegable vacio" data-plegable="avisos">
@@ -3549,7 +3620,8 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
       <div id="fin-progreso" class="fin-progreso"></div>
       <div class="botones">
         <button type="button" id="fin-seguir">Seguir mirando</button>
-        <button type="button" id="fin-nueva" class="principal">Nueva partida</button>
+        <button type="button" id="fin-menu">Menú</button>
+        <button type="button" id="fin-nueva" class="principal">Revancha</button>
       </div>
     </div>
   </div>
@@ -3565,7 +3637,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "a807f6d 2026-11-09 16:29 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "d9d6c8d 2026-11-10 14:00 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -3834,37 +3906,6 @@ function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving = 1) {
   ctx.restore();
 }
 
-/** Pesquero: casco de madera, cabina del color del dueño y aparejos. */
-function drawFishing(ctx, x, y, ang, len, color, mine, moving = 1) {
-  if (len < 7) return tiny(ctx, x, y, ang, Math.max(4, len), color, mine);
-  const w = len * 0.42;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(ang);
-  wakeLines(ctx, len, w, moving * 0.7);
-  shadow(ctx, len, w);
-  hullPath(ctx, len, w, 0.36, 0.8);
-  ctx.fillStyle = '#93623a';
-  ctx.fill();
-  ctx.lineWidth = Math.max(1, len * 0.06);
-  ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
-  ctx.stroke();
-  ctx.fillStyle = '#c49a6c';
-  ctx.fillRect(-len * 0.3, -w * 0.28, len * 0.55, w * 0.56);
-  ctx.fillStyle = color;
-  ctx.fillRect(-len * 0.42, -w * 0.3, len * 0.2, w * 0.6);
-  // Mástil con la red
-  ctx.strokeStyle = 'rgba(30, 24, 18, 0.8)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(len * 0.12, 0);
-  ctx.lineTo(-len * 0.75, -w * 0.9);
-  ctx.moveTo(len * 0.12, 0);
-  ctx.lineTo(-len * 0.75, w * 0.9);
-  ctx.stroke();
-  ctx.restore();
-}
-
 const CONTAINERS = ['#d9a441', '#4f8fd6', '#c95a4a', '#5fae6b'];
 
 /** Mercante: casco oscuro con contenedores y puente blanco a popa. */
@@ -3897,7 +3938,7 @@ function drawCargo(ctx, x, y, ang, len, color, mine, moving = 1, seed = 0) {
   ctx.restore();
 }
 
-return { drawTransport, drawWarship, drawFishing, drawCargo };
+return { drawTransport, drawWarship, drawCargo };
 });
 __define('bot', function () {
 // IA de las naciones controladas por el ordenador. Cada bot tiene una
@@ -3907,6 +3948,10 @@ const { AREA, CONFIG, RES } = __require('config');
 const { TECHS, TECH_IDS, techAvailable } = __require('tecnologias');
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+// Las heurísticas se ajustaron con RES 2: medidas en casillas de entonces
+const DOC_LEN = RES / 2;
+const DOC_AREA = DOC_LEN * DOC_LEN;
 
 const FRIENDLY = ['👍', '🤝', '❤️', '😂'];
 const HOSTILE = ['😠', '⚔️', '👎', '🔥'];
@@ -3939,8 +3984,17 @@ class BotBrain {
     const max = p.maxTroops();
     const summary = g.neighborSummary(p);
     const { wild, coastal } = summary;
-    // Los aliados no cuentan como objetivos
-    const counts = new Map([...summary.counts].filter(([id]) => !p.allies.has(id)));
+    // Ni los aliados, ni quien tiene un pacto o la paz con ella, ni (durante
+    // la tregua) las otras naciones cuentan como objetivos: si no, elegía uno
+    // que no podía atacar y se quedaba sin atacar a nadie
+    const truce = g.inTruce() && !p.weak;
+    const counts = new Map(
+      [...summary.counts].filter(([id]) => {
+        if (p.allies.has(id) || g.pactBetween(p.id, id)) return false;
+        const t = g.players[id];
+        return !(truce && t && !t.weak);
+      }),
+    );
 
     // 0. Diplomacia y construcción (no gastan tropas propias de ataque)
     if (g.ticks >= this.nextDiplomacy) {
@@ -4141,10 +4195,11 @@ class BotBrain {
       if (!ongoing && wars >= 1 + Math.round(this.aggression * 1.5)) continue;
       const defense = Math.max(1, t.troops - (pressed.get(id) || 0) * 0.5);
       const odds = spare / defense;
-      const density = t.troops / Math.max(1, t.tiles);
+      // Tropas por casilla de RES 2 (la misma superficie)
+      const density = t.troops / Math.max(1, t.tiles / DOC_AREA);
       // Mucha tropa por casilla = cada casilla cuesta más bajas (documento, 05.2)
       let score = Math.min(odds, 4) * 0.6 - Math.min(density / 600, 1) * 0.4;
-      score += Math.min(shared, 300) / 600;
+      score += Math.min(shared / DOC_LEN, 300) / 600;
       if (t.weak) score += 0.45; // colonias: presa fácil y con oro
       if (pressed.has(id)) score += 0.3;
       if (this.grudges.has(id)) score += 0.5;
@@ -4324,10 +4379,12 @@ class BotBrain {
     if (p.allies.size >= CONFIG.maxAllies || !r.chance(0.2 + this.diplomacy * 0.6)) return;
     let best = null;
     let bestScore = -Infinity;
-    const candidates = new Set(counts.keys());
-    for (let i = 0; i < 4; i++) {
+    // Vecinos (sin colonias) y unas cuantas naciones al azar: las colonias
+    // no firman alianzas, así que proponérselas era perder el turno
+    const candidates = new Set([...counts.keys()].filter((id) => g.players[id] && !g.players[id].weak));
+    for (let i = 0; i < 6; i++) {
       const other = g.players[r.int(1, g.players.length - 1)];
-      if (other.alive) candidates.add(other.id);
+      if (other.alive && !other.weak) candidates.add(other.id);
     }
     const leaderNeighbors = leader ? g.neighborSummary(leader).counts : new Map();
     for (const id of candidates) {
@@ -4410,7 +4467,7 @@ class BotBrain {
     const leader = g.leader();
     const share = leader ? leader.tiles / g.map.landCount : 0;
     let enemy = null;
-    if (leader && leader !== p && share > 0.25 && !p.allies.has(leader.id)) enemy = leader;
+    if (leader && leader !== p && share > 0.25 && !p.allies.has(leader.id) && !g.pactBetween(p.id, leader.id)) enemy = leader;
     if (!enemy) {
       let best = -Infinity;
       for (const id of counts.keys()) {
@@ -4423,15 +4480,24 @@ class BotBrain {
       }
     }
     if (!enemy) return false;
+    // En la fase final, con oro de sobra: MIRV contra el líder que se escapa
+    // y bomba H contra un rival grande; si no, la bomba atómica
+    const kinds = [];
+    if (enemy === leader && share > 0.3 && p.gold >= g.buildCost(p, 'mirv') * 1.1) kinds.push('mirv');
+    if (enemy.tiles > p.tiles * 0.5 && p.gold >= g.buildCost(p, 'hbomb') * 1.2) kinds.push('hbomb');
+    kinds.push('missile');
     const priority = { sam: 0, city: 1, fort: 2, silo: 3, factory: 4, port: 5 };
     const targets = g.buildings
       .filter((b) => b.owner === enemy.id && b.kind in priority)
-      .sort((a, b) => priority[a.kind] - priority[b.kind]);
-    for (const b of targets) {
-      if (g.canBuild(p, 'missile', b.tile).ok) return g.build(p, 'missile', b.tile);
-    }
+      .sort((a, b) => priority[a.kind] - priority[b.kind])
+      .map((b) => b.tile);
     // Sin edificios a tiro: el centro de su territorio
-    if (enemy.spawnTile >= 0 && g.canBuild(p, 'missile', enemy.spawnTile).ok) return g.build(p, 'missile', enemy.spawnTile);
+    if (enemy.spawnTile >= 0) targets.push(enemy.spawnTile);
+    for (const kind of kinds) {
+      for (const tile of targets) {
+        if (g.canBuild(p, kind, tile).ok) return g.build(p, kind, tile);
+      }
+    }
     return false;
   }
 
@@ -4462,8 +4528,18 @@ class BotBrain {
     const coast = map.coastTiles;
     const p = this.player;
     if (!coast.length) return -1;
-    const ox = map.x(p.spawnTile);
-    const oy = map.y(p.spawnTile);
+    // Desde dónde zarpa: unas cuantas casillas de su costa actual (no desde
+    // donde empezó, que en un imperio grande queda tierra adentro)
+    const from = [];
+    const stride = Math.max(1, Math.floor(p.border.size / 400));
+    let k = 0;
+    for (const t of p.border) {
+      if (k++ % stride || !map.coastal[t]) continue;
+      from.push(t);
+      if (from.length >= 12) break;
+    }
+    if (!from.length && p.spawnTile >= 0) from.push(p.spawnTile);
+    if (!from.length) return -1;
     let best = -1;
     let bestScore = Infinity;
     const reach = (far ? 900 : 110) * RES;
@@ -4473,11 +4549,15 @@ class BotBrain {
       if (o === p.id || p.allies.has(o)) continue;
       const strength = o === 0 ? 0 : g.players[o].troops / Math.max(1, p.troops);
       if (strength > 0.6) continue;
-      const dx = map.x(t) - ox;
-      const dy = map.y(t) - oy;
+      let d2 = Infinity;
+      for (const f of from) {
+        const dx = map.x(t) - map.x(f);
+        const dy = map.y(t) - map.y(f);
+        d2 = Math.min(d2, dx * dx + dy * dy);
+      }
       // Solo costas al alcance de un desembarco (las lejanas casi nunca tienen ruta)
-      if (dx * dx + dy * dy > reach * reach) continue;
-      const dist = Math.sqrt(dx * dx + dy * dy) / map.width;
+      if (d2 > reach * reach) continue;
+      const dist = Math.sqrt(d2) / map.width;
       const score = strength + dist;
       if (score < bestScore) {
         bestScore = score;
@@ -4537,6 +4617,20 @@ return { BotBrain, ColonyBrain };
 __define('camera', function () {
 // Cámara 2D: (x, y) es la esquina superior izquierda visible en coordenadas de
 // casilla; zoom = píxeles CSS por casilla.
+//
+// Todo lo que mueve la cámara es suave y depende del tiempo, no de los
+// fotogramas:
+// - zoom con la rueda o las teclas: un zoom objetivo al que se llega en
+//   escala logarítmica, sin moverse el punto bajo el cursor;
+// - arrastre con inercia: al soltar, el mapa sigue un poco y frena;
+// - vuelos (flyTo): zoom interpolado en escala logarítmica, con aceleración
+//   y frenada.
+
+const ZOOM_RATE = 16; // 1/s: lo rápido que llega el zoom a su objetivo
+const FRICTION = 5.5; // 1/s: frenada de la inercia
+const MIN_FLING = 40; // px/s: por debajo, la inercia se para
+
+const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 
 class Camera {
   constructor() {
@@ -4549,6 +4643,11 @@ class Camera {
     this.viewH = 600;
     this.mapW = 1;
     this.mapH = 1;
+    this.tween = null;
+    this.zoomTarget = null; // { zoom, sx, sy, wx, wy }: zoom suave anclado a un punto
+    this.vx = 0; // inercia, en píxeles de pantalla por segundo
+    this.vy = 0;
+    this._last = 0;
   }
 
   setView(w, h) {
@@ -4568,6 +4667,7 @@ class Camera {
     this.minZoom = contain * 0.7;
     this.x = (mapW - this.viewW / this.zoom) / 2;
     this.y = (mapH - this.viewH / this.zoom) / 2;
+    this.stop();
   }
 
   screenToWorld(sx, sy) {
@@ -4578,52 +4678,128 @@ class Camera {
     return [(wx - this.x) * this.zoom, (wy - this.y) * this.zoom];
   }
 
-  /** Vuelo suave hasta centrar (wx, wy) con el zoom indicado. */
-  flyTo(wx, wy, zoom, ms = 500) {
-    this.tween = {
-      fromZoom: this.zoom,
-      fromCx: this.x + this.viewW / this.zoom / 2,
-      fromCy: this.y + this.viewH / this.zoom / 2,
-      toZoom: Math.min(this.maxZoom, Math.max(this.minZoom, zoom)),
-      wx,
-      wy,
-      t0: performance.now(),
-      ms,
-    };
+  /** Para cualquier movimiento en curso (vuelo, zoom suave e inercia). */
+  stop() {
+    this.tween = null;
+    this.zoomTarget = null;
+    this.vx = 0;
+    this.vy = 0;
   }
 
-  /** Avanza el vuelo en curso (llamar cada frame). */
+  /** ¿Se está moviendo sola? (vuelo, zoom suave o inercia) */
+  get moving() {
+    return !!(this.tween || this.zoomTarget || this.vx || this.vy);
+  }
+
+  _clampZoom(z) {
+    return Math.min(this.maxZoom, Math.max(this.minZoom, z));
+  }
+
+  /**
+   * Vuelo suave hasta centrar (wx, wy) con el zoom indicado. La duración
+   * crece un poco con lo lejos que está (en pantallas) y con el cambio de zoom.
+   */
+  flyTo(wx, wy, zoom, ms = null) {
+    const fromCx = this.x + this.viewW / this.zoom / 2;
+    const fromCy = this.y + this.viewH / this.zoom / 2;
+    const toZoom = this._clampZoom(zoom);
+    if (ms === null) {
+      const screens = Math.hypot(wx - fromCx, wy - fromCy) * this.zoom / Math.max(1, Math.hypot(this.viewW, this.viewH));
+      const zoomSteps = Math.abs(Math.log2(toZoom / this.zoom));
+      ms = Math.min(1100, 450 + Math.min(screens, 6) * 70 + zoomSteps * 90);
+    }
+    this.zoomTarget = null;
+    this.vx = this.vy = 0;
+    this.tween = { fromZoom: this.zoom, fromCx, fromCy, toZoom, wx, wy, t0: performance.now(), ms };
+  }
+
+  /** Avanza el vuelo, el zoom suave y la inercia (llamar cada frame). */
   update(now) {
+    const dt = this._last ? Math.min(0.1, (now - this._last) / 1000) : 0;
+    this._last = now;
     const t = this.tween;
-    if (!t) return;
-    const k = Math.min(1, (now - t.t0) / t.ms);
-    const e = 1 - (1 - k) ** 3;
-    this.zoom = t.fromZoom + (t.toZoom - t.fromZoom) * e;
-    const cx = t.fromCx + (t.wx - t.fromCx) * e;
-    const cy = t.fromCy + (t.wy - t.fromCy) * e;
-    this.x = cx - this.viewW / this.zoom / 2;
-    this.y = cy - this.viewH / this.zoom / 2;
-    if (k >= 1) this.tween = null;
-    this.clamp();
+    if (t) {
+      const k = Math.min(1, (now - t.t0) / t.ms);
+      const e = easeInOut(k);
+      // Zoom en escala logarítmica: cada duplicación tarda lo mismo
+      this.zoom = t.fromZoom * (t.toZoom / t.fromZoom) ** e;
+      const cx = t.fromCx + (t.wx - t.fromCx) * e;
+      const cy = t.fromCy + (t.wy - t.fromCy) * e;
+      this.x = cx - this.viewW / this.zoom / 2;
+      this.y = cy - this.viewH / this.zoom / 2;
+      if (k >= 1) this.tween = null;
+      this.clamp();
+      return;
+    }
+    if (!dt) return;
+    const z = this.zoomTarget;
+    if (z) {
+      const k = 1 - Math.exp(-dt * ZOOM_RATE);
+      const ratio = z.zoom / this.zoom;
+      if (Math.abs(Math.log(ratio)) < 0.002) {
+        this.zoom = z.zoom;
+        this.zoomTarget = null;
+      } else this.zoom *= ratio ** k;
+      // El punto anclado se queda bajo el cursor
+      this.x = z.wx - z.sx / this.zoom;
+      this.y = z.wy - z.sy / this.zoom;
+      this.clamp();
+    }
+    if (this.vx || this.vy) {
+      this.x -= (this.vx * dt) / this.zoom;
+      this.y -= (this.vy * dt) / this.zoom;
+      const f = Math.exp(-dt * FRICTION);
+      this.vx *= f;
+      this.vy *= f;
+      if (Math.hypot(this.vx, this.vy) < MIN_FLING) this.vx = this.vy = 0;
+      this.clamp();
+    }
   }
 
   pan(dx, dy) {
     this.tween = null; // el jugador toma el control
+    this.vx = this.vy = 0;
     this.x -= dx / this.zoom;
     this.y -= dy / this.zoom;
+    // Si había un zoom suave en marcha, su punto anclado se mueve con el mapa
+    if (this.zoomTarget) {
+      this.zoomTarget.wx -= dx / this.zoom;
+      this.zoomTarget.wy -= dy / this.zoom;
+    }
     this.clamp();
   }
 
+  /** Al soltar un arrastre: el mapa sigue moviéndose con esta velocidad (px/s) y frena. */
+  fling(vx, vy) {
+    if (Math.hypot(vx, vy) < MIN_FLING * 2) return;
+    const max = 4000;
+    const s = Math.min(1, max / Math.hypot(vx, vy));
+    this.vx = vx * s;
+    this.vy = vy * s;
+  }
+
+  /** Zoom al momento (pellizco: sigue a los dedos). */
   zoomAt(sx, sy, factor) {
     this.tween = null;
+    this.zoomTarget = null;
     const [wx, wy] = this.screenToWorld(sx, sy);
-    this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom * factor));
+    this.zoom = this._clampZoom(this.zoom * factor);
     this.x = wx - sx / this.zoom;
     this.y = wy - sy / this.zoom;
     this.clamp();
   }
 
+  /** Zoom suave (rueda y teclas): acumula sobre el objetivo y mantiene el punto (sx, sy). */
+  zoomToward(sx, sy, factor) {
+    this.tween = null;
+    this.vx = this.vy = 0;
+    const base = this.zoomTarget ? this.zoomTarget.zoom : this.zoom;
+    const [wx, wy] = this.screenToWorld(sx, sy);
+    this.zoomTarget = { zoom: this._clampZoom(base * factor), sx, sy, wx, wy };
+  }
+
   centerOn(wx, wy) {
+    this.stop();
     this.x = wx - this.viewW / this.zoom / 2;
     this.y = wy - this.viewH / this.zoom / 2;
     this.clamp();
@@ -4866,7 +5042,6 @@ const TICK_MS = 100; // 10 ticks por segundo de simulación
  */
 const RES = 3;
 const AREA = RES * RES;
-const RES15 = RES * Math.sqrt(RES); // (AREA)^0,75: para fórmulas con casillas^0,75
 
 const TERRAIN = { WATER: 0, PLAINS: 1, HIGHLAND: 2, MOUNTAIN: 3 };
 const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
@@ -4877,9 +5052,6 @@ const CONFIG = {
   // La zona inicial (52 casillas), las tropas y el oro iniciales, el techo, la
   // regeneración, los precios, el comercio y el combate están en mecanicas.js
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
-
-  // Victoria: controlar esta fracción de toda la tierra
-  winLandShare: 0.7,
 
   // Economía de trabajadores (regla opcional): fracción de la población como
   // soldados al empezar y mínimo del deslizador
@@ -4893,12 +5065,12 @@ const CONFIG = {
   // Orden de conquista de la tierra libre: por distancia al centro del país
   // (en casillas), así crece parejo, en círculo, sin manchas ni brazos
   growRandom: 1.6, // azar por casilla: el borde sale algo irregular, no una regla
-  growTerrain: 6, // retraso por cada punto de coste de terreno sobre la llanura
+  growTerrain: (6 * RES) / 2, // retraso (en casillas de distancia) por cada punto de coste de terreno sobre la llanura: la misma superficie con más resolución
   growSmooth: 1.2, // las casillas con más vecinas propias antes: rellena huecos y esquinas
   // Hacia un clic, el lado que mira allí avanza antes: al de detrás le pesa la
   // distancia × (1 + 2 × growFocusStretch); contra países, growFocus pasos
   growFocusStretch: 0.6,
-  growFocus: 8,
+  growFocus: (8 * RES) / 2,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
   // Barcos de transporte
@@ -4955,8 +5127,6 @@ const CONFIG = {
   warshipPatrol: 22 * RES, // radio de la zona que patrulla cada buque
   warshipGuard: 34 * RES, // persigue a los intrusos que entren hasta aquí (desde el centro de su zona)
   warshipsPerPort: 3,
-  portHp: 80,
-  portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
 
   // Mercantes de los puertos (cuándo salen y cuánto pagan: mecanicas.js)
   tradeSpeed: 0.42 * RES,
@@ -5239,7 +5409,7 @@ const POI_TYPES = {
     name: 'Capital',
     desc: 'Capital de una nación. Conquistarla da un gran botín y su dueño crece un 15 % menos hasta recuperarla. Cada capital que controles: +5 % de oro y de crecimiento',
   },
-  industria: { name: 'Núcleo industrial', desc: '+15 % de oro de los trabajadores para quien lo controle' },
+  industria: { name: 'Núcleo industrial', desc: '+15 % de oro pasivo para quien lo controle' },
   puerto: { name: 'Puerto clave', desc: '+1 barco de transporte y +25 % de oro de trenes y mercantes' },
   paso: { name: 'Paso de montaña', desc: 'Conquistar alrededor cuesta un 60 % más a quien ataque a su dueño' },
 };
@@ -5258,13 +5428,14 @@ const POI = {
 
 /**
  * Coloca los puntos neutrales de un mapa: unos 1 por cada 75.000 casillas de
- * tierra (entre 8 y 36), separados entre sí, en masas de tierra grandes.
+ * tierra con RES 2 (la misma superficie con más resolución: × AREA / 4),
+ * entre 8 y 36, separados entre sí, en masas de tierra grandes.
  * Mezcla: ~45 % núcleos industriales, ~30 % puertos clave (en la costa) y
  * ~25 % pasos (en colinas o montañas que lindan con terreno más bajo).
  */
 function placePoints(map, seed) {
   const rng = new Rng((seed ^ 0x9e3779b9) >>> 0);
-  const total = Math.max(8, Math.min(36, Math.round(map.landCount / 75000)));
+  const total = Math.max(8, Math.min(36, Math.round(map.landCount / ((75000 * AREA) / 4))));
   const minBody = 150 * AREA;
   const bigLand = (t) => map.landBodySizes[map.landBody[t]] >= minBody;
   const minDist = Math.max(12 * RES, Math.sqrt(map.landCount / total) * 0.55);
@@ -5517,7 +5688,12 @@ class Fx {
    * a0 (opacidad), sprite | spark | ring | chunk, color.
    */
   add(p) {
-    if (this.parts.length >= this.max) return;
+    if (this.parts.length >= this.max) {
+      // Lleno (p. ej. de chispas de los frentes): lo importante (explosiones)
+      // entra igualmente, quitando la partícula más vieja
+      if (!this._priority) return;
+      this.parts.shift();
+    }
     // Las recetas usan medidas de la rejilla original: se pasan a casillas actuales
     if (!p.raw) {
       if (p.vx) p.vx *= RES;
@@ -5680,6 +5856,15 @@ class Fx {
   explosion(x, y, R) {
     this.shake = Math.max(this.shake, 9);
     this.flash = Math.max(this.flash, 0.55);
+    this._priority = true;
+    try {
+      this._explosion(x, y, R);
+    } finally {
+      this._priority = false;
+    }
+  }
+
+  _explosion(x, y, R) {
     this.add({ x, y, life: 0.45, s0: R * 2.4, s1: R * 3, min: 70, sprite: 'core', a0: 1 });
     this.add({ x, y, life: 0.7, s0: R * 1.6, s1: R * 2.5, min: 50, sprite: 'fire', a0: 1 });
     this.add({ x, y, life: 0.9, s0: R * 1.2, s1: R * 2, min: 36, sprite: 'red', a0: 0.8 });
@@ -6054,7 +6239,7 @@ function drawMissileSprite(ctx, x, y, ang, len, color, time) {
   ctx.rotate(ang);
   const w = len * 0.22;
   // Llama del motor
-  const flick = 0.75 + Math.sin(time * 60) * 0.12 + Math.random() * 0.13;
+  const flick = 0.82 + Math.sin(time * 60) * 0.1 + Math.sin(time * 37 + 1.7) * 0.07;
   ctx.globalCompositeOperation = 'lighter';
   ctx.drawImage(sprites().fire, -len * 1.05 - len * 0.5 * flick, -len * 0.35, len * flick, len * 0.7);
   ctx.drawImage(sprites().core, -len * 0.75, -w * 0.9, len * 0.4, w * 1.8);
@@ -6130,6 +6315,17 @@ const SEARCH = {
 const NB_BFS = new Int32Array(4);
 const NB_MISC = new Int32Array(4);
 
+/**
+ * Las cifras del documento en casillas se pensaron para el mundo de 2000×1000
+ * (RES 2). Con más resolución, una misma superficie tiene más casillas:
+ * DOC_AREA casillas actuales por cada casilla del documento, y DOC_LEN en
+ * distancias.
+ */
+const DOC_LEN = RES / 2;
+const DOC_AREA = DOC_LEN * DOC_LEN;
+const ANNEX_MAX_TILES = Math.round(MECH.annexMaxTiles * DOC_AREA);
+const ANNEX_VISITS_PER_TICK = Math.round(MECH.annexVisitsPerTick * DOC_AREA);
+
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 class Game {
@@ -6149,7 +6345,7 @@ class Game {
     this._nextWarshipId = 1;
     this.missiles = []; // { id, owner, from, to, dist, progress, targetId }
     this._nextMissileId = 1;
-    /** Barcos automáticos de los puertos: { id, owner, kind: 'fish'|'trade', port, dest, tile, path, pos, progress, value } */
+    /** Mercantes de los puertos: { id, owner, kind: 'trade', port, dest, tile, path, pos, progress, value (casillas de agua del viaje) } */
     this.merchants = [];
     this._nextMerchantId = 1;
     /** Efectos visuales recientes: explosiones e intercepciones (no afectan a la simulación). */
@@ -6178,6 +6374,11 @@ class Game {
     this.ticks = 0;
     this.phase = 'spawn'; // 'spawn' | 'playing' | 'ended'
     this.winner = null;
+    // Por qué acabó: 'dominio', 'ultimo', 'alianza', 'capitales', 'economia', 'supervivencia' o 'tiempo'
+    this.winReason = null;
+    // Victorias de capitales y economía: quién cumple el objetivo y desde qué turno
+    this.goalHolders = new Map();
+    this._goalAnnounced = new Map();
     this.intents = [];
 
     // El renderizador activa esto para saber qué píxeles repintar
@@ -6343,12 +6544,21 @@ class Game {
   }
 
   /** Coloca (o recoloca, durante el despliegue) a un jugador en `tile`. */
+  /** ¿Puede `p` empezar en `tile`? Devuelve el motivo si no (para explicárselo). */
+  spawnCheck(p, tile, minBody = CONFIG.minSpawnBodySize) {
+    const map = this.map;
+    if (this.phase !== 'spawn' || !p.alive) return { ok: false, reason: 'El despliegue ya ha terminado' };
+    if (tile < 0 || tile >= map.size) return { ok: false, reason: 'Fuera del mapa' };
+    if (!map.isLand(tile)) return { ok: false, reason: 'No puedes empezar en el agua' };
+    if (this.owner[tile] !== 0) return { ok: false, reason: 'Esa tierra ya tiene dueño' };
+    if (map.landBodySizes[map.landBody[tile]] < minBody) return { ok: false, reason: 'Esa isla es demasiado pequeña para empezar' };
+    return { ok: true, reason: '' };
+  }
+
   spawnPlayer(p, tile, minBody = CONFIG.minSpawnBodySize) {
     const map = this.map;
-    if (this.phase !== 'spawn' || !p.alive) return false;
-    if (tile < 0 || tile >= map.size || !map.isLand(tile) || this.owner[tile] !== 0) return false;
+    if (!this.spawnCheck(p, tile, minBody).ok) return false;
     const body = map.landBody[tile];
-    if (map.landBodySizes[body] < minBody) return false;
     if (p.spawned) this._releaseAll(p);
 
     // Zona inicial (documento, 02.2): el disco lógico de radio 4 desplazado
@@ -6699,12 +6909,26 @@ class Game {
       }
       if (it.type === 'action') {
         if (this.phase === 'spawn') {
-          if (!this.spawnPlayer(p, it.tile)) this._notify(p, 'No puedes empezar ahí', 'warn');
+          const check = this.spawnCheck(p, it.tile);
+          if (!check.ok || !this.spawnPlayer(p, it.tile)) this._notify(p, `No puedes empezar ahí: ${check.reason || 'prueba en otro sitio'}`, 'warn');
         } else if (this.phase === 'playing') {
           this._handleAttackIntent(p, it.tile, it.ratio);
         }
       } else if (it.type === 'share') {
         this.setSoldierShare(p, it.share);
+      } else if (it.type === 'build') {
+        if (this.phase !== 'playing') continue;
+        const tile = this.snapBuildTile(p, it.kind, it.tile);
+        const check = this.canBuild(p, it.kind, tile);
+        if (check.ok) this.build(p, it.kind, tile);
+        else this._notify(p, check.reason, 'warn');
+      } else if (it.type === 'cancelAttack') {
+        const atk = p.attacks.get(it.targetId);
+        if (atk) this.retreat(atk);
+      } else if (this.phase !== 'playing') {
+        // Durante el despliegue no se investiga, ni se especializa, ni hay diplomacia
+        if (it.type !== 'emoji') this._notify(p, 'Espera a que empiece la partida', 'warn');
+        continue;
       } else if (it.type === 'research') {
         this.startResearch(p, it.tech);
       } else if (it.type === 'spec') {
@@ -6718,17 +6942,6 @@ class Game {
         this.respondOffer(p, this.players[it.fromId], it.type === 'respondPact' ? 'pact' : 'peace', !!it.accept);
       } else if (it.type === 'askHelp') {
         this.askHelp(p);
-      } else if (it.type === 'build') {
-        if (this.phase !== 'playing') continue;
-        const tile = this.snapBuildTile(p, it.kind, it.tile);
-        const check = this.canBuild(p, it.kind, tile);
-        if (check.ok) this.build(p, it.kind, tile);
-        else this._notify(p, check.reason, 'warn');
-      } else if (it.type === 'cancelAttack') {
-        const atk = p.attacks.get(it.targetId);
-        if (atk) this.retreat(atk);
-      } else if (this.phase !== 'playing') {
-        continue;
       } else if (it.type === 'proposeAlliance') {
         this.proposeAlliance(p, this.players[it.targetId]);
       } else if (it.type === 'respondAlliance') {
@@ -6931,9 +7144,15 @@ class Game {
     return this.fortMultiplier(target, t) * this.passMultiplier(target, t) * Math.max(0.2, 1 + target.mods.defense);
   }
 
-  /** Tropas con las que defiende un país (con Milicia, también parte de sus trabajadores). */
+  /**
+   * Fuerza con la que defiende un país. Milicia: con trabajadores, una parte
+   * de ellos (militia) también defiende; con oro fijo (sin trabajadores), un
+   * +60 % de militia sobre sus tropas (+15 % con Milicia).
+   */
   defenders(target) {
-    return target.troops + target.workers * target.mods.militia;
+    const m = target.mods.militia;
+    if (!m) return target.troops;
+    return target.economy === 'workers' ? target.troops + target.workers * m : target.troops * (1 + 0.6 * m);
   }
 
   /**
@@ -7193,7 +7412,9 @@ class Game {
     const rel = at.owner === f.owner ? 'self' : this.isAllied(f.owner, at.owner) ? 'ally' : stationOwner && this.atWar(owner, stationOwner) ? 'enemy' : 'neutral';
     const value = MECH.trainRewards[rel];
     if (!value) return;
-    const earned = value * owner.goldMult * (1 + owner.mods.trade);
+    // Comercio (tecnología, puertos clave, infraestructura) y, al ser el tren
+    // de una fábrica, también la especialización Industria
+    const earned = value * owner.goldMult * (1 + owner.mods.trade + owner.mods.factoryBonus);
     owner.gold += earned;
     owner.income.trade += earned;
     owner.stats.trainGold = (owner.stats.trainGold || 0) + earned;
@@ -7351,7 +7572,7 @@ class Game {
         }
         const ov = owner[v];
         if (ov === aid) continue;
-        if (ov !== o || fail[v] === this.ticks || (seen[v] !== stamp && tail >= MECH.annexMaxTiles)) {
+        if (ov !== o || fail[v] === this.ticks || (seen[v] !== stamp && tail >= ANNEX_MAX_TILES)) {
           ok = false; // toca a otro, ya se vio que escapa o es demasiado grande
           break;
         }
@@ -7390,7 +7611,7 @@ class Game {
 
   /** ¿Permiten las reglas de esta partida este edificio o unidad? */
   isAllowed(kind) {
-    if (!this.rules.missiles && (kind === 'silo' || kind === 'sam' || kind === 'missile')) return false;
+    if (!this.rules.missiles && (kind === 'silo' || kind === 'sam' || (BUILDINGS[kind] && BUILDINGS[kind].unit === 'missile'))) return false;
     if (!this.rules.warships && kind === 'warship') return false;
     if (!this.rules.factories && kind === 'factory') return false;
     return true;
@@ -7537,8 +7758,6 @@ class Game {
     const b = { id: this._nextBuildingId++, kind, tile, owner: 0, level: 0, target: 1, buildEnd: this.ticks + time, buildTime: time };
     this.sites.push(b);
     if (kind === 'port') {
-      b.hp = CONFIG.portHp;
-      b.hitTick = -Infinity;
       b.water = this._waterNextTo(tile);
       b.rejections = 0;
     }
@@ -7741,12 +7960,15 @@ class Game {
     const dest = this.buildings.find((b) => b.id === m.dest);
     if (!dest) return; // el puerto de destino ya no existe
     const owner = this.players[m.owner];
-    const earned = tradeGold(m.value, owner.goldMult) * (1 + owner.mods.trade);
+    // La fórmula cuenta la distancia en casillas del documento (mundo de
+    // 2000×1000): con más resolución, la misma ruta tiene más casillas
+    const d = m.value / DOC_LEN;
+    const earned = tradeGold(d, owner.goldMult) * (1 + owner.mods.trade);
     owner.gold += earned;
     owner.income.trade += earned;
     const partner = this.players[dest.owner];
     if (partner && partner.alive && partner !== owner) {
-      const share = tradeGold(m.value, partner.goldMult) * (1 + partner.mods.trade);
+      const share = tradeGold(d, partner.goldMult) * (1 + partner.mods.trade);
       partner.gold += share;
       partner.income.trade += share;
       if (partner === this.human) this._emit(`⚓ Un mercante de ${owner.name} llega a tu puerto: +${formatNumber(share)} de oro`, 'good', { sfx: 'coin' });
@@ -7759,16 +7981,9 @@ class Game {
     const victim = this.players[m.owner];
     const thief = this.players[ws.owner];
     m.owner = ws.owner;
-    if (m.kind === 'fish') {
-      const port = this.buildings.find((b) => b.kind === 'port' && b.owner === thief.id && b.water >= 0 &&
-        this.map.waterBody[b.water] === this.map.waterBody[m.tile]);
-      m.port = port ? port.id : 0;
-      m.path = null;
-    }
     thief.stats.captured = (thief.stats.captured || 0) + 1;
-    const what = m.kind === 'fish' ? 'un pesquero' : 'un mercante';
-    if (thief === this.human) this._emit(`🏴 Has capturado ${what} de ${victim.name}`, 'good');
-    else if (victim === this.human) this._emit(`🏴 ${thief.name} te ha robado ${what}`, 'danger');
+    if (thief === this.human) this._emit(`🏴 Has capturado un mercante de ${victim.name}`, 'good');
+    else if (victim === this.human) this._emit(`🏴 ${thief.name} te ha robado un mercante`, 'danger');
   }
 
   // ---------------------------------------------------- misiles y antimisiles
@@ -7806,7 +8021,7 @@ class Game {
     const silo = this.readySilo(p, tile);
     if (!silo) {
       const any = this.buildings.some((b) => b.owner === p.id && b.kind === 'silo' && b.level > 0 && b.readyAt <= this.ticks);
-      return { ok: false, reason: any ? `Fuera de alcance (máx. ${CONFIG.missileRange} casillas desde un silo)` : 'Tus silos están recargando' };
+      return { ok: false, reason: any ? 'Fuera del alcance de tus silos' : 'Tus silos están recargando' };
     }
     return { ok: true, reason: '', silo };
   }
@@ -8045,7 +8260,9 @@ class Game {
     const map = this.map;
     // Mares distintos: no hace falta buscar
     if (map.waterBody[from] !== map.waterBody[to]) return null;
-    const key = from * map.size + to;
+    // El tope de búsqueda forma parte de la clave: «no hay ruta» con un tope
+    // corto (comercio) no vale para una búsqueda más larga (buques), ni al revés
+    const key = `${from},${to},${maxNodes}`;
     if (cache) {
       const cached = this._pathCache.get(key);
       if (cached !== undefined) return cached;
@@ -8205,8 +8422,9 @@ class Game {
     return true;
   }
 
+  /** ¿Son enemigos? (ni la misma nación, ni aliados, ni con un pacto o paz en vigor) */
   _isEnemy(a, b) {
-    return a !== b && !this.isAllied(a, b);
+    return a !== b && !this.isAllied(a, b) && !this.pactBetween(a, b);
   }
 
   /**
@@ -8592,6 +8810,11 @@ class Game {
       return;
     }
     const target = o ? this.players[o] : null;
+    // Un pacto o la tregua firmados durante el viaje: no desembarca y las tropas vuelven
+    if (target && this._truceBlocks(p, target)) {
+      p.troops += boat.troops;
+      return;
+    }
     // La casilla de desembarco se toma como cualquier otra (documento, 05)
     const c = this.conquestCost(dest, target, boat.troops, 1, p);
     if (boat.troops <= c.loss) {
@@ -8637,8 +8860,13 @@ class Game {
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }
 
-    this._annexBudget = MECH.annexVisitsPerTick;
-    for (let i = 0; i < this.attacks.length; i++) this._processAttack(this.attacks[i]);
+    // Cupo de cercos del turno, repartido en turno rotatorio: si siempre
+    // empezaba el mismo ataque, las bolsas de los demás podían no
+    // comprobarse nunca
+    this._annexBudget = ANNEX_VISITS_PER_TICK;
+    const na = this.attacks.length;
+    const first = na ? this.ticks % na : 0;
+    for (let k = 0; k < na; k++) this._processAttack(this.attacks[(first + k) % na]);
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateSites();
@@ -8792,36 +9020,78 @@ class Game {
     return { mode: 'dominio', leader, value: leader ? leader.tiles / this.map.landCount : 0, goal: this.rules.winShare };
   }
 
-  _win(p, text) {
+  _win(p, text, reason) {
     this.winner = p;
+    this.winReason = reason;
     this.phase = 'ended';
     this._emit(p === this.human ? `¡Victoria! ${text}` : `${p.name}: ${text.toLowerCase()}`, p === this.human ? 'good' : 'danger');
   }
 
-  /** Victorias de capitales y de economía: hay que sostener el objetivo un tiempo. */
+  /** Capitales que controla cada nación (id → número) y cuántas hacen falta. */
+  _capitalCounts() {
+    const counts = new Map();
+    let total = 0;
+    for (const pt of this.points) {
+      if (pt.kind !== 'capital') continue;
+      total++;
+      const o = this.owner[pt.tile];
+      if (o) counts.set(o, (counts.get(o) || 0) + 1);
+    }
+    return { counts, need: Math.max(1, Math.ceil(total * CONFIG.capitalShare)) };
+  }
+
+  /**
+   * Victorias de capitales y de economía: hay que sostener el objetivo un
+   * tiempo. Cada nación que lo cumple lleva su propio plazo (si dos se turnan
+   * el primer puesto, ninguna pierde lo aguantado); gana la que antes llegue
+   * al final. `goalHolder` es la más cercana a ganar (para la barra superior).
+   */
   _checkAltVictory() {
     const mode = this.rules.victory;
     if (mode !== 'capitales' && mode !== 'economia') return false;
-    const st = this.victoryStatus();
-    const p = st.leader;
-    if (!p) return false;
-    const met = st.value >= st.goal;
     const hold = mode === 'capitales' ? CONFIG.capitalHoldTicks : CONFIG.economyHoldTicks;
-    if (!met) {
-      this.goalHolder = null;
-      return false;
+    const caps = mode === 'capitales' ? this._capitalCounts() : null;
+    const goal = caps ? caps.need : CONFIG.economyGoalPerMin;
+    const holders = this.goalHolders;
+    let best = null;
+    for (const p of this.alivePlayers()) {
+      const value = caps ? caps.counts.get(p.id) || 0 : this.incomePerMin(p);
+      if (value < goal) {
+        holders.delete(p.id);
+        continue;
+      }
+      if (!holders.has(p.id)) {
+        holders.set(p.id, this.ticks);
+        // Un aviso por nación como mucho cada minuto (aunque entre y salga del objetivo)
+        const last = this._goalAnnounced.get(p.id);
+        if (last === undefined || this.ticks - last >= 600) {
+          this._goalAnnounced.set(p.id, this.ticks);
+          if (p === this.human) this._emit(caps ? `⭐ Controlas ${value} capitales: aguanta ${hold / 10} s para ganar` : `💰 Tus ingresos alcanzan el objetivo: aguanta ${hold / 600} min para ganar`, 'good');
+          else this._emit(caps ? `⭐ ${p.name} controla ${value} capitales: si aguanta ${hold / 10} s, gana` : `💰 ${p.name} alcanza la supremacía económica: si la mantiene ${hold / 600} min, gana`, 'danger');
+        }
+      }
+      const since = holders.get(p.id);
+      if (!best || since < best.since) best = { id: p.id, since };
     }
-    if (!this.goalHolder || this.goalHolder.id !== p.id) {
-      this.goalHolder = { id: p.id, since: this.ticks };
-      if (p === this.human) this._emit(mode === 'capitales' ? `⭐ Controlas ${st.value} capitales: aguanta ${hold / 10} s para ganar` : `💰 Tus ingresos alcanzan el objetivo: aguanta ${hold / 600} min para ganar`, 'good');
-      else this._emit(mode === 'capitales' ? `⭐ ${p.name} controla ${st.value} capitales: si aguanta ${hold / 10} s, gana` : `💰 ${p.name} alcanza la supremacía económica: si la mantiene ${hold / 600} min, gana`, 'danger');
-      return false;
-    }
-    if (this.ticks - this.goalHolder.since >= hold) {
-      this._win(p, mode === 'capitales' ? 'Controlas las capitales del mundo' : 'Supremacía económica');
+    // Quien ya no está vivo deja de contar
+    for (const id of [...holders.keys()]) if (!this.players[id] || !this.players[id].alive) holders.delete(id);
+    this.goalHolder = best;
+    if (best && this.ticks - best.since >= hold) {
+      this._win(this.players[best.id], caps ? 'Controlas las capitales del mundo' : 'Supremacía económica', mode);
       return true;
     }
     return false;
+  }
+
+  /**
+   * Quién va en cabeza al acabar el tiempo, según el objetivo de la partida:
+   * capitales, ingresos o territorio (y, a igualdad, territorio y luego id).
+   */
+  _timeLimitWinner() {
+    const mode = this.rules.victory;
+    const caps = mode === 'capitales' ? this._capitalCounts().counts : null;
+    const key = (p) => (caps ? caps.get(p.id) || 0 : mode === 'economia' ? this.incomePerMin(p) : p.tiles);
+    return this.alivePlayers().sort((a, b) => key(b) - key(a) || b.tiles - a.tiles || a.id - b.id)[0] || null;
   }
 
   _checkVictory() {
@@ -8840,17 +9110,19 @@ class Game {
     if (this.rules.victory === 'supervivencia' && this.ticks >= CONFIG.spawnTicks + limit * 600) {
       const st = this.victoryStatus();
       if (st.leader) {
-        this._win(st.leader, `Has sobrevivido con la mejor puntuación (${st.value})`);
+        this._win(st.leader, `Has sobrevivido con la mejor puntuación (${st.value})`, 'supervivencia');
         return;
       }
     }
-    // Límite de tiempo (regla): al acabar, gana quien tenga más territorio
+    // Límite de tiempo (regla): al acabar, gana quien vaya en cabeza según el
+    // objetivo de la partida (territorio, capitales o ingresos)
     if (this.rules.victory !== 'supervivencia' && this.rules.timeLimitMin > 0 && this.ticks >= CONFIG.spawnTicks + this.rules.timeLimitMin * 600) {
-      const best = this.alivePlayers().sort((a, b) => b.tiles - a.tiles || a.id - b.id)[0];
+      const best = this._timeLimitWinner();
       if (best) {
         this.winner = best;
+        this.winReason = 'tiempo';
         this.phase = 'ended';
-        this._emit(best === this.human ? '¡Se acabó el tiempo y tienes más territorio que nadie: victoria!' : `Se acabó el tiempo: ${best.name} tiene más territorio`, best === this.human ? 'good' : 'danger');
+        this._emit(best === this.human ? '¡Se acabó el tiempo y vas en cabeza: victoria!' : `Se acabó el tiempo: ${best.name} va en cabeza`, best === this.human ? 'good' : 'danger');
         return;
       }
     }
@@ -8868,6 +9140,7 @@ class Game {
     if (!winner && alive === 1 && this.players.length > 2) winner = last;
     if (winner) {
       this.winner = winner;
+      this.winReason = winner.tiles >= need ? 'dominio' : 'ultimo';
       this.phase = 'ended';
       this._emit(winner === this.human ? '¡Victoria! Dominas el mundo' : `${winner.name} domina el mundo`, winner === this.human ? 'good' : 'danger');
       return;
@@ -8880,6 +9153,7 @@ class Game {
         rest.sort((a, b) => b.tiles - a.tiles);
         this.winner = rest[0];
         this.winningAlliance = rest;
+        this.winReason = 'alianza';
         this.phase = 'ended';
         const human = rest.find((p) => p === this.human);
         this._emit(
@@ -9314,7 +9588,7 @@ __define('home', function () {
 // Pantallas de inicio: jugar (IA y multijugador), perfil, apariencia, logros,
 // clasificación, y la sala de espera del multijugador.
 const { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } = __require('config');
-const { PROFILES, rulesetId } = __require('mecanicas');
+const { PROFILES } = __require('mecanicas');
 const { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } = __require('multiplayer');
 const { REAL_MAP_DATA } = __require('mapas-reales');
 const { decodeRelief, generateMap, markRivers } = __require('map');
@@ -9527,8 +9801,9 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   const syncProfileNote = () => {
     const P = PROFILES[rules.profile] || PROFILES.trinchera;
     profileNote.textContent = rules.profile === 'clasico'
-      ? `Ritmo de FrontWars, sin puntos estratégicos ni tecnologías (${P.id})`
-      : `Ritmo lento, con puntos estratégicos y tecnologías (${P.id})`;
+      ? 'Ritmo ágil, sin puntos estratégicos ni tecnologías'
+      : 'Ritmo lento, con puntos estratégicos y tecnologías';
+    profileNote.title = `Versión de las reglas: ${P.id}`;
   };
   syncProfileNote();
   const profileBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Perfil de reglas' });
@@ -9602,7 +9877,7 @@ function segmented(box, options, current, onChange) {
 function rulesSummary(r) {
   if (!r) return '';
   const modes = { capitales: 'victoria por capitales', economia: 'victoria económica', supervivencia: 'supervivencia' };
-  const parts = [`${(PROFILES[r.profile] || PROFILES.trinchera).name} (${rulesetId(r)})`, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
+  const parts = [(PROFILES[r.profile] || PROFILES.trinchera).name, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.economy === 'workers') parts.push('economía con trabajadores');
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
   if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
@@ -9808,13 +10083,15 @@ class Home {
     $('plazas-mas').addEventListener('click', () => this._seats(1));
 
     // Perfil
+    // Escribir el nombre o arrastrar el color: como mucho un redibujado por
+    // fotograma (cada uno rehace decenas de miniaturas)
     $('in-nombre').addEventListener('input', () => {
       this.profile.nombre = $('in-nombre').value.trim().slice(0, 18);
-      this._profileChanged();
+      this._profileChangedSoon();
     });
     $('in-color').addEventListener('input', () => {
       this.profile.color = $('in-color').value;
-      this._profileChanged();
+      this._profileChangedSoon();
     });
     $('in-titulo').addEventListener('change', () => {
       const t = TITLES.find((x) => x.id === $('in-titulo').value);
@@ -9999,13 +10276,37 @@ class Home {
   }
 
   _profileChanged() {
-    this.renderChip();
-    this.renderIdentity();
-    this.renderCard();
-    this.renderPatterns();
-    this.renderAppearance();
-    this.renderHero();
+    this._keepFocus(() => {
+      this.renderChip();
+      this.renderIdentity();
+      this.renderCard();
+      this.renderPatterns();
+      this.renderAppearance();
+      this.renderHero();
+    });
     this.h.onProfileChange?.(true);
+  }
+
+  _profileChangedSoon() {
+    if (this._changeRaf) return;
+    this._changeRaf = requestAnimationFrame(() => {
+      this._changeRaf = 0;
+      this._profileChanged();
+    });
+  }
+
+  /**
+   * Rehace partes del menú sin perder el foco del teclado: si el foco estaba
+   * en una opción (data-k), vuelve a la misma opción ya redibujada.
+   */
+  _keepFocus(fn) {
+    const a = document.activeElement;
+    const key = a && a.dataset ? a.dataset.k : null;
+    const box = key ? a.parentElement && a.parentElement.id : null;
+    fn();
+    if (!key || !box) return;
+    const again = document.getElementById(box)?.querySelector(`[data-k="${CSS.escape(key)}"]`);
+    if (again && again !== document.activeElement) again.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------- portada y arsenal
@@ -10247,6 +10548,7 @@ class Home {
             role: 'radio',
             'aria-checked': String(b.id === p.estandarte),
             class: `estandarte est-${b.id}${s.cls}`,
+            'data-k': itemKey(b),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(b, () => (p.estandarte = b.id)),
@@ -10272,6 +10574,7 @@ class Home {
             role: 'radio',
             'aria-checked': String(f.id === p.marco),
             class: `opcion${s.cls}`,
+            'data-k': itemKey(f),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(f, () => (p.marco = f.id)),
@@ -10293,6 +10596,7 @@ class Home {
             role: 'radio',
             'aria-checked': String(n.id === p.colorNombre),
             class: `color-nombre${s.cls}`,
+            'data-k': itemKey(n),
             disabled: s.disabled,
             style: `--c:${color}`,
             title: s.title,
@@ -10315,7 +10619,7 @@ class Home {
     $('sala').hidden = true;
     $('crear-sala').hidden = true;
     this.renderAll();
-    this.cover?.start();
+    if (this.view === 'jugar' || !this.view) this.cover?.start();
     requestAnimationFrame(() => this._paintHero());
   }
 
@@ -10333,6 +10637,9 @@ class Home {
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
     if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
+    // El mapa animado de la portada solo corre mientras se ve «Jugar»
+    if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
+    else this.cover?.stop();
     $('inicio').scrollTo?.({ top: 0 });
   }
 
@@ -10405,9 +10712,11 @@ class Home {
       }
       if (this.buying !== itemKey(item)) {
         this.buying = itemKey(item);
-        this.renderAppearance();
-        this.renderPatterns();
-        this.renderIdentity();
+        this._keepFocus(() => {
+          this.renderAppearance();
+          this.renderPatterns();
+          this.renderIdentity();
+        });
         return;
       }
       this.buying = null;
@@ -10516,6 +10825,7 @@ class Home {
             role: 'radio',
             'aria-checked': String(item.id === current),
             class: `opcion${s.cls}`,
+            'data-k': itemKey(item),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(item, () => apply(item.id)),
@@ -10567,6 +10877,7 @@ class Home {
             role: 'radio',
             'aria-checked': String(item.id === p.patron),
             class: `patron${s.cls}`,
+            'data-k': itemKey(item),
             disabled: s.disabled,
             title: s.title,
             onclick: () => this._pick(item, () => (p.patron = item.id)),
@@ -13021,11 +13332,15 @@ function drawNewsArt(canvas, variant = 0) {
 return { soldier, tank, emblem, drawHeroScene, drawModeArt, drawNewsArt };
 });
 __define('input', function () {
-// Ratón, táctil y teclado. Arrastrar = mover el mapa; rueda/pellizco = zoom;
-// clic sin arrastrar = acción sobre la casilla.
+// Ratón, táctil y teclado. Arrastrar = mover el mapa (con inercia al
+// soltar); rueda/pellizco = zoom (la rueda, suave); clic sin arrastrar =
+// acción sobre la casilla.
 
 const DRAG_THRESHOLD = 6;
 const LONG_PRESS_MS = 500;
+const FLING_WINDOW_MS = 90; // la velocidad al soltar se mide con los últimos movimientos
+/** Píxeles por unidad de `deltaY` según `deltaMode` (píxeles, líneas, páginas). */
+const WHEEL_UNIT = [1, 16, 400];
 
 class Input {
   constructor(canvas, camera, handlers) {
@@ -13065,6 +13380,8 @@ class Input {
     if (this.pointers.size === 1) {
       this.dragging = false;
       this.longPressed = false;
+      this.trail = [{ t: e.timeStamp, x, y }];
+      this.camera.stop(); // tocar el mapa para la inercia o el vuelo en curso
       // Mantener pulsado (táctil) equivale al clic derecho
       clearTimeout(this.longPressTimer);
       if (e.pointerType !== 'mouse') {
@@ -13081,7 +13398,9 @@ class Input {
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       this.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      this.pinchMid = [(a.x + b.x) / 2, (a.y + b.y) / 2];
       this.dragging = true; // un pellizco nunca es un clic
+      this.trail = null; // tras un pellizco no hay inercia
     }
   }
 
@@ -13100,14 +13419,22 @@ class Input {
       if (this.dragging) this.camera.pan(x - ptr.x, y - ptr.y);
       ptr.x = x;
       ptr.y = y;
+      if (this.trail) {
+        this.trail.push({ t: e.timeStamp, x, y });
+        while (this.trail.length > 2 && e.timeStamp - this.trail[0].t > FLING_WINDOW_MS) this.trail.shift();
+      }
       if (e.pointerType === 'mouse') this.h.onHover?.(x, y);
     } else if (this.pointers.size === 2) {
       ptr.x = x;
       ptr.y = y;
       const [a, b] = [...this.pointers.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      if (this.pinchDist > 0) this.camera.zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, dist / this.pinchDist);
+      const mid = [(a.x + b.x) / 2, (a.y + b.y) / 2];
+      // Con dos dedos también se desplaza el mapa (el punto medio arrastra)
+      if (this.pinchMid) this.camera.pan(mid[0] - this.pinchMid[0], mid[1] - this.pinchMid[1]);
+      if (this.pinchDist > 0) this.camera.zoomAt(mid[0], mid[1], dist / this.pinchDist);
       this.pinchDist = dist;
+      this.pinchMid = mid;
     }
   }
 
@@ -13120,7 +13447,19 @@ class Input {
       if (ptr.button === 0) this.h.onClick?.(ptr.x, ptr.y, ptr.shift);
       else if (ptr.button === 2) this.h.onRightClick?.(ptr.x, ptr.y);
     }
-    if (this.pointers.size === 0) this.dragging = false;
+    // Inercia: si se soltó en pleno movimiento, el mapa sigue y frena
+    if (!cancelled && this.dragging && this.pointers.size === 0 && this.trail && this.trail.length >= 2) {
+      const first = this.trail[0];
+      const last = this.trail[this.trail.length - 1];
+      const dt = (last.t - first.t) / 1000;
+      const idle = e.timeStamp - last.t;
+      if (dt > 0.008 && idle < 60) this.camera.fling((last.x - first.x) / dt, (last.y - first.y) / dt);
+    }
+    if (this.pointers.size < 2) this.pinchMid = null;
+    if (this.pointers.size === 0) {
+      this.dragging = false;
+      this.trail = null;
+    }
   }
 
   _wheel(e) {
@@ -13130,7 +13469,10 @@ class Input {
       this.h.onRatioStep?.(e.deltaY > 0 ? -0.05 : 0.05);
       return;
     }
-    this.camera.zoomAt(x, y, Math.exp(-e.deltaY * 0.0015));
+    // Zoom suave: cada golpe de rueda acumula sobre el objetivo. Trackpads y
+    // ratones con «líneas» o «páginas» dan lo mismo por la misma distancia
+    const dy = e.deltaY * (WHEEL_UNIT[e.deltaMode] || 1);
+    this.camera.zoomToward(x, y, Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0018));
   }
 
   _key(e, down) {
@@ -13149,9 +13491,9 @@ class Input {
     } else if (this.h.buildKeys && this.h.buildKeys[e.code]) {
       this.h.onBuildKey?.(this.h.buildKeys[e.code]);
     } else if (e.code === 'Equal' || e.code === 'NumpadAdd') {
-      this.camera.zoomAt(this.camera.viewW / 2, this.camera.viewH / 2, 1.25);
+      this.camera.zoomToward(this.camera.viewW / 2, this.camera.viewH / 2, 1.3);
     } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
-      this.camera.zoomAt(this.camera.viewW / 2, this.camera.viewH / 2, 0.8);
+      this.camera.zoomToward(this.camera.viewW / 2, this.camera.viewH / 2, 1 / 1.3);
     }
   }
 
@@ -13178,22 +13520,22 @@ const $ = (id) => document.getElementById(id);
 
 const TIPS = [
   'Las montañas y mesetas cuestan más tropas y tiempo: rodéalas.',
-  'Tu población crece más rápido hacia el 43 % del máximo: ataca antes de llenarte.',
-  'Más trabajadores, más oro; más soldados, más fuerza: cambia el reparto según la fase.',
+  'Tus tropas crecen más rápido cerca del 40 % del máximo: ataca antes de llenarte.',
+  'Con la regla de trabajadores: más trabajadores, más oro; más soldados, más fuerza.',
   'La fuerza de ataque es un porcentaje de tus soldados, no de toda la población.',
-  'Un puerto saca pesqueros y mercantes que te dan oro sin hacer nada.',
-  'Tus buques de guerra capturan los pesqueros y mercantes enemigos.',
+  'Un puerto lanza mercantes a los puertos de otros jugadores: al llegar, cobráis los dos.',
+  'Tus buques de guerra capturan los mercantes enemigos y hunden sus transportes.',
   'Dos misiles a la vez saturan una batería antimisiles.',
   'Aliarte con los vecinos del líder es la mejor defensa.',
   'Romper una alianza te marca como traidor: conquistarte será más barato.',
-  'Cada fábrica suma un 25 % al oro que ganas.',
+  'Las fábricas tienden vías: cada tren que llega a una estación te da oro.',
   'Clic derecho (o mantener pulsado) sobre una nación abre su ficha.',
   'Mayús + clic construye varios edificios seguidos.',
-  'Si la pantalla se pone roja, alguien te está atacando: mira las tarjetas de la derecha.',
+  'Si el borde de la pantalla se pone rojo, alguien te está atacando: mira las tarjetas de combate.',
   'Si pierdes de vista tu nación, sigue la flecha del borde o pulsa C.',
-  'Las fortalezas hacen que conquistarte cueste dos veces y media más.',
+  'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas.',
   'Las colonias son débiles y guardan oro: conquístalas pronto.',
-  'Cada casilla que conquistas te da su parte del oro de ese país.',
+  'Si eliminas a una nación, te quedas con todo su oro.',
   'Haz clic sobre un edificio tuyo con su tipo seleccionado para subirlo de nivel.',
   'Cada compra encarece el resto: elige bien qué construyes primero.',
   'Los antimisiles tardan en construirse: no esperes a ver el misil.',
@@ -13464,7 +13806,10 @@ function startDemo({ background = false } = {}) {
 }
 
 // Minimapa abajo a la izquierda (oculto en el menú y en la partida de fondo)
-const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy) => camera.centerOn(wx, wy));
+const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy, first) => {
+  if (first) camera.flyTo(wx, wy, camera.zoom, 380);
+  else camera.centerOn(wx, wy);
+});
 const minimapBox = document.getElementById('minimapa');
 // Su altura, para que la clasificación (arriba a la izquierda) no la pise
 if (typeof ResizeObserver !== 'undefined') {
@@ -13516,6 +13861,8 @@ function enterGame(game) {
 async function startGame(opts) {
   if (state.loading) return;
   state.loading = true;
+  // Para la revancha: la misma partida con otra semilla (el tutorial no)
+  state.lastOpts = opts.tutorial ? null : { ...opts, seed: '' };
   leaveOnline();
   tutorial.stop();
   const seed = opts.seed ? hashString(opts.seed) : randomSeed();
@@ -13753,7 +14100,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   const groups = coopGroups(payload.players.length, game.rules.coop);
   const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index });
+  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer });
   state.net.onHostLeft = () => {
     if (game.phase === 'ended') return;
     const progress = finishGame();
@@ -13823,6 +14170,24 @@ function finishGame() {
   return { ...out, level: levelInfo(profile.xp).level };
 }
 
+/** Cómo ha ganado `who` (tú si `mine`), según el motivo con el que acabó la partida. */
+function winText(game, mine, who, land) {
+  switch (game.winReason) {
+    case 'capitales':
+      return mine ? 'Has controlado las capitales del mundo el tiempo necesario' : `${who.name} controla las capitales del mundo`;
+    case 'economia':
+      return mine ? 'Has mantenido la supremacía económica' : `${who.name} logra la supremacía económica`;
+    case 'supervivencia':
+      return mine ? 'Has sobrevivido con la mejor puntuación' : `${who.name} sobrevive con la mejor puntuación`;
+    case 'tiempo':
+      return mine ? 'Se acabó el tiempo y vas en cabeza' : `Se acabó el tiempo y ${who.name} va en cabeza`;
+    case 'ultimo':
+      return mine ? 'Eres la última nación en pie' : `${who.name} es la última nación en pie`;
+    default:
+      return mine ? `Has conquistado el ${formatPercent(who.tiles / land)} del mundo` : `${who.name} domina el mundo`;
+  }
+}
+
 function checkEnd() {
   const { game, human } = state;
   if (state.demo || !human) return;
@@ -13831,20 +14196,36 @@ function checkEnd() {
   if (game.phase === 'ended' && !state.endShown) {
     state.endShown = true;
     const progress = finishGame();
+    let title;
+    let text;
     if (game.winningAlliance && game.winningAlliance.includes(human)) {
       const others = game.winningAlliance.filter((p) => p !== human).map((p) => p.name).join(', ');
-      ui.showEnd('¡Victoria en alianza!', `Solo quedáis tú y tus aliados (${others}) en ${formatTime(seconds)}.\nTu territorio: ${formatPercent(human.tiles / land)}.`, progress);
+      title = '¡Victoria en alianza!';
+      text = `Solo quedáis tú y tus aliados (${others}) en ${formatTime(seconds)}.\nTu territorio: ${formatPercent(human.tiles / land)}.`;
     } else if (game.winner === human) {
-      ui.showEnd('¡Victoria!', `Has conquistado el ${formatPercent(human.tiles / land)} del mundo en ${formatTime(seconds)}.`, progress);
+      title = '¡Victoria!';
+      text = `${winText(game, true, human, land)} en ${formatTime(seconds)}.`;
     } else if (game.winningAlliance) {
-      ui.showEnd('Fin de la partida', `La alianza de ${game.winningAlliance.map((p) => p.name).join(', ')} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+      title = 'Fin de la partida';
+      text = `La alianza de ${game.winningAlliance.map((p) => p.name).join(', ')} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`;
     } else {
-      ui.showEnd('Fin de la partida', `${game.winner.name} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+      title = 'Fin de la partida';
+      text = `${winText(game, false, game.winner, land)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`;
     }
+    // Un momento para ver el final: la cámara se aleja hasta ver todo el
+    // mapa y después aparece el resultado
+    const map = game.map;
+    const fit = Math.min(camera.viewW / map.width, camera.viewH / map.height) * 0.9;
+    camera.flyTo(map.width / 2, map.height / 2, fit, 1300);
+    setTimeout(() => {
+      if (state.game === game) ui.showEnd(title, text, progress);
+    }, 1500);
   } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
     state.defeatShown = true;
     const progress = finishGame();
-    ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+    setTimeout(() => {
+      if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+    }, 1200);
   }
 }
 
@@ -14062,10 +14443,76 @@ function updatePointer(now) {
   const k = Math.min((W / 2 - side) / Math.max(1e-6, Math.abs(dx)), ((bottom - top) / 2) / Math.max(1e-6, Math.abs(dy)));
   pointerBtn.hidden = false;
   pointerBtn.style.transform = `translate(${Math.round(cx + dx * k - 26)}px, ${Math.round(cy + dy * k - 26)}px)`;
-  pointerArrow.style.transform = `rotate(${Math.atan2(dy, dx) + Math.PI / 2}rad)`;
+  // Ángulo acumulado: gira siempre por el camino corto (con atan2 a secas,
+  // al cruzar ±180° la transición daba la vuelta entera)
+  const target = Math.atan2(dy, dx) + Math.PI / 2;
+  if (arrowAngle === null) arrowAngle = target;
+  else {
+    const TAU = Math.PI * 2;
+    arrowAngle += ((((target - arrowAngle) % TAU) + TAU + Math.PI) % TAU) - Math.PI;
+  }
+  pointerArrow.style.transform = `rotate(${arrowAngle.toFixed(4)}rad)`;
 }
+let arrowAngle = null;
 
 pointerBtn.addEventListener('click', centerOnHuman);
+
+// Velocidad al mirar: solo cuando ya no juegas (has perdido) y sin conexión;
+// mientras juegas, la partida va siempre a su ritmo
+const speedBox = document.getElementById('velocidad');
+speedBox.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b) return;
+  state.speed = Number(b.dataset.v);
+  for (const x of speedBox.querySelectorAll('button')) x.classList.toggle('activo', x === b);
+});
+function updateSpeedBox() {
+  const { game, human } = state;
+  const show = !!(game && human && !state.demo && !state.net && !human.alive && game.phase !== 'ended');
+  if (speedBox.hidden === show) speedBox.hidden = !show;
+  if (!show && state.speed !== 1 && !state.demo) {
+    state.speed = 1;
+    for (const x of speedBox.querySelectorAll('button')) x.classList.toggle('activo', x.dataset.v === '1');
+  }
+}
+
+/**
+ * «Elegir por mí» en el despliegue: un sitio válido lo más lejos posible de
+ * las demás naciones. Se busca con el azar del navegador, no con el de la
+ * simulación (en multijugador, todos tienen que tirar los mismos dados).
+ */
+function suggestSpawn(game, human) {
+  const map = game.map;
+  const others = [];
+  for (const p of game.players) if (p && p !== human && p.spawned && p.spawnTile >= 0) others.push(p.spawnTile);
+  let best = -1;
+  let bestD = -1;
+  for (let k = 0; k < 600; k++) {
+    const t = map.landTiles[Math.floor(Math.random() * map.landTiles.length)];
+    if (!game.spawnCheck(human, t).ok) continue;
+    let d = Infinity;
+    const x = map.x(t);
+    const y = map.y(t);
+    for (const s of others) d = Math.min(d, (map.x(s) - x) ** 2 + (map.y(s) - y) ** 2);
+    if (d > bestD) {
+      bestD = d;
+      best = t;
+    }
+  }
+  return best;
+}
+
+document.getElementById('aviso-auto').addEventListener('click', () => {
+  const { game, human } = state;
+  if (state.demo || !game || !human || game.phase !== 'spawn') return;
+  const t = suggestSpawn(game, human);
+  if (t < 0) {
+    ui.hint('No encuentro un buen sitio: elige tú en el mapa', 'warn');
+    return;
+  }
+  humanIntent({ type: 'action', tile: t, ratio: state.ratio });
+  camera.flyTo(game.map.x(t) + 0.5, game.map.y(t) + 0.5, Math.max(camera.zoom, 3.5 / RES));
+});
 document.getElementById('btn-mi-nacion').addEventListener('click', centerOnHuman);
 
 function openNation(id) {
@@ -14085,7 +14532,7 @@ function coopGroups(n, coop) {
 
 /** Con roles en el cooperativo: qué decide cada uno (para evitar compras o ataques por accidente). */
 const ROLE_TYPES = {
-  militar: new Set(['action', 'cancelAttack', 'moveWarship']),
+  militar: new Set(['action', 'cancelAttack']),
   economia: new Set(['share', 'research', 'spec', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']),
 };
 const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'hbomb', 'mirv', 'silo', 'sam']);
@@ -14134,7 +14581,9 @@ const input = new Input(canvas, camera, {
       if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
       return;
     }
-    if (!state.game.map.isLand(tile)) return; // los buques no se mueven: su zona se elige al botarlos
+    // Los buques no se mueven (su zona se elige al botarlos); en el despliegue
+    // el clic en el agua sí llega, para explicar por qué no se puede empezar ahí
+    if (!state.game.map.isLand(tile) && state.game.phase !== 'spawn') return;
     humanIntent({ type: 'action', tile, ratio: state.ratio });
     // Información útil: lo que se espera de este ataque (aproximado)
     const g = state.game;
@@ -14197,10 +14646,21 @@ ui.on({
     tutorial.stop();
     startDemo();
   },
+  /** Revancha: misma partida contra la IA (en multijugador, volver a la sala). */
+  onRematch() {
+    finishGame();
+    ui.hideEnd();
+    if (state.online || !state.lastOpts) {
+      tutorial.stop();
+      startDemo();
+      return;
+    }
+    startGame(state.lastOpts);
+  },
   onBuildMode: setBuildMode,
   onFocusPlayer(id) {
     const label = state.renderer?.labels.find((l) => l.player.id === id);
-    if (label) camera.centerOn(label.x, label.y);
+    if (label) camera.flyTo(label.x, label.y, Math.max(camera.zoom, 3.5 / RES));
     if (state.human && id !== state.human.id) openNation(id);
   },
   onProposeAlliance(id) {
@@ -14221,6 +14681,7 @@ function frame(now) {
   const dt = Math.min(250, now - state.last);
   state.last = now;
   const game = state.game;
+  updateSpeedBox();
   adaptQuality(now - (state.lastRaw || now));
   state.lastRaw = now;
 
@@ -14309,6 +14770,10 @@ state.profile = profile;
 
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
 state.demo = true;
+// La cabecera (tu ficha, nivel y monedas) y el saludo, ya desde el primer
+// fotograma: antes salían vacíos hasta que se cargaba la partida de fondo
+home.renderChip();
+home.renderHero();
 requestAnimationFrame(() => setTimeout(() => {
   if (!state.game) startDemo({ background: true });
 }, 30));
@@ -14914,8 +15379,12 @@ __define('mecanicas', function () {
 // resultados distintos según el navegador, y el multijugador necesita que
 // todos los equipos calculen exactamente lo mismo).
 
-/** Versión de las reglas (para saber qué fórmulas usa una partida). */
-const MECH_VERSION = 'doc-1.0';
+/**
+ * Versión de las reglas (para saber qué fórmulas usa una partida). doc-1.1:
+ * correcciones de la revisión (Industria, Milicia, victorias, pactos, cercos,
+ * comercio por superficie). En multijugador, versiones distintas no juegan juntas.
+ */
+const MECH_VERSION = 'doc-1.1';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -15238,17 +15707,18 @@ class Minimap {
     this.maxH = 170;
     this._lastTerritory = 0;
     let dragging = false;
-    const jump = (e) => {
+    // `first`: el primer toque vuela hasta allí; al arrastrar, la vista sigue al dedo
+    const jump = (e, first = false) => {
       if (!this.game) return;
       const r = canvas.getBoundingClientRect();
       const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
       const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-      this.onJump(fx * this.game.map.width, fy * this.game.map.height);
+      this.onJump(fx * this.game.map.width, fy * this.game.map.height, first);
     };
     canvas.addEventListener('pointerdown', (e) => {
       dragging = true;
       canvas.setPointerCapture(e.pointerId);
-      jump(e);
+      jump(e, true);
       e.preventDefault();
     });
     canvas.addEventListener('pointermove', (e) => {
@@ -15378,6 +15848,134 @@ class Minimap {
 }
 
 return { Minimap };
+});
+__define('movimiento', function () {
+// Movimiento de la interfaz: elementos que aparecen y desaparecen con una
+// transición corta (opacidad y un pequeño desplazamiento) en vez de saltar.
+// Usa la Web Animations API (transform y opacidad: la gráfica lo hace sin
+// recalcular la página). Respeta «Animaciones» de Ajustes y la preferencia
+// del sistema de reducir el movimiento.
+
+const EASE_OUT = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+const EASE_IN = 'cubic-bezier(0.4, 0, 1, 1)';
+
+/** ¿Hay que evitar las animaciones? */
+function sinMovimiento() {
+  if (typeof document === 'undefined') return true;
+  return document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** `o.base`: transformación propia del elemento (p. ej. translateX(-50%) para centrarlo). */
+function frames(o) {
+  const x = o.x || 0;
+  const y = o.y ?? 6;
+  const s = o.scale ?? 0.98;
+  const base = o.base ? `${o.base} ` : '';
+  return [
+    { opacity: 0, transform: `${base}translate(${x}px, ${y}px) scale(${s})` },
+    { opacity: 1, transform: o.base || 'none' },
+  ];
+}
+
+/**
+ * Muestra `el` (quita `hidden`) con una entrada suave. Si estaba saliendo,
+ * la salida se cancela. `o`: { x, y, scale, ms, base }.
+ */
+function mostrar(el, o = {}) {
+  if (!el) return;
+  if (el._salida) {
+    el._salida.cancel();
+    el._salida = null;
+  }
+  if (!el.hidden) return;
+  el.hidden = false;
+  if (sinMovimiento() || !el.animate) return;
+  el.animate(frames(o), { duration: o.ms ?? 200, easing: EASE_OUT });
+}
+
+/** Oculta `el` (pone `hidden` al terminar) con una salida suave. */
+function ocultar(el, o = {}) {
+  if (!el || el.hidden || el._salida) return;
+  if (sinMovimiento() || !el.animate) {
+    el.hidden = true;
+    return;
+  }
+  const a = el.animate(frames(o).reverse(), { duration: o.ms ?? 140, easing: EASE_IN, fill: 'forwards' });
+  el._salida = a;
+  a.onfinish = () => {
+    el._salida = null;
+    el.hidden = true;
+    a.cancel(); // quita el estado final de la animación (lo oculta `hidden`)
+  };
+}
+
+/** Muestra u oculta según `visible`. */
+function alternar(el, visible, o = {}) {
+  if (visible) mostrar(el, o);
+  else ocultar(el, o);
+}
+
+/**
+ * FLIP: anima los hijos de `box` desde donde estaban hasta donde están tras
+ * `cambiar()` (filas que suben o bajan de puesto se deslizan).
+ */
+function deslizar(box, cambiar, ms = 260) {
+  if (!box || sinMovimiento()) {
+    cambiar();
+    return;
+  }
+  const antes = new Map();
+  for (const c of box.children) antes.set(c, c.getBoundingClientRect().top);
+  cambiar();
+  for (const c of box.children) {
+    const top = antes.get(c);
+    if (top === undefined || c.hidden) continue;
+    const dy = top - c.getBoundingClientRect().top;
+    if (Math.abs(dy) < 1 || !c.animate) continue;
+    c.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: ms, easing: EASE_OUT });
+  }
+}
+
+/**
+ * Pone `html` en `box` cambiando solo lo que difiere (textos, atributos y
+ * nodos nuevos o sobrantes). Los botones que ya estaban siguen siendo los
+ * mismos elementos: no se pierde un clic a medias ni el hover.
+ */
+function actualizarHtml(box, html) {
+  if (!box) return;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  parchear(box, tpl.content);
+}
+
+function parchear(a, b) {
+  const an = Array.from(a.childNodes);
+  const bn = Array.from(b.childNodes);
+  for (let i = 0; i < bn.length; i++) {
+    const x = an[i];
+    const y = bn[i];
+    if (!x) {
+      a.appendChild(y);
+      continue;
+    }
+    if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName) {
+      a.replaceChild(y, x);
+      continue;
+    }
+    if (x.nodeType === 3 || x.nodeType === 8) {
+      if (x.data !== y.data) x.data = y.data;
+      continue;
+    }
+    if (x.nodeType === 1) {
+      for (const { name, value } of Array.from(y.attributes)) if (x.getAttribute(name) !== value) x.setAttribute(name, value);
+      for (const { name } of Array.from(x.attributes)) if (!y.hasAttribute(name)) x.removeAttribute(name);
+      parchear(x, y);
+    }
+  }
+  for (let i = bn.length; i < an.length; i++) an[i].remove();
+}
+
+return { sinMovimiento, mostrar, ocultar, alternar, deslizar, actualizarHtml };
 });
 __define('mqtt', function () {
 // Cliente MQTT 3.1.1 mínimo sobre WebSocket, sin dependencias. Solo lo que
@@ -15688,7 +16286,7 @@ const { BUILDINGS, CONFIG, MAP_IDS, TICK_MS, cleanRules } = __require('config');
 const { MECH, PROFILES, rulesetId } = __require('mecanicas');
 const { selfPeer } = __require('net');
 
-const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash'];
+const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash', 'cargado'];
 
 /**
  * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios): si
@@ -15741,6 +16339,29 @@ const MAX_MSG_BYTES = 3500; // por debajo del límite de 4 KiB
 const HASH_EVERY = 100; // ticks entre comprobaciones de sincronía
 const RESEND_AFTER_MS = 700;
 const INTENT_RETRY_MS = 1500;
+const LOAD_WAIT_MS = 20000; // el anfitrión espera como mucho esto a que carguen todos
+
+/**
+ * Reloj de 100 ms para el anfitrión. En una pestaña en segundo plano el
+ * navegador frena los temporizadores (hasta uno por minuto); los de un
+ * Worker siguen a su ritmo, así la partida no se ralentiza para los demás.
+ * Si no se puede crear el Worker, un setInterval normal.
+ */
+function startTicker(fn) {
+  try {
+    const src = 'setInterval(function () { postMessage(0); }, 100);';
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    const w = new Worker(url);
+    w.onmessage = fn;
+    return () => {
+      w.terminate();
+      URL.revokeObjectURL(url);
+    };
+  } catch {
+    const id = setInterval(fn, 100);
+    return () => clearInterval(id);
+  }
+}
 const START_REPEAT_MS = 1500;
 const START_REPEAT_FOR_MS = 12000;
 const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -16207,7 +16828,7 @@ class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
 const SAFE_ID = /^[a-z]{2,16}$/;
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
@@ -16222,7 +16843,6 @@ function cleanIntent(raw) {
   if (typeof raw.share === 'number' && raw.share >= 0 && raw.share <= 1) out.share = raw.share;
   if (typeof raw.tech === 'string' && SAFE_ID.test(raw.tech)) out.tech = raw.tech;
   if (typeof raw.spec === 'string' && SAFE_ID.test(raw.spec)) out.spec = raw.spec;
-  if (typeof raw.mode === 'string' && SAFE_ID.test(raw.mode)) out.mode = raw.mode;
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
@@ -16255,7 +16875,7 @@ class NetSync {
    * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
    * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null }) {
     this.room = room;
     this.game = game;
     this.isHost = isHost;
@@ -16269,6 +16889,7 @@ class NetSync {
     this.desynced = false;
     this.hostGone = false;
     this.onHostLeft = null;
+    this.myPeer = myPeer;
 
     if (isHost) {
       this.queue = []; // acciones para el próximo tick
@@ -16282,15 +16903,37 @@ class NetSync {
       this.unsubs.push(room.on('intent', (m) => this._onIntent(m)));
       this.unsubs.push(room.on('resend', (m) => this._onResend(m)));
       this.unsubs.push(room.on('hash', (m) => this._onHash(m)));
+      // Antes del primer turno, espera a que todos hayan cargado el mapa (si
+      // no, quien carga despacio pierde parte del despliegue)
+      this.waiting = new Set([...peerToPlayer.keys()].filter((peer) => peer !== hostPeer && peer !== myPeer));
+      this.waitStart = performance.now();
+      this.unsubs.push(room.on('cargado', (m) => this.waiting.delete(m.peer)));
+      this.unsubs.push(room.onPeers((c) => {
+        for (const p of c.left) this.waiting.delete(p.peer);
+      }));
       // Si la pestaña pasa a segundo plano, requestAnimationFrame se para: este
-      // temporizador mantiene la partida en marcha para los demás.
-      this._timer = setInterval(() => this.update(), 100);
+      // reloj mantiene la partida en marcha para los demás.
+      this._stopTicker = startTicker(() => this.update());
     } else {
       this.turns = new Map();
       this.outbox = new Map(); // uid → { intent, sentAt }
       this.lastAdvance = performance.now();
       this.lastResendAsk = -Infinity;
       this.unsubs.push(room.on('turn', (m) => this._onTurn(m)));
+      // Hashes del anfitrión, para que el invitado sepa si se ha desincronizado
+      this.myHashes = new Map();
+      this.hostHashes = new Map();
+      this.unsubs.push(room.on('hash', (m) => this._onHostHash(m)));
+      // Avisa de que ya ha cargado (y repite hasta que llegue el primer turno)
+      const announce = () => {
+        if (this.game.ticks > 0 || this.turns.size || this.hostGone) {
+          clearInterval(this._loadTimer);
+          return;
+        }
+        room.emit('cargado', {}).catch(() => {});
+      };
+      this._loadTimer = setInterval(announce, 1000);
+      announce();
       this.unsubs.push(
         room.onPeers((c) => {
           if (c.left.some((p) => p.peer === this.hostPeer)) {
@@ -16347,7 +16990,7 @@ class NetSync {
 
   _onHash(m) {
     const d = m.data;
-    if (!d || !Number.isInteger(d.t)) return;
+    if (m.isMe || !d || d.host || !Number.isInteger(d.t)) return;
     const mine = this.hashes.get(d.t);
     if (mine !== undefined && mine !== d.h) {
       this.status = 'Aviso: un jugador se ha desincronizado';
@@ -16362,8 +17005,11 @@ class NetSync {
     this.history.set(t, intents);
     if (this.history.size > 3000) this.history.delete(t - 3000);
     if (t % HASH_EVERY === 0) {
-      this.hashes.set(t, stateHash(this.game));
+      const h = stateHash(this.game);
+      this.hashes.set(t, h);
       if (this.hashes.size > 60) this.hashes.delete(t - HASH_EVERY * 60);
+      // También a los invitados: cada uno comprueba si sigue sincronizado
+      this.room.emit('hash', { t, h, host: true }).catch(() => {});
     }
     const entry = [t, intents];
     const size = JSON.stringify(this.batch).length + JSON.stringify(entry).length;
@@ -16374,7 +17020,9 @@ class NetSync {
 
   _flush() {
     if (!this.batch.length) return;
-    this.room.emit('turn', { turns: this.batch }).catch(() => {});
+    // bg: la pestaña del anfitrión está en segundo plano (los invitados lo avisan)
+    const bg = typeof document !== 'undefined' && document.hidden ? 1 : 0;
+    this.room.emit('turn', bg ? { turns: this.batch, bg } : { turns: this.batch }).catch(() => {});
     this.batch = [];
   }
 
@@ -16382,6 +17030,7 @@ class NetSync {
 
   _onTurn(m) {
     if (m.peer !== this.hostPeer || !m.data || !Array.isArray(m.data.turns)) return;
+    this.hostBackground = !!m.data.bg;
     for (const entry of m.data.turns) {
       if (!Array.isArray(entry) || !Number.isInteger(entry[0]) || !Array.isArray(entry[1])) continue;
       if (entry[0] > this.game.ticks) this.turns.set(entry[0], entry[1]);
@@ -16396,7 +17045,29 @@ class NetSync {
     }
     this.game.tick();
     const t = this.game.ticks;
-    if (t % HASH_EVERY === 0) this.room.emit('hash', { t, h: stateHash(this.game) }).catch(() => {});
+    if (t % HASH_EVERY === 0) {
+      const h = stateHash(this.game);
+      this.room.emit('hash', { t, h }).catch(() => {});
+      this.myHashes.set(t, h);
+      if (this.myHashes.size > 60) this.myHashes.delete(t - HASH_EVERY * 60);
+      this._compareHash(t);
+    }
+  }
+
+  /** Hash del anfitrión para el tick `t`: se compara con el propio en cuanto estén los dos. */
+  _onHostHash(m) {
+    const d = m.data;
+    if (m.peer !== this.hostPeer || !d || !d.host || !Number.isInteger(d.t)) return;
+    this.hostHashes.set(d.t, d.h);
+    if (this.hostHashes.size > 60) this.hostHashes.delete(d.t - HASH_EVERY * 60);
+    this._compareHash(d.t);
+  }
+
+  _compareHash(t) {
+    const mine = this.myHashes.get(t);
+    const host = this.hostHashes.get(t);
+    if (mine === undefined || host === undefined || this.desynced) return;
+    if (mine !== host) this.desynced = true;
   }
 
   // ---- bucle
@@ -16406,6 +17077,16 @@ class NetSync {
     if (this.game.phase === 'ended' || this.hostGone) return;
     const now = performance.now();
     if (this.isHost) {
+      if (this.waiting.size && now - this.waitStart < LOAD_WAIT_MS) {
+        this.last = now;
+        this.status = 'Esperando a que todos carguen el mapa…';
+        return;
+      }
+      if (this.waitStart !== null) {
+        this.waitStart = null;
+        this.waiting.clear();
+        this.status = '';
+      }
       this.acc += Math.min(1000, now - this.last);
       this.last = now;
       let steps = 0;
@@ -16426,7 +17107,11 @@ class NetSync {
     }
     if (steps) {
       this.lastAdvance = now;
-      this.status = '';
+      this.status = this.desynced
+        ? 'Te has desincronizado del anfitrión: lo que ves puede no coincidir con los demás'
+        : this.hostBackground
+          ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
+          : '';
     } else if (now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
       this.lastResendAsk = now;
       this.room.emit('resend', { from: this.game.ticks + 1 }).catch(() => {});
@@ -16441,7 +17126,8 @@ class NetSync {
   }
 
   stop() {
-    clearInterval(this._timer);
+    this._stopTicker?.();
+    clearInterval(this._loadTimer);
     for (const u of this.unsubs) u();
     this.unsubs = [];
   }
@@ -17298,16 +17984,26 @@ class CoverArt {
     this.ships = ships;
   }
 
+  /** ¿Animaciones apagadas? (Ajustes o el sistema; se mira en cada fotograma) */
+  _still() {
+    return document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  }
+
   start() {
     if (this.raf) return;
-    const still = document.body.classList.contains('sin-animaciones') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const loop = (now) => {
-      this.raf = still ? 0 : requestAnimationFrame(loop);
+      if (this._still()) {
+        // Se apagaron las animaciones: una imagen fija y se para
+        this.raf = 0;
+        this.draw(1.2);
+        return;
+      }
+      this.raf = requestAnimationFrame(loop);
       if (now - this.last < 33) return;
       this.last = now;
       this.draw(now / 1000);
     };
-    if (still) this.draw(1.2);
+    if (this._still()) this.draw(1.2);
     else this.raf = requestAnimationFrame(loop);
   }
 
@@ -17960,7 +18656,7 @@ const { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } = __require('for
 const { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } = __require('icons');
 const { paintTerrain } = __require('terreno');
 const { Fx, drawMissileSprite } = __require('fx');
-const { drawCargo, drawFishing, drawTransport, drawWarship } = __require('barcos');
+const { drawCargo, drawTransport, drawWarship } = __require('barcos');
 
 const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
 const LABEL_INTERVAL_MS = 500;
@@ -17992,6 +18688,21 @@ const FLASH_COLORS = [
 const ALLY_STRIPE = [96, 226, 140];
 
 const lerp = (a, b, t) => a + (b - a) * t;
+
+// Color CSS de cada nación, calculado una vez (antes, una cadena nueva por
+// barco, buque, misil y tren en cada fotograma)
+const CSS_OF = new WeakMap();
+const RGB_OF = new WeakMap();
+function pcss(p) {
+  let c = CSS_OF.get(p);
+  if (!c) CSS_OF.set(p, (c = rgbToCss(p.color)));
+  return c;
+}
+function prgb(p) {
+  let c = RGB_OF.get(p);
+  if (!c) RGB_OF.set(p, (c = p.color.join(', ')));
+  return c;
+}
 
 /** Tren visto desde arriba apuntando en `ang`: locomotora (color del dueño) y dos vagones. */
 function drawTrain(ctx, x, y, ang, L, color) {
@@ -18251,6 +18962,59 @@ class Renderer {
     this._paintTile(i);
     const w = this.game.map.width;
     this._markChunk(i % w, (i / w) | 0);
+  }
+
+  /**
+   * Una nación (no colonia) acaba de caer: donde estaba su nombre, una onda
+   * oscura y su nombre que sube y se desvanece.
+   */
+  _eliminations() {
+    const seen = (this._aliveNations ??= new Set());
+    const human = this.game.human;
+    for (const p of this.game.players) {
+      if (!p || p.weak) continue;
+      if (p.alive && p.tiles > 0) {
+        seen.add(p.id);
+        continue;
+      }
+      if (!seen.has(p.id)) continue;
+      seen.delete(p.id);
+      const L = this.labelById.get(p.id);
+      if (!L || !this.anim || !this._inView(L.x, L.y, 20)) continue;
+      this.fx.add({ x: L.x, y: L.y, life: 1.1, s0: 0.5, s1: 9 * RES, min: 8, ring: true, color: 'rgba(30, 24, 20, 0.7)', lw: 0.6 });
+      this.fx.label(L.x, L.y, `✝ ${p.name}`, p === human ? 'rgba(255, 120, 120, 0.95)' : 'rgba(255, 236, 214, 0.95)', 15, 2.4);
+    }
+  }
+
+  /**
+   * Sombra de las tierras donde no se puede empezar (islas pequeñas), a
+   * media resolución; se hace una vez y se suelta al acabar el despliegue.
+   */
+  _spawnMask() {
+    if (this._spawnMaskCanvas) return this._spawnMaskCanvas;
+    if (this._spawnMaskCanvas === false) return null;
+    const map = this.game.map;
+    const W = Math.ceil(map.width / 2);
+    const H = Math.ceil(map.height / 2);
+    const c = makeCanvas(W, H);
+    const g = c.getContext('2d');
+    const img = g.createImageData(W, H);
+    const px = new Uint32Array(img.data.buffer);
+    const shade = pack(10, 16, 30, 150);
+    const min = CONFIG.minSpawnBodySize;
+    let any = false;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const t = Math.min(map.height - 1, y * 2) * map.width + Math.min(map.width - 1, x * 2);
+        if (map.isLand(t) && map.landBodySizes[map.landBody[t]] < min) {
+          px[y * W + x] = shade;
+          any = true;
+        }
+      }
+    }
+    g.putImageData(img, 0, 0);
+    this._spawnMaskCanvas = any ? c : false;
+    return any ? c : null;
   }
 
   /**
@@ -18608,6 +19372,7 @@ class Renderer {
    * tamaño de letra.
    */
   _updateLabels() {
+    this._eliminations();
     const { owner, players, map } = this.game;
     // Basta una rejilla basta (F×F casillas por celda): el nombre solo necesita
     // una posición aproximada y así el cálculo no da tirones
@@ -18735,8 +19500,11 @@ class Renderer {
 
     // Temblor de cámara tras una explosión cercana
     const sh = this.anim ? this.fx.shake : 0;
-    const ox = sh ? (Math.random() - 0.5) * sh : 0;
-    const oy = sh ? (Math.random() - 0.5) * sh : 0;
+    // Temblor con ondas suaves (no un salto al azar en cada fotograma: así no
+    // depende de los fps y no «vibra» en pantallas de 120 Hz)
+    const ts = now / 1000;
+    const ox = sh ? (Math.sin(ts * 53) * 0.6 + Math.sin(ts * 31 + 1.3) * 0.4) * sh * 0.5 : 0;
+    const oy = sh ? (Math.sin(ts * 47 + 0.7) * 0.6 + Math.sin(ts * 37 + 2.1) * 0.4) * sh * 0.5 : 0;
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#0a1a30';
@@ -18759,6 +19527,11 @@ class Renderer {
       ctx.drawImage(img, x0 * S, y0 * S, w * S, h * S, x0, y0, w, h);
       const ts = this.ts;
       ctx.drawImage(this.territoryCanvas, x0 * ts, y0 * ts, w * ts, h * ts, x0, y0, w, h);
+      // Despliegue: las islas demasiado pequeñas para empezar, en sombra
+      if (game.phase === 'spawn' && game.human) {
+        const mask = this._spawnMask();
+        if (mask) ctx.drawImage(mask, 0, 0, mask.width, mask.height, 0, 0, mask.width * 2, mask.height * 2);
+      } else if (this._spawnMaskCanvas) this._spawnMaskCanvas = null;
     }
     this._drawFlashes(now);
 
@@ -18870,7 +19643,6 @@ class Renderer {
         if ((b.kind === 'sam' || b.kind === 'silo') && b.level > 0) this._drawReload(sx, sy, size, b);
         if (b.level > 1) this._drawLevel(sx, sy, size, b.level);
       }
-      if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
     }
   }
 
@@ -18998,7 +19770,7 @@ class Renderer {
       if (px < -L * 2 || py < -L * 2 || px > W + L * 2 || py > H + L * 2) continue;
       const ang = a + (t.dir < 0 ? Math.PI : 0);
       const owner = game.players[r.factory.owner];
-      drawTrain(ctx, px, py, ang, L, owner ? rgbToCss(owner.color) : '#888');
+      drawTrain(ctx, px, py, ang, L, owner ? pcss(owner) : '#888');
     }
   }
 
@@ -19160,24 +19932,19 @@ class Renderer {
         this._merch.set(m.id, st);
       } else if (st.owner !== m.owner) {
         st.owner = m.owner;
-        if (this.anim) fx.capture(s.x, s.y, rgbToCss(game.players[m.owner].color));
+        if (this.anim) fx.capture(s.x, s.y, pcss(game.players[m.owner]));
       }
       st.gen = gen;
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
       if (!this._onScreen(sx, sy, 40)) continue;
       const p = game.players[m.owner];
-      const color = rgbToCss(p.color);
+      const color = pcss(p);
       const mine = p === game.human;
       const moving = clamp((s.speed / RES) * 3, 0, 1);
-      if (m.kind === 'trade') {
-        const len = clamp(z * RES * 2.6, 6, 30);
-        drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
-        this._maybeWake(s, len, 5);
-      } else {
-        const len = clamp(z * RES * 1.8, 5, 18);
-        drawFishing(ctx, sx, sy, s.ang, len, color, mine, moving);
-      }
+      const len = clamp(z * RES * 2.6, 6, 30);
+      drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
+      this._maybeWake(s, len, 5);
     }
     for (const [id, st] of this._merch) if (st.gen !== gen) this._merch.delete(id);
   }
@@ -19200,7 +19967,7 @@ class Renderer {
       this._drawBoatTrail(b, s, p);
       if (!this._onScreen(sx, sy, 60)) continue;
       const len = clamp(z * RES * 2.4, 8, 30);
-      drawTransport(ctx, sx, sy, s.ang, len, rgbToCss(p.color), p === human, 1);
+      drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
       this._maybeWake(s, len, 8);
       const mine = human && (b.owner === human.id || b.targetId === human.id);
       if (z * RES >= 4 || mine) {
@@ -19238,7 +20005,7 @@ class Renderer {
     const path = b.path;
     const step = Math.max(1, Math.floor(path.length / 90));
     const pt = (t) => [((t % W) + 0.5 - camera.x) * z, (Math.floor(t / W) + 0.5 - camera.y) * z];
-    const color = p.color.join(', ');
+    const color = prgb(p);
     const [hx, hy] = [(s.x - camera.x) * z, (s.y - camera.y) * z];
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -19337,7 +20104,7 @@ class Renderer {
         }
         ctx.setLineDash([]);
       }
-      drawWarship(ctx, sx, sy, s.ang, r, rgbToCss(p.color), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
+      drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
       this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
@@ -19447,7 +20214,7 @@ class Renderer {
         const vx = (tx - fx0) * rate;
         const vy = (ty - fy0) * rate;
         const vz = arc * Math.PI * Math.cos(Math.PI * t) * rate;
-        const color = rgbToCss(game.players[m.owner].color);
+        const color = pcss(game.players[m.owner]);
         this._missiles.set(m.id, { gx, gy, z: alt, vx, vy, vz, color, gen });
 
         const involved = human && (m.owner === human.id || m.targetId === human.id);
@@ -19678,6 +20445,9 @@ class Renderer {
   _drawLabels() {
     this._glideLabels();
     const { ctx, camera } = this;
+    // ¿Cambia el zoom en este fotograma? (zoom suave, vuelo o pellizco)
+    const zooming = !!(camera.zoomTarget || camera.tween || this._lastZoom !== camera.zoom);
+    this._lastZoom = camera.zoom;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
@@ -19697,6 +20467,10 @@ class Renderer {
     order.sort((a, b) => b.rank - a.rank);
     const boxes = (this._labelBoxes ??= []);
     boxes.length = 0;
+    // Los nombres aparecen con un fundido (antes saltaban al entrar en pantalla
+    // o al dejar de chocar con otro); el que no se dibuja vuelve a empezar
+    const fadeStep = this.anim ? Math.min(1, this._dt * 5) : 1;
+    for (const L of order) L.shown = false;
     for (const L of order) {
       const p = L.player;
       const [sx, sy] = camera.worldToScreen(L.x, L.y);
@@ -19722,11 +20496,25 @@ class Renderer {
       size = size < 20 ? Math.round(size) : Math.round(size / 2) * 2;
       const traitor = this.game.isTraitor(p);
       const me = p === human;
-      const N = this._nameSprite(p, size, me, allied, traitor, player);
       const s2 = Math.round(size * 0.78);
+      // Mientras la cámara hace zoom, el tamaño cambia en cada fotograma: se
+      // reutiliza la imagen ya dibujada del nombre (y de las cifras), escalada,
+      // y se vuelve a dibujar nítida cuando el zoom se para
+      let N = null;
+      let k = 1;
+      if (zooming) {
+        const e = this._labelEntry(p).name;
+        if (e.canvas && e.size) {
+          N = e;
+          k = size / e.size;
+        }
+      }
+      if (!N) N = this._nameSprite(p, size, me, allied, traitor, player);
+      const ds2 = zooming && L.s2 ? L.s2 : s2;
+      if (!zooming) L.s2 = s2;
       // Caja que ocupa (icono + nombre + tropas) para no pisar otros nombres
-      const w = N.w;
-      const x0 = sx - w / 2 - N.iconW - 2;
+      const w = N.w * k;
+      const x0 = sx - w / 2 - N.iconW * k - 2;
       const x1 = sx + w / 2 + 2;
       const y0 = sy - size * 0.95;
       const y1 = sy + size * 0.6 + s2 * 0.6;
@@ -19740,9 +20528,15 @@ class Renderer {
       // Nombre (con su icono) y tropas: imágenes ya dibujadas, centradas
       // En píxeles enteros del lienzo: copia directa, sin remuestrear
       const d = this.dpr;
-      ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
-      this._drawTroops((me ? fmtTroopsCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, s2, me);
+      L.shown = true;
+      L.alpha = Math.min(1, (L.alpha || 0) + fadeStep);
+      if (L.alpha < 1) ctx.globalAlpha = L.alpha;
+      if (k === 1) ctx.drawImage(N.canvas, Math.round((sx - N.tx) * d) / d, Math.round((sy - size * 0.35 - N.ty) * d) / d, N.canvas.width / d, N.canvas.height / d);
+      else ctx.drawImage(N.canvas, sx - N.tx * k, sy - size * 0.35 - N.ty * k, (N.canvas.width / d) * k, (N.canvas.height / d) * k);
+      this._drawTroops((me ? fmtTroopsCount : formatTroops)(this._smoothed(p, p.troops)), sx, sy + size * 0.6, ds2, me, s2 / ds2);
+      if (L.alpha < 1) ctx.globalAlpha = 1;
     }
+    for (const L of order) if (!L.shown) L.alpha = 0;
   }
 
   /**
@@ -19799,6 +20593,7 @@ class Renderer {
     const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${this.dpr}`;
     if (e.key === key) return e;
     e.key = key;
+    e.size = size;
     const name = traitor ? `⚠ ${p.name}` : allied ? `${p.name} 🤝` : p.name;
     const font = `${me ? 800 : player ? 600 : 500} ${size}px system-ui, sans-serif`;
     const mc = this.ctx;
@@ -19896,14 +20691,16 @@ class Renderer {
   }
 
   /** Cifra de tropas centrada en (cx, cy) con el juego de caracteres guardado. */
-  _drawTroops(text, cx, cy, s2, me) {
+  /** `scale`: durante el zoom, el juego de cifras de `s2` dibujado a escala (sin rehacerlo). */
+  _drawTroops(text, cx, cy, s2, me, scale = 1) {
     const f = this._digitFont(s2, me);
     const { ctx, dpr } = this;
     let w = 0;
     for (let i = 0; i < text.length; i++) w += f.widths[text[i]] || 0;
+    w *= scale;
     // Cada carácter, en píxeles enteros del lienzo (copia directa, sin remuestrear)
     const ch = Math.round(f.cellH * dpr);
-    const y = Math.round((cy - f.ty) * dpr) / dpr;
+    const y = scale === 1 ? Math.round((cy - f.ty) * dpr) / dpr : cy - f.ty * scale;
     for (let pass = 0; pass < 2; pass++) {
       let x = cx - w / 2;
       const srcY = pass * Math.round((f.cellH + 2) * dpr);
@@ -19912,8 +20709,9 @@ class Renderer {
         const cw = f.widths[c];
         if (cw === undefined) continue;
         const sw = Math.round((cw + f.pad * 2) * dpr);
-        ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, Math.round((x - f.pad) * dpr) / dpr, y, sw / dpr, ch / dpr);
-        x += cw;
+        if (scale === 1) ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, Math.round((x - f.pad) * dpr) / dpr, y, sw / dpr, ch / dpr);
+        else ctx.drawImage(f.canvas, Math.round(f.xs[c] * dpr), srcY, sw, ch, x - f.pad * scale, y, (sw / dpr) * scale, (ch / dpr) * scale);
+        x += cw * scale;
       }
     }
   }
@@ -20036,7 +20834,7 @@ class Renderer {
       if (!this._onScreen(sx, sy, 80)) continue;
       const dx = Math.cos(f.ang);
       const dy = Math.sin(f.ang);
-      const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : atk.attacker.color.join(', ');
+      const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : prgb(atk.attacker);
       const s = incoming || mine ? 8 : 5.5;
       const lw = incoming || mine ? 3.2 : 2.4;
       for (let k = 0; k < 3; k++) {
@@ -20107,21 +20905,31 @@ class Renderer {
       const wx = label ? label.x : map.x(sender.spawnTile) + 0.5;
       const wy = label ? label.y : map.y(sender.spawnTile) + 0.5;
       const [sx, sy0] = camera.worldToScreen(wx, wy);
-      const age = game.ticks - e.tick;
+      // Edad continua (entre turnos también), para que suba sin tirones
+      const age = game.ticks - e.tick + (this._frac || 0);
       const sy = sy0 - 34 - age * 0.4;
       ctx.globalAlpha = Math.max(0, Math.min(1, (CONFIG.emojiTicks - age) / 10));
+      // Al aparecer, un pequeño rebote (de 0,6 a 1 pasándose un poco)
+      const k = Math.min(1, age / 3);
+      const back = 1 + 2.7 * (k - 1) ** 3 + 1.7 * (k - 1) ** 2;
+      const pop = 0.6 + 0.4 * back;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.scale(pop, pop);
+      ctx.translate(-sx, -sy);
       ctx.beginPath();
       ctx.arc(sx, sy, 17, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,255,0.92)';
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = rgbToCss(sender.color);
+      ctx.strokeStyle = pcss(sender);
       ctx.stroke();
       ctx.font = '20px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#000';
       ctx.fillText(e.emoji, sx, sy + 1);
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
   }
@@ -20732,8 +21540,8 @@ function emptyMods() {
   return {
     growth: 0, // crecimiento de la población
     cap: 0, // población máxima
-    gold: 0, // oro de los trabajadores
-    factoryBonus: 0, // bonus extra de las fábricas
+    gold: 0, // oro pasivo (base y trabajadores)
+    factoryBonus: 0, // oro extra de los trenes de tus fábricas
     trade: 0, // oro de trenes y mercantes
     attackSpeed: 0, // velocidad de avance de tus ataques
     attackCost: 0, // tropas que cuesta cada casilla al atacar
@@ -20745,7 +21553,7 @@ function emptyMods() {
     missileCost: 0,
     reload: 0, // recarga de los silos
     fortRadius: 0,
-    militia: 0, // fracción de trabajadores que defiende
+    militia: 0, // la población civil defiende (ver Game.defenders)
     railRange: 0,
     cityCost: 0,
     factoryCost: 0,
@@ -20759,7 +21567,7 @@ function emptyMods() {
  */
 const TECHS = {
   agricultura: { branch: 'eco', tier: 1, name: 'Agricultura', desc: '+15 % de crecimiento de la población', mods: { growth: 0.15 } },
-  banca: { branch: 'eco', tier: 1, name: 'Banca', desc: '+20 % de oro de los trabajadores', mods: { gold: 0.2 } },
+  banca: { branch: 'eco', tier: 1, name: 'Banca', desc: '+20 % de oro pasivo', mods: { gold: 0.2 } },
   urbanismo: { branch: 'eco', tier: 2, name: 'Urbanismo', desc: '+20 % de población máxima', mods: { cap: 0.2 } },
   comercio: { branch: 'eco', tier: 2, name: 'Comercio', desc: '+40 % de oro de trenes y mercantes', mods: { trade: 0.4 } },
   movilizacion: { branch: 'mil', tier: 1, name: 'Movilización', desc: 'Tus ataques avanzan un 25 % más rápido', mods: { attackSpeed: 0.25 } },
@@ -20769,7 +21577,7 @@ const TECHS = {
   fortificacion: { branch: 'def', tier: 1, name: 'Fortificación', desc: 'Conquistarte cuesta un 20 % más', mods: { defense: 0.2 } },
   ingenieria: { branch: 'def', tier: 1, name: 'Ingeniería', desc: 'Obras un 40 % más rápidas y fortalezas con un 30 % más de radio', mods: { buildSpeed: 0.4, fortRadius: 0.3 } },
   radar: { branch: 'def', tier: 2, name: 'Radar', desc: '+20 % de acierto de los antimisiles', mods: { samHit: 0.2 } },
-  milicia: { branch: 'def', tier: 2, name: 'Milicia', desc: 'Un 25 % de tus trabajadores también defiende', mods: { militia: 0.25 } },
+  milicia: { branch: 'def', tier: 2, name: 'Milicia', desc: 'Tu población civil defiende: +15 % de fuerza al defender (con trabajadores, un 25 % de ellos)', mods: { militia: 0.25 } },
 };
 const TECH_IDS = Object.keys(TECHS);
 const BRANCHES = { eco: 'Economía', mil: 'Ejército', def: 'Defensa' };
@@ -20779,7 +21587,7 @@ const BRANCHES = { eco: 'Economía', mil: 'Ejército', def: 'Defensa' };
  * es gratis; cambiarla cuesta oro.
  */
 const SPECS = {
-  industria: { name: 'Industria', desc: '+25 % de oro de los trabajadores y fábricas un 50 % más rentables, pero las fábricas cuestan un 25 % más', mods: { gold: 0.25, factoryBonus: 0.5, factoryCost: 0.25 } },
+  industria: { name: 'Industria', desc: '+25 % de oro pasivo y los trenes de tus fábricas un 50 % más rentables, pero las fábricas cuestan un 25 % más', mods: { gold: 0.25, factoryBonus: 0.5, factoryCost: 0.25 } },
   infra: { name: 'Infraestructura', desc: 'Trenes y mercantes un 60 % más rentables, raíles con un 30 % más de alcance y +1 barco', mods: { trade: 0.6, railRange: 0.3, boats: 1 } },
   urbano: { name: 'Desarrollo urbano', desc: '+15 % de población máxima, +10 % de crecimiento y ciudades un 20 % más baratas', mods: { cap: 0.15, growth: 0.1, cityCost: -0.2 } },
 };
@@ -21408,6 +22216,7 @@ const { drawBuildingReal, flagCss, hasFlag } = __require('icons');
 const { POI_TYPES } = __require('estrategia');
 const { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } = __require('tecnologias');
 const { MECH, regenPerTick, tradeGold } = __require('mecanicas');
+const { actualizarHtml, alternar, mostrar, ocultar } = __require('movimiento');
 
 const $ = (id) => document.getElementById(id);
 const MAX_EVENTS = 5;
@@ -21484,12 +22293,18 @@ class Counter {
     this.text = '';
   }
 
+  /** Durante `ms` la cifra no se mueve (p. ej. hasta que llegan las monedas del botín). */
+  hold(ms) {
+    this.holdUntil = performance.now() + ms;
+  }
+
   set(target) {
     if (this.value === null) {
       this.value = this.target = this.from = target;
       this._write();
       return;
     }
+    if (this.holdUntil && performance.now() < this.holdUntil) return;
     if (target === this.target) return;
     this.target = target;
     this.from = this.value;
@@ -21548,12 +22363,14 @@ class UI {
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
-    $('fin-nueva').addEventListener('click', () => this.handlers.onExit?.(true));
+    $('fin-menu').addEventListener('click', () => this.handlers.onExit?.(true));
+    // Revancha: la misma partida (mapa, rivales y reglas) con otra semilla
+    $('fin-nueva').addEventListener('click', () => this.handlers.onRematch?.());
     $('conf-no').addEventListener('click', () => {
-      $('confirmar').hidden = true;
+      ocultar($('confirmar'), { y: 0, scale: 1 });
     });
     $('conf-si').addEventListener('click', () => {
-      $('confirmar').hidden = true;
+      ocultar($('confirmar'), { y: 0, scale: 1 });
       this.handlers.onExit?.(true);
     });
 
@@ -21674,9 +22491,21 @@ class UI {
 
     // Panel inferior: se puede minimizar (botón o tecla V); se recuerda
     const panel = $('panel-jugador');
-    const setFolded = (folded) => {
+    const setFolded = (folded, animate = false) => {
+      // La altura pasa de una a otra con una transición (antes saltaba)
+      const h0 = animate && !panel.hidden && !document.body.classList.contains('sin-animaciones') ? panel.getBoundingClientRect().height : 0;
       panel.classList.toggle('plegado', folded);
       $('hud').classList.toggle('pj-plegado', folded);
+      if (h0 && panel.animate) {
+        const h1 = panel.getBoundingClientRect().height;
+        if (Math.abs(h1 - h0) > 2) {
+          panel.style.overflow = 'hidden';
+          const a = panel.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+          a.onfinish = a.oncancel = () => {
+            panel.style.overflow = '';
+          };
+        }
+      }
       $('pj-plegar').setAttribute('aria-expanded', String(!folded));
       $('pj-plegar').title = folded ? 'Mostrar el panel completo (tecla V)' : 'Minimizar el panel (tecla V)';
       try {
@@ -21692,12 +22521,12 @@ class UI {
       folded = false;
     }
     setFolded(folded);
-    $('pj-plegar').addEventListener('click', () => setFolded(!panel.classList.contains('plegado')));
+    $('pj-plegar').addEventListener('click', () => setFolded(!panel.classList.contains('plegado'), true));
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || $('hud').hidden) return;
       if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       // Atajos: V panel, I desarrollo
-      if (e.code === 'KeyV') setFolded(!panel.classList.contains('plegado'));
+      if (e.code === 'KeyV') setFolded(!panel.classList.contains('plegado'), true);
       else if (e.code === 'KeyI') this.toggleDev();
     });
     // En el ordenador (pantalla ancha y ratón): edificios en una barra propia
@@ -21761,7 +22590,8 @@ class UI {
   setNetNote(text) {
     const box = $('aviso');
     if (text) {
-      box.textContent = text;
+      $('aviso-texto').textContent = text;
+      $('aviso-auto').hidden = true;
       box.hidden = false;
       box.dataset.red = '1';
     } else if (box.dataset.red) {
@@ -21795,12 +22625,12 @@ class UI {
   openNation(id) {
     this.nationId = id;
     this._breakArmedUntil = 0;
-    $('panel-nacion').hidden = false;
+    mostrar($('panel-nacion'), { x: 12, y: 0 });
   }
 
   closeNation() {
     this.nationId = 0;
-    $('panel-nacion').hidden = true;
+    ocultar($('panel-nacion'), { x: 12, y: 0 });
   }
 
   _updateNation(game, human, ratio) {
@@ -21914,13 +22744,19 @@ class UI {
         <button type="button" class="principal" data-from="${p.id}" data-offer="${kind}" data-accept="1">Aceptar</button>
       </div>
       <div class="sol-tiempo"><div></div></div>`;
+    card.hidden = true;
     $('solicitudes').prepend(card);
+    mostrar(card, { x: 16, y: 0 });
     this._requests.set(key, card);
   }
 
   _removeRequest(key) {
-    this._requests.get(key)?.remove();
+    const card = this._requests.get(key);
     this._requests.delete(key);
+    if (!card) return;
+    // Sale deslizándose y luego se quita
+    ocultar(card, { x: 16, y: 0 });
+    setTimeout(() => card.remove(), 200);
   }
 
   _updateRequests(game, human) {
@@ -21937,7 +22773,7 @@ class UI {
   }
 
   confirmExit() {
-    $('confirmar').hidden = false;
+    mostrar($('confirmar'), { y: 0, scale: 1 });
     $('conf-no').focus();
   }
 
@@ -21971,11 +22807,20 @@ class UI {
         box.append(li);
       }
     }
-    $('fin').hidden = false;
+    // Entra en dos tiempos: el velo sobre el mapa y luego la tarjeta
+    mostrar($('fin'), { y: 0, scale: 1, ms: 450 });
+    const card = $('fin').querySelector('.tarjeta');
+    if (card && card.animate && !document.body.classList.contains('sin-animaciones')) {
+      card.animate(
+        [{ opacity: 0, transform: 'translateY(18px) scale(0.96)' }, { opacity: 1, transform: 'none' }],
+        { duration: 420, delay: 120, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' },
+      );
+    }
+    $('fin-nueva').focus({ preventScroll: true });
   }
 
   hideEnd() {
-    $('fin').hidden = true;
+    ocultar($('fin'), { y: 0, scale: 1 });
   }
 
   /** Rótulo del reparto: «70 % soldados · 30 % trabajadores». */
@@ -22149,6 +22994,8 @@ class UI {
     const tx = r.left + Math.min(24, r.width / 2);
     const ty = r.top + r.height / 2;
     const n = small ? 7 : 12;
+    // El oro sube cuando llegan las monedas, no antes
+    this._gold.hold(820);
     for (let i = 0; i < n; i++) {
       const c = document.createElement('div');
       c.className = 'moneda-vuela';
@@ -22163,7 +23010,11 @@ class UI {
         ],
         { duration: 850 + i * 40, delay: i * 40, easing: 'cubic-bezier(0.45, 0, 0.7, 0.5)', fill: 'both' },
       );
-      anim.onfinish = () => c.remove();
+      anim.onfinish = () => {
+        c.remove();
+        // Cada moneda que llega da un pequeño salto a la cifra
+        target.animate?.([{ transform: 'scale(1.12)' }, { transform: 'none' }], { duration: 160, easing: 'ease-out' });
+      };
     }
     clearTimeout(this._goldHit);
     this._goldHit = setTimeout(() => {
@@ -22194,9 +23045,43 @@ class UI {
     this._gold.set(human.gold);
   }
 
+  /**
+   * Cuenta atrás grande en los últimos 3 s del despliegue y, al empezar la
+   * conquista, el sello «¡Comienza!».
+   */
+  _countdown(game) {
+    const box = $('cuenta-atras');
+    let text = '';
+    if (game.phase === 'spawn') {
+      const left = Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000);
+      if (left >= 1 && left <= 3) text = String(left);
+    } else if (game.phase === 'playing' && game.ticks - CONFIG.spawnTicks < 9) text = '¡Comienza!';
+    if (text === (this._countText || '')) return;
+    const prev = this._countText;
+    this._countText = text;
+    if (!text) {
+      ocultar(box, { y: 0, scale: 1.1, ms: 260, base: 'translate(-50%, -50%)' });
+      return;
+    }
+    box.textContent = text;
+    box.classList.toggle('sello', text.length > 1);
+    box.hidden = false;
+    if (box._salida) {
+      box._salida.cancel();
+      box._salida = null;
+    }
+    if (box.animate && !document.body.classList.contains('sin-animaciones')) {
+      box.animate(
+        [{ opacity: 0, transform: 'translate(-50%, -50%) scale(1.8)' }, { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: 0.35 }, { opacity: 1, transform: 'translate(-50%, -50%) scale(0.96)' }],
+        { duration: prev && prev.length > 1 ? 400 : 700, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+      );
+    }
+  }
+
   /** Avanza las cifras animadas (llamar en cada frame). */
   animate(dt) {
     for (const c of this._counters) c.step(dt);
+    this._stepTextTweens();
   }
 
   update(game, human, ratio, buildMode) {
@@ -22205,61 +23090,74 @@ class UI {
 
     // Aviso central: despliegue o construcción en curso
     const aviso = $('aviso');
+    const avisoTxt = $('aviso-texto');
+    const auto = $('aviso-auto');
+    const setAviso = (text) => {
+      if (avisoTxt.textContent !== text) avisoTxt.textContent = text;
+    };
+    this._countdown(game);
+    // «Elegir por mí»: solo en el despliegue
+    const showAuto = !aviso.dataset.red && game.phase === 'spawn' && human.alive;
+    if (auto.hidden === showAuto) auto.hidden = !showAuto;
     if (aviso.dataset.red) {
       // el estado de la red tiene prioridad
     } else if (game.phase === 'spawn') {
       const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000));
-      aviso.textContent = human.spawned
+      setAviso(human.spawned
         ? `Posición elegida. Puedes cambiarla. Empieza en ${left} s`
-        : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`;
-      aviso.hidden = false;
+        : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`);
+      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));
       if (def.unit === 'missile') {
-        aviso.textContent = `Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`;
+        setAviso(`Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`);
       } else if (def.unit === 'ship') {
-        aviso.textContent = `Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`;
+        setAviso(`Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`);
       } else {
         const where = def.coastal ? 'en tu costa' : 'en tu territorio';
         const up = ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
-        aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`;
+        setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`);
       }
-      aviso.hidden = false;
+      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (game.inTruce?.()) {
       // Regla de tregua: recordatorio con la cuenta atrás
       const left = Math.ceil(((game.truceUntil() - game.ticks) * TICK_MS) / 1000);
-      aviso.textContent = `Tregua: nadie puede atacar a otras naciones durante ${formatTime(left)}. Expándete y conquista colonias`;
-      aviso.hidden = false;
+      setAviso(`Tregua: nadie puede atacar a otras naciones durante ${formatTime(left)}. Expándete y conquista colonias`);
+      mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else {
-      aviso.hidden = true;
+      ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
     }
 
     const playingTicks = Math.max(0, game.ticks - CONFIG.spawnTicks);
     const limit = game._timeLimitMin ? game._timeLimitMin() : game.rules?.timeLimitMin || 0;
     // Con límite de tiempo, el reloj muestra cuánto queda
-    $('reloj').textContent = limit
+    txt('reloj', limit
       ? `${formatTime(Math.max(0, limit * 60 - (playingTicks * TICK_MS) / 1000))} restantes`
-      : formatTime((playingTicks * TICK_MS) / 1000);
+      : formatTime((playingTicks * TICK_MS) / 1000));
 
     // Panel del jugador
-    $('pj-color').style.background = rgbToCss(human.color);
-    $('panel-jugador').style.setProperty('--pj-color', rgbToCss(human.color));
-    $('pj-nombre').textContent = human.name;
+    const pc = rgbToCss(human.color);
+    if (this._pjColor !== pc) {
+      this._pjColor = pc;
+      $('pj-color').style.background = pc;
+      $('panel-jugador').style.setProperty('--pj-color', pc);
+    }
+    txt('pj-nombre', human.name);
     const max = human.maxTroops();
     const coop = this.coop;
     const roleName = coop?.role === 'militar' ? 'Mando militar' : coop?.role === 'economia' ? 'Economía y diplomacia' : '';
-    $('pj-estado').textContent = !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '';
+    txt('pj-estado', !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '');
     // Economía fija (la del documento): solo tropas, sin reparto ni trabajadores
     const workersMode = human.economy === 'workers';
     $('panel-jugador').classList.toggle('economia-fija', !workersMode);
     const label = workersMode ? 'Población' : 'Tropas';
-    if ($('pj-pob-etq').textContent !== label) $('pj-pob-etq').textContent = label;
+    if ($('pj-pob-etq').textContent !== label) txt('pj-pob-etq', label);
     const pop = human.population();
     const fill = Math.min(1, pop / max);
-    $('pj-barra').style.width = `${fill * 100}%`;
+    cssProp($('pj-barra'), 'width', `${(fill * 100).toFixed(1)}%`);
     // Dentro de la barra: la parte de soldados (dorada) y la de trabajadores
-    $('pj-barra').style.setProperty('--soldados', `${pop > 0 ? Math.round((100 * human.troops) / pop) : 100}%`);
+    cssProp($('pj-barra'), '--soldados', `${pop > 0 ? Math.round((100 * human.troops) / pop) : 100}%`);
     // Casi al máximo: la barra brilla (buen momento para atacar)
     $('pj-barra').parentElement.classList.toggle('lleno', fill >= 0.95 && human.alive);
     const perSecond = 1000 / TICK_MS;
@@ -22269,21 +23167,21 @@ class UI {
     if (human.economy === 'workers') this._pop.set(pop);
     this._troopsMax.set(max);
     const growth = human.growthPerTick() * perSecond;
-    $('pj-crec').textContent = playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '';
+    txt('pj-crec', playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '');
     $('pj-crec').classList.toggle('baja', growth < 0);
-    $('pj-trab').textContent = `${fmtTroops(human.workers)} trab.`;
+    txt('pj-trab', `${fmtTroops(human.workers)} trab.`);
     // El deslizador sigue al reparto real salvo mientras lo estás moviendo
     if (!(performance.now() - (this._shareDragAt || 0) < 1500)) {
       $('reparto').value = Math.round(human.soldierShare * 100);
       this._showShare(human.soldierShare);
     }
     this._gold.set(human.gold);
-    $('pj-oro-ritmo').textContent = playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '';
-    $('pj-terr').textContent = formatShare(human.tiles, landCount);
-    $('pj-barcos').textContent = `${human.boatCount}/${human.maxBoats()}`;
-    $('pj-buques').textContent = human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '';
-    $('ratio-valor').textContent = `${Math.round(ratio * 100)}%`;
-    $('ratio').style.setProperty('--valor', `${Math.round(ratio * 100)}%`);
+    txt('pj-oro-ritmo', playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '');
+    txt('pj-terr', formatShare(human.tiles, landCount));
+    txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
+    txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
+    txt('ratio-valor', `${Math.round(ratio * 100)}%`);
+    cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
 
     const works = {};
     for (const b of game.sites) if (b.owner === human.id) works[b.kind] = (works[b.kind] || 0) + 1;
@@ -22343,8 +23241,8 @@ class UI {
 
   toggleDev(force) {
     const panel = $('panel-desarrollo');
-    const open = force ?? panel.hidden;
-    panel.hidden = !open;
+    const open = force ?? (panel.hidden || !!panel._salida);
+    alternar(panel, open, { y: 10, base: 'translateX(-50%)' });
     $('btn-desarrollo').setAttribute('aria-pressed', String(open));
     if (open) {
       this._devAt = 0;
@@ -22396,7 +23294,7 @@ class UI {
     const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
     out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
     out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
-    out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} a 100 casillas, ~${formatNumber(tradeGold(300))} a 300)`;
+    out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} en una ruta corta, ~${formatNumber(tradeGold(300))} en una larga)`;
     return out;
   }
 
@@ -22424,7 +23322,7 @@ class UI {
       const bar = (v) => `<span class="pd-barra"><span style="width:${total > 0 ? Math.round((100 * (v || 0)) / total) : 0}%"></span></span>`;
       const roi = this._roi(game, h);
       const specCost = h.spec ? formatNumber(CONFIG.specChangeCost * game.rules.priceMult) : 'gratis';
-      $('pd-economia').innerHTML = `
+      actualizarHtml($('pd-economia'), `
         <div class="pd-total"><span>Oro por minuto</span><strong>${formatNumber(total)}</strong><small>último minuto · ahora tienes ${formatNumber(h.gold)}</small></div>
         <table class="pd-tabla"><tbody>
           ${rows.map(([n, v]) => `<tr><td>${n}</td><td>${formatNumber(v || 0)}</td><td>${bar(v)}</td></tr>`).join('')}
@@ -22436,7 +23334,7 @@ class UI {
         ${techs ? `<h4>Especialización <small>(${h.spec ? `cambiarla cuesta ${specCost}` : 'la primera es gratis'})</small></h4>
         <div class="pd-specs">${SPEC_IDS.map((id) => `
           <button type="button" class="pd-spec${h.spec === id ? ' activa' : ''}" data-spec="${id}" ${h.spec === id || game.phase !== 'playing' ? 'disabled' : ''}>
-            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>` : `<p class="pd-nota">Perfil ${game.profile.name}: sin tecnologías ni especialización.</p>`}`;
+            <strong>${SPECS[id].name}</strong><span>${SPECS[id].desc}</span></button>`).join('')}</div>` : `<p class="pd-nota">Perfil ${game.profile.name}: sin tecnologías ni especialización.</p>`}`);
     } else {
       const cost = game.techCost(h);
       const time = Math.round(game.techTime(h) / 10);
@@ -22454,7 +23352,7 @@ class UI {
         return `<button type="button" class="pd-tec${done ? ' hecha' : ''}${doing ? ' marcha' : ''}" data-tech="${id}" ${dis ? 'disabled' : ''}>
           <span class="pd-nivel">Nv ${t.tier}</span><strong>${t.name}</strong><span>${t.desc}</span>${state}</button>`;
       }).join('');
-      $('pd-tecnologias').innerHTML = `${head}<div class="pd-ramas">${Object.keys(BRANCHES).map((b) => `<div class="pd-rama"><h4>${BRANCHES[b]}</h4>${col(b)}</div>`).join('')}</div>`;
+      actualizarHtml($('pd-tecnologias'), `${head}<div class="pd-ramas">${Object.keys(BRANCHES).map((b) => `<div class="pd-rama"><h4>${BRANCHES[b]}</h4>${col(b)}</div>`).join('')}</div>`);
     }
   }
 
@@ -22536,8 +23434,17 @@ class UI {
     }
     this._threat = (this._threat || 0) + (target - (this._threat || 0)) * 0.35;
     if (this._threat < 0.02) this._threat = 0;
-    box.style.setProperty('--amenaza', this._threat.toFixed(3));
-    box.classList.toggle('activa', this._threat > 0);
+    // En pasos de 0,05 y solo si cambia: repintar el degradado de toda la
+    // pantalla 5 veces por segundo costaba, y cambiar la duración del latido
+    // a mitad lo hacía saltar (ahora va por niveles fijos)
+    const q = Math.round(this._threat * 20) / 20;
+    if (q !== this._threatShown) {
+      this._threatShown = q;
+      box.style.setProperty('--amenaza', q.toFixed(2));
+      box.classList.toggle('activa', q > 0);
+      const lvl = q >= 0.66 ? 3 : q >= 0.33 ? 2 : 1;
+      if (box.dataset.nivel !== String(lvl)) box.dataset.nivel = String(lvl);
+    }
   }
 
   /**
@@ -22622,6 +23529,11 @@ class UI {
 
     const shown = cards.slice(0, MAX_FRONTS);
     const live = new Set();
+    // Posición de cada tarjeta antes de reordenar (para que se deslicen)
+    const flip = !document.body.classList.contains('sin-animaciones') && !$('combates').hidden;
+    const before = new Map();
+    if (flip) for (const f of this._fronts.values()) if (f.li.isConnected) before.set(f.li, f.li.getBoundingClientRect().top);
+    let moved = false;
     shown.forEach((c, i) => {
       live.add(c.key);
       let f = this._fronts.get(c.key);
@@ -22671,8 +23583,19 @@ class UI {
       f.barA.style.width = `${pct}%`;
       f.barD.style.width = `${100 - pct}%`;
       // Solo se mueve si no está ya en su sitio (moverla reiniciaría animaciones)
-      if (list.children[i] !== f.li) list.insertBefore(f.li, list.children[i] || null);
+      if (list.children[i] !== f.li) {
+        list.insertBefore(f.li, list.children[i] || null);
+        moved = true;
+      }
     });
+    // Las que cambiaron de sitio se deslizan desde donde estaban
+    if (flip && moved) {
+      for (const [li, top] of before) {
+        if (!li.isConnected || !li.animate) continue;
+        const dy = top - li.getBoundingClientRect().top;
+        if (Math.abs(dy) >= 1) li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+      }
+    }
     for (const [key, f] of this._fronts) {
       if (live.has(key)) continue;
       if (!f.gone) {
@@ -22688,9 +23611,13 @@ class UI {
     const inc = cards.filter((c) => c.incoming).length;
     const out = cards.length - inc;
     const box = $('combates');
-    box.hidden = !list.querySelector('.frente');
+    alternar(box, !!list.querySelector('.frente'), { x: -10, y: 0 });
     box.classList.toggle('amenaza', inc > 0);
-    $('cab-combates').innerHTML = `${inc ? `<span class="cc-rojo">🛡 ${inc}</span>` : ''}${out ? `<span class="cc-verde">⚔ ${out}</span>` : ''}`;
+    const cab = `${inc ? `<span class="cc-rojo">🛡 ${inc}</span>` : ''}${out ? `<span class="cc-verde">⚔ ${out}</span>` : ''}`;
+    if (cab !== this._cabCombates) {
+      this._cabCombates = cab;
+      $('cab-combates').innerHTML = cab;
+    }
     let more = this._moreFronts;
     if (cards.length > MAX_FRONTS) {
       if (!more) {
@@ -22723,7 +23650,14 @@ class UI {
   _newFront(c) {
     const li = document.createElement('li');
     li.className = `frente ${c.incoming ? 'entrante' : 'saliente'} tipo-${c.kind} nueva`;
-    li.addEventListener('animationend', () => li.classList.remove('nueva'), { once: true });
+    // Se quita al acabar el barrido de brillo (el último): la entrada de la
+    // tarjeta acaba antes y, si se quitaba entonces, el barrido se cortaba
+    const done = (e) => {
+      if (e.animationName !== 'barrido') return;
+      li.classList.remove('nueva');
+      li.removeEventListener('animationend', done);
+    };
+    li.addEventListener('animationend', done);
     li.dataset.key = c.key;
     li.tabIndex = 0;
     li.setAttribute('role', 'button');
@@ -22821,10 +23755,13 @@ class UI {
         text = `${name} ${formatNumber(st.value)} puntos`;
         near = false;
       }
-      const hold = game.goalHolder && game.goalHolder.id === leader.id ? game.goalHolder : null;
+      // Quien más cerca está de ganar por aguantar el objetivo (puede no ser el líder)
+      const hold = game.goalHolder;
       if (hold && st && (st.mode === 'capitales' || st.mode === 'economia')) {
         const need = st.mode === 'capitales' ? CONFIG.capitalHoldTicks : CONFIG.economyHoldTicks;
-        text += ` · gana en ${Math.max(0, Math.ceil((hold.since + need - game.ticks) / 10))} s`;
+        const holder = game.players[hold.id];
+        const who = holder && holder.id !== leader.id ? `${holder === human ? 'tú' : holder.name} ` : '';
+        text += ` · ${who}gana en ${Math.max(0, Math.ceil((hold.since + need - game.ticks) / 10))} s`;
         near = true;
       }
       $('dato-lider').textContent = text;
@@ -22876,9 +23813,10 @@ class UI {
         if (el.textContent !== text) el.textContent = text;
       };
       set('.pos', String(rank));
-      set('.pct', formatPercent(p.tiles / landCount));
-      set('.oro', formatNumber(p.gold));
-      set('.tro', fmtTroops(p.troops));
+      // Las cifras van hasta su nuevo valor poco a poco (se actualizan una vez por segundo)
+      this._tweenText(li.querySelector('.pct'), p.tiles / landCount, formatPercent);
+      this._tweenText(li.querySelector('.oro'), p.gold, formatNumber);
+      this._tweenText(li.querySelector('.tro'), p.troops, fmtTroops);
       set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
       li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;
       li.classList.toggle('yo', p === human);
@@ -22892,7 +23830,12 @@ class UI {
         li.classList.add(rank < prev ? 'sube' : 'baja');
       }
       this._lbIndex.set(p.id, rank);
+      const fresh = !li.isConnected;
       if (list.children[i] !== li) list.insertBefore(li, list.children[i] || null);
+      // Una fila nueva entra deslizándose
+      if (fresh && animate && li.animate) {
+        li.animate([{ opacity: 0, transform: 'translateX(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+      }
     });
     const keep = new Set(rows.map((p) => p.id));
     for (const [id, li] of this._lbRows) {
@@ -22901,20 +23844,55 @@ class UI {
         this._lbRows.delete(id);
       }
     }
-    // FLIP: cada fila que cambió de posición parte de donde estaba
+    // FLIP: cada fila que cambió de posición parte de donde estaba (con la
+    // Web Animations API: no deja estilos en línea que anulen el hover)
     if (animate) {
       for (const [id, top] of before) {
         const li = this._lbRows.get(id);
-        if (!li) continue;
+        if (!li || !li.animate) continue;
         const dy = top - li.getBoundingClientRect().top;
         if (Math.abs(dy) < 1) continue;
-        li.style.transition = 'none';
-        li.style.transform = `translateY(${dy}px)`;
-        requestAnimationFrame(() => {
-          li.style.transition = 'transform 0.35s ease';
-          li.style.transform = '';
-        });
+        li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 350, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
       }
+    }
+  }
+
+  /**
+   * Cifra de texto que va hasta `value` en ~0,6 s (la avanza `animate`). La
+   * primera vez, o sin animaciones, se pone directamente.
+   */
+  _tweenText(el, value, fmt) {
+    const t = (this._textTweens ??= new Map());
+    const cur = t.get(el);
+    const still = document.body.classList.contains('sin-animaciones');
+    if (!cur || still) {
+      t.set(el, { from: value, to: value, shown: value, t0: 0, fmt });
+      const text = fmt(value);
+      if (el.textContent !== text) el.textContent = text;
+      return;
+    }
+    if (cur.to === value) return;
+    cur.from = cur.shown;
+    cur.to = value;
+    cur.t0 = performance.now();
+    cur.fmt = fmt;
+  }
+
+  _stepTextTweens() {
+    const t = this._textTweens;
+    if (!t || !t.size) return;
+    const now = performance.now();
+    for (const [el, tw] of t) {
+      if (!el.isConnected) {
+        t.delete(el);
+        continue;
+      }
+      if (tw.shown === tw.to) continue;
+      const k = Math.min(1, (now - tw.t0) / 600);
+      const e = 1 - (1 - k) ** 3;
+      tw.shown = k >= 1 ? tw.to : tw.from + (tw.to - tw.from) * e;
+      const text = tw.fmt(tw.shown);
+      if (el.textContent !== text) el.textContent = text;
     }
   }
 
@@ -22942,14 +23920,50 @@ class UI {
     const tip = $('tooltip');
     if (tile < 0) {
       tip.hidden = true;
+      this._tipTile = -1;
       return;
     }
     const map = game.map;
-    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
     if (!map.isLand(tile)) {
       tip.hidden = true;
+      this._tipTile = -1;
       return;
     }
+    // El texto se rehace al cambiar de casilla o, en la misma, cada 150 ms
+    // (las tropas cambian); moverse por la misma casilla solo lo recoloca
+    const now = performance.now();
+    if (tile !== this._tipTile || now - (this._tipAt || 0) > 150) {
+      this._tipTile = tile;
+      this._tipAt = now;
+      const html = this._tipHtml(game, tile);
+      if (html !== this._tipLast) {
+        this._tipLast = html;
+        tip.innerHTML = html;
+        this._tipSize = null;
+      }
+    }
+    if (tip.hidden) {
+      tip.hidden = false;
+      this._tipSize = null;
+    }
+    // Dentro de la ventana: se mide la caja (solo si cambió el texto) y, si
+    // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
+    const size = (this._tipSize ??= [tip.offsetWidth, tip.offsetHeight]);
+    const [w, h] = size;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
+    let top = sy + 16 + h > vh - 8 ? sy - 16 - h : sy + 16;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    top = Math.max(8, Math.min(vh - h - 8, top));
+    // Con transform (sin recolocar la página)
+    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+  }
+
+  /** Texto del tooltip de una casilla de tierra. */
+  _tipHtml(game, tile) {
+    const map = game.map;
+    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
     const o = game.owner[tile];
     if (o) {
       const p = game.players[o];
@@ -22964,26 +23978,26 @@ class UI {
       extra.push(terrain);
       const human = game.human;
       const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
-      tip.innerHTML = `<b>${escapeHtml(p.name)}</b>${tag}<br>
+      return `<b>${escapeHtml(p.name)}</b>${tag}<br>
         ${fmtTroops(p.troops)} tropas · ${formatShare(p.tiles, map.landCount)}<br>
         <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
-    } else {
-      tip.innerHTML = `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
     }
-    tip.hidden = false;
-    // Dentro de la ventana: se mide la caja (ya con el texto ajustado) y, si
-    // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
-    const w = tip.offsetWidth;
-    const h = tip.offsetHeight;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
-    let top = sy + 16 + h > vh - 8 ? sy - 16 - h : sy + 16;
-    left = Math.max(8, Math.min(vw - w - 8, left));
-    top = Math.max(8, Math.min(vh - h - 8, top));
-    tip.style.left = `${left}px`;
-    tip.style.top = `${top}px`;
+    return `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
   }
+}
+
+/** Escribe el texto de #id solo si cambia (no obliga al navegador a repintar). */
+function txt(id, text) {
+  const e = $(id);
+  if (e && e.textContent !== text) e.textContent = text;
+}
+
+/** Pone una propiedad de estilo (o variable CSS) solo si cambia. */
+function cssProp(el, prop, value) {
+  const cache = (el._css ??= {});
+  if (cache[prop] === value) return;
+  cache[prop] = value;
+  el.style.setProperty(prop, value);
 }
 
 function escapeHtml(s) {
