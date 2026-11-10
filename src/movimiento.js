@@ -226,13 +226,19 @@ export function cerrarDialogo(el, motivo = 'cerrar') {
   d.o.alCerrar?.(motivo);
 }
 
-/** Quita todos los diálogos sin animación (al cambiar de pantalla). */
-export function cerrarDialogos() {
-  while (abiertos.length) {
-    const d = abiertos.pop();
+/** Quita sin animación los diálogos abiertos (los que cumplan `filtro`, o todos) al cambiar de pantalla. */
+export function cerrarDialogos(filtro = null) {
+  for (let i = abiertos.length - 1; i >= 0; i--) {
+    const d = abiertos[i];
+    if (filtro && !filtro(d.el)) continue;
+    abiertos.splice(i, 1);
+    if (d.el._salida) {
+      d.el._salida.cancel();
+      d.el._salida = null;
+    }
     d.el.hidden = true;
   }
-  document.removeEventListener('keydown', teclaDialogo, true);
+  if (!abiertos.length) document.removeEventListener('keydown', teclaDialogo, true);
 }
 
 // ------------------------------------------------------------- cifras

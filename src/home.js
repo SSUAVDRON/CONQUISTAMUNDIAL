@@ -15,6 +15,7 @@ import { drawTransport, drawWarship } from './barcos.js';
 import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
+import { abrirGuia } from './guia.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -572,7 +573,8 @@ export class Home {
       $(id).addEventListener('change', () => this.h.onProfileChange?.(false));
     }
     $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
-    $('aj-guia').addEventListener('click', () => this.h.onGuide?.());
+    $('aj-guia').addEventListener('click', () => abrirGuia());
+    $('btn-guia').addEventListener('click', () => abrirGuia());
     $('aj-restablecer').addEventListener('click', () => abrirDialogo($('dialogo-restablecer'), { foco: '[data-cerrar]' }));
     $('dr-si').addEventListener('click', () => {
       this._resetSettings();
@@ -1621,6 +1623,14 @@ export class Home {
       if (k in d) a[k] = d[k];
       else delete a[k];
     }
+    this.syncSettings();
+    this.h.onProfileChange?.(false);
+    this.h.onSettings?.();
+  }
+
+  /** Pone los controles de Ajustes según el perfil (tras cambiarlos desde el menú en partida o al restablecer). */
+  syncSettings() {
+    const a = this.profile.ajustes;
     const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos', 'aj-musica': 'musica', 'aj-efectos': 'efectos' };
     for (const [id, key] of Object.entries(toggles)) $(id).checked = a[key] !== false;
     for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
@@ -1629,8 +1639,6 @@ export class Home {
       $(out).textContent = String(v);
     }
     this._syncVolumes();
-    this.h.onProfileChange?.(false);
-    this.h.onSettings?.();
   }
 
   setCloudNote(text) {

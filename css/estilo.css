@@ -3205,7 +3205,7 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 #sala-ajustes .segmentos.plazas button { min-width: 38px; }
 
 /* ===================================================== Sub-pestañas (Perfil y Clasificación) */
-#inicio .sub-pestanas {
+#inicio .sub-pestanas, .dialogo .sub-pestanas {
   position: relative;
   display: flex;
   gap: var(--e1);
@@ -3219,10 +3219,11 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
   overflow-x: auto;
   scrollbar-width: none;
 }
-#inicio .sub-pestanas::-webkit-scrollbar { display: none; }
-#inicio .sub-pestanas button { flex: none; padding: 10px 16px; border: 0; border-radius: var(--r-s) var(--r-s) 0 0; background: none; box-shadow: none; color: var(--texto-2); font-weight: 700; font-size: 14px; }
-#inicio .sub-pestanas button:hover { color: var(--texto-1); background: rgba(255, 255, 255, 0.04); }
-#inicio .sub-pestanas button[aria-selected="true"] { color: var(--oro-200); background: none; }
+#inicio .sub-pestanas::-webkit-scrollbar, .dialogo .sub-pestanas::-webkit-scrollbar { display: none; }
+#inicio .sub-pestanas button, .dialogo .sub-pestanas button { flex: none; padding: 10px 16px; border: 0; border-radius: var(--r-s) var(--r-s) 0 0; background: none; box-shadow: none; color: var(--texto-2); font-weight: 700; font-size: 14px; }
+#inicio .sub-pestanas button:hover, .dialogo .sub-pestanas button:hover { color: var(--texto-1); background: rgba(255, 255, 255, 0.04); }
+#inicio .sub-pestanas button[aria-selected="true"], .dialogo .sub-pestanas button[aria-selected="true"] { color: var(--oro-200); background: none; box-shadow: inset 0 -2px 0 var(--oro-400); }
+#inicio .sub-pestanas.con-subrayado button[aria-selected="true"] { box-shadow: none; }
 .subrayado-pestana {
   position: absolute; left: 0; bottom: 0; height: 2px; width: 0; opacity: 0; pointer-events: none;
   border-radius: 2px 2px 0 0;
@@ -3344,3 +3345,25 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 .aj-volumen.apagado { opacity: 0.45; }
 .aj-grupo .botones-izq { display: flex; flex-wrap: wrap; gap: var(--e2); }
 @media (max-width: 900px) { .ajustes-rejilla { grid-template-columns: 1fr; } }
+
+/* ===================================================== Guía y menú en partida */
+.guia-caja { width: min(720px, 100%); height: min(640px, 88vh); }
+.dialogo .guia-pestanas { margin: 0; padding: 0 var(--e4); flex: none; }
+.guia-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e3); }
+.guia-lista li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--e3); align-items: start; padding: var(--e3); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--borde-1); }
+.guia-lista:not([hidden]) li { animation: subir var(--dur-3) var(--ease-out) both; }
+.guia-lista li:nth-child(2) { animation-delay: 40ms; }
+.guia-lista li:nth-child(3) { animation-delay: 80ms; }
+.guia-lista li:nth-child(4) { animation-delay: 120ms; }
+.guia-lista li:nth-child(n+5) { animation-delay: 160ms; }
+.guia-icono { width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--r-s); color: var(--oro-200); background: rgba(233, 185, 85, 0.12); border: 1px solid rgba(233, 185, 85, 0.3); }
+.guia-icono svg { width: 18px; height: 18px; }
+.guia-lista strong { display: block; color: var(--oro-200); margin-bottom: 2px; }
+.guia-lista p { margin: 0; color: var(--texto-2); font-size: 13.5px; line-height: 1.5; }
+body.sin-animaciones .guia-lista li { animation: none; }
+.menu-partida .dialogo-cuerpo { display: flex; flex-direction: column; gap: var(--e3); }
+.menu-partida h3 { margin: var(--e2) 0 0; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-500); }
+.mp-continuar { width: 100%; }
+.mp-nota { margin: -4px 0 0; text-align: center; font-size: 12px; color: var(--texto-3); }
+.mp-botones { display: flex; gap: var(--e2); margin-top: var(--e2); }
+.mp-botones > * { flex: 1; }

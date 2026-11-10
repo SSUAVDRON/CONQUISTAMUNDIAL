@@ -368,7 +368,8 @@ export class UI {
 
   /** Oculta la interfaz de partida (al volver al inicio). */
   hideHud() {
-    cerrarDialogos();
+    // Solo los diálogos de la partida (los del menú, como la guía abierta desde el inicio, siguen)
+    cerrarDialogos((el) => ['fin', 'confirmar', 'menu-partida'].includes(el.id));
     $('hud').hidden = true;
     $('fin').hidden = true;
     $('confirmar').hidden = true;

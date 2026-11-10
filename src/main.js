@@ -26,6 +26,8 @@ import { Diagnostico } from './diagnostico.js';
 const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('diag') === '1';
 import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
+import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
+import { abrirGuia } from './guia.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -1038,8 +1040,16 @@ const input = new Input(canvas, camera, {
     else ui.closeNation();
   },
   onEscape() {
-    state.buildMode = null;
-    ui.closeNation();
+    // Escape: primero cancela lo que haya abierto (construir, ficha, desarrollo); si no hay nada, el menú
+    const dev = document.getElementById('panel-desarrollo');
+    const nation = document.getElementById('panel-nacion');
+    if (state.buildMode || !nation.hidden || !dev.hidden) {
+      state.buildMode = null;
+      ui.closeNation();
+      if (!dev.hidden) ui.toggleDev(false);
+      return;
+    }
+    if (!state.demo && state.game && !hayDialogo()) openGameMenu();
   },
   buildKeys,
   onBuildKey: setBuildMode,
@@ -1064,8 +1074,9 @@ ui.on({
   onRespondOffer: (fromId, kind, accept) => humanIntent({ type: kind === 'pact' ? 'respondPact' : 'respondPeace', fromId, accept }),
   onFocusFront: focusFront,
   onExit(force) {
-    if (!force && !state.demo && state.game.phase !== 'ended' && state.human?.alive) {
-      ui.confirmExit();
+    // Botón «Menú»: el menú en partida (continuar, ajustes rápidos, guía, abandonar)
+    if (!force && !state.demo) {
+      openGameMenu();
       return;
     }
     finishGame();
@@ -1168,6 +1179,40 @@ function frame(now) {
 
 installFlagSprite(document.documentElement);
 applySettings();
+
+// ------------------------------------------------------------ menú en partida
+
+/** ¿Sigue la partida para ti (no ha acabado y sigues en pie)? */
+function stillPlaying() {
+  return !state.demo && state.game && state.game.phase !== 'ended' && !!state.human?.alive;
+}
+
+/** Menú en partida: la partida no se pausa (en multijugador no se puede). */
+function openGameMenu() {
+  const a = profile.ajustes;
+  for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) input.checked = a[input.dataset.ajuste] !== false;
+  document.getElementById('mp-salir').textContent = stillPlaying() ? 'Abandonar' : 'Volver al menú';
+  document.getElementById('mp-nota').textContent = state.online ? 'La partida sigue para todos mientras tanto.' : 'La partida sigue mientras tanto.';
+  abrirDialogo(document.getElementById('menu-partida'), { foco: '#mp-continuar' });
+}
+for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) {
+  input.addEventListener('change', () => {
+    profile.ajustes[input.dataset.ajuste] = input.checked;
+    saveProfile(profile);
+    applySettings();
+    home.syncSettings();
+  });
+}
+document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
+document.getElementById('mp-salir').addEventListener('click', () => {
+  cerrarDialogo(document.getElementById('menu-partida'));
+  if (stillPlaying()) ui.confirmExit();
+  else {
+    finishGame();
+    tutorial.stop();
+    startDemo();
+  }
+});
 
 // Acceso desde la consola del navegador para depurar: __dominia.game, __dominia.human…
 window.__dominia = state;
