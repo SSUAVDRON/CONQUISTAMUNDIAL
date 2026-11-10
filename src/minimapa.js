@@ -18,17 +18,18 @@ export class Minimap {
     this.maxH = 170;
     this._lastTerritory = 0;
     let dragging = false;
-    const jump = (e) => {
+    // `first`: el primer toque vuela hasta allí; al arrastrar, la vista sigue al dedo
+    const jump = (e, first = false) => {
       if (!this.game) return;
       const r = canvas.getBoundingClientRect();
       const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
       const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-      this.onJump(fx * this.game.map.width, fy * this.game.map.height);
+      this.onJump(fx * this.game.map.width, fy * this.game.map.height, first);
     };
     canvas.addEventListener('pointerdown', (e) => {
       dragging = true;
       canvas.setPointerCapture(e.pointerId);
-      jump(e);
+      jump(e, true);
       e.preventDefault();
     });
     canvas.addEventListener('pointermove', (e) => {

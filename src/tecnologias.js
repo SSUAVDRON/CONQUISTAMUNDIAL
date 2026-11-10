@@ -8,8 +8,8 @@ export function emptyMods() {
   return {
     growth: 0, // crecimiento de la población
     cap: 0, // población máxima
-    gold: 0, // oro de los trabajadores
-    factoryBonus: 0, // bonus extra de las fábricas
+    gold: 0, // oro pasivo (base y trabajadores)
+    factoryBonus: 0, // oro extra de los trenes de tus fábricas
     trade: 0, // oro de trenes y mercantes
     attackSpeed: 0, // velocidad de avance de tus ataques
     attackCost: 0, // tropas que cuesta cada casilla al atacar
@@ -21,7 +21,7 @@ export function emptyMods() {
     missileCost: 0,
     reload: 0, // recarga de los silos
     fortRadius: 0,
-    militia: 0, // fracción de trabajadores que defiende
+    militia: 0, // la población civil defiende (ver Game.defenders)
     railRange: 0,
     cityCost: 0,
     factoryCost: 0,
@@ -35,7 +35,7 @@ export function emptyMods() {
  */
 export const TECHS = {
   agricultura: { branch: 'eco', tier: 1, name: 'Agricultura', desc: '+15 % de crecimiento de la población', mods: { growth: 0.15 } },
-  banca: { branch: 'eco', tier: 1, name: 'Banca', desc: '+20 % de oro de los trabajadores', mods: { gold: 0.2 } },
+  banca: { branch: 'eco', tier: 1, name: 'Banca', desc: '+20 % de oro pasivo', mods: { gold: 0.2 } },
   urbanismo: { branch: 'eco', tier: 2, name: 'Urbanismo', desc: '+20 % de población máxima', mods: { cap: 0.2 } },
   comercio: { branch: 'eco', tier: 2, name: 'Comercio', desc: '+40 % de oro de trenes y mercantes', mods: { trade: 0.4 } },
   movilizacion: { branch: 'mil', tier: 1, name: 'Movilización', desc: 'Tus ataques avanzan un 25 % más rápido', mods: { attackSpeed: 0.25 } },
@@ -45,7 +45,7 @@ export const TECHS = {
   fortificacion: { branch: 'def', tier: 1, name: 'Fortificación', desc: 'Conquistarte cuesta un 20 % más', mods: { defense: 0.2 } },
   ingenieria: { branch: 'def', tier: 1, name: 'Ingeniería', desc: 'Obras un 40 % más rápidas y fortalezas con un 30 % más de radio', mods: { buildSpeed: 0.4, fortRadius: 0.3 } },
   radar: { branch: 'def', tier: 2, name: 'Radar', desc: '+20 % de acierto de los antimisiles', mods: { samHit: 0.2 } },
-  milicia: { branch: 'def', tier: 2, name: 'Milicia', desc: 'Un 25 % de tus trabajadores también defiende', mods: { militia: 0.25 } },
+  milicia: { branch: 'def', tier: 2, name: 'Milicia', desc: 'Tu población civil defiende: +15 % de fuerza al defender (con trabajadores, un 25 % de ellos)', mods: { militia: 0.25 } },
 };
 export const TECH_IDS = Object.keys(TECHS);
 export const BRANCHES = { eco: 'Economía', mil: 'Ejército', def: 'Defensa' };
@@ -55,7 +55,7 @@ export const BRANCHES = { eco: 'Economía', mil: 'Ejército', def: 'Defensa' };
  * es gratis; cambiarla cuesta oro.
  */
 export const SPECS = {
-  industria: { name: 'Industria', desc: '+25 % de oro de los trabajadores y fábricas un 50 % más rentables, pero las fábricas cuestan un 25 % más', mods: { gold: 0.25, factoryBonus: 0.5, factoryCost: 0.25 } },
+  industria: { name: 'Industria', desc: '+25 % de oro pasivo y los trenes de tus fábricas un 50 % más rentables, pero las fábricas cuestan un 25 % más', mods: { gold: 0.25, factoryBonus: 0.5, factoryCost: 0.25 } },
   infra: { name: 'Infraestructura', desc: 'Trenes y mercantes un 60 % más rentables, raíles con un 30 % más de alcance y +1 barco', mods: { trade: 0.6, railRange: 0.3, boats: 1 } },
   urbano: { name: 'Desarrollo urbano', desc: '+15 % de población máxima, +10 % de crecimiento y ciudades un 20 % más baratas', mods: { cap: 0.15, growth: 0.1, cityCost: -0.2 } },
 };

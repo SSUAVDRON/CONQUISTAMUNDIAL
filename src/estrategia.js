@@ -11,7 +11,7 @@ export const POI_TYPES = {
     name: 'Capital',
     desc: 'Capital de una nación. Conquistarla da un gran botín y su dueño crece un 15 % menos hasta recuperarla. Cada capital que controles: +5 % de oro y de crecimiento',
   },
-  industria: { name: 'Núcleo industrial', desc: '+15 % de oro de los trabajadores para quien lo controle' },
+  industria: { name: 'Núcleo industrial', desc: '+15 % de oro pasivo para quien lo controle' },
   puerto: { name: 'Puerto clave', desc: '+1 barco de transporte y +25 % de oro de trenes y mercantes' },
   paso: { name: 'Paso de montaña', desc: 'Conquistar alrededor cuesta un 60 % más a quien ataque a su dueño' },
 };
@@ -30,13 +30,14 @@ export const POI = {
 
 /**
  * Coloca los puntos neutrales de un mapa: unos 1 por cada 75.000 casillas de
- * tierra (entre 8 y 36), separados entre sí, en masas de tierra grandes.
+ * tierra con RES 2 (la misma superficie con más resolución: × AREA / 4),
+ * entre 8 y 36, separados entre sí, en masas de tierra grandes.
  * Mezcla: ~45 % núcleos industriales, ~30 % puertos clave (en la costa) y
  * ~25 % pasos (en colinas o montañas que lindan con terreno más bajo).
  */
 export function placePoints(map, seed) {
   const rng = new Rng((seed ^ 0x9e3779b9) >>> 0);
-  const total = Math.max(8, Math.min(36, Math.round(map.landCount / 75000)));
+  const total = Math.max(8, Math.min(36, Math.round(map.landCount / ((75000 * AREA) / 4))));
   const minBody = 150 * AREA;
   const bigLand = (t) => map.landBodySizes[map.landBody[t]] >= minBody;
   const minDist = Math.max(12 * RES, Math.sqrt(map.landCount / total) * 0.55);

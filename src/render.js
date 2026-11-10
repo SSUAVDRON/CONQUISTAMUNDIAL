@@ -9,7 +9,7 @@ import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { paintTerrain } from './terreno.js';
 import { Fx, drawMissileSprite } from './fx.js';
-import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
+import { drawCargo, drawTransport, drawWarship } from './barcos.js';
 
 const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
 const LABEL_INTERVAL_MS = 500;
@@ -300,6 +300,37 @@ export class Renderer {
     this._paintTile(i);
     const w = this.game.map.width;
     this._markChunk(i % w, (i / w) | 0);
+  }
+
+  /**
+   * Sombra de las tierras donde no se puede empezar (islas pequeñas), a
+   * media resolución; se hace una vez y se suelta al acabar el despliegue.
+   */
+  _spawnMask() {
+    if (this._spawnMaskCanvas) return this._spawnMaskCanvas;
+    if (this._spawnMaskCanvas === false) return null;
+    const map = this.game.map;
+    const W = Math.ceil(map.width / 2);
+    const H = Math.ceil(map.height / 2);
+    const c = makeCanvas(W, H);
+    const g = c.getContext('2d');
+    const img = g.createImageData(W, H);
+    const px = new Uint32Array(img.data.buffer);
+    const shade = pack(10, 16, 30, 150);
+    const min = CONFIG.minSpawnBodySize;
+    let any = false;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const t = Math.min(map.height - 1, y * 2) * map.width + Math.min(map.width - 1, x * 2);
+        if (map.isLand(t) && map.landBodySizes[map.landBody[t]] < min) {
+          px[y * W + x] = shade;
+          any = true;
+        }
+      }
+    }
+    g.putImageData(img, 0, 0);
+    this._spawnMaskCanvas = any ? c : false;
+    return any ? c : null;
   }
 
   /**
@@ -808,6 +839,11 @@ export class Renderer {
       ctx.drawImage(img, x0 * S, y0 * S, w * S, h * S, x0, y0, w, h);
       const ts = this.ts;
       ctx.drawImage(this.territoryCanvas, x0 * ts, y0 * ts, w * ts, h * ts, x0, y0, w, h);
+      // Despliegue: las islas demasiado pequeñas para empezar, en sombra
+      if (game.phase === 'spawn' && game.human) {
+        const mask = this._spawnMask();
+        if (mask) ctx.drawImage(mask, 0, 0, mask.width, mask.height, 0, 0, mask.width * 2, mask.height * 2);
+      } else if (this._spawnMaskCanvas) this._spawnMaskCanvas = null;
     }
     this._drawFlashes(now);
 
@@ -919,7 +955,6 @@ export class Renderer {
         if ((b.kind === 'sam' || b.kind === 'silo') && b.level > 0) this._drawReload(sx, sy, size, b);
         if (b.level > 1) this._drawLevel(sx, sy, size, b.level);
       }
-      if (b.kind === 'port' && b.hp < CONFIG.portHp) this._hpBar(sx, sy - size * 0.75, size, b.hp / CONFIG.portHp);
     }
   }
 
@@ -1219,14 +1254,9 @@ export class Renderer {
       const color = rgbToCss(p.color);
       const mine = p === game.human;
       const moving = clamp((s.speed / RES) * 3, 0, 1);
-      if (m.kind === 'trade') {
-        const len = clamp(z * RES * 2.6, 6, 30);
-        drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
-        this._maybeWake(s, len, 5);
-      } else {
-        const len = clamp(z * RES * 1.8, 5, 18);
-        drawFishing(ctx, sx, sy, s.ang, len, color, mine, moving);
-      }
+      const len = clamp(z * RES * 2.6, 6, 30);
+      drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
+      this._maybeWake(s, len, 5);
     }
     for (const [id, st] of this._merch) if (st.gen !== gen) this._merch.delete(id);
   }

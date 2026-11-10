@@ -6,6 +6,10 @@ import { TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
+// Las heurísticas se ajustaron con RES 2: medidas en casillas de entonces
+const DOC_LEN = RES / 2;
+const DOC_AREA = DOC_LEN * DOC_LEN;
+
 const FRIENDLY = ['👍', '🤝', '❤️', '😂'];
 const HOSTILE = ['😠', '⚔️', '👎', '🔥'];
 
@@ -37,8 +41,17 @@ export class BotBrain {
     const max = p.maxTroops();
     const summary = g.neighborSummary(p);
     const { wild, coastal } = summary;
-    // Los aliados no cuentan como objetivos
-    const counts = new Map([...summary.counts].filter(([id]) => !p.allies.has(id)));
+    // Ni los aliados, ni quien tiene un pacto o la paz con ella, ni (durante
+    // la tregua) las otras naciones cuentan como objetivos: si no, elegía uno
+    // que no podía atacar y se quedaba sin atacar a nadie
+    const truce = g.inTruce() && !p.weak;
+    const counts = new Map(
+      [...summary.counts].filter(([id]) => {
+        if (p.allies.has(id) || g.pactBetween(p.id, id)) return false;
+        const t = g.players[id];
+        return !(truce && t && !t.weak);
+      }),
+    );
 
     // 0. Diplomacia y construcción (no gastan tropas propias de ataque)
     if (g.ticks >= this.nextDiplomacy) {
@@ -239,10 +252,11 @@ export class BotBrain {
       if (!ongoing && wars >= 1 + Math.round(this.aggression * 1.5)) continue;
       const defense = Math.max(1, t.troops - (pressed.get(id) || 0) * 0.5);
       const odds = spare / defense;
-      const density = t.troops / Math.max(1, t.tiles);
+      // Tropas por casilla de RES 2 (la misma superficie)
+      const density = t.troops / Math.max(1, t.tiles / DOC_AREA);
       // Mucha tropa por casilla = cada casilla cuesta más bajas (documento, 05.2)
       let score = Math.min(odds, 4) * 0.6 - Math.min(density / 600, 1) * 0.4;
-      score += Math.min(shared, 300) / 600;
+      score += Math.min(shared / DOC_LEN, 300) / 600;
       if (t.weak) score += 0.45; // colonias: presa fácil y con oro
       if (pressed.has(id)) score += 0.3;
       if (this.grudges.has(id)) score += 0.5;
@@ -422,10 +436,12 @@ export class BotBrain {
     if (p.allies.size >= CONFIG.maxAllies || !r.chance(0.2 + this.diplomacy * 0.6)) return;
     let best = null;
     let bestScore = -Infinity;
-    const candidates = new Set(counts.keys());
-    for (let i = 0; i < 4; i++) {
+    // Vecinos (sin colonias) y unas cuantas naciones al azar: las colonias
+    // no firman alianzas, así que proponérselas era perder el turno
+    const candidates = new Set([...counts.keys()].filter((id) => g.players[id] && !g.players[id].weak));
+    for (let i = 0; i < 6; i++) {
       const other = g.players[r.int(1, g.players.length - 1)];
-      if (other.alive) candidates.add(other.id);
+      if (other.alive && !other.weak) candidates.add(other.id);
     }
     const leaderNeighbors = leader ? g.neighborSummary(leader).counts : new Map();
     for (const id of candidates) {
@@ -508,7 +524,7 @@ export class BotBrain {
     const leader = g.leader();
     const share = leader ? leader.tiles / g.map.landCount : 0;
     let enemy = null;
-    if (leader && leader !== p && share > 0.25 && !p.allies.has(leader.id)) enemy = leader;
+    if (leader && leader !== p && share > 0.25 && !p.allies.has(leader.id) && !g.pactBetween(p.id, leader.id)) enemy = leader;
     if (!enemy) {
       let best = -Infinity;
       for (const id of counts.keys()) {
@@ -521,15 +537,24 @@ export class BotBrain {
       }
     }
     if (!enemy) return false;
+    // En la fase final, con oro de sobra: MIRV contra el líder que se escapa
+    // y bomba H contra un rival grande; si no, la bomba atómica
+    const kinds = [];
+    if (enemy === leader && share > 0.3 && p.gold >= g.buildCost(p, 'mirv') * 1.1) kinds.push('mirv');
+    if (enemy.tiles > p.tiles * 0.5 && p.gold >= g.buildCost(p, 'hbomb') * 1.2) kinds.push('hbomb');
+    kinds.push('missile');
     const priority = { sam: 0, city: 1, fort: 2, silo: 3, factory: 4, port: 5 };
     const targets = g.buildings
       .filter((b) => b.owner === enemy.id && b.kind in priority)
-      .sort((a, b) => priority[a.kind] - priority[b.kind]);
-    for (const b of targets) {
-      if (g.canBuild(p, 'missile', b.tile).ok) return g.build(p, 'missile', b.tile);
-    }
+      .sort((a, b) => priority[a.kind] - priority[b.kind])
+      .map((b) => b.tile);
     // Sin edificios a tiro: el centro de su territorio
-    if (enemy.spawnTile >= 0 && g.canBuild(p, 'missile', enemy.spawnTile).ok) return g.build(p, 'missile', enemy.spawnTile);
+    if (enemy.spawnTile >= 0) targets.push(enemy.spawnTile);
+    for (const kind of kinds) {
+      for (const tile of targets) {
+        if (g.canBuild(p, kind, tile).ok) return g.build(p, kind, tile);
+      }
+    }
     return false;
   }
 
@@ -560,8 +585,18 @@ export class BotBrain {
     const coast = map.coastTiles;
     const p = this.player;
     if (!coast.length) return -1;
-    const ox = map.x(p.spawnTile);
-    const oy = map.y(p.spawnTile);
+    // Desde dónde zarpa: unas cuantas casillas de su costa actual (no desde
+    // donde empezó, que en un imperio grande queda tierra adentro)
+    const from = [];
+    const stride = Math.max(1, Math.floor(p.border.size / 400));
+    let k = 0;
+    for (const t of p.border) {
+      if (k++ % stride || !map.coastal[t]) continue;
+      from.push(t);
+      if (from.length >= 12) break;
+    }
+    if (!from.length && p.spawnTile >= 0) from.push(p.spawnTile);
+    if (!from.length) return -1;
     let best = -1;
     let bestScore = Infinity;
     const reach = (far ? 900 : 110) * RES;
@@ -571,11 +606,15 @@ export class BotBrain {
       if (o === p.id || p.allies.has(o)) continue;
       const strength = o === 0 ? 0 : g.players[o].troops / Math.max(1, p.troops);
       if (strength > 0.6) continue;
-      const dx = map.x(t) - ox;
-      const dy = map.y(t) - oy;
+      let d2 = Infinity;
+      for (const f of from) {
+        const dx = map.x(t) - map.x(f);
+        const dy = map.y(t) - map.y(f);
+        d2 = Math.min(d2, dx * dx + dy * dy);
+      }
       // Solo costas al alcance de un desembarco (las lejanas casi nunca tienen ruta)
-      if (dx * dx + dy * dy > reach * reach) continue;
-      const dist = Math.sqrt(dx * dx + dy * dy) / map.width;
+      if (d2 > reach * reach) continue;
+      const dist = Math.sqrt(d2) / map.width;
       const score = strength + dist;
       if (score < bestScore) {
         bestScore = score;

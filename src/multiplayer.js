@@ -10,7 +10,7 @@ import { BUILDINGS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from './config.js';
 import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
 
-export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash'];
+export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash', 'cargado'];
 
 /**
  * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios): si
@@ -63,6 +63,29 @@ const MAX_MSG_BYTES = 3500; // por debajo del límite de 4 KiB
 const HASH_EVERY = 100; // ticks entre comprobaciones de sincronía
 const RESEND_AFTER_MS = 700;
 const INTENT_RETRY_MS = 1500;
+const LOAD_WAIT_MS = 20000; // el anfitrión espera como mucho esto a que carguen todos
+
+/**
+ * Reloj de 100 ms para el anfitrión. En una pestaña en segundo plano el
+ * navegador frena los temporizadores (hasta uno por minuto); los de un
+ * Worker siguen a su ritmo, así la partida no se ralentiza para los demás.
+ * Si no se puede crear el Worker, un setInterval normal.
+ */
+function startTicker(fn) {
+  try {
+    const src = 'setInterval(function () { postMessage(0); }, 100);';
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    const w = new Worker(url);
+    w.onmessage = fn;
+    return () => {
+      w.terminate();
+      URL.revokeObjectURL(url);
+    };
+  } catch {
+    const id = setInterval(fn, 100);
+    return () => clearInterval(id);
+  }
+}
 const START_REPEAT_MS = 1500;
 const START_REPEAT_FOR_MS = 12000;
 const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -529,7 +552,7 @@ export class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'moveWarship', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
 const SAFE_ID = /^[a-z]{2,16}$/;
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
@@ -544,7 +567,6 @@ function cleanIntent(raw) {
   if (typeof raw.share === 'number' && raw.share >= 0 && raw.share <= 1) out.share = raw.share;
   if (typeof raw.tech === 'string' && SAFE_ID.test(raw.tech)) out.tech = raw.tech;
   if (typeof raw.spec === 'string' && SAFE_ID.test(raw.spec)) out.spec = raw.spec;
-  if (typeof raw.mode === 'string' && SAFE_ID.test(raw.mode)) out.mode = raw.mode;
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
@@ -577,7 +599,7 @@ export class NetSync {
    * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
    * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null }) {
     this.room = room;
     this.game = game;
     this.isHost = isHost;
@@ -591,6 +613,7 @@ export class NetSync {
     this.desynced = false;
     this.hostGone = false;
     this.onHostLeft = null;
+    this.myPeer = myPeer;
 
     if (isHost) {
       this.queue = []; // acciones para el próximo tick
@@ -604,15 +627,37 @@ export class NetSync {
       this.unsubs.push(room.on('intent', (m) => this._onIntent(m)));
       this.unsubs.push(room.on('resend', (m) => this._onResend(m)));
       this.unsubs.push(room.on('hash', (m) => this._onHash(m)));
+      // Antes del primer turno, espera a que todos hayan cargado el mapa (si
+      // no, quien carga despacio pierde parte del despliegue)
+      this.waiting = new Set([...peerToPlayer.keys()].filter((peer) => peer !== hostPeer && peer !== myPeer));
+      this.waitStart = performance.now();
+      this.unsubs.push(room.on('cargado', (m) => this.waiting.delete(m.peer)));
+      this.unsubs.push(room.onPeers((c) => {
+        for (const p of c.left) this.waiting.delete(p.peer);
+      }));
       // Si la pestaña pasa a segundo plano, requestAnimationFrame se para: este
-      // temporizador mantiene la partida en marcha para los demás.
-      this._timer = setInterval(() => this.update(), 100);
+      // reloj mantiene la partida en marcha para los demás.
+      this._stopTicker = startTicker(() => this.update());
     } else {
       this.turns = new Map();
       this.outbox = new Map(); // uid → { intent, sentAt }
       this.lastAdvance = performance.now();
       this.lastResendAsk = -Infinity;
       this.unsubs.push(room.on('turn', (m) => this._onTurn(m)));
+      // Hashes del anfitrión, para que el invitado sepa si se ha desincronizado
+      this.myHashes = new Map();
+      this.hostHashes = new Map();
+      this.unsubs.push(room.on('hash', (m) => this._onHostHash(m)));
+      // Avisa de que ya ha cargado (y repite hasta que llegue el primer turno)
+      const announce = () => {
+        if (this.game.ticks > 0 || this.turns.size || this.hostGone) {
+          clearInterval(this._loadTimer);
+          return;
+        }
+        room.emit('cargado', {}).catch(() => {});
+      };
+      this._loadTimer = setInterval(announce, 1000);
+      announce();
       this.unsubs.push(
         room.onPeers((c) => {
           if (c.left.some((p) => p.peer === this.hostPeer)) {
@@ -669,7 +714,7 @@ export class NetSync {
 
   _onHash(m) {
     const d = m.data;
-    if (!d || !Number.isInteger(d.t)) return;
+    if (m.isMe || !d || d.host || !Number.isInteger(d.t)) return;
     const mine = this.hashes.get(d.t);
     if (mine !== undefined && mine !== d.h) {
       this.status = 'Aviso: un jugador se ha desincronizado';
@@ -684,8 +729,11 @@ export class NetSync {
     this.history.set(t, intents);
     if (this.history.size > 3000) this.history.delete(t - 3000);
     if (t % HASH_EVERY === 0) {
-      this.hashes.set(t, stateHash(this.game));
+      const h = stateHash(this.game);
+      this.hashes.set(t, h);
       if (this.hashes.size > 60) this.hashes.delete(t - HASH_EVERY * 60);
+      // También a los invitados: cada uno comprueba si sigue sincronizado
+      this.room.emit('hash', { t, h, host: true }).catch(() => {});
     }
     const entry = [t, intents];
     const size = JSON.stringify(this.batch).length + JSON.stringify(entry).length;
@@ -696,7 +744,9 @@ export class NetSync {
 
   _flush() {
     if (!this.batch.length) return;
-    this.room.emit('turn', { turns: this.batch }).catch(() => {});
+    // bg: la pestaña del anfitrión está en segundo plano (los invitados lo avisan)
+    const bg = typeof document !== 'undefined' && document.hidden ? 1 : 0;
+    this.room.emit('turn', bg ? { turns: this.batch, bg } : { turns: this.batch }).catch(() => {});
     this.batch = [];
   }
 
@@ -704,6 +754,7 @@ export class NetSync {
 
   _onTurn(m) {
     if (m.peer !== this.hostPeer || !m.data || !Array.isArray(m.data.turns)) return;
+    this.hostBackground = !!m.data.bg;
     for (const entry of m.data.turns) {
       if (!Array.isArray(entry) || !Number.isInteger(entry[0]) || !Array.isArray(entry[1])) continue;
       if (entry[0] > this.game.ticks) this.turns.set(entry[0], entry[1]);
@@ -718,7 +769,29 @@ export class NetSync {
     }
     this.game.tick();
     const t = this.game.ticks;
-    if (t % HASH_EVERY === 0) this.room.emit('hash', { t, h: stateHash(this.game) }).catch(() => {});
+    if (t % HASH_EVERY === 0) {
+      const h = stateHash(this.game);
+      this.room.emit('hash', { t, h }).catch(() => {});
+      this.myHashes.set(t, h);
+      if (this.myHashes.size > 60) this.myHashes.delete(t - HASH_EVERY * 60);
+      this._compareHash(t);
+    }
+  }
+
+  /** Hash del anfitrión para el tick `t`: se compara con el propio en cuanto estén los dos. */
+  _onHostHash(m) {
+    const d = m.data;
+    if (m.peer !== this.hostPeer || !d || !d.host || !Number.isInteger(d.t)) return;
+    this.hostHashes.set(d.t, d.h);
+    if (this.hostHashes.size > 60) this.hostHashes.delete(d.t - HASH_EVERY * 60);
+    this._compareHash(d.t);
+  }
+
+  _compareHash(t) {
+    const mine = this.myHashes.get(t);
+    const host = this.hostHashes.get(t);
+    if (mine === undefined || host === undefined || this.desynced) return;
+    if (mine !== host) this.desynced = true;
   }
 
   // ---- bucle
@@ -728,6 +801,16 @@ export class NetSync {
     if (this.game.phase === 'ended' || this.hostGone) return;
     const now = performance.now();
     if (this.isHost) {
+      if (this.waiting.size && now - this.waitStart < LOAD_WAIT_MS) {
+        this.last = now;
+        this.status = 'Esperando a que todos carguen el mapa…';
+        return;
+      }
+      if (this.waitStart !== null) {
+        this.waitStart = null;
+        this.waiting.clear();
+        this.status = '';
+      }
       this.acc += Math.min(1000, now - this.last);
       this.last = now;
       let steps = 0;
@@ -748,7 +831,11 @@ export class NetSync {
     }
     if (steps) {
       this.lastAdvance = now;
-      this.status = '';
+      this.status = this.desynced
+        ? 'Te has desincronizado del anfitrión: lo que ves puede no coincidir con los demás'
+        : this.hostBackground
+          ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
+          : '';
     } else if (now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
       this.lastResendAsk = now;
       this.room.emit('resend', { from: this.game.ticks + 1 }).catch(() => {});
@@ -763,7 +850,8 @@ export class NetSync {
   }
 
   stop() {
-    clearInterval(this._timer);
+    this._stopTicker?.();
+    clearInterval(this._loadTimer);
     for (const u of this.unsubs) u();
     this.unsubs = [];
   }

@@ -360,7 +360,8 @@ export class UI {
   setNetNote(text) {
     const box = $('aviso');
     if (text) {
-      box.textContent = text;
+      $('aviso-texto').textContent = text;
+      $('aviso-auto').hidden = true;
       box.hidden = false;
       box.dataset.red = '1';
     } else if (box.dataset.red) {
@@ -804,31 +805,39 @@ export class UI {
 
     // Aviso central: despliegue o construcción en curso
     const aviso = $('aviso');
+    const avisoTxt = $('aviso-texto');
+    const auto = $('aviso-auto');
+    const setAviso = (text) => {
+      if (avisoTxt.textContent !== text) avisoTxt.textContent = text;
+    };
+    // «Elegir por mí»: solo en el despliegue
+    const showAuto = !aviso.dataset.red && game.phase === 'spawn' && human.alive;
+    if (auto.hidden === showAuto) auto.hidden = !showAuto;
     if (aviso.dataset.red) {
       // el estado de la red tiene prioridad
     } else if (game.phase === 'spawn') {
       const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000));
-      aviso.textContent = human.spawned
+      setAviso(human.spawned
         ? `Posición elegida. Puedes cambiarla. Empieza en ${left} s`
-        : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`;
+        : `Haz clic en el mapa para elegir dónde empezar. Quedan ${left} s`);
       aviso.hidden = false;
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));
       if (def.unit === 'missile') {
-        aviso.textContent = `Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`;
+        setAviso(`Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`);
       } else if (def.unit === 'ship') {
-        aviso.textContent = `Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`;
+        setAviso(`Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`);
       } else {
         const where = def.coastal ? 'en tu costa' : 'en tu territorio';
         const up = ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
-        aviso.textContent = `Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`;
+        setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`);
       }
       aviso.hidden = false;
     } else if (game.inTruce?.()) {
       // Regla de tregua: recordatorio con la cuenta atrás
       const left = Math.ceil(((game.truceUntil() - game.ticks) * TICK_MS) / 1000);
-      aviso.textContent = `Tregua: nadie puede atacar a otras naciones durante ${formatTime(left)}. Expándete y conquista colonias`;
+      setAviso(`Tregua: nadie puede atacar a otras naciones durante ${formatTime(left)}. Expándete y conquista colonias`);
       aviso.hidden = false;
     } else {
       aviso.hidden = true;
@@ -995,7 +1004,7 @@ export class UI {
     const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
     out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
     out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
-    out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} a 100 casillas, ~${formatNumber(tradeGold(300))} a 300)`;
+    out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} en una ruta corta, ~${formatNumber(tradeGold(300))} en una larga)`;
     return out;
   }
 
@@ -1420,10 +1429,13 @@ export class UI {
         text = `${name} ${formatNumber(st.value)} puntos`;
         near = false;
       }
-      const hold = game.goalHolder && game.goalHolder.id === leader.id ? game.goalHolder : null;
+      // Quien más cerca está de ganar por aguantar el objetivo (puede no ser el líder)
+      const hold = game.goalHolder;
       if (hold && st && (st.mode === 'capitales' || st.mode === 'economia')) {
         const need = st.mode === 'capitales' ? CONFIG.capitalHoldTicks : CONFIG.economyHoldTicks;
-        text += ` · gana en ${Math.max(0, Math.ceil((hold.since + need - game.ticks) / 10))} s`;
+        const holder = game.players[hold.id];
+        const who = holder && holder.id !== leader.id ? `${holder === human ? 'tú' : holder.name} ` : '';
+        text += ` · ${who}gana en ${Math.max(0, Math.ceil((hold.since + need - game.ticks) / 10))} s`;
         near = true;
       }
       $('dato-lider').textContent = text;

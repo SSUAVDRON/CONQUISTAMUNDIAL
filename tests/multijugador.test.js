@@ -70,7 +70,7 @@ test('lockstep: con un 30 % de mensajes perdidos ambas partidas terminan idénti
   const peerToPlayer = new Map([['h', 1], ['g', 2]]);
   const host = new NetSync(hostCh, hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer });
   const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 2, peerToPlayer });
-  clearInterval(host._timer); // en el test avanzamos a mano
+  host._stopTicker(); // en el test avanzamos a mano
 
   host.localIntent({ type: 'action', tile: freeTile(hostGame, 0.2), ratio: 0.2 });
   guest.localIntent({ type: 'action', tile: freeTile(guestGame, 0.8), ratio: 0.2 });
@@ -119,7 +119,7 @@ test('el anfitrión ignora acciones que dicen ser de otro jugador', () => {
   const intruder = net.channel('x'); // no está en la partida
   const game = makeGame(9);
   const host = new NetSync(hostCh, game, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer: new Map([['h', 1], ['g', 2]]) });
-  clearInterval(host._timer);
+  host._stopTicker();
   intruder.emit('intent', { u: 'x.1', i: { type: 'action', tile: freeTile(game, 0.5), ratio: 1, playerId: 2 } });
   intruder.emit('intent', { u: 'x.2', i: { type: 'borrarTodo' } });
   assert.equal(host.queue.length, 0);
@@ -144,7 +144,7 @@ test('cooperativo: dos jugadores comparten nación y las acciones de ambos llega
   const peerToPlayer = new Map([['h', 1], ['g', 1]]);
   const host = new NetSync(hostCh, hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, mySlot: 0 });
   const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 1, peerToPlayer, mySlot: 1 });
-  clearInterval(host._timer);
+  host._stopTicker();
   // Las dos primeras acciones de cada uno tendrían la misma clave sin el puesto
   host.localIntent({ type: 'share', share: 0.4 });
   guest.localIntent({ type: 'action', tile: freeTile(guestGame, 0.5), ratio: 0.2 });
@@ -164,6 +164,52 @@ test('cooperativo: dos jugadores comparten nación y las acciones de ambos llega
   const marks = hostGame.effects.filter((e) => e.kind === 'order');
   assert.ok(marks.some((e) => e.by === 1), 'la marca de la orden del invitado');
   assert.equal(stateHash(guestGame), stateHash(hostGame));
+  host.stop();
+  guest.stop();
+});
+
+test('el anfitrión espera a que todos carguen antes del primer turno', () => {
+  const net = fakeNetwork(0);
+  const hostCh = net.channel('h');
+  const guestCh = net.channel('g');
+  const hostGame = makeGame(5);
+  const guestGame = makeGame(5);
+  const peerToPlayer = new Map([['h', 1], ['g', 2]]);
+  const host = new NetSync(hostCh, hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, myPeer: 'h' });
+  host._stopTicker();
+  host.last = performance.now() - 1000;
+  host.update();
+  assert.equal(hostGame.ticks, 0, 'sin el invitado cargado, no avanza');
+  assert.match(host.status, /carguen/);
+  // El invitado termina de cargar: lo anuncia al crear su NetSync
+  const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 2, peerToPlayer, myPeer: 'g' });
+  host.last = performance.now() - 1000;
+  host.update();
+  assert.ok(hostGame.ticks > 0, 'con todos cargados, la partida empieza');
+  assert.equal(host.status, '');
+  host.stop();
+  guest.stop();
+});
+
+test('el invitado se entera si se desincroniza', () => {
+  const net = fakeNetwork(0);
+  const hostCh = net.channel('h');
+  const guestCh = net.channel('g');
+  const hostGame = makeGame(6);
+  const guestGame = makeGame(6);
+  const peerToPlayer = new Map([['h', 1], ['g', 2]]);
+  const host = new NetSync(hostCh, hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, myPeer: 'h' });
+  const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 2, peerToPlayer, myPeer: 'g' });
+  host._stopTicker();
+  for (let i = 0; i < 120; i++) {
+    host._hostStep();
+    if (i === 50) guestGame.players[3].troops += 12345; // algo distinto solo en el invitado
+    host._flush();
+    guest.update();
+  }
+  assert.equal(guestGame.ticks, hostGame.ticks);
+  assert.ok(guest.desynced, 'el invitado detecta que su estado no coincide con el del anfitrión');
+  assert.match(guest.status, /desincronizado/);
   host.stop();
   guest.stop();
 });

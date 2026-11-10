@@ -63,7 +63,8 @@ test('los mercantes viajan a otro puerto y pagan a los dos dueños', () => {
     const trade = trades.find((m) => m.done);
     if (trade) {
       // Los dos cobran floor((75 000 / (1 + e^(−0,03 (d − 300))) + 50 d) × mult), d = casillas de agua recorridas
-      const v = tradeGold(trade.value);
+      // d en casillas del documento (mundo de 2000×1000, RES 2)
+      const v = tradeGold(trade.value / (RES / 2));
       assert.ok(v > 0);
       assert.ok(a.gold - before[0] >= v - 1e-6, 'el dueño cobra el viaje');
       assert.ok(b.gold - before[1] >= v - 1e-6, 'el puerto de destino cobra lo mismo');

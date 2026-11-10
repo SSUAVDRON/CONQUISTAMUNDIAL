@@ -500,6 +500,10 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         <span id="dato-lider">—</span>
       </span>
+      <!-- Solo al mirar la partida después de perder (sin conexión): ir más deprisa -->
+      <span id="velocidad" class="velocidad" role="group" aria-label="Velocidad al mirar" hidden>
+        <button type="button" data-v="1" class="activo">×1</button><button type="button" data-v="2">×2</button><button type="button" data-v="4">×4</button>
+      </span>
       <button type="button" id="btn-sonido" class="btn-sonido" title="Silenciar o activar el sonido (tecla N)" aria-pressed="false">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3H2.5z" fill="currentColor"/><path class="ondas" d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="tachado" d="M10.5 5.5l4 5M14.5 5.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -520,7 +524,7 @@
       <span class="puntero-txt">TÚ</span>
     </button>
 
-    <div id="aviso" hidden></div>
+    <div id="aviso" hidden><span id="aviso-texto"></span><button type="button" id="aviso-auto" class="aviso-auto" hidden>🎲 Elegir por mí</button></div>
     <!-- Respuesta breve a tus acciones (no es un aviso importante) -->
     <div id="pista" class="pista" hidden role="status"></div>
     <section id="avisos" class="plegable vacio" data-plegable="avisos">

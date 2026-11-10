@@ -209,37 +209,6 @@ export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving =
   ctx.restore();
 }
 
-/** Pesquero: casco de madera, cabina del color del dueño y aparejos. */
-export function drawFishing(ctx, x, y, ang, len, color, mine, moving = 1) {
-  if (len < 7) return tiny(ctx, x, y, ang, Math.max(4, len), color, mine);
-  const w = len * 0.42;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(ang);
-  wakeLines(ctx, len, w, moving * 0.7);
-  shadow(ctx, len, w);
-  hullPath(ctx, len, w, 0.36, 0.8);
-  ctx.fillStyle = '#93623a';
-  ctx.fill();
-  ctx.lineWidth = Math.max(1, len * 0.06);
-  ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
-  ctx.stroke();
-  ctx.fillStyle = '#c49a6c';
-  ctx.fillRect(-len * 0.3, -w * 0.28, len * 0.55, w * 0.56);
-  ctx.fillStyle = color;
-  ctx.fillRect(-len * 0.42, -w * 0.3, len * 0.2, w * 0.6);
-  // Mástil con la red
-  ctx.strokeStyle = 'rgba(30, 24, 18, 0.8)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(len * 0.12, 0);
-  ctx.lineTo(-len * 0.75, -w * 0.9);
-  ctx.moveTo(len * 0.12, 0);
-  ctx.lineTo(-len * 0.75, w * 0.9);
-  ctx.stroke();
-  ctx.restore();
-}
-
 const CONTAINERS = ['#d9a441', '#4f8fd6', '#c95a4a', '#5fae6b'];
 
 /** Mercante: casco oscuro con contenedores y puente blanco a popa. */

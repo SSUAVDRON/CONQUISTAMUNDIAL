@@ -9,8 +9,12 @@
 // resultados distintos según el navegador, y el multijugador necesita que
 // todos los equipos calculen exactamente lo mismo).
 
-/** Versión de las reglas (para saber qué fórmulas usa una partida). */
-export const MECH_VERSION = 'doc-1.0';
+/**
+ * Versión de las reglas (para saber qué fórmulas usa una partida). doc-1.1:
+ * correcciones de la revisión (Industria, Milicia, victorias, pactos, cercos,
+ * comercio por superficie). En multijugador, versiones distintas no juegan juntas.
+ */
+export const MECH_VERSION = 'doc-1.1';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El

@@ -220,7 +220,10 @@ function startDemo({ background = false } = {}) {
 }
 
 // Minimapa abajo a la izquierda (oculto en el menú y en la partida de fondo)
-const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy) => camera.centerOn(wx, wy));
+const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy, first) => {
+  if (first) camera.flyTo(wx, wy, camera.zoom, 380);
+  else camera.centerOn(wx, wy);
+});
 const minimapBox = document.getElementById('minimapa');
 // Su altura, para que la clasificación (arriba a la izquierda) no la pise
 if (typeof ResizeObserver !== 'undefined') {
@@ -509,7 +512,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   const groups = coopGroups(payload.players.length, game.rules.coop);
   const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index });
+  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer });
   state.net.onHostLeft = () => {
     if (game.phase === 'ended') return;
     const progress = finishGame();
@@ -579,6 +582,24 @@ function finishGame() {
   return { ...out, level: levelInfo(profile.xp).level };
 }
 
+/** Cómo ha ganado `who` (tú si `mine`), según el motivo con el que acabó la partida. */
+function winText(game, mine, who, land) {
+  switch (game.winReason) {
+    case 'capitales':
+      return mine ? 'Has controlado las capitales del mundo el tiempo necesario' : `${who.name} controla las capitales del mundo`;
+    case 'economia':
+      return mine ? 'Has mantenido la supremacía económica' : `${who.name} logra la supremacía económica`;
+    case 'supervivencia':
+      return mine ? 'Has sobrevivido con la mejor puntuación' : `${who.name} sobrevive con la mejor puntuación`;
+    case 'tiempo':
+      return mine ? 'Se acabó el tiempo y vas en cabeza' : `Se acabó el tiempo y ${who.name} va en cabeza`;
+    case 'ultimo':
+      return mine ? 'Eres la última nación en pie' : `${who.name} es la última nación en pie`;
+    default:
+      return mine ? `Has conquistado el ${formatPercent(who.tiles / land)} del mundo` : `${who.name} domina el mundo`;
+  }
+}
+
 function checkEnd() {
   const { game, human } = state;
   if (state.demo || !human) return;
@@ -591,11 +612,11 @@ function checkEnd() {
       const others = game.winningAlliance.filter((p) => p !== human).map((p) => p.name).join(', ');
       ui.showEnd('¡Victoria en alianza!', `Solo quedáis tú y tus aliados (${others}) en ${formatTime(seconds)}.\nTu territorio: ${formatPercent(human.tiles / land)}.`, progress);
     } else if (game.winner === human) {
-      ui.showEnd('¡Victoria!', `Has conquistado el ${formatPercent(human.tiles / land)} del mundo en ${formatTime(seconds)}.`, progress);
+      ui.showEnd('¡Victoria!', `${winText(game, true, human, land)} en ${formatTime(seconds)}.`, progress);
     } else if (game.winningAlliance) {
       ui.showEnd('Fin de la partida', `La alianza de ${game.winningAlliance.map((p) => p.name).join(', ')} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
     } else {
-      ui.showEnd('Fin de la partida', `${game.winner.name} domina el mundo.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
+      ui.showEnd('Fin de la partida', `${winText(game, false, game.winner, land)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress);
     }
   } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
     state.defeatShown = true;
@@ -818,10 +839,76 @@ function updatePointer(now) {
   const k = Math.min((W / 2 - side) / Math.max(1e-6, Math.abs(dx)), ((bottom - top) / 2) / Math.max(1e-6, Math.abs(dy)));
   pointerBtn.hidden = false;
   pointerBtn.style.transform = `translate(${Math.round(cx + dx * k - 26)}px, ${Math.round(cy + dy * k - 26)}px)`;
-  pointerArrow.style.transform = `rotate(${Math.atan2(dy, dx) + Math.PI / 2}rad)`;
+  // Ángulo acumulado: gira siempre por el camino corto (con atan2 a secas,
+  // al cruzar ±180° la transición daba la vuelta entera)
+  const target = Math.atan2(dy, dx) + Math.PI / 2;
+  if (arrowAngle === null) arrowAngle = target;
+  else {
+    const TAU = Math.PI * 2;
+    arrowAngle += ((((target - arrowAngle) % TAU) + TAU + Math.PI) % TAU) - Math.PI;
+  }
+  pointerArrow.style.transform = `rotate(${arrowAngle.toFixed(4)}rad)`;
 }
+let arrowAngle = null;
 
 pointerBtn.addEventListener('click', centerOnHuman);
+
+// Velocidad al mirar: solo cuando ya no juegas (has perdido) y sin conexión;
+// mientras juegas, la partida va siempre a su ritmo
+const speedBox = document.getElementById('velocidad');
+speedBox.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b) return;
+  state.speed = Number(b.dataset.v);
+  for (const x of speedBox.querySelectorAll('button')) x.classList.toggle('activo', x === b);
+});
+function updateSpeedBox() {
+  const { game, human } = state;
+  const show = !!(game && human && !state.demo && !state.net && !human.alive && game.phase !== 'ended');
+  if (speedBox.hidden === show) speedBox.hidden = !show;
+  if (!show && state.speed !== 1 && !state.demo) {
+    state.speed = 1;
+    for (const x of speedBox.querySelectorAll('button')) x.classList.toggle('activo', x.dataset.v === '1');
+  }
+}
+
+/**
+ * «Elegir por mí» en el despliegue: un sitio válido lo más lejos posible de
+ * las demás naciones. Se busca con el azar del navegador, no con el de la
+ * simulación (en multijugador, todos tienen que tirar los mismos dados).
+ */
+function suggestSpawn(game, human) {
+  const map = game.map;
+  const others = [];
+  for (const p of game.players) if (p && p !== human && p.spawned && p.spawnTile >= 0) others.push(p.spawnTile);
+  let best = -1;
+  let bestD = -1;
+  for (let k = 0; k < 600; k++) {
+    const t = map.landTiles[Math.floor(Math.random() * map.landTiles.length)];
+    if (!game.spawnCheck(human, t).ok) continue;
+    let d = Infinity;
+    const x = map.x(t);
+    const y = map.y(t);
+    for (const s of others) d = Math.min(d, (map.x(s) - x) ** 2 + (map.y(s) - y) ** 2);
+    if (d > bestD) {
+      bestD = d;
+      best = t;
+    }
+  }
+  return best;
+}
+
+document.getElementById('aviso-auto').addEventListener('click', () => {
+  const { game, human } = state;
+  if (state.demo || !game || !human || game.phase !== 'spawn') return;
+  const t = suggestSpawn(game, human);
+  if (t < 0) {
+    ui.hint('No encuentro un buen sitio: elige tú en el mapa', 'warn');
+    return;
+  }
+  humanIntent({ type: 'action', tile: t, ratio: state.ratio });
+  camera.flyTo(game.map.x(t) + 0.5, game.map.y(t) + 0.5, Math.max(camera.zoom, 3.5 / RES));
+});
 document.getElementById('btn-mi-nacion').addEventListener('click', centerOnHuman);
 
 function openNation(id) {
@@ -841,7 +928,7 @@ function coopGroups(n, coop) {
 
 /** Con roles en el cooperativo: qué decide cada uno (para evitar compras o ataques por accidente). */
 const ROLE_TYPES = {
-  militar: new Set(['action', 'cancelAttack', 'moveWarship']),
+  militar: new Set(['action', 'cancelAttack']),
   economia: new Set(['share', 'research', 'spec', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']),
 };
 const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'hbomb', 'mirv', 'silo', 'sam']);
@@ -890,7 +977,9 @@ const input = new Input(canvas, camera, {
       if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
       return;
     }
-    if (!state.game.map.isLand(tile)) return; // los buques no se mueven: su zona se elige al botarlos
+    // Los buques no se mueven (su zona se elige al botarlos); en el despliegue
+    // el clic en el agua sí llega, para explicar por qué no se puede empezar ahí
+    if (!state.game.map.isLand(tile) && state.game.phase !== 'spawn') return;
     humanIntent({ type: 'action', tile, ratio: state.ratio });
     // Información útil: lo que se espera de este ataque (aproximado)
     const g = state.game;
@@ -956,7 +1045,7 @@ ui.on({
   onBuildMode: setBuildMode,
   onFocusPlayer(id) {
     const label = state.renderer?.labels.find((l) => l.player.id === id);
-    if (label) camera.centerOn(label.x, label.y);
+    if (label) camera.flyTo(label.x, label.y, Math.max(camera.zoom, 3.5 / RES));
     if (state.human && id !== state.human.id) openNation(id);
   },
   onProposeAlliance(id) {
@@ -977,6 +1066,7 @@ function frame(now) {
   const dt = Math.min(250, now - state.last);
   state.last = now;
   const game = state.game;
+  updateSpeedBox();
   adaptQuality(now - (state.lastRaw || now));
   state.lastRaw = now;
 

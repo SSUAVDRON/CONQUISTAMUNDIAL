@@ -167,7 +167,26 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
   pointer-events: none;
   text-align: center;
   max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
+#aviso[hidden] { display: none; }
+.aviso-auto {
+  pointer-events: auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 20, 5, 0.35);
+  background: rgba(27, 20, 5, 0.12);
+  color: var(--acento-texto);
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.aviso-auto:hover { background: rgba(27, 20, 5, 0.22); transform: translateY(-1px); }
+.aviso-auto:active { transform: translateY(1px); }
 
 #eventos {
   position: fixed;

@@ -32,6 +32,17 @@ const SEARCH = {
 const NB_BFS = new Int32Array(4);
 const NB_MISC = new Int32Array(4);
 
+/**
+ * Las cifras del documento en casillas se pensaron para el mundo de 2000×1000
+ * (RES 2). Con más resolución, una misma superficie tiene más casillas:
+ * DOC_AREA casillas actuales por cada casilla del documento, y DOC_LEN en
+ * distancias.
+ */
+const DOC_LEN = RES / 2;
+const DOC_AREA = DOC_LEN * DOC_LEN;
+const ANNEX_MAX_TILES = Math.round(MECH.annexMaxTiles * DOC_AREA);
+const ANNEX_VISITS_PER_TICK = Math.round(MECH.annexVisitsPerTick * DOC_AREA);
+
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export class Game {
@@ -51,7 +62,7 @@ export class Game {
     this._nextWarshipId = 1;
     this.missiles = []; // { id, owner, from, to, dist, progress, targetId }
     this._nextMissileId = 1;
-    /** Barcos automáticos de los puertos: { id, owner, kind: 'fish'|'trade', port, dest, tile, path, pos, progress, value } */
+    /** Mercantes de los puertos: { id, owner, kind: 'trade', port, dest, tile, path, pos, progress, value (casillas de agua del viaje) } */
     this.merchants = [];
     this._nextMerchantId = 1;
     /** Efectos visuales recientes: explosiones e intercepciones (no afectan a la simulación). */
@@ -80,6 +91,11 @@ export class Game {
     this.ticks = 0;
     this.phase = 'spawn'; // 'spawn' | 'playing' | 'ended'
     this.winner = null;
+    // Por qué acabó: 'dominio', 'ultimo', 'alianza', 'capitales', 'economia', 'supervivencia' o 'tiempo'
+    this.winReason = null;
+    // Victorias de capitales y economía: quién cumple el objetivo y desde qué turno
+    this.goalHolders = new Map();
+    this._goalAnnounced = new Map();
     this.intents = [];
 
     // El renderizador activa esto para saber qué píxeles repintar
@@ -245,12 +261,21 @@ export class Game {
   }
 
   /** Coloca (o recoloca, durante el despliegue) a un jugador en `tile`. */
+  /** ¿Puede `p` empezar en `tile`? Devuelve el motivo si no (para explicárselo). */
+  spawnCheck(p, tile, minBody = CONFIG.minSpawnBodySize) {
+    const map = this.map;
+    if (this.phase !== 'spawn' || !p.alive) return { ok: false, reason: 'El despliegue ya ha terminado' };
+    if (tile < 0 || tile >= map.size) return { ok: false, reason: 'Fuera del mapa' };
+    if (!map.isLand(tile)) return { ok: false, reason: 'No puedes empezar en el agua' };
+    if (this.owner[tile] !== 0) return { ok: false, reason: 'Esa tierra ya tiene dueño' };
+    if (map.landBodySizes[map.landBody[tile]] < minBody) return { ok: false, reason: 'Esa isla es demasiado pequeña para empezar' };
+    return { ok: true, reason: '' };
+  }
+
   spawnPlayer(p, tile, minBody = CONFIG.minSpawnBodySize) {
     const map = this.map;
-    if (this.phase !== 'spawn' || !p.alive) return false;
-    if (tile < 0 || tile >= map.size || !map.isLand(tile) || this.owner[tile] !== 0) return false;
+    if (!this.spawnCheck(p, tile, minBody).ok) return false;
     const body = map.landBody[tile];
-    if (map.landBodySizes[body] < minBody) return false;
     if (p.spawned) this._releaseAll(p);
 
     // Zona inicial (documento, 02.2): el disco lógico de radio 4 desplazado
@@ -601,12 +626,26 @@ export class Game {
       }
       if (it.type === 'action') {
         if (this.phase === 'spawn') {
-          if (!this.spawnPlayer(p, it.tile)) this._notify(p, 'No puedes empezar ahí', 'warn');
+          const check = this.spawnCheck(p, it.tile);
+          if (!check.ok || !this.spawnPlayer(p, it.tile)) this._notify(p, `No puedes empezar ahí: ${check.reason || 'prueba en otro sitio'}`, 'warn');
         } else if (this.phase === 'playing') {
           this._handleAttackIntent(p, it.tile, it.ratio);
         }
       } else if (it.type === 'share') {
         this.setSoldierShare(p, it.share);
+      } else if (it.type === 'build') {
+        if (this.phase !== 'playing') continue;
+        const tile = this.snapBuildTile(p, it.kind, it.tile);
+        const check = this.canBuild(p, it.kind, tile);
+        if (check.ok) this.build(p, it.kind, tile);
+        else this._notify(p, check.reason, 'warn');
+      } else if (it.type === 'cancelAttack') {
+        const atk = p.attacks.get(it.targetId);
+        if (atk) this.retreat(atk);
+      } else if (this.phase !== 'playing') {
+        // Durante el despliegue no se investiga, ni se especializa, ni hay diplomacia
+        if (it.type !== 'emoji') this._notify(p, 'Espera a que empiece la partida', 'warn');
+        continue;
       } else if (it.type === 'research') {
         this.startResearch(p, it.tech);
       } else if (it.type === 'spec') {
@@ -620,17 +659,6 @@ export class Game {
         this.respondOffer(p, this.players[it.fromId], it.type === 'respondPact' ? 'pact' : 'peace', !!it.accept);
       } else if (it.type === 'askHelp') {
         this.askHelp(p);
-      } else if (it.type === 'build') {
-        if (this.phase !== 'playing') continue;
-        const tile = this.snapBuildTile(p, it.kind, it.tile);
-        const check = this.canBuild(p, it.kind, tile);
-        if (check.ok) this.build(p, it.kind, tile);
-        else this._notify(p, check.reason, 'warn');
-      } else if (it.type === 'cancelAttack') {
-        const atk = p.attacks.get(it.targetId);
-        if (atk) this.retreat(atk);
-      } else if (this.phase !== 'playing') {
-        continue;
       } else if (it.type === 'proposeAlliance') {
         this.proposeAlliance(p, this.players[it.targetId]);
       } else if (it.type === 'respondAlliance') {
@@ -833,9 +861,15 @@ export class Game {
     return this.fortMultiplier(target, t) * this.passMultiplier(target, t) * Math.max(0.2, 1 + target.mods.defense);
   }
 
-  /** Tropas con las que defiende un país (con Milicia, también parte de sus trabajadores). */
+  /**
+   * Fuerza con la que defiende un país. Milicia: con trabajadores, una parte
+   * de ellos (militia) también defiende; con oro fijo (sin trabajadores), un
+   * +60 % de militia sobre sus tropas (+15 % con Milicia).
+   */
   defenders(target) {
-    return target.troops + target.workers * target.mods.militia;
+    const m = target.mods.militia;
+    if (!m) return target.troops;
+    return target.economy === 'workers' ? target.troops + target.workers * m : target.troops * (1 + 0.6 * m);
   }
 
   /**
@@ -1095,7 +1129,9 @@ export class Game {
     const rel = at.owner === f.owner ? 'self' : this.isAllied(f.owner, at.owner) ? 'ally' : stationOwner && this.atWar(owner, stationOwner) ? 'enemy' : 'neutral';
     const value = MECH.trainRewards[rel];
     if (!value) return;
-    const earned = value * owner.goldMult * (1 + owner.mods.trade);
+    // Comercio (tecnología, puertos clave, infraestructura) y, al ser el tren
+    // de una fábrica, también la especialización Industria
+    const earned = value * owner.goldMult * (1 + owner.mods.trade + owner.mods.factoryBonus);
     owner.gold += earned;
     owner.income.trade += earned;
     owner.stats.trainGold = (owner.stats.trainGold || 0) + earned;
@@ -1253,7 +1289,7 @@ export class Game {
         }
         const ov = owner[v];
         if (ov === aid) continue;
-        if (ov !== o || fail[v] === this.ticks || (seen[v] !== stamp && tail >= MECH.annexMaxTiles)) {
+        if (ov !== o || fail[v] === this.ticks || (seen[v] !== stamp && tail >= ANNEX_MAX_TILES)) {
           ok = false; // toca a otro, ya se vio que escapa o es demasiado grande
           break;
         }
@@ -1292,7 +1328,7 @@ export class Game {
 
   /** ¿Permiten las reglas de esta partida este edificio o unidad? */
   isAllowed(kind) {
-    if (!this.rules.missiles && (kind === 'silo' || kind === 'sam' || kind === 'missile')) return false;
+    if (!this.rules.missiles && (kind === 'silo' || kind === 'sam' || (BUILDINGS[kind] && BUILDINGS[kind].unit === 'missile'))) return false;
     if (!this.rules.warships && kind === 'warship') return false;
     if (!this.rules.factories && kind === 'factory') return false;
     return true;
@@ -1439,8 +1475,6 @@ export class Game {
     const b = { id: this._nextBuildingId++, kind, tile, owner: 0, level: 0, target: 1, buildEnd: this.ticks + time, buildTime: time };
     this.sites.push(b);
     if (kind === 'port') {
-      b.hp = CONFIG.portHp;
-      b.hitTick = -Infinity;
       b.water = this._waterNextTo(tile);
       b.rejections = 0;
     }
@@ -1643,12 +1677,15 @@ export class Game {
     const dest = this.buildings.find((b) => b.id === m.dest);
     if (!dest) return; // el puerto de destino ya no existe
     const owner = this.players[m.owner];
-    const earned = tradeGold(m.value, owner.goldMult) * (1 + owner.mods.trade);
+    // La fórmula cuenta la distancia en casillas del documento (mundo de
+    // 2000×1000): con más resolución, la misma ruta tiene más casillas
+    const d = m.value / DOC_LEN;
+    const earned = tradeGold(d, owner.goldMult) * (1 + owner.mods.trade);
     owner.gold += earned;
     owner.income.trade += earned;
     const partner = this.players[dest.owner];
     if (partner && partner.alive && partner !== owner) {
-      const share = tradeGold(m.value, partner.goldMult) * (1 + partner.mods.trade);
+      const share = tradeGold(d, partner.goldMult) * (1 + partner.mods.trade);
       partner.gold += share;
       partner.income.trade += share;
       if (partner === this.human) this._emit(`⚓ Un mercante de ${owner.name} llega a tu puerto: +${formatNumber(share)} de oro`, 'good', { sfx: 'coin' });
@@ -1661,16 +1698,9 @@ export class Game {
     const victim = this.players[m.owner];
     const thief = this.players[ws.owner];
     m.owner = ws.owner;
-    if (m.kind === 'fish') {
-      const port = this.buildings.find((b) => b.kind === 'port' && b.owner === thief.id && b.water >= 0 &&
-        this.map.waterBody[b.water] === this.map.waterBody[m.tile]);
-      m.port = port ? port.id : 0;
-      m.path = null;
-    }
     thief.stats.captured = (thief.stats.captured || 0) + 1;
-    const what = m.kind === 'fish' ? 'un pesquero' : 'un mercante';
-    if (thief === this.human) this._emit(`🏴 Has capturado ${what} de ${victim.name}`, 'good');
-    else if (victim === this.human) this._emit(`🏴 ${thief.name} te ha robado ${what}`, 'danger');
+    if (thief === this.human) this._emit(`🏴 Has capturado un mercante de ${victim.name}`, 'good');
+    else if (victim === this.human) this._emit(`🏴 ${thief.name} te ha robado un mercante`, 'danger');
   }
 
   // ---------------------------------------------------- misiles y antimisiles
@@ -1708,7 +1738,7 @@ export class Game {
     const silo = this.readySilo(p, tile);
     if (!silo) {
       const any = this.buildings.some((b) => b.owner === p.id && b.kind === 'silo' && b.level > 0 && b.readyAt <= this.ticks);
-      return { ok: false, reason: any ? `Fuera de alcance (máx. ${CONFIG.missileRange} casillas desde un silo)` : 'Tus silos están recargando' };
+      return { ok: false, reason: any ? 'Fuera del alcance de tus silos' : 'Tus silos están recargando' };
     }
     return { ok: true, reason: '', silo };
   }
@@ -1947,7 +1977,9 @@ export class Game {
     const map = this.map;
     // Mares distintos: no hace falta buscar
     if (map.waterBody[from] !== map.waterBody[to]) return null;
-    const key = from * map.size + to;
+    // El tope de búsqueda forma parte de la clave: «no hay ruta» con un tope
+    // corto (comercio) no vale para una búsqueda más larga (buques), ni al revés
+    const key = `${from},${to},${maxNodes}`;
     if (cache) {
       const cached = this._pathCache.get(key);
       if (cached !== undefined) return cached;
@@ -2107,8 +2139,9 @@ export class Game {
     return true;
   }
 
+  /** ¿Son enemigos? (ni la misma nación, ni aliados, ni con un pacto o paz en vigor) */
   _isEnemy(a, b) {
-    return a !== b && !this.isAllied(a, b);
+    return a !== b && !this.isAllied(a, b) && !this.pactBetween(a, b);
   }
 
   /**
@@ -2494,6 +2527,11 @@ export class Game {
       return;
     }
     const target = o ? this.players[o] : null;
+    // Un pacto o la tregua firmados durante el viaje: no desembarca y las tropas vuelven
+    if (target && this._truceBlocks(p, target)) {
+      p.troops += boat.troops;
+      return;
+    }
     // La casilla de desembarco se toma como cualquier otra (documento, 05)
     const c = this.conquestCost(dest, target, boat.troops, 1, p);
     if (boat.troops <= c.loss) {
@@ -2539,8 +2577,13 @@ export class Game {
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }
 
-    this._annexBudget = MECH.annexVisitsPerTick;
-    for (let i = 0; i < this.attacks.length; i++) this._processAttack(this.attacks[i]);
+    // Cupo de cercos del turno, repartido en turno rotatorio: si siempre
+    // empezaba el mismo ataque, las bolsas de los demás podían no
+    // comprobarse nunca
+    this._annexBudget = ANNEX_VISITS_PER_TICK;
+    const na = this.attacks.length;
+    const first = na ? this.ticks % na : 0;
+    for (let k = 0; k < na; k++) this._processAttack(this.attacks[(first + k) % na]);
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateSites();
@@ -2694,36 +2737,78 @@ export class Game {
     return { mode: 'dominio', leader, value: leader ? leader.tiles / this.map.landCount : 0, goal: this.rules.winShare };
   }
 
-  _win(p, text) {
+  _win(p, text, reason) {
     this.winner = p;
+    this.winReason = reason;
     this.phase = 'ended';
     this._emit(p === this.human ? `¡Victoria! ${text}` : `${p.name}: ${text.toLowerCase()}`, p === this.human ? 'good' : 'danger');
   }
 
-  /** Victorias de capitales y de economía: hay que sostener el objetivo un tiempo. */
+  /** Capitales que controla cada nación (id → número) y cuántas hacen falta. */
+  _capitalCounts() {
+    const counts = new Map();
+    let total = 0;
+    for (const pt of this.points) {
+      if (pt.kind !== 'capital') continue;
+      total++;
+      const o = this.owner[pt.tile];
+      if (o) counts.set(o, (counts.get(o) || 0) + 1);
+    }
+    return { counts, need: Math.max(1, Math.ceil(total * CONFIG.capitalShare)) };
+  }
+
+  /**
+   * Victorias de capitales y de economía: hay que sostener el objetivo un
+   * tiempo. Cada nación que lo cumple lleva su propio plazo (si dos se turnan
+   * el primer puesto, ninguna pierde lo aguantado); gana la que antes llegue
+   * al final. `goalHolder` es la más cercana a ganar (para la barra superior).
+   */
   _checkAltVictory() {
     const mode = this.rules.victory;
     if (mode !== 'capitales' && mode !== 'economia') return false;
-    const st = this.victoryStatus();
-    const p = st.leader;
-    if (!p) return false;
-    const met = st.value >= st.goal;
     const hold = mode === 'capitales' ? CONFIG.capitalHoldTicks : CONFIG.economyHoldTicks;
-    if (!met) {
-      this.goalHolder = null;
-      return false;
+    const caps = mode === 'capitales' ? this._capitalCounts() : null;
+    const goal = caps ? caps.need : CONFIG.economyGoalPerMin;
+    const holders = this.goalHolders;
+    let best = null;
+    for (const p of this.alivePlayers()) {
+      const value = caps ? caps.counts.get(p.id) || 0 : this.incomePerMin(p);
+      if (value < goal) {
+        holders.delete(p.id);
+        continue;
+      }
+      if (!holders.has(p.id)) {
+        holders.set(p.id, this.ticks);
+        // Un aviso por nación como mucho cada minuto (aunque entre y salga del objetivo)
+        const last = this._goalAnnounced.get(p.id);
+        if (last === undefined || this.ticks - last >= 600) {
+          this._goalAnnounced.set(p.id, this.ticks);
+          if (p === this.human) this._emit(caps ? `⭐ Controlas ${value} capitales: aguanta ${hold / 10} s para ganar` : `💰 Tus ingresos alcanzan el objetivo: aguanta ${hold / 600} min para ganar`, 'good');
+          else this._emit(caps ? `⭐ ${p.name} controla ${value} capitales: si aguanta ${hold / 10} s, gana` : `💰 ${p.name} alcanza la supremacía económica: si la mantiene ${hold / 600} min, gana`, 'danger');
+        }
+      }
+      const since = holders.get(p.id);
+      if (!best || since < best.since) best = { id: p.id, since };
     }
-    if (!this.goalHolder || this.goalHolder.id !== p.id) {
-      this.goalHolder = { id: p.id, since: this.ticks };
-      if (p === this.human) this._emit(mode === 'capitales' ? `⭐ Controlas ${st.value} capitales: aguanta ${hold / 10} s para ganar` : `💰 Tus ingresos alcanzan el objetivo: aguanta ${hold / 600} min para ganar`, 'good');
-      else this._emit(mode === 'capitales' ? `⭐ ${p.name} controla ${st.value} capitales: si aguanta ${hold / 10} s, gana` : `💰 ${p.name} alcanza la supremacía económica: si la mantiene ${hold / 600} min, gana`, 'danger');
-      return false;
-    }
-    if (this.ticks - this.goalHolder.since >= hold) {
-      this._win(p, mode === 'capitales' ? 'Controlas las capitales del mundo' : 'Supremacía económica');
+    // Quien ya no está vivo deja de contar
+    for (const id of [...holders.keys()]) if (!this.players[id] || !this.players[id].alive) holders.delete(id);
+    this.goalHolder = best;
+    if (best && this.ticks - best.since >= hold) {
+      this._win(this.players[best.id], caps ? 'Controlas las capitales del mundo' : 'Supremacía económica', mode);
       return true;
     }
     return false;
+  }
+
+  /**
+   * Quién va en cabeza al acabar el tiempo, según el objetivo de la partida:
+   * capitales, ingresos o territorio (y, a igualdad, territorio y luego id).
+   */
+  _timeLimitWinner() {
+    const mode = this.rules.victory;
+    const caps = mode === 'capitales' ? this._capitalCounts().counts : null;
+    const key = (p) => (caps ? caps.get(p.id) || 0 : mode === 'economia' ? this.incomePerMin(p) : p.tiles);
+    return this.alivePlayers().sort((a, b) => key(b) - key(a) || b.tiles - a.tiles || a.id - b.id)[0] || null;
   }
 
   _checkVictory() {
@@ -2742,17 +2827,19 @@ export class Game {
     if (this.rules.victory === 'supervivencia' && this.ticks >= CONFIG.spawnTicks + limit * 600) {
       const st = this.victoryStatus();
       if (st.leader) {
-        this._win(st.leader, `Has sobrevivido con la mejor puntuación (${st.value})`);
+        this._win(st.leader, `Has sobrevivido con la mejor puntuación (${st.value})`, 'supervivencia');
         return;
       }
     }
-    // Límite de tiempo (regla): al acabar, gana quien tenga más territorio
+    // Límite de tiempo (regla): al acabar, gana quien vaya en cabeza según el
+    // objetivo de la partida (territorio, capitales o ingresos)
     if (this.rules.victory !== 'supervivencia' && this.rules.timeLimitMin > 0 && this.ticks >= CONFIG.spawnTicks + this.rules.timeLimitMin * 600) {
-      const best = this.alivePlayers().sort((a, b) => b.tiles - a.tiles || a.id - b.id)[0];
+      const best = this._timeLimitWinner();
       if (best) {
         this.winner = best;
+        this.winReason = 'tiempo';
         this.phase = 'ended';
-        this._emit(best === this.human ? '¡Se acabó el tiempo y tienes más territorio que nadie: victoria!' : `Se acabó el tiempo: ${best.name} tiene más territorio`, best === this.human ? 'good' : 'danger');
+        this._emit(best === this.human ? '¡Se acabó el tiempo y vas en cabeza: victoria!' : `Se acabó el tiempo: ${best.name} va en cabeza`, best === this.human ? 'good' : 'danger');
         return;
       }
     }
@@ -2770,6 +2857,7 @@ export class Game {
     if (!winner && alive === 1 && this.players.length > 2) winner = last;
     if (winner) {
       this.winner = winner;
+      this.winReason = winner.tiles >= need ? 'dominio' : 'ultimo';
       this.phase = 'ended';
       this._emit(winner === this.human ? '¡Victoria! Dominas el mundo' : `${winner.name} domina el mundo`, winner === this.human ? 'good' : 'danger');
       return;
@@ -2782,6 +2870,7 @@ export class Game {
         rest.sort((a, b) => b.tiles - a.tiles);
         this.winner = rest[0];
         this.winningAlliance = rest;
+        this.winReason = 'alianza';
         this.phase = 'ended';
         const human = rest.find((p) => p === this.human);
         this._emit(

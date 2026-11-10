@@ -11,7 +11,6 @@ export const TICK_MS = 100; // 10 ticks por segundo de simulación
  */
 export const RES = 3;
 export const AREA = RES * RES;
-const RES15 = RES * Math.sqrt(RES); // (AREA)^0,75: para fórmulas con casillas^0,75
 
 export const TERRAIN = { WATER: 0, PLAINS: 1, HIGHLAND: 2, MOUNTAIN: 3 };
 export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];
@@ -22,9 +21,6 @@ export const CONFIG = {
   // La zona inicial (52 casillas), las tropas y el oro iniciales, el techo, la
   // regeneración, los precios, el comercio y el combate están en mecanicas.js
   minSpawnBodySize: 150 * AREA, // no se puede empezar en islotes minúsculos
-
-  // Victoria: controlar esta fracción de toda la tierra
-  winLandShare: 0.7,
 
   // Economía de trabajadores (regla opcional): fracción de la población como
   // soldados al empezar y mínimo del deslizador
@@ -38,12 +34,12 @@ export const CONFIG = {
   // Orden de conquista de la tierra libre: por distancia al centro del país
   // (en casillas), así crece parejo, en círculo, sin manchas ni brazos
   growRandom: 1.6, // azar por casilla: el borde sale algo irregular, no una regla
-  growTerrain: 6, // retraso por cada punto de coste de terreno sobre la llanura
+  growTerrain: (6 * RES) / 2, // retraso (en casillas de distancia) por cada punto de coste de terreno sobre la llanura: la misma superficie con más resolución
   growSmooth: 1.2, // las casillas con más vecinas propias antes: rellena huecos y esquinas
   // Hacia un clic, el lado que mira allí avanza antes: al de detrás le pesa la
   // distancia × (1 + 2 × growFocusStretch); contra países, growFocus pasos
   growFocusStretch: 0.6,
-  growFocus: 8,
+  growFocus: (8 * RES) / 2,
   growPlayerMult: 0.15, // contra naciones, casi como antes (un frente irregular es más largo y aceleraba las guerras)
 
   // Barcos de transporte
@@ -100,8 +96,6 @@ export const CONFIG = {
   warshipPatrol: 22 * RES, // radio de la zona que patrulla cada buque
   warshipGuard: 34 * RES, // persigue a los intrusos que entren hasta aquí (desde el centro de su zona)
   warshipsPerPort: 3,
-  portHp: 80,
-  portRegen: 0.1, // vida por tick que recupera un puerto que no recibe fuego
 
   // Mercantes de los puertos (cuándo salen y cuánto pagan: mecanicas.js)
   tradeSpeed: 0.42 * RES,
