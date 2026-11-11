@@ -33,6 +33,8 @@ export const CONFIG = {
   // azar hacen que los países crezcan irregulares y no como círculos.
   // Orden de conquista de la tierra libre: por distancia al centro del país
   // (en casillas), así crece parejo, en círculo, sin manchas ni brazos
+  // Forma: 0 = círculo, 1 = cuadrado (en medio, un cuadrado de esquinas redondeadas)
+  growSquare: 0.45,
   growRandom: 0.45, // azar por casilla: el borde sale algo irregular, no una regla (poco: crece parejo, sin dientes)
   growTerrain: (4 * RES) / 2, // retraso (en casillas de distancia) por cada punto de coste de terreno sobre la llanura: la misma superficie con más resolución
   growSmooth: 1.2, // las casillas con más vecinas propias antes: rellena huecos y esquinas

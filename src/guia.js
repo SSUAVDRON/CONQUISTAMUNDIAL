@@ -31,7 +31,7 @@ const TABS = [
     id: 'controles',
     name: 'Controles',
     items: [
-      ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic en tierra libre o en un vecino: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
+      ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
       ['ciudad', 'Construir', 'Q ciudad · E puerto · R puesto defensivo · F fábrica · G silo · H antimisiles · T buque · M bomba atómica · J bomba H · K MIRV. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
@@ -54,7 +54,7 @@ const TABS = [
     name: 'Combate',
     items: [
       ['tropas', 'Tropas', 'Se regeneran solas, más rápido cerca del 42 % de tu techo y nada al llenarlo: no esperes con la barra llena. Más territorio y ciudades, más techo.'],
-      ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 1,6 tropas en llanura, 2 en meseta y 2,4 en montaña; contra otro país, más cuantos más defensores tenga.'],
+      ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
       ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas.'],
       ['barco', 'Barcos y buques', 'Clic en una costa sin frontera por tierra: sale un barco con tropas (3 a la vez como mucho). Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],

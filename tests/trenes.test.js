@@ -28,8 +28,9 @@ function setup(seed = 7) {
   // A crece un poco para tener sitio para dos edificios
   for (let i = 0; i < 6; i++) {
     a.troops = 1e5;
-    game.launchAttack(a, 0, 3000);
-    // (la expansión va al ritmo del juego: × paceNeutral del perfil)
+    game.launchAttack(a, 0, 6000);
+    // (la expansión va al ritmo del juego: × paceNeutral del perfil; desde
+    // doc-1.2 la tierra libre cuesta el doble de tropas)
     for (let k = 0; k < 100; k++) game.tick();
   }
   for (const atk of [...a.attacks.values()]) game._endAttack(atk);

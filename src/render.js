@@ -1046,8 +1046,37 @@ export class Renderer {
   }
 
   /** Anillos que marcan el punto al que ha volado la cámara. */
+  /**
+   * Nombre de país (no el tuyo) dibujado bajo el punto (sx, sy) de la
+   * pantalla en el último fotograma, con `pad` px de margen; o null.
+   */
+  labelAt(sx, sy, pad = 0) {
+    const hits = this._labelHits;
+    if (!hits) return null;
+    for (let i = 0; i < hits.length; i += 5) {
+      if (sx >= hits[i + 1] - pad && sx <= hits[i + 3] + pad && sy >= hits[i + 2] - pad && sy <= hits[i + 4] + pad) return hits[i];
+    }
+    return null;
+  }
+
   _drawPing(now, ping) {
     const age = (now - ping.t) / 1000;
+    if (ping.small) {
+      // Toque: dos anillos pequeños y rápidos donde cae la orden
+      if (age > 0.7) return;
+      const { ctx, camera } = this;
+      const [x, y] = camera.worldToScreen(ping.x, ping.y);
+      for (let k = 0; k < 2; k++) {
+        const a = age - k * 0.15;
+        if (a < 0 || a > 0.55) continue;
+        ctx.beginPath();
+        ctx.arc(x, y, 5 + a * 34, 0, Math.PI * 2);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * (1 - a / 0.55)})`;
+        ctx.stroke();
+      }
+      return;
+    }
     if (age > 1.6) return;
     const { ctx, camera } = this;
     const [x, y] = camera.worldToScreen(ping.x, ping.y);
@@ -1920,6 +1949,9 @@ export class Renderer {
     order.sort((a, b) => b.rank - a.rank);
     const boxes = (this._labelBoxes ??= []);
     boxes.length = 0;
+    // Cajas de los nombres de este fotograma (para tocar un país por su nombre)
+    const hits = (this._labelHits ??= []);
+    hits.length = 0;
     // Los nombres aparecen con un fundido (antes saltaban al entrar en pantalla
     // o al dejar de chocar con otro); el que no se dibuja vuelve a empezar
     const fadeStep = this.anim ? Math.min(1, this._dt * 5) : 1;
@@ -2004,6 +2036,7 @@ export class Renderer {
         continue;
       }
       boxes.push(x0, y0, x1, y1);
+      if (!me) hits.push(L, x0, y0, x1, y1);
       L.size = size;
       // Nombre (con su icono) y tropas: imágenes ya dibujadas, centradas
       // En píxeles enteros del lienzo: copia directa, sin remuestrear

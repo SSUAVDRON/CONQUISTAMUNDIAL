@@ -814,14 +814,17 @@ export class Game {
     const terr = (MECH.terrain[map.terrain[t]].tileCost / MECH.terrain[1].tileCost - 1) * CONFIG.growTerrain;
     let key;
     if (!atk.targetId && atk.cx !== undefined) {
-      // Tierra libre: en orden de distancia al centro del país (crece en
-      // círculo, parejo por todos lados) con un poco de azar para que el borde
-      // no sea una regla. Hacia un clic, ese lado avanza antes.
+      // Tierra libre: en orden de distancia al centro del país (crece parejo
+      // por todos lados) con un poco de azar para que el borde no sea una
+      // regla. La distancia mezcla la normal y la «de casillas» (la mayor de
+      // las dos): sale un cuadrado de esquinas redondeadas, no un círculo.
+      // Hacia un clic, ese lado avanza antes.
       const vx = x - atk.cx;
       const vy = y - atk.cy;
-      const d = Math.sqrt(vx * vx + vy * vy);
+      const round = Math.sqrt(vx * vx + vy * vy);
+      const d = round + (Math.max(Math.abs(vx), Math.abs(vy)) - round) * CONFIG.growSquare;
       let stretch = 1;
-      if (atk.focus >= 0 && d > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / d) * CONFIG.growFocusStretch;
+      if (atk.focus >= 0 && round > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / round) * CONFIG.growFocusStretch;
       key = d * stretch + this.rng.float() * CONFIG.growRandom + terr - n * CONFIG.growSmooth;
     } else {
       // Contra otro país: el frente entero avanza a la vez (por turnos de
@@ -888,7 +891,10 @@ export class Game {
     const speed = Math.max(0.2, 1 + (attacker ? attacker.mods.attackSpeed : 0));
     const lossMul = Math.max(0.3, 1 + (attacker ? attacker.mods.attackCost : 0));
     if (!target) {
-      return { time: neutralTimeCost(T.tileCost, troops) / speed, loss: (T.mag / MECH.neutralLossDiv) * lossMul, defLoss: 0 };
+      // Las colonias ocupan tierra libre más rápido y con menos bajas
+      const colony = attacker && attacker.weak;
+      const time = neutralTimeCost(T.tileCost, troops) / speed / (colony ? MECH.colonyNeutralSpeed : 1);
+      return { time, loss: (T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1), defLoss: 0 };
     }
     const mult = this.defenseMult(target, t);
     const c = pvpTile(this.defenders(target), troops, target.tiles, front, {
@@ -944,7 +950,7 @@ export class Game {
     const lossMul = Math.max(0.3, 1 + p.mods.attackCost);
     const plain = MECH.terrain[1];
     let perTile;
-    if (!target) perTile = (plain.mag / MECH.neutralLossDiv) * lossMul;
+    if (!target) perTile = (plain.mag / MECH.neutralLossDiv) * lossMul * (p.weak ? MECH.colonyNeutralLoss : 1);
     else {
       const c = pvpTile(this.defenders(target), troops, target.tiles, 1, { traitor: this.isTraitor(target) });
       perTile = plain.mag * c.attackerLossPerMag * Math.max(0.2, 1 + target.mods.defense) * lossMul;

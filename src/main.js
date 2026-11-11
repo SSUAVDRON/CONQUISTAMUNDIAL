@@ -27,6 +27,7 @@ const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.sea
 import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
 import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
+import { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } from './toque.js';
 import { abrirGuia } from './guia.js';
 import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
@@ -106,12 +107,22 @@ function adaptQuality(dt) {
 
 function resize() {
   const dpr = currentDpr();
-  canvas.width = Math.round(window.innerWidth * dpr);
-  canvas.height = Math.round(window.innerHeight * dpr);
-  camera.setView(window.innerWidth, window.innerHeight);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  // El tamaño en pantalla, el mismo que el de la cámara: con 100vh, en el
+  // móvil (con la barra del navegador) el mapa se veía estirado y los toques
+  // caían más abajo de donde se veían
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+  camera.setView(w, h);
   state.renderer?.setDpr(dpr);
 }
 window.addEventListener('resize', resize);
+window.visualViewport?.addEventListener('resize', () => {
+  if (canvas.width !== Math.round(window.innerWidth * currentDpr()) || canvas.height !== Math.round(window.innerHeight * currentDpr())) resize();
+});
 resize();
 
 function randomSeed() {
@@ -1012,6 +1023,26 @@ function selectCode() {
 
 // ------------------------------------------------------------------ entrada
 
+/**
+ * Objetivo de un clic o toque en partida. Sobre el nombre de un país (que
+ * suele salirse de sus fronteras): ese país, en su casilla más cercana. Con
+ * el dedo, además, tolerancia: si la casilla tocada no se puede atacar por
+ * tierra (agua, lo tuyo, un aliado o un país sin frontera contigo), la más
+ * cercana que sí, a unos 24 px (ver src/toque.js).
+ */
+function aimTap(sx, sy, tile, touch) {
+  const { game, renderer, human } = state;
+  const named = renderer?.labelAt(sx, sy, touch ? 6 : 0);
+  if (named && named.player !== human) {
+    const L = named;
+    const [wx, wy] = camera.screenToWorld(sx, sy);
+    const t = nearestTileOf(game, L.player.id, wx, wy, Math.max(8, L.r + Math.hypot(wx - L.x, wy - L.y)));
+    if (t >= 0) return t;
+  }
+  if (!touch) return tile;
+  return resolveTap(game, human, tile, Math.min(TAP_RADIUS_MAX, TAP_RADIUS_PX / camera.zoom));
+}
+
 function tileAt(sx, sy) {
   const game = state.game;
   if (!game) return -1;
@@ -1279,19 +1310,27 @@ function setBuildMode(kind) {
 const buildKeys = Object.fromEntries(BUILDING_KINDS.map((k) => [BUILDINGS[k].key, k]));
 
 const input = new Input(canvas, camera, {
-  onClick(sx, sy, shift) {
+  onClick(sx, sy, shift, touch = false) {
     if (state.demo || !state.human || !state.human.alive) return;
-    const tile = tileAt(sx, sy);
+    let tile = tileAt(sx, sy);
     if (tile < 0) return;
     if (state.buildMode) {
       humanIntent({ type: 'build', tile, kind: state.buildMode });
       if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
       return;
     }
+    if (state.game.phase === 'playing') {
+      tile = aimTap(sx, sy, tile, touch);
+    }
     // Los buques no se mueven (su zona se elige al botarlos); en el despliegue
     // el clic en el agua sí llega, para explicar por qué no se puede empezar ahí
     if (!state.game.map.isLand(tile) && state.game.phase !== 'spawn') return;
     humanIntent({ type: 'action', tile, ratio: state.ratio });
+    // Con el dedo, unos anillos pequeños marcan a dónde va la orden
+    if (touch && state.game.phase === 'playing' && state.game.owner[tile] !== state.human.id) {
+      const m = state.game.map;
+      state.ping = { x: m.x(tile) + 0.5, y: m.y(tile) + 0.5, t: performance.now(), danger: false, small: true };
+    }
     // Información útil: lo que se espera de este ataque (aproximado)
     const g = state.game;
     const h = state.human;

@@ -3,6 +3,8 @@
 // acción sobre la casilla.
 
 const DRAG_THRESHOLD = 6;
+// Con el dedo, más margen: el dedo tiembla y muchos toques se volvían arrastres
+const DRAG_THRESHOLD_TOUCH = 10;
 const LONG_PRESS_MS = 500;
 const FLING_WINDOW_MS = 90; // la velocidad al soltar se mide con los últimos movimientos
 /** Píxeles por unidad de `deltaY` según `deltaMode` (píxeles, líneas, páginas). */
@@ -36,18 +38,30 @@ export class Input {
 
   _pos(e) {
     const r = (this._rect ??= this.canvas.getBoundingClientRect());
-    return [e.clientX - r.left, e.clientY - r.top];
+    // En coordenadas de la cámara: si el lienzo se ve estirado (en el móvil,
+    // con la barra del navegador, 100vh no es el alto visible), el toque
+    // sigue cayendo donde se ve
+    const kx = r.width > 0 ? this.camera.viewW / r.width : 1;
+    const ky = r.height > 0 ? this.camera.viewH / r.height : 1;
+    return [(e.clientX - r.left) * kx, (e.clientY - r.top) * ky];
   }
 
   _down(e) {
+    // Al empezar un gesto se vuelve a leer dónde está el lienzo (la barra del
+    // navegador del móvil aparece y desaparece sin que siempre llegue un resize)
+    if (this.pointers.size === 0) this._rect = null;
     const [x, y] = this._pos(e);
     this.canvas.setPointerCapture(e.pointerId);
-    this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button, shift: e.shiftKey });
+    const touch = e.pointerType !== 'mouse';
+    this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button, shift: e.shiftKey, touch });
     if (this.pointers.size === 1) {
       this.dragging = false;
       this.longPressed = false;
       this.trail = [{ t: e.timeStamp, x, y }];
-      this.camera.stop(); // tocar el mapa para la inercia o el vuelo en curso
+      // Tocar el mapa para la inercia o el vuelo en curso. Si iba deslizándose,
+      // ese toque solo lo frena: no es una orden
+      this.braked = !!(this.camera.vx || this.camera.vy);
+      this.camera.stop();
       // Mantener pulsado (táctil) equivale al clic derecho
       clearTimeout(this.longPressTimer);
       if (e.pointerType !== 'mouse') {
@@ -78,7 +92,7 @@ export class Input {
       return;
     }
     if (this.pointers.size === 1) {
-      if (!this.dragging && Math.hypot(x - ptr.sx, y - ptr.sy) > DRAG_THRESHOLD) {
+      if (!this.dragging && Math.hypot(x - ptr.sx, y - ptr.sy) > (ptr.touch ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD)) {
         this.dragging = true;
         clearTimeout(this.longPressTimer);
       }
@@ -109,9 +123,12 @@ export class Input {
     if (!ptr) return;
     this.pointers.delete(e.pointerId);
     clearTimeout(this.longPressTimer);
-    if (!cancelled && !this.dragging && !this.longPressed && this.pointers.size === 0) {
-      if (ptr.button === 0) this.h.onClick?.(ptr.x, ptr.y, ptr.shift);
-      else if (ptr.button === 2) this.h.onRightClick?.(ptr.x, ptr.y);
+    if (!cancelled && !this.dragging && !this.longPressed && !this.braked && this.pointers.size === 0) {
+      // Con el dedo cuenta donde se apoyó (al levantarlo suele rodar unos píxeles)
+      const x = ptr.touch ? ptr.sx : ptr.x;
+      const y = ptr.touch ? ptr.sy : ptr.y;
+      if (ptr.button === 0) this.h.onClick?.(x, y, ptr.shift, ptr.touch);
+      else if (ptr.button === 2) this.h.onRightClick?.(x, y);
     }
     // Inercia: si se soltó en pleno movimiento, el mapa sigue y frena
     if (!cancelled && this.dragging && this.pointers.size === 0 && this.trail && this.trail.length >= 2) {

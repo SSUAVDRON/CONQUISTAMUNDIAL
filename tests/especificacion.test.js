@@ -135,18 +135,18 @@ function wildNear(game, p) {
   return -1;
 }
 
-test('T08: 5000 tropas atacantes en llanura neutral → coste de tiempo 6,6 por casilla y 16 de bajas', () => {
+test('T08: 5000 tropas atacantes en llanura neutral → coste de tiempo 6,6 por casilla y 32 de bajas (doc-1.2: el doble)', () => {
   assert.ok(near(neutralTimeCost(16.5, 5000), 6.6, 1e-9));
-  assert.equal(MECH.terrain[1].mag / MECH.neutralLossDiv, 16);
-  assert.equal(MECH.terrain[2].mag / MECH.neutralLossDiv, 20);
-  assert.equal(MECH.terrain[3].mag / MECH.neutralLossDiv, 24);
+  assert.equal(MECH.terrain[1].mag / MECH.neutralLossDiv, 32);
+  assert.equal(MECH.terrain[2].mag / MECH.neutralLossDiv, 40);
+  assert.equal(MECH.terrain[3].mag / MECH.neutralLossDiv, 48);
   const { game, human } = setup();
   const t = wildNear(game, human);
   const plain = game.map.terrain[t] === 1;
   const c = game.conquestCost(t, null, 5000, 10, null);
   if (plain) {
     assert.ok(near(c.time, 6.6, 1e-9));
-    assert.equal(c.loss, 16);
+    assert.equal(c.loss, 32);
   }
   // Ejemplo del documento: frente de 10 casillas → presupuesto 20 por tick → unas 3 casillas
   assert.equal(MECH.neutralBudgetPerFront * 10, 20);

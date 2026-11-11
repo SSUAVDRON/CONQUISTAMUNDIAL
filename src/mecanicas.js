@@ -12,9 +12,12 @@
 /**
  * Versión de las reglas (para saber qué fórmulas usa una partida). doc-1.1:
  * correcciones de la revisión (Industria, Milicia, victorias, pactos, cercos,
- * comercio por superficie). En multijugador, versiones distintas no juegan juntas.
+ * comercio por superficie). doc-1.2: tierra libre al doble de bajas, más
+ * tropas = más rápido (también contra países), colonias rápidas y baratas en
+ * tierra libre, crecimiento algo más cuadrado y sonda del cerco. En
+ * multijugador, versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.1';
+export const MECH_VERSION = 'doc-1.2';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -25,7 +28,8 @@ export const MECH_VERSION = 'doc-1.1';
  *   y techo; ver docs/calibracion-clasico.md). paceNeutral y pacePvp son
  *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
- *   a petición, porque la expansión inicial iba demasiado rápida. Sin puntos estratégicos (ni bonos ni botín de
+ *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
+ *   las fórmulas de doc-1.2 (mismos ritmos). Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -35,8 +39,8 @@ export const MECH_VERSION = 'doc-1.1';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-2', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-1', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-3', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-2', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -88,7 +92,15 @@ export const MECH = {
   neutralTimeMin: 5,
   neutralTimeMax: 100,
   neutralBudgetPerFront: 2, // presupuesto por tick = 2 × longitud del frente
-  neutralLossDiv: 5, // bajas por casilla = magnitud / 5
+  // PROPUESTA (doc-1.2): bajas por casilla = magnitud / 2,5 (32 / 40 / 48: el
+  // doble que el documento, a petición: expandirse al principio cuesta más)
+  neutralLossDiv: 2.5,
+  // PROPUESTA (doc-1.2): más tropas, más rápido también por encima de
+  // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
+  neutralTimeFloor: 1.25,
+  // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
+  colonyNeutralLoss: 0.5,
+  colonyNeutralSpeed: 2,
   // Guerra entre países (sección 05.2)
   pvp: {
     lossBase: 0.463,
@@ -96,6 +108,9 @@ export const MECH = {
     ratioMin: 0.6,
     ratioMax: 2,
     speedMin: 0.82,
+    // PROPUESTA (doc-1.2): por debajo de speedMin (más de 1,22× las tropas del
+    // defensor) sigue acelerando, con raíz, hasta speedBoostMax veces
+    speedBoostMax: 3,
     speedMax: 7.5,
     speedHighDiv: 20,
     speedHighMax: 50,
@@ -239,9 +254,27 @@ export function startOffsets() {
   return out;
 }
 
-/** Coste de tiempo de una casilla sin dueño (sección 05.1). */
+/**
+ * Coste de tiempo de una casilla sin dueño (sección 05.1): 2000 × coste ÷
+ * tropas, entre 5 y 100. Por encima de las tropas que dan 5 (unas 6.600 en
+ * llanura), más tropas siguen acelerando con rendimiento decreciente:
+ * 5 × √(t / 5), hasta neutralTimeFloor (doc-1.2).
+ */
 export function neutralTimeCost(tileCost, attackTroops) {
-  return clamp((MECH.neutralTimeK * tileCost) / Math.max(1, attackTroops), MECH.neutralTimeMin, MECH.neutralTimeMax);
+  const t = (MECH.neutralTimeK * tileCost) / Math.max(1, attackTroops);
+  if (t >= MECH.neutralTimeMin) return Math.min(t, MECH.neutralTimeMax);
+  return Math.max(MECH.neutralTimeFloor, MECH.neutralTimeMin * Math.sqrt(t / MECH.neutralTimeMin));
+}
+
+/**
+ * Factor de velocidad contra un país según defensor ÷ atacante (sección
+ * 05.2: entre speedMin y speedMax). Por debajo de speedMin, mandar más tropas
+ * sigue acelerando con raíz, hasta speedBoostMax veces (doc-1.2).
+ */
+export function pvpSpeedRatio(ratio) {
+  const P = MECH.pvp;
+  if (ratio >= P.speedMin) return Math.min(ratio, P.speedMax);
+  return Math.max(P.speedMin / P.speedBoostMax, P.speedMin * Math.sqrt(Math.max(0, ratio) / P.speedMin));
 }
 
 /**
@@ -255,7 +288,7 @@ export function pvpTile(def, atk, defTiles, front, { traitor = false, bigAttacke
   const ratio = def / Math.max(1, atk);
   const density = def / Math.max(1, defTiles);
   const attackerLossPerMag = (traitor ? P.traitorDebuff : 1) * clamp(ratio, P.ratioMin, P.ratioMax) * (P.lossBase * bigAttacker * bigDefender + P.lossPerDensity * density);
-  const speedCost = (clamp(ratio, P.speedMin, P.speedMax) * clamp(ratio / P.speedHighDiv, 1, P.speedHighMax)) / P.speedDiv;
+  const speedCost = (pvpSpeedRatio(ratio) * clamp(ratio / P.speedHighDiv, 1, P.speedHighMax)) / P.speedDiv;
   return { ratio, attackerLossPerMag, defenderLoss: density, speedCost, perFront: speedCost / Math.max(1, front) };
 }
 

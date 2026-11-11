@@ -51,9 +51,10 @@ test('con pocas tropas se expande poco y con muchas, mucho más', () => {
   const few = expand(small.game, small.a, focus, 300).length;
   const many = expand(big.game, big.a, focus, 1500).length;
   assert.ok(many > few * 3, `${few} casillas con 300 tropas frente a ${many} con 1500`);
-  // Documento (05.1): cada casilla libre cuesta magnitud / 5 tropas (16 en llanura, más en altura)
+  // Cada casilla libre cuesta magnitud / 2,5 tropas (32 en llanura, más en
+  // altura: el doble que el documento, doc-1.2)
   const plainLoss = MECH.terrain[1].mag / MECH.neutralLossDiv;
-  assert.equal(plainLoss, 16);
+  assert.equal(plainLoss, 32);
   assert.ok(few <= 300 / plainLoss + 1, `${few} casillas con 300 tropas`);
   assert.ok(many <= 1500 / plainLoss + 1);
 });

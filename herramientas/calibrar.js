@@ -181,7 +181,7 @@ md();
 
 md(`## C. Tierra libre (PROVISIONAL)`);
 md();
-md(`Barrido de \`paceNeutral\` con las mismas ${SEEDS.length} semillas para cada valor. Terreno alrededor de cada despliegue (llanura / meseta / montaña): ${SPAWNS.map((t, i) => `semilla ${SEEDS[i]}: ${terrainMix(t)}`).join('; ')}. Coste por casilla y bajas sin tocar (documento). Tiempos en segundos desde el clic; «no llega» = ese frente se agotó antes.`);
+md(`Barrido de \`paceNeutral\` con las mismas ${SEEDS.length} semillas para cada valor. Terreno alrededor de cada despliegue (llanura / meseta / montaña): ${SPAWNS.map((t, i) => `semilla ${SEEDS[i]}: ${terrainMix(t)}`).join('; ')}. Coste de tiempo por casilla del documento; bajas por casilla de doc-1.2 (el doble que el documento) y, por encima de ~6.600 tropas, la aceleración con raíz de doc-1.2. Tiempos en segundos desde el clic; «no llega» = ese frente se agotó antes.`);
 md();
 
 /** Un frente de expansión: envía `amount` (internas) o `ratio` en t=5 s; variantes: segundo envío o retirada en t=10 s. */
@@ -239,7 +239,7 @@ const sample = {};
 const best = PACES.reduce((a, b) => (Math.abs(sample[b] - fwProxy) < Math.abs(sample[a] - fwProxy) ? b : a));
 md(`Valor más cercano al indicador de FrontWars: **paceNeutral = ${fmt(best, 2)}** (${fmt(sample[best], 0)} casillas a los 4 s frente a ~${fwProxy}). Queda como **provisional**.`);
 md();
-md(`Segundo indicador, también indirecto: el frente de FrontWars pasó de ~1,27k a 202 visibles en esos 4 s (~1,07k gastadas). Con las bajas por casilla del documento (1,6 / 2 / 2,4 visibles en llanura / meseta / montaña) serían ~670 / ~535 / ~445 casillas según el terreno, que no se conoce. Los dos indicadores se solapan hacia ~450–500 casillas, lo que también apunta a 0,5; con terreno llano, a 0,75–1. Hace falta la medición directa de la lista final para cerrarlo.`);
+md(`Segundo indicador, también indirecto: el frente de FrontWars pasó de ~1,27k a 202 visibles en esos 4 s (~1,07k gastadas). Con las bajas por casilla del documento (1,6 / 2 / 2,4 visibles en llanura / meseta / montaña; desde doc-1.2 el juego cobra el doble) serían ~670 / ~535 / ~445 casillas según el terreno, que no se conoce. Los dos indicadores se solapan hacia ~450–500 casillas, lo que también apunta a 0,5; con terreno llano, a 0,75–1. Hace falta la medición directa de la lista final para cerrarlo.`);
 md();
 md(`### Envíos al 10, 20 y 40 % de la reserva en t = 5 s`);
 md();
