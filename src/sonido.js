@@ -38,6 +38,12 @@ export class Sound {
     this._musicTimer = null;
   }
 
+  /** Suelta lo que recordaba de la partida anterior (buques y datos del humano). */
+  releaseGame() {
+    this._shots.clear();
+    this._prev = null;
+  }
+
   /** Se llama en el primer gesto del usuario (los navegadores no dejan sonar antes). */
   unlock() {
     if (this.ctx) {

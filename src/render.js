@@ -7,9 +7,9 @@ import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
 import { mutedRgb, rgbToCss, shadeRgb, vividRgb } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
-import { paintTerrain } from './terreno.js';
+import { forgetTerrain, paintTerrain } from './terreno.js';
 import { MECH } from './mecanicas.js';
-import { Fx, drawMissileSprite } from './fx.js';
+import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
 import { drawCargo, drawTransport, drawWarship } from './barcos.js';
 
 const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
@@ -154,6 +154,19 @@ export class Renderer {
     this._allySig = this._allySignature();
     this._spawnStyle = game.phase === 'spawn';
     this._paintAllTerritory();
+    // Si el navegador descarta el contenido de los lienzos, se rehacen (ver restoreCanvases)
+    this._lost = false;
+    this._needRestore = false;
+    this._lostCheckAt = 0;
+    this.restores = 0;
+    this._onLost = () => {
+      this._lost = true;
+    };
+    this._onRestored = () => {
+      this._lost = false;
+      this._needRestore = true;
+    };
+    for (const c of [canvas, this.territoryCanvas, this.baseCanvas]) this._watchCanvas(c);
 
     // Destellos de casillas que cambian de dueño (cola circular)
     this._flash = { t: new Int32Array(FLASH_N), at: new Float64Array(FLASH_N), k: new Uint8Array(FLASH_N), head: 0, n: 0 };
@@ -196,6 +209,112 @@ export class Renderer {
   setDpr(dpr) {
     this.dpr = dpr;
     this._vignette = null;
+  }
+
+  /** Escucha si el navegador pierde (y recupera) el contexto de dibujo de un lienzo. */
+  _watchCanvas(c) {
+    if (!c || !c.addEventListener) return;
+    c.addEventListener('contextlost', this._onLost);
+    c.addEventListener('contextrestored', this._onRestored);
+  }
+
+  /**
+   * ¿Se perdió el contenido de los lienzos? Chrome en Android (con poca
+   * memoria, o al volver de otra app) puede tirar el contexto de dibujo: el
+   * mapa y el territorio se quedaban en blanco para el resto de la partida
+   * (solo volvían los trozos de territorio que cambiaban). Cuando el contexto
+   * vuelve, se rehace todo. Además de los eventos, se mira cada ~2 s y al
+   * volver a la pestaña.
+   */
+  checkCanvases() {
+    let lost = false;
+    try {
+      lost = !!(this.ctx.isContextLost?.() || this.tctx.isContextLost?.() || this.baseCanvas.getContext('2d').isContextLost?.());
+    } catch {
+      lost = false;
+    }
+    if (lost) this._lost = true;
+    else if (this._lost) {
+      this._lost = false;
+      this._needRestore = true;
+    }
+    return lost;
+  }
+
+  /**
+   * Suelta la memoria de esta partida al empezar otra o volver al menú: la
+   * capa del territorio (imagen y lienzo: en el mundo, 36-144 MB), sus copias
+   * y cachés. El mapa base no (lo guarda terreno.js para la próxima partida en
+   * el mismo mapa). Deja de escuchar al lienzo principal, que sigue en uso.
+   */
+  dispose() {
+    for (const c of [this.canvas, this.territoryCanvas, this.baseCanvas]) {
+      c?.removeEventListener?.('contextlost', this._onLost);
+      c?.removeEventListener?.('contextrestored', this._onRestored);
+    }
+    if (this.territoryCanvas) {
+      // Ancho 0: el navegador suelta su memoria (también la de la tarjeta gráfica)
+      this.territoryCanvas.width = 0;
+      this.territoryCanvas.height = 0;
+    }
+    for (const m of Object.values(this._mips || {})) {
+      m.width = 0;
+      m.height = 0;
+    }
+    this.territoryCanvas = null;
+    this.tctx = null;
+    this.image = null;
+    this.pixels = null;
+    this.prevOwner = null;
+    this._queued = null;
+    this._mips = null;
+    this._spawnMaskCanvas = null;
+    this._lbOwner = null;
+    this.distField = null;
+    this._sprites?.clear();
+    this._labelSprites?.clear();
+    this._digitFonts?.clear();
+    this.labels = [];
+    this.labelById.clear();
+    this.onRestored = null;
+    this.disposed = true;
+  }
+
+  /** Sube otra vez el territorio entero desde sus píxeles (barato: no hay que pintarlo). */
+  refreshTerritory() {
+    this.tctx.putImageData(this.image, 0, 0);
+    for (const c of this._chunkList) this._chunkDirty[c] = 0;
+    this._chunkList.length = 0;
+  }
+
+  /**
+   * Vuelve a dibujar lo que vive en lienzos auxiliares: el mapa (terreno, sin
+   * la copia guardada) y sus copias reducidas, el territorio (sus píxeles
+   * siguen en memoria), la sombra del despliegue, la viñeta y las imágenes ya
+   * dibujadas (nombres, cifras, edificios, efectos). `onRestored` avisa al
+   * resto (minimapa e iconos del panel).
+   */
+  restoreCanvases() {
+    this._needRestore = false;
+    this._lost = false;
+    forgetTerrain();
+    const terrain = paintTerrain(this.game.map);
+    if (terrain.base !== this.baseCanvas) this._watchCanvas(terrain.base);
+    this.baseCanvas = terrain.base;
+    this.baseScale = terrain.scale;
+    this._mips = null;
+    this.tctx.putImageData(this.image, 0, 0);
+    for (const c of this._chunkList) this._chunkDirty[c] = 0;
+    this._chunkList.length = 0;
+    this._spawnMaskCanvas = null;
+    this._vignette = null;
+    this._youKey = null;
+    this._sprites?.clear();
+    this._labelSprites?.clear();
+    this._digitFonts?.clear();
+    resetFxSprites();
+    this.restores++;
+    this.onRestored?.();
   }
 
   get anim() {
@@ -456,6 +575,17 @@ export class Renderer {
     }
   }
 
+  /** Repinta las casillas de los dueños marcados en `mask` (sus bloques se suben a medida que se ven). */
+  _repaintOwners(mask) {
+    const s = this.prevOwner;
+    const W = this.game.map.width;
+    for (let i = 0; i < s.length; i++) {
+      if (!mask[s[i]]) continue;
+      this._paintTile(i);
+      this._markChunk(i % W, (i / W) | 0);
+    }
+  }
+
   /** Todo el territorio de una vez (al empezar o si cambian tus alianzas). */
   _paintAllTerritory() {
     const N = this.prevOwner.length;
@@ -478,6 +608,16 @@ export class Renderer {
   _flushDirty(now) {
     const game = this.game;
     const dirty = game.dirty;
+    if (game.dirtyOverflow) {
+      // Demasiados cambios sin dibujar (pestaña oculta en una sala): todo de una vez
+      game.dirtyOverflow = false;
+      dirty.length = 0;
+      this._runN = 0;
+      this._queued?.fill(0);
+      this.prevOwner.set(game.owner);
+      this._paintAllTerritory();
+      return;
+    }
     if (dirty.length) {
       // Turno nuevo: primero se termina de mostrar el anterior
       this._reveal(1, now);
@@ -862,6 +1002,9 @@ export class Renderer {
     old.clear();
     for (const [id, L] of this.labelById) old.set(id, L);
     this.labelById.clear();
+    // Los nombres ya dibujados de los eliminados, fuera (antes se guardaban
+    // todos hasta el final: cientos de lienzos pequeños)
+    if (this._labelSprites) for (const id of this._labelSprites.keys()) if (!players[id]?.alive) this._labelSprites.delete(id);
     const spawn = this.game.phase === 'spawn';
     for (const p of players) {
       if (!p || !p.alive || at[p.id] < 0) continue;
@@ -919,11 +1062,25 @@ export class Renderer {
       this.diploVersion = game.diploVersion;
       const sig = this._allySignature();
       if (sig !== this._allySig) {
+        // Solo las naciones cuyo trato contigo cambia (antes se repintaba y
+        // subía el mapa entero: en el móvil, medio segundo congelado)
+        const ids = (s) => new Set(s ? s.split(',').map(Number) : []);
+        const before = ids(this._allySig);
+        const after = ids(sig);
         this._allySig = sig;
         this._buildPalette();
-        this._paintAllTerritory();
+        const changed = new Uint8Array(game.players.length);
+        for (const id of before) if (!after.has(id)) changed[id] = 1;
+        for (const id of after) if (!before.has(id)) changed[id] = 1;
+        this._repaintOwners(changed);
       }
     }
+    // Lienzos descartados por el navegador: se rehacen en cuanto vuelve el contexto
+    if (now - this._lostCheckAt > 2000) {
+      this._lostCheckAt = now;
+      this.checkCanvases();
+    }
+    if (this._needRestore && !this._lost) this.restoreCanvases();
     if (this._spawnStyle && game.phase !== 'spawn') this._endSpawnStyle();
     this._flushDirty(now);
     this._updateGlowsAndUpload(now);

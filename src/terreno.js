@@ -119,6 +119,15 @@ export function paintTerrain(map) {
   return result;
 }
 
+/**
+ * Olvida el terreno guardado (el del último mapa). Si el navegador descarta el
+ * contenido de los lienzos (Chrome en Android, con poca memoria o al volver de
+ * otra app), la imagen guardada queda en blanco y hay que volver a pintarla.
+ */
+export function forgetTerrain() {
+  lastPaint = null;
+}
+
 function paintTerrainNow(map) {
   const { width: W, height: H, size, terrain } = map;
   const S = terrainScale(map);

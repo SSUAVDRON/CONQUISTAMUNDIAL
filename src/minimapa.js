@@ -56,6 +56,20 @@ export class Minimap {
     this._layout();
   }
 
+  /** Vuelve a dibujar sus lienzos (si el navegador descartó su contenido). */
+  restore() {
+    if (this.game) this._layout();
+  }
+
+  /** Suelta la partida (y sus lienzos) al volver al menú o empezar otra. */
+  release() {
+    this.game = null;
+    this.renderer = null;
+    this.base = null;
+    this.terr = null;
+    this.terrImg = null;
+  }
+
   _layout() {
     const map = this.game.map;
     const s = Math.min(this.maxW / map.width, this.maxH / map.height);

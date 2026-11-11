@@ -16,6 +16,7 @@ import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
 import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } from './movimiento.js';
 import { abrirGuia } from './guia.js';
+import { errorReport } from './errores.js';
 import { drawChart, drawSparkline } from './resumen.js';
 import { PLACEMENT_GAMES, RANKED_ROOM, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } from './rangos.js';
 import {
@@ -593,6 +594,19 @@ export class Home {
     $('aj-guia').addEventListener('click', () => abrirGuia());
     $('btn-guia').addEventListener('click', () => abrirGuia());
     $('aj-restablecer').addEventListener('click', () => abrirDialogo($('dialogo-restablecer'), { foco: '[data-cerrar]' }));
+    $('aj-error-copiar').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(errorReport());
+        this._flash('Copiado. Pégalo donde quieras enviarlo.', true);
+      } catch {
+        // Sin portapapeles: el texto queda seleccionado para copiarlo a mano
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents($('aj-error-texto'));
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
     $('dr-si').addEventListener('click', () => {
       this._resetSettings();
       cerrarDialogo($('dialogo-restablecer'));
@@ -1343,6 +1357,16 @@ export class Home {
     this.renderAchievements();
     this.renderTable();
     this.renderRooms();
+    this.renderLastError();
+  }
+
+  /** Ajustes → Más: el último fallo registrado (para copiarlo y enviarlo). */
+  renderLastError() {
+    const box = $('aj-error');
+    if (!box) return;
+    const text = errorReport();
+    box.hidden = !text;
+    $('aj-error-texto').textContent = text;
   }
 
   // ------------------------------------------------------------ rangos

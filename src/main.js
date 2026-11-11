@@ -28,6 +28,7 @@ import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
 import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
 import { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } from './toque.js';
+import { installGlobalHandlers, reportError, setErrorContext, setErrorNotifier } from './errores.js';
 import { abrirGuia } from './guia.js';
 import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
@@ -120,6 +121,14 @@ function resize() {
   state.renderer?.setDpr(dpr);
 }
 window.addEventListener('resize', resize);
+// Al volver a la pestaña (o de otra app en el móvil): ¿se perdió el
+// contenido de los lienzos? En el móvil, el territorio se vuelve a subir
+// entero (sus píxeles siguen en memoria; es barato)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !state.renderer) return;
+  state.renderer.checkCanvases();
+  if (TOUCH) state.renderer.refreshTerritory();
+});
 window.visualViewport?.addEventListener('resize', () => {
   if (canvas.width !== Math.round(window.innerWidth * currentDpr()) || canvas.height !== Math.round(window.innerHeight * currentDpr())) resize();
 });
@@ -156,7 +165,32 @@ function loadMap(mapSize, seed) {
   return { map: generateMap(size.w, size.h, seed), countries: null };
 }
 
+/**
+ * Suelta la partida que hubiera (la de fondo del menú o la anterior) antes
+ * de crear otra: si no, durante un momento convivían dos o tres partidas del
+ * mundo en memoria, y en el móvil el navegador acababa descartando lienzos
+ * (el mapa en negro) o cerrando la pestaña.
+ */
+function releaseGame() {
+  if (state.game) state.game.onEvent = null;
+  try {
+    state.renderer?.dispose();
+  } catch (err) {
+    reportError(err, 'liberar la partida');
+  }
+  state.renderer = null;
+  state.game = null;
+  state.human = null;
+  state.rec = null;
+  state.diag = null;
+  state.ping = null;
+  minimap.release();
+  ui.releaseGame();
+  sound.releaseGame();
+}
+
 function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = DEFAULT_RULES, loaded = null }) {
+  releaseGame();
   const { map, countries } = loaded || loadMap(mapSize, seed);
   const game = new Game({ map, seed, rules });
   const used = new Set();
@@ -202,6 +236,12 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   // Diagnóstico local: ?diag=1 registra la partida (exportar con Ctrl+Mayús+D o __trinchera.diag.exportar())
   state.diag = DIAG ? new Diagnostico(game, { build: RULES_FINGERPRINT, mechVersion: MECH_VERSION, ruleset: roomRuleset(game.rules) }) : null;
   state.renderer = new Renderer(canvas, game, camera);
+  // Si el navegador descartó los lienzos y el mapa se ha rehecho, también el
+  // minimapa y los iconos del panel (que se dibujan una sola vez)
+  state.renderer.onRestored = () => {
+    if (minimap.game === game) minimap.restore();
+    ui.repaintIcons();
+  };
   // La misma densidad con la que se creó el lienzo (en móviles de 2,5-3× no es
   // la del dispositivo): si no, el mapa salía desplazado y los toques no
   // caían donde se veía
@@ -271,17 +311,23 @@ function enterGame(game) {
   state.demo = false;
   // Resumen de partida: graba cómo va (sin tocar la simulación)
   state.rec = game.human ? new Grabador(game, game.human) : null;
+  // Se llama en mitad del turno: un fallo de la interfaz no debe dejar el
+  // turno a medias (ni desincronizar una sala)
   game.onEvent = (evt) => {
-    if (state.rec && state.rec.game === game) state.rec.onEvent(evt);
-    if (!state.demo) sound.onEvent(evt);
-    // Botín al eliminar a alguien: monedas que vuelan del mapa a tu oro
-    if (evt.loot && !state.demo && evt.tick >= game.ticks - 2 && state.renderer?.anim) {
-      const [sx, sy] = camera.worldToScreen(evt.x, evt.y);
-      ui.flyCoins(sx, sy, evt.weak);
-      setTimeout(() => sound.play('coins', 0.9, 0), 850);
+    try {
+      if (state.rec && state.rec.game === game) state.rec.onEvent(evt);
+      if (!state.demo) sound.onEvent(evt);
+      // Botín al eliminar a alguien: monedas que vuelan del mapa a tu oro
+      if (evt.loot && !state.demo && evt.tick >= game.ticks - 2 && state.renderer?.anim) {
+        const [sx, sy] = camera.worldToScreen(evt.x, evt.y);
+        ui.flyCoins(sx, sy, evt.weak);
+        setTimeout(() => sound.play('coins', 0.9, 0), 850);
+      }
+      if (evt.kind === 'request') ui.addRequest(game, evt);
+      else ui.pushEvent(evt);
+    } catch (err) {
+      reportError(err, 'avisos de la partida');
     }
-    if (evt.kind === 'request') ui.addRequest(game, evt);
-    else ui.pushEvent(evt);
   };
   for (const evt of game.eventLog) game.onEvent(evt);
   state.speed = 1; // la partida va siempre a velocidad normal
@@ -1433,30 +1479,83 @@ ui.on({
 
 // -------------------------------------------------------------------- bucle
 
+// Turnos de simulación por fotograma, como mucho: si el equipo va justo, la
+// partida va un pelín más lenta en vez de dar tirones intentando recuperar
+// (en el móvil, 2: un fotograma con 3 turnos y el dibujo se notaba)
+const MAX_TICKS_PER_FRAME = TOUCH ? 2 : 3;
+
+/**
+ * Un fotograma. El siguiente se pide lo primero y cada parte va por separado:
+ * si algo falla (simulación, dibujo, minimapa o paneles), se registra (ver
+ * errores.js) y la partida sigue; antes, un solo fallo la dejaba congelada.
+ */
 function frame(now) {
+  requestAnimationFrame(frame);
   const dt = Math.min(250, now - state.last);
   state.last = now;
   const game = state.game;
-  updateSpeedBox();
-  adaptQuality(now - (state.lastRaw || now));
-  state.lastRaw = now;
-
-  if (game && game.phase !== 'ended') {
-    if (state.net) {
-      state.net.update();
-    } else if (state.speed > 0) {
-      state.acc += dt * state.speed;
-      let steps = 0;
-      // Como mucho 3 turnos por fotograma: si el equipo va justo, la partida
-      // va un pelín más lenta en vez de dar tirones intentando recuperar
-      while (state.acc >= TICK_MS && steps < 3) {
-        game.tick();
-        state.acc -= TICK_MS;
-        steps++;
+  try {
+    updateSpeedBox();
+    adaptQuality(now - (state.lastRaw || now));
+    state.lastRaw = now;
+    if (game && game.phase !== 'ended') {
+      if (state.net) {
+        state.net.update();
+      } else if (state.speed > 0) {
+        state.acc += dt * state.speed;
+        let steps = 0;
+        while (state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
+          state.acc -= TICK_MS;
+          steps++;
+          game.tick();
+        }
+        if (steps === MAX_TICKS_PER_FRAME) state.acc = Math.min(state.acc, TICK_MS);
       }
-      if (steps === 3) state.acc = Math.min(state.acc, TICK_MS);
+    }
+  } catch (err) {
+    reportError(err, 'simulación');
+  }
+  try {
+    frameWorld(now, dt, game);
+  } catch (err) {
+    reportError(err, 'cámara y sonido');
+  }
+  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
+  state.frameNo = (state.frameNo || 0) + 1;
+  if (!(state.demo && TOUCH && state.frameNo & 1)) {
+    try {
+      state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+    } catch (err) {
+      reportError(err, 'dibujo del mapa');
     }
   }
+  try {
+    if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
+    sound.update(state.game, camera, state.human, state.demo);
+    updatePointer(now);
+  } catch (err) {
+    reportError(err, 'minimapa y sonido');
+  }
+  if (!state.demo && state.human && now - state.lastHud > 200) {
+    state.lastHud = now;
+    try {
+      ui.update(state.game, state.human, state.ratio, state.buildMode);
+      if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
+      if (state.net) ui.setNetNote(state.net.status);
+      if (tutorial.active) tutorial.update(tutorialState());
+    } catch (err) {
+      reportError(err, 'paneles');
+    }
+    try {
+      checkEnd();
+    } catch (err) {
+      reportError(err, 'final de partida');
+    }
+  }
+}
+
+/** Lo que va entre la simulación y el dibujo: resumen, cuenta atrás, demo, cámara y paneles vivos. */
+function frameWorld(now, dt, game) {
   if (!state.demo && state.rec && state.rec.game === game) state.rec.update();
   // Últimos 5 s del despliegue: un «tic» por segundo
   if (game && !state.demo && game.phase === 'spawn' && state.human?.alive) {
@@ -1483,24 +1582,6 @@ function frame(now) {
     ui.liveNumbers(state.game, state.human);
     ui.animate(dt);
   }
-  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
-  state.frameNo = (state.frameNo || 0) + 1;
-  if (!(state.demo && TOUCH && state.frameNo & 1)) {
-    state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
-  }
-  if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
-  sound.update(state.game, camera, state.human, state.demo);
-  updatePointer(now);
-
-  if (!state.demo && state.human && now - state.lastHud > 200) {
-    state.lastHud = now;
-    ui.update(state.game, state.human, state.ratio, state.buildMode);
-    if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
-    if (state.net) ui.setNetNote(state.net.status);
-    if (tutorial.active) tutorial.update(tutorialState());
-    checkEnd();
-  }
-  requestAnimationFrame(frame);
 }
 
 // ------------------------------------------------------------ arranque
@@ -1532,6 +1613,8 @@ for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) {
   });
 }
 document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
+// Por si el navegador descartó los lienzos sin avisar: rehace mapa, territorio y minimapa
+document.getElementById('mp-repintar').addEventListener('click', () => state.renderer?.restoreCanvases());
 document.getElementById('mp-salir').addEventListener('click', () => {
   cerrarDialogo(document.getElementById('menu-partida'));
   if (stillPlaying()) ui.confirmExit(!!state.ranked);
@@ -1566,6 +1649,25 @@ state.version = { motor: MECH_VERSION, perfiles: Object.fromEntries(Object.entri
 state.camera = camera; // para pruebas automáticas
 state.sound = sound;
 state.profile = profile;
+
+// Fallos: con qué partida y versión ocurrieron, y un aviso discreto (como
+// mucho uno cada 30 s; la partida sigue)
+setErrorContext(() => ({
+  build: state.version.build,
+  tick: state.game ? state.game.ticks : null,
+  phase: state.game ? (state.demo ? 'menú' : state.game.phase) : null,
+  map: state.mapSize || null,
+  device: `${TOUCH ? 'táctil' : 'ratón'} · ${window.innerWidth}×${window.innerHeight} · ${navigator.userAgent.slice(0, 120)}`,
+}));
+let lastErrorHint = -Infinity;
+setErrorNotifier(() => {
+  home.renderLastError?.();
+  const now = performance.now();
+  if (now - lastErrorHint < 30000 || state.demo) return;
+  lastErrorHint = now;
+  ui.hint('Algo ha fallado, pero la partida sigue. Si se repite: Ajustes → Más → Último error', 'warn');
+});
+installGlobalHandlers();
 
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
 state.demo = true;

@@ -92,6 +92,11 @@ function sprites() {
   return SPRITES;
 }
 
+/** Vuelve a dibujar los sprites (si el navegador descartó el contenido de los lienzos). */
+export function resetFxSprites() {
+  SPRITES = null;
+}
+
 /** Sprites que se dibujan sumando luz. */
 const ADDITIVE = new Set(['fire', 'core', 'red', 'blue', 'gold']);
 

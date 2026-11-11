@@ -19,25 +19,26 @@
       "./src/colors.js": "./src/colors.js?v=61b9fe2d81",
       "./src/config.js": "./src/config.js?v=0f75384d4c",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
+      "./src/errores.js": "./src/errores.js?v=1a5ed3f3a9",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
       "./src/fin.js": "./src/fin.js?v=72a8fd1796",
       "./src/format.js": "./src/format.js?v=66b8e86f09",
-      "./src/fx.js": "./src/fx.js?v=dae868bb98",
-      "./src/game.js": "./src/game.js?v=8b208ef1ef",
+      "./src/fx.js": "./src/fx.js?v=ab7609d597",
+      "./src/game.js": "./src/game.js?v=a3b8eb8cec",
       "./src/guia.js": "./src/guia.js?v=c22d32aded",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=06e5aa3c69",
+      "./src/home.js": "./src/home.js?v=98c7641f30",
       "./src/icons.js": "./src/icons.js?v=d51a108086",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=370e36db66",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=c9c00ff77d",
       "./src/loading.js": "./src/loading.js?v=60190a41c1",
-      "./src/main.js": "./src/main.js?v=bbbf69ed7e",
+      "./src/main.js": "./src/main.js?v=296926a7af",
       "./src/map.js": "./src/map.js?v=88708ebc94",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=eebaf66b1d",
       "./src/mecanicas.js": "./src/mecanicas.js?v=01c62f7c01",
-      "./src/minimapa.js": "./src/minimapa.js?v=1a0ee2f6bd",
+      "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=bca7deac27",
       "./src/mqtt.js": "./src/mqtt.js?v=f04ad35319",
       "./src/multiplayer.js": "./src/multiplayer.js?v=cf4a4ee816",
@@ -48,22 +49,22 @@
       "./src/portada.js": "./src/portada.js?v=a6d45c3308",
       "./src/profile.js": "./src/profile.js?v=e322c02e25",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
-      "./src/render.js": "./src/render.js?v=2ea1dc8ce9",
+      "./src/render.js": "./src/render.js?v=826078f2a8",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=f3d23579ab",
       "./src/rng.js": "./src/rng.js?v=f9717328bc",
-      "./src/sonido.js": "./src/sonido.js?v=90e9490ca0",
+      "./src/sonido.js": "./src/sonido.js?v=0120271ae4",
       "./src/tecnologias.js": "./src/tecnologias.js?v=e5f4d0a332",
-      "./src/terreno.js": "./src/terreno.js?v=2744ae1249",
+      "./src/terreno.js": "./src/terreno.js?v=8fa88e7ed0",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=18c38a27ef",
-      "./src/ui.js": "./src/ui.js?v=e72d049a94"
+      "./src/ui.js": "./src/ui.js?v=f4b4693a05"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=704df1a21d">
+  <link rel="stylesheet" href="css/estilo.css?v=fcdb6ac814">
 </head>
 <body>
   <canvas id="lienzo"></canvas>
@@ -453,6 +454,12 @@
             </div>
             <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
             <p class="nota version-reglas" id="version-reglas"></p>
+            <details class="ultimo-error" id="aj-error" hidden>
+              <summary>Último error</summary>
+              <p class="nota">Si algo ha ido mal, cópialo y envíalo: ayuda a arreglarlo.</p>
+              <pre id="aj-error-texto"></pre>
+              <button type="button" id="aj-error-copiar" class="btn-sec">Copiar</button>
+            </details>
           </div>
         </div>
       </section>
@@ -859,6 +866,7 @@
         </div>
         <div class="mp-botones">
           <button type="button" class="btn-sec" id="mp-guia">📖 Guía</button>
+          <button type="button" class="btn-sec" id="mp-repintar" title="Si el mapa se ve en negro o le faltan trozos" data-cerrar>🔄 Repintar el mapa</button>
           <button type="button" class="btn-peligro" id="mp-salir">Abandonar</button>
         </div>
       </div>

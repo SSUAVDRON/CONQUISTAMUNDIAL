@@ -242,6 +242,7 @@ export class UI {
     });
 
     this._buildButtons = new Map();
+    this._buildIcons = new Map();
     for (const kind of BUILDING_KINDS) {
       const def = BUILDINGS[kind];
       const btn = document.createElement('button');
@@ -254,6 +255,7 @@ export class UI {
       icon.width = 48;
       icon.height = 48;
       drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
+      this._buildIcons.set(kind, icon);
       // Sin nombre (ocupa menos): el nombre sale al pasar el ratón
       btn.setAttribute('aria-label', def.name);
       const text = document.createElement('span');
@@ -365,6 +367,29 @@ export class UI {
 
   on(handlers) {
     Object.assign(this.handlers, handlers);
+  }
+
+  /**
+   * Suelta todo lo que guardaba de la partida anterior (la pantalla final y
+   * los datos de economía la mantenían viva durante la siguiente: en el
+   * móvil, más de 100 MB del mapa del mundo).
+   */
+  releaseGame() {
+    if (this.fin) {
+      this.fin.hide();
+      this.fin.data = null;
+    }
+    if (this._ecoSnaps) this._ecoSnaps.length = 0;
+    this._textTweens?.clear();
+  }
+
+  /** Vuelve a dibujar los iconos del panel de construir (si el navegador descartó su contenido). */
+  repaintIcons() {
+    for (const [kind, icon] of this._buildIcons) {
+      const g = icon.getContext('2d');
+      g.clearRect(0, 0, icon.width, icon.height);
+      drawBuildingReal(g, kind, 24, 24, 44);
+    }
   }
 
   /** Oculta la interfaz de partida (al volver al inicio). */

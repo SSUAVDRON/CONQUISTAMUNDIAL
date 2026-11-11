@@ -2800,6 +2800,9 @@ body.sin-animaciones .novedad { transition: none; }
 .campo-perfil .nota-perfil { display: block; margin-top: 2px; font-weight: 400; color: var(--texto-suave); }
 .pd-nota { margin: 8px 0 0; font-size: 12px; color: var(--texto-suave); }
 .version-reglas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; opacity: 0.8; }
+.ultimo-error { margin-top: var(--e2); }
+.ultimo-error summary { cursor: pointer; color: var(--texto-2); font-size: 13px; }
+.ultimo-error pre { max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; background: var(--sup-1, rgba(0, 0, 0, 0.25)); border-radius: var(--r-s); padding: var(--e2); margin: var(--e2) 0; }
 
 /* =========================================================================
    Salas (diseño de salas): crear, vestíbulo, invitación y cuenta atrás
@@ -3365,8 +3368,9 @@ body.sin-animaciones .guia-lista li { animation: none; }
 .menu-partida h3 { margin: var(--e2) 0 0; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-500); }
 .mp-continuar { width: 100%; }
 .mp-nota { margin: -4px 0 0; text-align: center; font-size: 12px; color: var(--texto-3); }
-.mp-botones { display: flex; gap: var(--e2); margin-top: var(--e2); }
-.mp-botones > * { flex: 1; }
+.mp-botones { display: flex; flex-wrap: wrap; gap: var(--e2); margin-top: var(--e2); }
+.mp-botones > * { flex: 1 1 40%; }
+.mp-botones > #mp-repintar { order: 3; flex-basis: 100%; }
 
 /* ===================================================== Fin de partida: resumen con pestañas (fin.js) */
 #fin .fin-tarjeta { width: min(880px, 100%); padding: var(--e5); display: flex; flex-direction: column; gap: var(--e3); }

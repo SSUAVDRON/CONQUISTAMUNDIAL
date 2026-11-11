@@ -44,6 +44,8 @@ const ANNEX_MAX_TILES = Math.round(MECH.annexMaxTiles * DOC_AREA);
 const ANNEX_VISITS_PER_TICK = Math.round(MECH.annexVisitsPerTick * DOC_AREA);
 // Casillas recorridas antes de probar la sonda del cerco (ver _annexProbe)
 const ANNEX_PROBE_AT = MECH.annexProbeAt;
+// Tope de casillas pendientes de repintar (solo dibujo, ver setOwner)
+const DIRTY_MAX = 2_000_000;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -103,6 +105,8 @@ export class Game {
     // El renderizador activa esto para saber qué píxeles repintar
     this.trackDirty = false;
     this.dirty = [];
+    /** Se pasó el tope de `dirty`: el dibujo debe repintarlo todo. */
+    this.dirtyOverflow = false;
     /** Sube con cada casilla que cambia de dueño (invalida resúmenes guardados). */
     this.ownerVersion = 0;
 
@@ -497,7 +501,11 @@ export class Game {
     if (building) this._transferBuilding(building, oldId, newId);
     const point = this.pointAt.get(t);
     if (point) this._pointChanged(point, oldId, newId);
-    if (this.trackDirty) this.dirty.push(t);
+    // Casillas para repintar (solo dibujo). Con tope: con la pestaña oculta
+    // nadie las recoge (sala multijugador en segundo plano) y crecían sin fin;
+    // pasado el tope, el dibujo lo repinta todo al volver
+    const track = this.trackDirty && (this.dirty.length < DIRTY_MAX || ((this.dirtyOverflow = true), false));
+    if (track) this.dirty.push(t);
     this._updateBorder(t);
 
     const nb = NB_SET;
@@ -508,7 +516,7 @@ export class Game {
       // dueño (para un tercero, `t` era y sigue siendo ajena)
       const on = owner[n];
       if (on && (on === oldId || on === newId)) this._updateBorder(n);
-      if (this.trackDirty) this.dirty.push(n);
+      if (track) this.dirty.push(n);
     }
 
     // Las casillas vecinas pueden entrar en el frente de algún ataque del nuevo dueño
