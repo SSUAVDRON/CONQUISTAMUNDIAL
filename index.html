@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="8bceeb2 2026-11-10 16:29 UTC">
+<meta name="trinchera-build" content="e0ee09a 2026-11-11 12:00 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4470,7 +4470,7 @@ body.sin-animaciones .despliegue { animation: none; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "8bceeb2 2026-11-10 16:29 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "e0ee09a 2026-11-11 12:00 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -5897,6 +5897,8 @@ const CONFIG = {
   // azar hacen que los países crezcan irregulares y no como círculos.
   // Orden de conquista de la tierra libre: por distancia al centro del país
   // (en casillas), así crece parejo, en círculo, sin manchas ni brazos
+  // Forma: 0 = círculo, 1 = cuadrado (en medio, un cuadrado de esquinas redondeadas)
+  growSquare: 0.45,
   growRandom: 0.45, // azar por casilla: el borde sale algo irregular, no una regla (poco: crece parejo, sin dientes)
   growTerrain: (4 * RES) / 2, // retraso (en casillas de distancia) por cada punto de coste de terreno sobre la llanura: la misma superficie con más resolución
   growSmooth: 1.2, // las casillas con más vecinas propias antes: rellena huecos y esquinas
@@ -8253,14 +8255,17 @@ class Game {
     const terr = (MECH.terrain[map.terrain[t]].tileCost / MECH.terrain[1].tileCost - 1) * CONFIG.growTerrain;
     let key;
     if (!atk.targetId && atk.cx !== undefined) {
-      // Tierra libre: en orden de distancia al centro del país (crece en
-      // círculo, parejo por todos lados) con un poco de azar para que el borde
-      // no sea una regla. Hacia un clic, ese lado avanza antes.
+      // Tierra libre: en orden de distancia al centro del país (crece parejo
+      // por todos lados) con un poco de azar para que el borde no sea una
+      // regla. La distancia mezcla la normal y la «de casillas» (la mayor de
+      // las dos): sale un cuadrado de esquinas redondeadas, no un círculo.
+      // Hacia un clic, ese lado avanza antes.
       const vx = x - atk.cx;
       const vy = y - atk.cy;
-      const d = Math.sqrt(vx * vx + vy * vy);
+      const round = Math.sqrt(vx * vx + vy * vy);
+      const d = round + (Math.max(Math.abs(vx), Math.abs(vy)) - round) * CONFIG.growSquare;
       let stretch = 1;
-      if (atk.focus >= 0 && d > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / d) * CONFIG.growFocusStretch;
+      if (atk.focus >= 0 && round > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / round) * CONFIG.growFocusStretch;
       key = d * stretch + this.rng.float() * CONFIG.growRandom + terr - n * CONFIG.growSmooth;
     } else {
       // Contra otro país: el frente entero avanza a la vez (por turnos de
@@ -8327,7 +8332,10 @@ class Game {
     const speed = Math.max(0.2, 1 + (attacker ? attacker.mods.attackSpeed : 0));
     const lossMul = Math.max(0.3, 1 + (attacker ? attacker.mods.attackCost : 0));
     if (!target) {
-      return { time: neutralTimeCost(T.tileCost, troops) / speed, loss: (T.mag / MECH.neutralLossDiv) * lossMul, defLoss: 0 };
+      // Las colonias ocupan tierra libre más rápido y con menos bajas
+      const colony = attacker && attacker.weak;
+      const time = neutralTimeCost(T.tileCost, troops) / speed / (colony ? MECH.colonyNeutralSpeed : 1);
+      return { time, loss: (T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1), defLoss: 0 };
     }
     const mult = this.defenseMult(target, t);
     const c = pvpTile(this.defenders(target), troops, target.tiles, front, {
@@ -8383,7 +8391,7 @@ class Game {
     const lossMul = Math.max(0.3, 1 + p.mods.attackCost);
     const plain = MECH.terrain[1];
     let perTile;
-    if (!target) perTile = (plain.mag / MECH.neutralLossDiv) * lossMul;
+    if (!target) perTile = (plain.mag / MECH.neutralLossDiv) * lossMul * (p.weak ? MECH.colonyNeutralLoss : 1);
     else {
       const c = pvpTile(this.defenders(target), troops, target.tiles, 1, { traitor: this.isTraitor(target) });
       perTile = plain.mag * c.attackerLossPerMag * Math.max(0.2, 1 + target.mods.defense) * lossMul;
@@ -10783,7 +10791,7 @@ const TABS = [
     id: 'controles',
     name: 'Controles',
     items: [
-      ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic en tierra libre o en un vecino: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
+      ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
       ['ciudad', 'Construir', 'Q ciudad · E puerto · R puesto defensivo · F fábrica · G silo · H antimisiles · T buque · M bomba atómica · J bomba H · K MIRV. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
@@ -10806,7 +10814,7 @@ const TABS = [
     name: 'Combate',
     items: [
       ['tropas', 'Tropas', 'Se regeneran solas, más rápido cerca del 42 % de tu techo y nada al llenarlo: no esperes con la barra llena. Más territorio y ciudades, más techo.'],
-      ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 1,6 tropas en llanura, 2 en meseta y 2,4 en montaña; contra otro país, más cuantos más defensores tenga.'],
+      ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
       ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas.'],
       ['barco', 'Barcos y buques', 'Clic en una costa sin frontera por tierra: sale un barco con tropas (3 a la vez como mucho). Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
@@ -15529,6 +15537,8 @@ __define('input', function () {
 // acción sobre la casilla.
 
 const DRAG_THRESHOLD = 6;
+// Con el dedo, más margen: el dedo tiembla y muchos toques se volvían arrastres
+const DRAG_THRESHOLD_TOUCH = 10;
 const LONG_PRESS_MS = 500;
 const FLING_WINDOW_MS = 90; // la velocidad al soltar se mide con los últimos movimientos
 /** Píxeles por unidad de `deltaY` según `deltaMode` (píxeles, líneas, páginas). */
@@ -15562,18 +15572,30 @@ class Input {
 
   _pos(e) {
     const r = (this._rect ??= this.canvas.getBoundingClientRect());
-    return [e.clientX - r.left, e.clientY - r.top];
+    // En coordenadas de la cámara: si el lienzo se ve estirado (en el móvil,
+    // con la barra del navegador, 100vh no es el alto visible), el toque
+    // sigue cayendo donde se ve
+    const kx = r.width > 0 ? this.camera.viewW / r.width : 1;
+    const ky = r.height > 0 ? this.camera.viewH / r.height : 1;
+    return [(e.clientX - r.left) * kx, (e.clientY - r.top) * ky];
   }
 
   _down(e) {
+    // Al empezar un gesto se vuelve a leer dónde está el lienzo (la barra del
+    // navegador del móvil aparece y desaparece sin que siempre llegue un resize)
+    if (this.pointers.size === 0) this._rect = null;
     const [x, y] = this._pos(e);
     this.canvas.setPointerCapture(e.pointerId);
-    this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button, shift: e.shiftKey });
+    const touch = e.pointerType !== 'mouse';
+    this.pointers.set(e.pointerId, { x, y, sx: x, sy: y, button: e.button, shift: e.shiftKey, touch });
     if (this.pointers.size === 1) {
       this.dragging = false;
       this.longPressed = false;
       this.trail = [{ t: e.timeStamp, x, y }];
-      this.camera.stop(); // tocar el mapa para la inercia o el vuelo en curso
+      // Tocar el mapa para la inercia o el vuelo en curso. Si iba deslizándose,
+      // ese toque solo lo frena: no es una orden
+      this.braked = !!(this.camera.vx || this.camera.vy);
+      this.camera.stop();
       // Mantener pulsado (táctil) equivale al clic derecho
       clearTimeout(this.longPressTimer);
       if (e.pointerType !== 'mouse') {
@@ -15604,7 +15626,7 @@ class Input {
       return;
     }
     if (this.pointers.size === 1) {
-      if (!this.dragging && Math.hypot(x - ptr.sx, y - ptr.sy) > DRAG_THRESHOLD) {
+      if (!this.dragging && Math.hypot(x - ptr.sx, y - ptr.sy) > (ptr.touch ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD)) {
         this.dragging = true;
         clearTimeout(this.longPressTimer);
       }
@@ -15635,9 +15657,12 @@ class Input {
     if (!ptr) return;
     this.pointers.delete(e.pointerId);
     clearTimeout(this.longPressTimer);
-    if (!cancelled && !this.dragging && !this.longPressed && this.pointers.size === 0) {
-      if (ptr.button === 0) this.h.onClick?.(ptr.x, ptr.y, ptr.shift);
-      else if (ptr.button === 2) this.h.onRightClick?.(ptr.x, ptr.y);
+    if (!cancelled && !this.dragging && !this.longPressed && !this.braked && this.pointers.size === 0) {
+      // Con el dedo cuenta donde se apoyó (al levantarlo suele rodar unos píxeles)
+      const x = ptr.touch ? ptr.sx : ptr.x;
+      const y = ptr.touch ? ptr.sy : ptr.y;
+      if (ptr.button === 0) this.h.onClick?.(x, y, ptr.shift, ptr.touch);
+      else if (ptr.button === 2) this.h.onRightClick?.(x, y);
     }
     // Inercia: si se soltó en pleno movimiento, el mapa sigue y frena
     if (!cancelled && this.dragging && this.pointers.size === 0 && this.trail && this.trail.length >= 2) {
@@ -15981,6 +16006,7 @@ const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.sea
 const { Sound } = __require('sonido');
 const { Minimap } = __require('minimapa');
 const { abrirDialogo, cerrarDialogo, hayDialogo } = __require('movimiento');
+const { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } = __require('toque');
 const { abrirGuia } = __require('guia');
 const { Grabador, compactCurve, placement } = __require('resumen');
 const { Ladder } = __require('ladder');
@@ -16060,12 +16086,22 @@ function adaptQuality(dt) {
 
 function resize() {
   const dpr = currentDpr();
-  canvas.width = Math.round(window.innerWidth * dpr);
-  canvas.height = Math.round(window.innerHeight * dpr);
-  camera.setView(window.innerWidth, window.innerHeight);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  // El tamaño en pantalla, el mismo que el de la cámara: con 100vh, en el
+  // móvil (con la barra del navegador) el mapa se veía estirado y los toques
+  // caían más abajo de donde se veían
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+  camera.setView(w, h);
   state.renderer?.setDpr(dpr);
 }
 window.addEventListener('resize', resize);
+window.visualViewport?.addEventListener('resize', () => {
+  if (canvas.width !== Math.round(window.innerWidth * currentDpr()) || canvas.height !== Math.round(window.innerHeight * currentDpr())) resize();
+});
 resize();
 
 function randomSeed() {
@@ -16966,6 +17002,26 @@ function selectCode() {
 
 // ------------------------------------------------------------------ entrada
 
+/**
+ * Objetivo de un clic o toque en partida. Sobre el nombre de un país (que
+ * suele salirse de sus fronteras): ese país, en su casilla más cercana. Con
+ * el dedo, además, tolerancia: si la casilla tocada no se puede atacar por
+ * tierra (agua, lo tuyo, un aliado o un país sin frontera contigo), la más
+ * cercana que sí, a unos 24 px (ver src/toque.js).
+ */
+function aimTap(sx, sy, tile, touch) {
+  const { game, renderer, human } = state;
+  const named = renderer?.labelAt(sx, sy, touch ? 6 : 0);
+  if (named && named.player !== human) {
+    const L = named;
+    const [wx, wy] = camera.screenToWorld(sx, sy);
+    const t = nearestTileOf(game, L.player.id, wx, wy, Math.max(8, L.r + Math.hypot(wx - L.x, wy - L.y)));
+    if (t >= 0) return t;
+  }
+  if (!touch) return tile;
+  return resolveTap(game, human, tile, Math.min(TAP_RADIUS_MAX, TAP_RADIUS_PX / camera.zoom));
+}
+
 function tileAt(sx, sy) {
   const game = state.game;
   if (!game) return -1;
@@ -17233,19 +17289,27 @@ function setBuildMode(kind) {
 const buildKeys = Object.fromEntries(BUILDING_KINDS.map((k) => [BUILDINGS[k].key, k]));
 
 const input = new Input(canvas, camera, {
-  onClick(sx, sy, shift) {
+  onClick(sx, sy, shift, touch = false) {
     if (state.demo || !state.human || !state.human.alive) return;
-    const tile = tileAt(sx, sy);
+    let tile = tileAt(sx, sy);
     if (tile < 0) return;
     if (state.buildMode) {
       humanIntent({ type: 'build', tile, kind: state.buildMode });
       if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
       return;
     }
+    if (state.game.phase === 'playing') {
+      tile = aimTap(sx, sy, tile, touch);
+    }
     // Los buques no se mueven (su zona se elige al botarlos); en el despliegue
     // el clic en el agua sí llega, para explicar por qué no se puede empezar ahí
     if (!state.game.map.isLand(tile) && state.game.phase !== 'spawn') return;
     humanIntent({ type: 'action', tile, ratio: state.ratio });
+    // Con el dedo, unos anillos pequeños marcan a dónde va la orden
+    if (touch && state.game.phase === 'playing' && state.game.owner[tile] !== state.human.id) {
+      const m = state.game.map;
+      state.ping = { x: m.x(tile) + 0.5, y: m.y(tile) + 0.5, t: performance.now(), danger: false, small: true };
+    }
     // Información útil: lo que se espera de este ataque (aproximado)
     const g = state.game;
     const h = state.human;
@@ -18117,9 +18181,12 @@ __define('mecanicas', function () {
 /**
  * Versión de las reglas (para saber qué fórmulas usa una partida). doc-1.1:
  * correcciones de la revisión (Industria, Milicia, victorias, pactos, cercos,
- * comercio por superficie). En multijugador, versiones distintas no juegan juntas.
+ * comercio por superficie). doc-1.2: tierra libre al doble de bajas, más
+ * tropas = más rápido (también contra países), colonias rápidas y baratas en
+ * tierra libre, crecimiento algo más cuadrado y sonda del cerco. En
+ * multijugador, versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.1';
+const MECH_VERSION = 'doc-1.2';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -18130,7 +18197,8 @@ const MECH_VERSION = 'doc-1.1';
  *   y techo; ver docs/calibracion-clasico.md). paceNeutral y pacePvp son
  *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
- *   a petición, porque la expansión inicial iba demasiado rápida. Sin puntos estratégicos (ni bonos ni botín de
+ *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
+ *   las fórmulas de doc-1.2 (mismos ritmos). Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -18140,8 +18208,8 @@ const MECH_VERSION = 'doc-1.1';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-2', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-1', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-3', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-2', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -18193,7 +18261,15 @@ const MECH = {
   neutralTimeMin: 5,
   neutralTimeMax: 100,
   neutralBudgetPerFront: 2, // presupuesto por tick = 2 × longitud del frente
-  neutralLossDiv: 5, // bajas por casilla = magnitud / 5
+  // PROPUESTA (doc-1.2): bajas por casilla = magnitud / 2,5 (32 / 40 / 48: el
+  // doble que el documento, a petición: expandirse al principio cuesta más)
+  neutralLossDiv: 2.5,
+  // PROPUESTA (doc-1.2): más tropas, más rápido también por encima de
+  // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
+  neutralTimeFloor: 1.25,
+  // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
+  colonyNeutralLoss: 0.5,
+  colonyNeutralSpeed: 2,
   // Guerra entre países (sección 05.2)
   pvp: {
     lossBase: 0.463,
@@ -18201,6 +18277,9 @@ const MECH = {
     ratioMin: 0.6,
     ratioMax: 2,
     speedMin: 0.82,
+    // PROPUESTA (doc-1.2): por debajo de speedMin (más de 1,22× las tropas del
+    // defensor) sigue acelerando, con raíz, hasta speedBoostMax veces
+    speedBoostMax: 3,
     speedMax: 7.5,
     speedHighDiv: 20,
     speedHighMax: 50,
@@ -18344,9 +18423,27 @@ function startOffsets() {
   return out;
 }
 
-/** Coste de tiempo de una casilla sin dueño (sección 05.1). */
+/**
+ * Coste de tiempo de una casilla sin dueño (sección 05.1): 2000 × coste ÷
+ * tropas, entre 5 y 100. Por encima de las tropas que dan 5 (unas 6.600 en
+ * llanura), más tropas siguen acelerando con rendimiento decreciente:
+ * 5 × √(t / 5), hasta neutralTimeFloor (doc-1.2).
+ */
 function neutralTimeCost(tileCost, attackTroops) {
-  return clamp((MECH.neutralTimeK * tileCost) / Math.max(1, attackTroops), MECH.neutralTimeMin, MECH.neutralTimeMax);
+  const t = (MECH.neutralTimeK * tileCost) / Math.max(1, attackTroops);
+  if (t >= MECH.neutralTimeMin) return Math.min(t, MECH.neutralTimeMax);
+  return Math.max(MECH.neutralTimeFloor, MECH.neutralTimeMin * Math.sqrt(t / MECH.neutralTimeMin));
+}
+
+/**
+ * Factor de velocidad contra un país según defensor ÷ atacante (sección
+ * 05.2: entre speedMin y speedMax). Por debajo de speedMin, mandar más tropas
+ * sigue acelerando con raíz, hasta speedBoostMax veces (doc-1.2).
+ */
+function pvpSpeedRatio(ratio) {
+  const P = MECH.pvp;
+  if (ratio >= P.speedMin) return Math.min(ratio, P.speedMax);
+  return Math.max(P.speedMin / P.speedBoostMax, P.speedMin * Math.sqrt(Math.max(0, ratio) / P.speedMin));
 }
 
 /**
@@ -18360,7 +18457,7 @@ function pvpTile(def, atk, defTiles, front, { traitor = false, bigAttacker = 1, 
   const ratio = def / Math.max(1, atk);
   const density = def / Math.max(1, defTiles);
   const attackerLossPerMag = (traitor ? P.traitorDebuff : 1) * clamp(ratio, P.ratioMin, P.ratioMax) * (P.lossBase * bigAttacker * bigDefender + P.lossPerDensity * density);
-  const speedCost = (clamp(ratio, P.speedMin, P.speedMax) * clamp(ratio / P.speedHighDiv, 1, P.speedHighMax)) / P.speedDiv;
+  const speedCost = (pvpSpeedRatio(ratio) * clamp(ratio / P.speedHighDiv, 1, P.speedHighMax)) / P.speedDiv;
   return { ratio, attackerLossPerMag, defenderLoss: density, speedCost, perFront: speedCost / Math.max(1, front) };
 }
 
@@ -18423,7 +18520,7 @@ function priceFor(kind, n) {
   }
 }
 
-return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
+return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpSpeedRatio, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
 });
 __define('minimapa', function () {
 // Minimapa: todo el mapa en pequeño (relieve y territorios), con el recuadro
@@ -23218,8 +23315,37 @@ class Renderer {
   }
 
   /** Anillos que marcan el punto al que ha volado la cámara. */
+  /**
+   * Nombre de país (no el tuyo) dibujado bajo el punto (sx, sy) de la
+   * pantalla en el último fotograma, con `pad` px de margen; o null.
+   */
+  labelAt(sx, sy, pad = 0) {
+    const hits = this._labelHits;
+    if (!hits) return null;
+    for (let i = 0; i < hits.length; i += 5) {
+      if (sx >= hits[i + 1] - pad && sx <= hits[i + 3] + pad && sy >= hits[i + 2] - pad && sy <= hits[i + 4] + pad) return hits[i];
+    }
+    return null;
+  }
+
   _drawPing(now, ping) {
     const age = (now - ping.t) / 1000;
+    if (ping.small) {
+      // Toque: dos anillos pequeños y rápidos donde cae la orden
+      if (age > 0.7) return;
+      const { ctx, camera } = this;
+      const [x, y] = camera.worldToScreen(ping.x, ping.y);
+      for (let k = 0; k < 2; k++) {
+        const a = age - k * 0.15;
+        if (a < 0 || a > 0.55) continue;
+        ctx.beginPath();
+        ctx.arc(x, y, 5 + a * 34, 0, Math.PI * 2);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * (1 - a / 0.55)})`;
+        ctx.stroke();
+      }
+      return;
+    }
     if (age > 1.6) return;
     const { ctx, camera } = this;
     const [x, y] = camera.worldToScreen(ping.x, ping.y);
@@ -24092,6 +24218,9 @@ class Renderer {
     order.sort((a, b) => b.rank - a.rank);
     const boxes = (this._labelBoxes ??= []);
     boxes.length = 0;
+    // Cajas de los nombres de este fotograma (para tocar un país por su nombre)
+    const hits = (this._labelHits ??= []);
+    hits.length = 0;
     // Los nombres aparecen con un fundido (antes saltaban al entrar en pantalla
     // o al dejar de chocar con otro); el que no se dibuja vuelve a empezar
     const fadeStep = this.anim ? Math.min(1, this._dt * 5) : 1;
@@ -24176,6 +24305,7 @@ class Renderer {
         continue;
       }
       boxes.push(x0, y0, x1, y1);
+      if (!me) hits.push(L, x0, y0, x1, y1);
       L.size = size;
       // Nombre (con su icono) y tropas: imágenes ya dibujadas, centradas
       // En píxeles enteros del lienzo: copia directa, sin remuestrear
@@ -26190,6 +26320,109 @@ function paintMapPreview(canvas, data, crop = null) {
 }
 
 return { terrainScale, paintTerrain, paintMapPreview };
+});
+__define('toque', function () {
+// Toques con el dedo: un dedo tapa varias casillas, así que el objetivo de un
+// toque no es solo la casilla exacta. Todo esto pasa en este navegador antes
+// de mandar la orden (la orden lleva ya su casilla): no toca la simulación.
+
+/** Radio de tolerancia de un toque, en píxeles de pantalla. */
+const TAP_RADIUS_PX = 24;
+/** Tope del radio en casillas (con el mapa muy alejado). */
+const TAP_RADIUS_MAX = 60;
+
+/**
+ * ¿Se puede atacar `tile` por tierra? Tierra, ni tuya ni de un aliado, y con
+ * frontera tuya en esa masa de tierra (si no, la orden mandaría un barco).
+ * `cache`: Map de «dueño:masa» → sí/no (la frontera se mira una vez).
+ */
+function attackableByLand(game, p, tile, cache = new Map()) {
+  const map = game.map;
+  if (tile < 0 || tile >= map.size || !map.isLand(tile)) return false;
+  const o = game.owner[tile];
+  if (o === p.id || game.isAllied(p.id, o)) return false;
+  const body = map.landBody[tile];
+  const key = `${o}:${body}`;
+  let ok = cache.get(key);
+  if (ok === undefined) {
+    ok = game.hasLandBorder(p, o, body);
+    cache.set(key, ok);
+  }
+  return ok;
+}
+
+/**
+ * Casilla a la que va un toque en `tile`, con `radius` casillas de tolerancia.
+ * - Si la casilla tocada ya se puede atacar por tierra, esa.
+ * - En el agua, en tu territorio o en un aliado (la orden no haría nada): la
+ *   más cercana del radio que sí se pueda atacar por tierra.
+ * - En tierra a la que irías en barco (un país o tierra libre sin frontera
+ *   contigo): solo un país con frontera a menos de medio radio (el dedo que
+ *   se pasa de la frontera); si no, la tocada (el barco es a propósito).
+ */
+function resolveTap(game, p, tile, radius) {
+  const map = game.map;
+  const cache = new Map();
+  if (attackableByLand(game, p, tile, cache)) return tile;
+  if (tile < 0 || tile >= map.size || radius < 1) return tile;
+  const o = game.owner[tile];
+  const boat = map.isLand(tile) && o !== p.id && !game.isAllied(p.id, o);
+  if (boat) radius *= 0.5;
+  if (radius < 1) return tile;
+  const cx = map.x(tile);
+  const cy = map.y(tile);
+  const R = Math.ceil(radius);
+  const r2 = radius * radius;
+  let best = -1;
+  let bestD = Infinity;
+  for (let dy = -R; dy <= R; dy++) {
+    const y = cy + dy;
+    if (y < 0 || y >= map.height) continue;
+    for (let dx = -R; dx <= R; dx++) {
+      const d = dx * dx + dy * dy;
+      if (d > r2 || d >= bestD) continue;
+      const x = cx + dx;
+      if (x < 0 || x >= map.width) continue;
+      const t = y * map.width + x;
+      if ((!boat || game.owner[t] !== 0) && attackableByLand(game, p, t, cache)) {
+        best = t;
+        bestD = d;
+      }
+    }
+  }
+  return best >= 0 ? best : tile;
+}
+
+/**
+ * Casilla de `ownerId` más cercana al punto (`wx`, `wy`) del mundo, hasta
+ * `radius` casillas (para un toque sobre el nombre de un país). -1 si no hay.
+ */
+function nearestTileOf(game, ownerId, wx, wy, radius) {
+  const map = game.map;
+  const cx = Math.floor(wx);
+  const cy = Math.floor(wy);
+  const R = Math.ceil(radius);
+  let best = -1;
+  let bestD = Infinity;
+  for (let dy = -R; dy <= R; dy++) {
+    const y = cy + dy;
+    if (y < 0 || y >= map.height) continue;
+    for (let dx = -R; dx <= R; dx++) {
+      const d = dx * dx + dy * dy;
+      if (d > R * R || d >= bestD) continue;
+      const x = cx + dx;
+      if (x < 0 || x >= map.width) continue;
+      const t = y * map.width + x;
+      if (game.owner[t] === ownerId) {
+        best = t;
+        bestD = d;
+      }
+    }
+  }
+  return best;
+}
+
+return { TAP_RADIUS_PX, TAP_RADIUS_MAX, attackableByLand, resolveTap, nearestTileOf };
 });
 __define('tutorial', function () {
 // Tutorial guiado: una partida pequeña con pasos que avanzan solos cuando el
