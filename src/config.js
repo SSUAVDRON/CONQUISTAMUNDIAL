@@ -46,7 +46,8 @@ export const CONFIG = {
 
   // Barcos de transporte
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
-  boatSpeed: 0.55 * RES, // casillas por tick
+  // Barcos un 40 % más lentos que antes (× 0,6, a petición): da tiempo a verlos venir
+  boatSpeed: 0.33 * RES, // casillas por tick (antes 0,55)
 
   // Oro: pasivo fijo por tick (mecanicas.js); al eliminar a un rival, todo su oro
   startGold: 0,
@@ -94,13 +95,13 @@ export const CONFIG = {
   warshipHp: 100,
   warshipDamage: 1.5, // vida que quitan por tick a otro buque o a un puerto
   warshipRange: 9 * RES, // casillas de alcance de tiro
-  warshipSpeed: 0.5 * RES, // casillas por tick
+  warshipSpeed: 0.3 * RES, // casillas por tick (antes 0,5; × 0,6 como todos los barcos)
   warshipPatrol: 22 * RES, // radio de la zona que patrulla cada buque
   warshipGuard: 34 * RES, // persigue a los intrusos que entren hasta aquí (desde el centro de su zona)
   warshipsPerPort: 3,
 
   // Mercantes de los puertos (cuándo salen y cuánto pagan: mecanicas.js)
-  tradeSpeed: 0.42 * RES,
+  tradeSpeed: 0.252 * RES, // antes 0,42 (× 0,6 como todos los barcos)
 
   // Raíles y trenes de las fábricas
   railRange: 14 * RES, // alcance de las vías de una fábrica de nivel 1 (casillas de recorrido: en horizontal + en vertical)

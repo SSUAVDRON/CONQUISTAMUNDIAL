@@ -409,6 +409,7 @@ export function loadRealMap(id) {
     i += n;
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
+  carveStraits(data, terrain);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
   markRivers(w, h, terrain, RIVERS[id] || [], map.river);
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
@@ -418,9 +419,83 @@ export function loadRealMap(id) {
     const mid = (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180;
     map.tileKm = ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w;
   }
+  map.rowWeight = data.lat ? rowWeights(data.lat, h) : null;
   const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' }));
   lastReal = { id, map, countries };
   return { map, countries: countries.map((c) => ({ ...c })) };
+}
+
+/**
+ * Estrechos que la resolución del mapa cierra pero por los que deben pasar
+ * los barcos, como líneas [lon, lat] (de mar a mar). El Bósforo y los
+ * Dardanelos miden 1-2 km: a ~13 km por casilla desaparecían y el Mar Negro
+ * quedaba aislado.
+ */
+const STRAITS = [
+  // Mar Negro → Bósforo → Mármara → Dardanelos → Egeo
+  [
+    [29.2, 41.35],
+    [29.07, 41.15],
+    [28.99, 40.98],
+    [28.6, 40.85],
+    [27.6, 40.7],
+    [26.9, 40.45],
+    [26.55, 40.2],
+    [26.2, 40.02],
+    [25.9, 39.95],
+  ],
+];
+
+/** Miller (como herramientas/mapas.js): la y del mapa crece hacia el sur. */
+const millerY = (lat) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((lat * Math.PI) / 180)));
+
+/**
+ * Peso de cada fila (0-1): superficie real de una casilla de esa fila frente
+ * a la del ecuador. En Miller, una casilla mide cos φ · cos(0,8 φ) veces lo
+ * del ecuador: el norte sale estirado y, colocando al azar por casillas, se
+ * llenaba de colonias (Groenlandia, el Ártico) y África se quedaba corta.
+ */
+function rowWeights([lat0, lat1], h) {
+  const top = millerY(lat1);
+  const span = top - millerY(lat0);
+  const out = new Float32Array(h);
+  for (let y = 0; y < h; y++) {
+    // Latitud del centro de la fila (Miller inversa)
+    const m = top - ((y + 0.5) / h) * span;
+    const lat = 2.5 * Math.atan(Math.exp(0.8 * m)) - (5 * Math.PI) / 8;
+    out[y] = Math.max(0, Math.cos(lat) * Math.cos(0.8 * lat));
+  }
+  return out;
+}
+
+/** Abre en `terrain` un canal de 2 casillas a lo largo de cada estrecho que cae dentro del mapa. */
+function carveStraits(data, terrain) {
+  if (!data.lon || !data.lat) return;
+  const { w, h } = data;
+  const [lon0, lon1] = data.lon;
+  const [lat0, lat1] = data.lat;
+  const top = millerY(lat1);
+  const span = top - millerY(lat0);
+  const toXY = ([lon, lat]) => [((lon - lon0) / (lon1 - lon0)) * w, ((top - millerY(lat)) / span) * h];
+  for (const line of STRAITS) {
+    if (!line.every(([lon, lat]) => lon >= lon0 && lon <= lon1 && lat >= lat0 && lat <= lat1)) continue;
+    for (let k = 0; k + 1 < line.length; k++) {
+      const [ax, ay] = toXY(line[k]);
+      const [bx, by] = toXY(line[k + 1]);
+      const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 4));
+      for (let s = 0; s <= steps; s++) {
+        const x = Math.floor(ax + ((bx - ax) * s) / steps);
+        const y = Math.floor(ay + ((by - ay) * s) / steps);
+        for (let dy = 0; dy < 2; dy++) {
+          for (let dx = 0; dx < 2; dx++) {
+            const xx = x + dx;
+            const yy = y + dy;
+            if (xx >= 0 && yy >= 0 && xx < w && yy < h) terrain[yy * w + xx] = 0;
+          }
+        }
+      }
+    }
+  }
 }
 
 /** Máxima altura representable en el relieve (como en herramientas/mapas.js). */

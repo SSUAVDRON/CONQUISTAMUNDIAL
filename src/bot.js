@@ -91,6 +91,11 @@ export class BotBrain {
     // rodeado de mar se queda atascado sin poder cruzar el océano)
     const landlocked = counts.size === 0;
     if (wild === 0 && coastal && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
+      // Sin puerto no hay barcos: primero hay que construirlo
+      if (!p.active.port) {
+        if (!p.buildings.port) this.needPort = true;
+        return;
+      }
       const tile = this._pickBoatTarget(landlocked);
       if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)));
     }
@@ -305,7 +310,10 @@ export class BotBrain {
 
     // Ciudades: con tope (cada una cuesta el doble que la anterior); pasado el tope, mejora
     let want = 'city';
+    // Quiere cruzar el mar y no tiene puerto: el puerto va primero (aunque no tenga ciudades)
+    if (this.needPort && (p.buildings.port || !coastal)) this.needPort = false;
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
+    else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';

@@ -57,7 +57,7 @@ const TABS = [
       ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
       ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas.'],
-      ['barco', 'Barcos y buques', 'Clic en una costa sin frontera por tierra: sale un barco con tropas (3 a la vez como mucho). Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
+      ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
       ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
       ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas. Si el borde de la pantalla se pone rojo, te atacan.'],
     ],

@@ -86,11 +86,18 @@ test('un buque de guerra captura los mercantes enemigos', () => {
   assert.ok(a.stats.captured >= 1, 'A debería haber capturado el mercante');
 });
 
-test('los barcos de tropas salen de cualquier costa, sin necesidad de puerto', () => {
+test('los barcos de tropas necesitan un puerto (doc-1.3), pero salen de cualquier costa', () => {
   const { map, game, a, tb } = setup();
+  const own = game.buildings.filter((x) => x.owner === a.id);
   game.buildings = game.buildings.filter((x) => x.owner !== a.id);
-  a.buildings.port = 0;
+  game._recount(a);
   a.troops = 20000;
   const target = [...game.players[2].border].find((t) => map.coastal[t]) ?? tb;
-  assert.ok(game.launchBoat(a, target, 5000), 'sin puerto también se puede desembarcar');
+  assert.equal(game.launchBoat(a, target, 5000), false, 'sin puerto no hay barcos');
+  assert.equal(game.boats.length, 0);
+  // Con su puerto otra vez: el barco sale (de la costa más cercana al objetivo, no del puerto)
+  game.buildings.push(...own);
+  game._recount(a);
+  assert.ok(a.active.port >= 1);
+  assert.ok(game.launchBoat(a, target, 5000), 'con puerto, sí');
 });

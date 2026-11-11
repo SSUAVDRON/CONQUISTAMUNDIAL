@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { CONFIG, RES } from '../src/config.js';
+import { buildNow, casillaPara } from './ayuda.js';
 
 function checksum(arr) {
   let h = 2166136261 >>> 0;
@@ -157,7 +158,7 @@ test('un ataque contra un vecino conquista casillas y el defensor pierde tropas'
   assertInvariants(game);
 });
 
-test('los barcos cruzan el agua y desembarcan', () => {
+test('sin puerto no salen barcos; con puerto cruzan el agua y desembarcan', () => {
   // Buscamos una semilla con al menos dos masas de tierra grandes
   for (let seed = 1; seed < 40; seed++) {
     const map = generateMap(220 * RES, 130 * RES, seed);
@@ -170,6 +171,12 @@ test('los barcos cruzan el agua y desembarcan', () => {
     const away = [...map.coastTiles].find((t) => map.landBody[t] === big[1][1] && map.waterBody.length);
     assert.ok(game.spawnPlayer(p, home));
     while (game.phase === 'spawn') game.tick();
+    // Sin puerto no hay barcos (doc-1.3)
+    assert.equal(game.launchBoat(p, away, 1000), false, 'sin puerto no sale');
+    assert.equal(game.boats.length, 0);
+    p.gold = 1e7;
+    const portTile = casillaPara(game, p, 'port');
+    if (portTile < 0 || !buildNow(game, p, 'port', portTile)) continue;
     const sent = game.launchBoat(p, away, 1000);
     if (!sent) continue; // otra semilla si no hay ruta
     assert.equal(game.boats.length, 1);

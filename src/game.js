@@ -210,21 +210,109 @@ export class Game {
     this.phase = 'spawn';
     for (const p of this.players) if (p) p.gold = this.rules.startGold;
     for (const bot of this.bots) {
-      const home = bot.player.homeTile;
-      const near = home >= 0 ? this._freeTileNear(home, 10 * RES, 30 * AREA) : -1;
-      if (near >= 0 && this.spawnPlayer(bot.player, near, 30 * AREA)) continue;
-      const t = this.findSpawnTile();
-      if (t >= 0) this.spawnPlayer(bot.player, t);
+      const p = bot.player;
+      const home = p.homeTile;
+      // Los países reales, cerca de donde están de verdad pero en un buen
+      // sitio (tierra adentro, llano, con su zona inicial entera y algo de
+      // espacio); si no hay ninguno así, el sitio libre más cercano
+      if (home >= 0) {
+        const good = this._goodSpawnNear(home, 10 * RES, 30 * AREA);
+        const near = good >= 0 ? good : this._freeTileNear(home, 10 * RES, 30 * AREA);
+        if (near >= 0 && this.spawnPlayer(p, near, 30 * AREA)) continue;
+      }
+      const t = this.findSpawnTile({ colony: !!p.weak });
+      if (t >= 0) this.spawnPlayer(p, t);
     }
     this._emit('Elige dónde empezar haciendo clic en el mapa', 'info');
   }
 
-  /** Busca una casilla libre lejos del resto de naciones. */
-  findSpawnTile() {
+  /** Casillas de la zona inicial (52) que caben en `t`: tierra libre de la misma masa. */
+  startFits(t) {
+    const map = this.map;
+    const cx = map.x(t);
+    const cy = map.y(t);
+    const body = map.landBody[t];
+    let n = 0;
+    for (const [dx, dy] of START_OFFSETS) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!map.inBounds(x, y)) continue;
+      const i = map.index(x, y);
+      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) n++;
+    }
+    return n;
+  }
+
+  /**
+   * El mejor sitio para empezar a menos de `radius` casillas de `anchor` (el
+   * punto real de un país): con la zona inicial entera, tierra adentro, en
+   * terreno llano y separado de las naciones ya colocadas; alejarse del punto
+   * real penaliza un poco. -1 si no hay ninguno con la zona entera.
+   */
+  _goodSpawnNear(anchor, radius, minBody) {
+    const map = this.map;
+    const ax = map.x(anchor);
+    const ay = map.y(anchor);
+    const full = START_OFFSETS.length;
+    const others = [];
+    for (const p of this.players) if (p && p.spawned && !p.weak) others.push(p.spawnTile);
+    const room = 12 * RES; // separación cómoda con otra nación
+    const look = 2 * RES; // a esta distancia se mira si hay agua cerca
+    const plain = MECH.terrain[1].tileCost;
+    let best = -1;
+    let bestScore = Infinity;
+    for (let dy = -radius; dy <= radius; dy += 2) {
+      for (let dx = -radius; dx <= radius; dx += 2) {
+        const d2 = dx * dx + dy * dy;
+        if (d2 > radius * radius) continue;
+        const x = ax + dx;
+        const y = ay + dy;
+        if (!map.inBounds(x, y)) continue;
+        const t = map.index(x, y);
+        if (!map.isLand(t) || this.owner[t] !== 0 || map.landBodySizes[map.landBody[t]] < minBody) continue;
+        if (this.startFits(t) < full) continue;
+        // Terreno medio de la zona (llanura 0; montaña ~1)
+        let cost = 0;
+        for (const [ox, oy] of START_OFFSETS) cost += MECH.terrain[map.terrain[map.index(x + ox, y + oy)]].tileCost;
+        let score = Math.sqrt(d2) / radius + (cost / full / plain - 1) * 2;
+        // Agua cerca (costa): ocho direcciones a `look` casillas
+        let wet = 0;
+        for (const [ux, uy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+          const xx = x + ux * look;
+          const yy = y + uy * look;
+          if (!map.inBounds(xx, yy) || !map.isLand(map.index(xx, yy))) wet++;
+        }
+        score += wet * 0.12;
+        // Demasiado cerca de otra nación
+        for (const s of others) {
+          const ex = map.x(s) - x;
+          const ey = map.y(s) - y;
+          const e = Math.sqrt(ex * ex + ey * ey);
+          if (e < room) score += (1 - e / room) * 1.5;
+        }
+        if (score < bestScore) {
+          bestScore = score;
+          best = t;
+        }
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Busca una casilla libre lejos del resto. `colony`: para una colonia, que
+   * puede quedar más cerca de las naciones (con 90 países reales, sus zonas
+   * tapaban casi toda África). En los mapas reales se reparte por superficie
+   * de verdad (`map.rowWeight`: el mapa estira el norte) y se prefiere un sitio
+   * con la zona inicial entera.
+   */
+  findSpawnTile({ colony = false } = {}) {
     const map = this.map;
     const spawns = [];
-    for (const p of this.players) if (p && p.spawned) spawns.push(p.spawnTile);
+    for (const p of this.players) if (p && p.spawned) spawns.push(p.spawnTile, p.weak ? 1 : 0);
     let minDist = Math.sqrt(map.landCount / Math.max(1, this.players.length - 1)) * 0.9;
+    const rows = map.rowWeight || null;
+    const full = START_OFFSETS.length;
     for (let attempt = 0; attempt < 3000; attempt++) {
       if (attempt % 250 === 249) minDist *= 0.8;
       const t = map.landTiles[this.rng.int(0, map.landTiles.length - 1)];
@@ -232,11 +320,16 @@ export class Game {
       if (map.landBodySizes[map.landBody[t]] < CONFIG.minSpawnBodySize) continue;
       const tx = map.x(t);
       const ty = map.y(t);
+      if (rows && this.rng.float() > rows[ty]) continue;
+      if (attempt < 1500 && this.startFits(t) < full) continue;
+      const nationDist = colony ? Math.min(minDist, 8 * RES) : minDist;
       let ok = true;
-      for (const s of spawns) {
+      for (let k = 0; k < spawns.length; k += 2) {
+        const s = spawns[k];
+        const lim = spawns[k + 1] ? minDist : nationDist;
         const dx = map.x(s) - tx;
         const dy = map.y(s) - ty;
-        if (dx * dx + dy * dy < minDist * minDist) {
+        if (dx * dx + dy * dy < lim * lim) {
           ok = false;
           break;
         }
@@ -2449,6 +2542,11 @@ export class Game {
       this._notify(p, 'Los desembarcos están desactivados en esta partida', 'warn');
       return false;
     }
+    // Sin un puerto terminado no hay barcos (salen de cualquier costa tuya)
+    if (!p.active.port) {
+      this._notify(p, 'Necesitas un puerto para mandar barcos', 'warn');
+      return false;
+    }
     if (tile >= 0 && tile < this.map.size && this._truceBlocks(p, this.players[this.owner[tile]])) return false;
     if (p.boatCount >= p.maxBoats()) {
       this._notify(p, `Ya tienes ${p.maxBoats()} barcos en el mar`, 'warn');
@@ -2549,44 +2647,48 @@ export class Game {
     if (!this._coarseCorridor(starts, (cell) => cg.goal[cell] === gs, SEARCH.landing / AREA)) return null;
     const W0 = map.width;
     const inCorridor = (t) => cg.mark[(((t / W0) | 0) / cg.k | 0) * cg.cw + (((t % W0) / cg.k) | 0)] === cg.markStamp;
-    const stamp = this._nextStamp();
     const seen = this._stampArr;
     const parent = this._parent;
     const queue = this._queue;
     const nb = NB_BFS;
-    let head = 0;
-    let tail = 0;
-
-    let c = map.neighbors(dest, nb);
-    for (let k = 0; k < c; k++) {
-      const n = nb[k];
-      if (terrain[n] !== 0 || seen[n] === stamp) continue;
-      seen[n] = stamp;
-      parent[n] = -1;
-      queue[tail++] = n;
-    }
-
-    let found = -1;
     // Tope de búsqueda: un desembarco no cruza medio planeta (y no congela la partida)
     const cap = SEARCH.landing;
-    while (head < tail && tail < cap) {
-      const w = queue[head++];
-      c = map.neighbors(w, nb);
+    let found = -1;
+    // Primero solo por el pasillo de la ruta gruesa. Si no llega (un estrecho
+    // como Ormuz: la ruta gruesa cruza la península por celdas con algo de
+    // agua y el pasillo no incluye el canal de verdad), otra vez sin pasillo
+    for (const restrict of [true, false]) {
+      const stamp = this._nextStamp();
+      let head = 0;
+      let tail = 0;
+      let c = map.neighbors(dest, nb);
       for (let k = 0; k < c; k++) {
         const n = nb[k];
-        if (terrain[n] !== 0 && this.owner[n] === pid) {
-          found = w;
-          break;
+        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        seen[n] = stamp;
+        parent[n] = -1;
+        queue[tail++] = n;
+      }
+      while (head < tail && tail < cap) {
+        const w = queue[head++];
+        c = map.neighbors(w, nb);
+        for (let k = 0; k < c; k++) {
+          const n = nb[k];
+          if (terrain[n] !== 0 && this.owner[n] === pid) {
+            found = w;
+            break;
+          }
+        }
+        if (found >= 0) break;
+        for (let k = 0; k < c; k++) {
+          const n = nb[k];
+          if (terrain[n] !== 0 || seen[n] === stamp || (restrict && !inCorridor(n))) continue;
+          seen[n] = stamp;
+          parent[n] = w;
+          queue[tail++] = n;
         }
       }
       if (found >= 0) break;
-      for (let k = 0; k < c; k++) {
-        const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp || !inCorridor(n)) continue;
-        seen[n] = stamp;
-        parent[n] = w;
-        queue[tail++] = n;
-      }
     }
     if (found < 0) return null;
     const path = [];
