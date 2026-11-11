@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="e0ee09a 2026-11-11 12:00 UTC">
+<meta name="trinchera-build" content="7f216d1 2026-11-11 23:06 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -2809,6 +2809,9 @@ body.sin-animaciones .novedad { transition: none; }
 .campo-perfil .nota-perfil { display: block; margin-top: 2px; font-weight: 400; color: var(--texto-suave); }
 .pd-nota { margin: 8px 0 0; font-size: 12px; color: var(--texto-suave); }
 .version-reglas { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; opacity: 0.8; }
+.ultimo-error { margin-top: var(--e2); }
+.ultimo-error summary { cursor: pointer; color: var(--texto-2); font-size: 13px; }
+.ultimo-error pre { max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; background: var(--sup-1, rgba(0, 0, 0, 0.25)); border-radius: var(--r-s); padding: var(--e2); margin: var(--e2) 0; }
 
 /* =========================================================================
    Salas (diseño de salas): crear, vestíbulo, invitación y cuenta atrás
@@ -3374,8 +3377,9 @@ body.sin-animaciones .guia-lista li { animation: none; }
 .menu-partida h3 { margin: var(--e2) 0 0; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-500); }
 .mp-continuar { width: 100%; }
 .mp-nota { margin: -4px 0 0; text-align: center; font-size: 12px; color: var(--texto-3); }
-.mp-botones { display: flex; gap: var(--e2); margin-top: var(--e2); }
-.mp-botones > * { flex: 1; }
+.mp-botones { display: flex; flex-wrap: wrap; gap: var(--e2); margin-top: var(--e2); }
+.mp-botones > * { flex: 1 1 40%; }
+.mp-botones > #mp-repintar { order: 3; flex-basis: 100%; }
 
 /* ===================================================== Fin de partida: resumen con pestañas (fin.js) */
 #fin .fin-tarjeta { width: min(880px, 100%); padding: var(--e5); display: flex; flex-direction: column; gap: var(--e3); }
@@ -4001,6 +4005,12 @@ body.sin-animaciones .despliegue { animation: none; }
             </div>
             <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
             <p class="nota version-reglas" id="version-reglas"></p>
+            <details class="ultimo-error" id="aj-error" hidden>
+              <summary>Último error</summary>
+              <p class="nota">Si algo ha ido mal, cópialo y envíalo: ayuda a arreglarlo.</p>
+              <pre id="aj-error-texto"></pre>
+              <button type="button" id="aj-error-copiar" class="btn-sec">Copiar</button>
+            </details>
           </div>
         </div>
       </section>
@@ -4407,6 +4417,7 @@ body.sin-animaciones .despliegue { animation: none; }
         </div>
         <div class="mp-botones">
           <button type="button" class="btn-sec" id="mp-guia">📖 Guía</button>
+          <button type="button" class="btn-sec" id="mp-repintar" title="Si el mapa se ve en negro o le faltan trozos" data-cerrar>🔄 Repintar el mapa</button>
           <button type="button" class="btn-peligro" id="mp-salir">Abandonar</button>
         </div>
       </div>
@@ -4470,7 +4481,7 @@ body.sin-animaciones .despliegue { animation: none; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "e0ee09a 2026-11-11 12:00 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "7f216d1 2026-11-11 23:06 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -4867,6 +4878,11 @@ class BotBrain {
     // rodeado de mar se queda atascado sin poder cruzar el océano)
     const landlocked = counts.size === 0;
     if (wild === 0 && coastal && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
+      // Sin puerto no hay barcos: primero hay que construirlo
+      if (!p.active.port) {
+        if (!p.buildings.port) this.needPort = true;
+        return;
+      }
       const tile = this._pickBoatTarget(landlocked);
       if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)));
     }
@@ -5081,7 +5097,10 @@ class BotBrain {
 
     // Ciudades: con tope (cada una cuesta el doble que la anterior); pasado el tope, mejora
     let want = 'city';
+    // Quiere cruzar el mar y no tiene puerto: el puerto va primero (aunque no tenga ciudades)
+    if (this.needPort && (p.buildings.port || !coastal)) this.needPort = false;
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
+    else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
@@ -5910,7 +5929,8 @@ const CONFIG = {
 
   // Barcos de transporte
   maxBoats: 3, // barcos de transporte de tropas a la vez (los puertos no suman)
-  boatSpeed: 0.55 * RES, // casillas por tick
+  // Barcos un 40 % más lentos que antes (× 0,6, a petición): da tiempo a verlos venir
+  boatSpeed: 0.33 * RES, // casillas por tick (antes 0,55)
 
   // Oro: pasivo fijo por tick (mecanicas.js); al eliminar a un rival, todo su oro
   startGold: 0,
@@ -5958,13 +5978,13 @@ const CONFIG = {
   warshipHp: 100,
   warshipDamage: 1.5, // vida que quitan por tick a otro buque o a un puerto
   warshipRange: 9 * RES, // casillas de alcance de tiro
-  warshipSpeed: 0.5 * RES, // casillas por tick
+  warshipSpeed: 0.3 * RES, // casillas por tick (antes 0,5; × 0,6 como todos los barcos)
   warshipPatrol: 22 * RES, // radio de la zona que patrulla cada buque
   warshipGuard: 34 * RES, // persigue a los intrusos que entren hasta aquí (desde el centro de su zona)
   warshipsPerPort: 3,
 
   // Mercantes de los puertos (cuándo salen y cuánto pagan: mecanicas.js)
-  tradeSpeed: 0.42 * RES,
+  tradeSpeed: 0.252 * RES, // antes 0,42 (× 0,6 como todos los barcos)
 
   // Raíles y trenes de las fábricas
   railRange: 14 * RES, // alcance de las vías de una fábrica de nivel 1 (casillas de recorrido: en horizontal + en vertical)
@@ -6229,6 +6249,100 @@ class Diagnostico {
 }
 
 return { Diagnostico };
+});
+__define('errores', function () {
+// Fallos en el navegador: que ninguno pare la partida y que quede constancia
+// para poder arreglarlo. Se guardan los últimos (en memoria) y el último en
+// localStorage; en Ajustes → Más se puede ver y copiar.
+
+const KEY = 'trinchera.ultimoError';
+const MAX = 20;
+const ring = [];
+let context = () => ({});
+let notify = null;
+
+/** Datos que acompañan a cada fallo (compilación, turno, fase…). */
+function setErrorContext(fn) {
+  context = fn;
+}
+
+/** Quién avisa al jugador (una vez cada cierto tiempo, ver main.js). */
+function setErrorNotifier(fn) {
+  notify = fn;
+}
+
+/** Registra un fallo de `where` (simulación, dibujo, interfaz…) sin relanzarlo. */
+function reportError(err, where = 'desconocido') {
+  const msg = String((err && err.message) || err || 'Error');
+  const last = ring[ring.length - 1];
+  if (last && last.msg === msg && last.where === where) {
+    // El mismo fallo en cada fotograma: se cuenta, no se repite
+    last.count++;
+    last.last = new Date().toISOString();
+  } else {
+    let extra = {};
+    try {
+      extra = context() || {};
+    } catch {
+      extra = {};
+    }
+    ring.push({
+      where,
+      msg,
+      stack: String((err && err.stack) || '').split('\n').slice(0, 8).join('\n'),
+      at: new Date().toISOString(),
+      count: 1,
+      ...extra,
+    });
+    if (ring.length > MAX) ring.shift();
+  }
+  const e = ring[ring.length - 1];
+  try {
+    localStorage.setItem(KEY, JSON.stringify(e));
+  } catch {
+    /* sin almacenamiento */
+  }
+  try {
+    console.error(`[Trinchera] fallo en ${where}:`, err);
+    notify?.(e);
+  } catch {
+    /* el aviso nunca debe fallar */
+  }
+  return e;
+}
+
+/** Fallos de esta sesión (los más recientes al final). */
+function sessionErrors() {
+  return ring.slice();
+}
+
+/** El último fallo registrado (de esta sesión o de una anterior), o null. */
+function lastError() {
+  if (ring.length) return ring[ring.length - 1];
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+/** Texto para copiar y enviar. */
+function errorReport(e = lastError()) {
+  if (!e) return '';
+  const lines = [`Trinchera · ${e.at}${e.count > 1 ? ` (×${e.count})` : ''}`, `Dónde: ${e.where}`, `Error: ${e.msg}`];
+  for (const k of ['build', 'tick', 'phase', 'map', 'device']) if (e[k] !== undefined) lines.push(`${k}: ${e[k]}`);
+  if (e.stack) lines.push('', e.stack);
+  return lines.join('\n');
+}
+
+/** Fallos sueltos del navegador (fuera del bucle de la partida). */
+function installGlobalHandlers() {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('error', (ev) => reportError(ev.error || ev.message, 'ventana'));
+  window.addEventListener('unhandledrejection', (ev) => reportError(ev.reason, 'promesa'));
+}
+
+return { setErrorContext, setErrorNotifier, reportError, sessionErrors, lastError, errorReport, installGlobalHandlers };
 });
 __define('estrategia', function () {
 // Puntos estratégicos: no todo el territorio vale lo mismo. Capitales de las
@@ -6811,6 +6925,11 @@ function sprites() {
     };
   }
   return SPRITES;
+}
+
+/** Vuelve a dibujar los sprites (si el navegador descartó el contenido de los lienzos). */
+function resetFxSprites() {
+  SPRITES = null;
 }
 
 /** Sprites que se dibujan sumando luz. */
@@ -7436,7 +7555,7 @@ function drawMissileSprite(ctx, x, y, ang, len, color, time) {
   ctx.restore();
 }
 
-return { Fx, drawMissileSprite };
+return { resetFxSprites, Fx, drawMissileSprite };
 });
 __define('game', function () {
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
@@ -7485,6 +7604,8 @@ const ANNEX_MAX_TILES = Math.round(MECH.annexMaxTiles * DOC_AREA);
 const ANNEX_VISITS_PER_TICK = Math.round(MECH.annexVisitsPerTick * DOC_AREA);
 // Casillas recorridas antes de probar la sonda del cerco (ver _annexProbe)
 const ANNEX_PROBE_AT = MECH.annexProbeAt;
+// Tope de casillas pendientes de repintar (solo dibujo, ver setOwner)
+const DIRTY_MAX = 2_000_000;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -7544,6 +7665,8 @@ class Game {
     // El renderizador activa esto para saber qué píxeles repintar
     this.trackDirty = false;
     this.dirty = [];
+    /** Se pasó el tope de `dirty`: el dibujo debe repintarlo todo. */
+    this.dirtyOverflow = false;
     /** Sube con cada casilla que cambia de dueño (invalida resúmenes guardados). */
     this.ownerVersion = 0;
 
@@ -7647,21 +7770,109 @@ class Game {
     this.phase = 'spawn';
     for (const p of this.players) if (p) p.gold = this.rules.startGold;
     for (const bot of this.bots) {
-      const home = bot.player.homeTile;
-      const near = home >= 0 ? this._freeTileNear(home, 10 * RES, 30 * AREA) : -1;
-      if (near >= 0 && this.spawnPlayer(bot.player, near, 30 * AREA)) continue;
-      const t = this.findSpawnTile();
-      if (t >= 0) this.spawnPlayer(bot.player, t);
+      const p = bot.player;
+      const home = p.homeTile;
+      // Los países reales, cerca de donde están de verdad pero en un buen
+      // sitio (tierra adentro, llano, con su zona inicial entera y algo de
+      // espacio); si no hay ninguno así, el sitio libre más cercano
+      if (home >= 0) {
+        const good = this._goodSpawnNear(home, 10 * RES, 30 * AREA);
+        const near = good >= 0 ? good : this._freeTileNear(home, 10 * RES, 30 * AREA);
+        if (near >= 0 && this.spawnPlayer(p, near, 30 * AREA)) continue;
+      }
+      const t = this.findSpawnTile({ colony: !!p.weak });
+      if (t >= 0) this.spawnPlayer(p, t);
     }
     this._emit('Elige dónde empezar haciendo clic en el mapa', 'info');
   }
 
-  /** Busca una casilla libre lejos del resto de naciones. */
-  findSpawnTile() {
+  /** Casillas de la zona inicial (52) que caben en `t`: tierra libre de la misma masa. */
+  startFits(t) {
+    const map = this.map;
+    const cx = map.x(t);
+    const cy = map.y(t);
+    const body = map.landBody[t];
+    let n = 0;
+    for (const [dx, dy] of START_OFFSETS) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!map.inBounds(x, y)) continue;
+      const i = map.index(x, y);
+      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) n++;
+    }
+    return n;
+  }
+
+  /**
+   * El mejor sitio para empezar a menos de `radius` casillas de `anchor` (el
+   * punto real de un país): con la zona inicial entera, tierra adentro, en
+   * terreno llano y separado de las naciones ya colocadas; alejarse del punto
+   * real penaliza un poco. -1 si no hay ninguno con la zona entera.
+   */
+  _goodSpawnNear(anchor, radius, minBody) {
+    const map = this.map;
+    const ax = map.x(anchor);
+    const ay = map.y(anchor);
+    const full = START_OFFSETS.length;
+    const others = [];
+    for (const p of this.players) if (p && p.spawned && !p.weak) others.push(p.spawnTile);
+    const room = 12 * RES; // separación cómoda con otra nación
+    const look = 2 * RES; // a esta distancia se mira si hay agua cerca
+    const plain = MECH.terrain[1].tileCost;
+    let best = -1;
+    let bestScore = Infinity;
+    for (let dy = -radius; dy <= radius; dy += 2) {
+      for (let dx = -radius; dx <= radius; dx += 2) {
+        const d2 = dx * dx + dy * dy;
+        if (d2 > radius * radius) continue;
+        const x = ax + dx;
+        const y = ay + dy;
+        if (!map.inBounds(x, y)) continue;
+        const t = map.index(x, y);
+        if (!map.isLand(t) || this.owner[t] !== 0 || map.landBodySizes[map.landBody[t]] < minBody) continue;
+        if (this.startFits(t) < full) continue;
+        // Terreno medio de la zona (llanura 0; montaña ~1)
+        let cost = 0;
+        for (const [ox, oy] of START_OFFSETS) cost += MECH.terrain[map.terrain[map.index(x + ox, y + oy)]].tileCost;
+        let score = Math.sqrt(d2) / radius + (cost / full / plain - 1) * 2;
+        // Agua cerca (costa): ocho direcciones a `look` casillas
+        let wet = 0;
+        for (const [ux, uy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+          const xx = x + ux * look;
+          const yy = y + uy * look;
+          if (!map.inBounds(xx, yy) || !map.isLand(map.index(xx, yy))) wet++;
+        }
+        score += wet * 0.12;
+        // Demasiado cerca de otra nación
+        for (const s of others) {
+          const ex = map.x(s) - x;
+          const ey = map.y(s) - y;
+          const e = Math.sqrt(ex * ex + ey * ey);
+          if (e < room) score += (1 - e / room) * 1.5;
+        }
+        if (score < bestScore) {
+          bestScore = score;
+          best = t;
+        }
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Busca una casilla libre lejos del resto. `colony`: para una colonia, que
+   * puede quedar más cerca de las naciones (con 90 países reales, sus zonas
+   * tapaban casi toda África). En los mapas reales se reparte por superficie
+   * de verdad (`map.rowWeight`: el mapa estira el norte) y se prefiere un sitio
+   * con la zona inicial entera.
+   */
+  findSpawnTile({ colony = false } = {}) {
     const map = this.map;
     const spawns = [];
-    for (const p of this.players) if (p && p.spawned) spawns.push(p.spawnTile);
+    for (const p of this.players) if (p && p.spawned) spawns.push(p.spawnTile, p.weak ? 1 : 0);
     let minDist = Math.sqrt(map.landCount / Math.max(1, this.players.length - 1)) * 0.9;
+    const rows = map.rowWeight || null;
+    const full = START_OFFSETS.length;
     for (let attempt = 0; attempt < 3000; attempt++) {
       if (attempt % 250 === 249) minDist *= 0.8;
       const t = map.landTiles[this.rng.int(0, map.landTiles.length - 1)];
@@ -7669,11 +7880,16 @@ class Game {
       if (map.landBodySizes[map.landBody[t]] < CONFIG.minSpawnBodySize) continue;
       const tx = map.x(t);
       const ty = map.y(t);
+      if (rows && this.rng.float() > rows[ty]) continue;
+      if (attempt < 1500 && this.startFits(t) < full) continue;
+      const nationDist = colony ? Math.min(minDist, 8 * RES) : minDist;
       let ok = true;
-      for (const s of spawns) {
+      for (let k = 0; k < spawns.length; k += 2) {
+        const s = spawns[k];
+        const lim = spawns[k + 1] ? minDist : nationDist;
         const dx = map.x(s) - tx;
         const dy = map.y(s) - ty;
-        if (dx * dx + dy * dy < minDist * minDist) {
+        if (dx * dx + dy * dy < lim * lim) {
           ok = false;
           break;
         }
@@ -7938,7 +8154,11 @@ class Game {
     if (building) this._transferBuilding(building, oldId, newId);
     const point = this.pointAt.get(t);
     if (point) this._pointChanged(point, oldId, newId);
-    if (this.trackDirty) this.dirty.push(t);
+    // Casillas para repintar (solo dibujo). Con tope: con la pestaña oculta
+    // nadie las recoge (sala multijugador en segundo plano) y crecían sin fin;
+    // pasado el tope, el dibujo lo repinta todo al volver
+    const track = this.trackDirty && (this.dirty.length < DIRTY_MAX || ((this.dirtyOverflow = true), false));
+    if (track) this.dirty.push(t);
     this._updateBorder(t);
 
     const nb = NB_SET;
@@ -7949,7 +8169,7 @@ class Game {
       // dueño (para un tercero, `t` era y sigue siendo ajena)
       const on = owner[n];
       if (on && (on === oldId || on === newId)) this._updateBorder(n);
-      if (this.trackDirty) this.dirty.push(n);
+      if (track) this.dirty.push(n);
     }
 
     // Las casillas vecinas pueden entrar en el frente de algún ataque del nuevo dueño
@@ -9882,6 +10102,11 @@ class Game {
       this._notify(p, 'Los desembarcos están desactivados en esta partida', 'warn');
       return false;
     }
+    // Sin un puerto terminado no hay barcos (salen de cualquier costa tuya)
+    if (!p.active.port) {
+      this._notify(p, 'Necesitas un puerto para mandar barcos', 'warn');
+      return false;
+    }
     if (tile >= 0 && tile < this.map.size && this._truceBlocks(p, this.players[this.owner[tile]])) return false;
     if (p.boatCount >= p.maxBoats()) {
       this._notify(p, `Ya tienes ${p.maxBoats()} barcos en el mar`, 'warn');
@@ -9982,44 +10207,48 @@ class Game {
     if (!this._coarseCorridor(starts, (cell) => cg.goal[cell] === gs, SEARCH.landing / AREA)) return null;
     const W0 = map.width;
     const inCorridor = (t) => cg.mark[(((t / W0) | 0) / cg.k | 0) * cg.cw + (((t % W0) / cg.k) | 0)] === cg.markStamp;
-    const stamp = this._nextStamp();
     const seen = this._stampArr;
     const parent = this._parent;
     const queue = this._queue;
     const nb = NB_BFS;
-    let head = 0;
-    let tail = 0;
-
-    let c = map.neighbors(dest, nb);
-    for (let k = 0; k < c; k++) {
-      const n = nb[k];
-      if (terrain[n] !== 0 || seen[n] === stamp) continue;
-      seen[n] = stamp;
-      parent[n] = -1;
-      queue[tail++] = n;
-    }
-
-    let found = -1;
     // Tope de búsqueda: un desembarco no cruza medio planeta (y no congela la partida)
     const cap = SEARCH.landing;
-    while (head < tail && tail < cap) {
-      const w = queue[head++];
-      c = map.neighbors(w, nb);
+    let found = -1;
+    // Primero solo por el pasillo de la ruta gruesa. Si no llega (un estrecho
+    // como Ormuz: la ruta gruesa cruza la península por celdas con algo de
+    // agua y el pasillo no incluye el canal de verdad), otra vez sin pasillo
+    for (const restrict of [true, false]) {
+      const stamp = this._nextStamp();
+      let head = 0;
+      let tail = 0;
+      let c = map.neighbors(dest, nb);
       for (let k = 0; k < c; k++) {
         const n = nb[k];
-        if (terrain[n] !== 0 && this.owner[n] === pid) {
-          found = w;
-          break;
+        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        seen[n] = stamp;
+        parent[n] = -1;
+        queue[tail++] = n;
+      }
+      while (head < tail && tail < cap) {
+        const w = queue[head++];
+        c = map.neighbors(w, nb);
+        for (let k = 0; k < c; k++) {
+          const n = nb[k];
+          if (terrain[n] !== 0 && this.owner[n] === pid) {
+            found = w;
+            break;
+          }
+        }
+        if (found >= 0) break;
+        for (let k = 0; k < c; k++) {
+          const n = nb[k];
+          if (terrain[n] !== 0 || seen[n] === stamp || (restrict && !inCorridor(n))) continue;
+          seen[n] = stamp;
+          parent[n] = w;
+          queue[tail++] = n;
         }
       }
       if (found >= 0) break;
-      for (let k = 0; k < c; k++) {
-        const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp || !inCorridor(n)) continue;
-        seen[n] = stamp;
-        parent[n] = w;
-        queue[tail++] = n;
-      }
     }
     if (found < 0) return null;
     const path = [];
@@ -10817,7 +11046,7 @@ const TABS = [
       ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
       ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas.'],
-      ['barco', 'Barcos y buques', 'Clic en una costa sin frontera por tierra: sale un barco con tropas (3 a la vez como mucho). Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
+      ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
       ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
       ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas. Si el borde de la pantalla se pone rojo, te atacan.'],
     ],
@@ -11002,6 +11231,7 @@ const { drawMissileSprite } = __require('fx');
 const { formatNumber, formatPercent, formatTime } = __require('format');
 const { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rodar, sinMovimiento, teclasGrupo } = __require('movimiento');
 const { abrirGuia } = __require('guia');
+const { errorReport } = __require('errores');
 const { drawChart, drawSparkline } = __require('resumen');
 const { PLACEMENT_GAMES, RANKED_ROOM, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } = __require('rangos');
 const { ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly, achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText } = __require('profile');
@@ -11576,6 +11806,19 @@ class Home {
     $('aj-guia').addEventListener('click', () => abrirGuia());
     $('btn-guia').addEventListener('click', () => abrirGuia());
     $('aj-restablecer').addEventListener('click', () => abrirDialogo($('dialogo-restablecer'), { foco: '[data-cerrar]' }));
+    $('aj-error-copiar').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(errorReport());
+        this._flash('Copiado. Pégalo donde quieras enviarlo.', true);
+      } catch {
+        // Sin portapapeles: el texto queda seleccionado para copiarlo a mano
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents($('aj-error-texto'));
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
     $('dr-si').addEventListener('click', () => {
       this._resetSettings();
       cerrarDialogo($('dialogo-restablecer'));
@@ -12326,6 +12569,16 @@ class Home {
     this.renderAchievements();
     this.renderTable();
     this.renderRooms();
+    this.renderLastError();
+  }
+
+  /** Ajustes → Más: el último fallo registrado (para copiarlo y enviarlo). */
+  renderLastError() {
+    const box = $('aj-error');
+    if (!box) return;
+    const text = errorReport();
+    box.hidden = !text;
+    $('aj-error-texto').textContent = text;
   }
 
   // ------------------------------------------------------------ rangos
@@ -16007,6 +16260,7 @@ const { Sound } = __require('sonido');
 const { Minimap } = __require('minimapa');
 const { abrirDialogo, cerrarDialogo, hayDialogo } = __require('movimiento');
 const { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } = __require('toque');
+const { installGlobalHandlers, reportError, setErrorContext, setErrorNotifier } = __require('errores');
 const { abrirGuia } = __require('guia');
 const { Grabador, compactCurve, placement } = __require('resumen');
 const { Ladder } = __require('ladder');
@@ -16099,6 +16353,14 @@ function resize() {
   state.renderer?.setDpr(dpr);
 }
 window.addEventListener('resize', resize);
+// Al volver a la pestaña (o de otra app en el móvil): ¿se perdió el
+// contenido de los lienzos? En el móvil, el territorio se vuelve a subir
+// entero (sus píxeles siguen en memoria; es barato)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !state.renderer) return;
+  state.renderer.checkCanvases();
+  if (TOUCH) state.renderer.refreshTerritory();
+});
 window.visualViewport?.addEventListener('resize', () => {
   if (canvas.width !== Math.round(window.innerWidth * currentDpr()) || canvas.height !== Math.round(window.innerHeight * currentDpr())) resize();
 });
@@ -16135,7 +16397,32 @@ function loadMap(mapSize, seed) {
   return { map: generateMap(size.w, size.h, seed), countries: null };
 }
 
+/**
+ * Suelta la partida que hubiera (la de fondo del menú o la anterior) antes
+ * de crear otra: si no, durante un momento convivían dos o tres partidas del
+ * mundo en memoria, y en el móvil el navegador acababa descartando lienzos
+ * (el mapa en negro) o cerrando la pestaña.
+ */
+function releaseGame() {
+  if (state.game) state.game.onEvent = null;
+  try {
+    state.renderer?.dispose();
+  } catch (err) {
+    reportError(err, 'liberar la partida');
+  }
+  state.renderer = null;
+  state.game = null;
+  state.human = null;
+  state.rec = null;
+  state.diag = null;
+  state.ping = null;
+  minimap.release();
+  ui.releaseGame();
+  sound.releaseGame();
+}
+
 function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = DEFAULT_RULES, loaded = null }) {
+  releaseGame();
   const { map, countries } = loaded || loadMap(mapSize, seed);
   const game = new Game({ map, seed, rules });
   const used = new Set();
@@ -16181,6 +16468,12 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   // Diagnóstico local: ?diag=1 registra la partida (exportar con Ctrl+Mayús+D o __trinchera.diag.exportar())
   state.diag = DIAG ? new Diagnostico(game, { build: RULES_FINGERPRINT, mechVersion: MECH_VERSION, ruleset: roomRuleset(game.rules) }) : null;
   state.renderer = new Renderer(canvas, game, camera);
+  // Si el navegador descartó los lienzos y el mapa se ha rehecho, también el
+  // minimapa y los iconos del panel (que se dibujan una sola vez)
+  state.renderer.onRestored = () => {
+    if (minimap.game === game) minimap.restore();
+    ui.repaintIcons();
+  };
   // La misma densidad con la que se creó el lienzo (en móviles de 2,5-3× no es
   // la del dispositivo): si no, el mapa salía desplazado y los toques no
   // caían donde se veía
@@ -16250,17 +16543,23 @@ function enterGame(game) {
   state.demo = false;
   // Resumen de partida: graba cómo va (sin tocar la simulación)
   state.rec = game.human ? new Grabador(game, game.human) : null;
+  // Se llama en mitad del turno: un fallo de la interfaz no debe dejar el
+  // turno a medias (ni desincronizar una sala)
   game.onEvent = (evt) => {
-    if (state.rec && state.rec.game === game) state.rec.onEvent(evt);
-    if (!state.demo) sound.onEvent(evt);
-    // Botín al eliminar a alguien: monedas que vuelan del mapa a tu oro
-    if (evt.loot && !state.demo && evt.tick >= game.ticks - 2 && state.renderer?.anim) {
-      const [sx, sy] = camera.worldToScreen(evt.x, evt.y);
-      ui.flyCoins(sx, sy, evt.weak);
-      setTimeout(() => sound.play('coins', 0.9, 0), 850);
+    try {
+      if (state.rec && state.rec.game === game) state.rec.onEvent(evt);
+      if (!state.demo) sound.onEvent(evt);
+      // Botín al eliminar a alguien: monedas que vuelan del mapa a tu oro
+      if (evt.loot && !state.demo && evt.tick >= game.ticks - 2 && state.renderer?.anim) {
+        const [sx, sy] = camera.worldToScreen(evt.x, evt.y);
+        ui.flyCoins(sx, sy, evt.weak);
+        setTimeout(() => sound.play('coins', 0.9, 0), 850);
+      }
+      if (evt.kind === 'request') ui.addRequest(game, evt);
+      else ui.pushEvent(evt);
+    } catch (err) {
+      reportError(err, 'avisos de la partida');
     }
-    if (evt.kind === 'request') ui.addRequest(game, evt);
-    else ui.pushEvent(evt);
   };
   for (const evt of game.eventLog) game.onEvent(evt);
   state.speed = 1; // la partida va siempre a velocidad normal
@@ -17412,30 +17711,83 @@ ui.on({
 
 // -------------------------------------------------------------------- bucle
 
+// Turnos de simulación por fotograma, como mucho: si el equipo va justo, la
+// partida va un pelín más lenta en vez de dar tirones intentando recuperar
+// (en el móvil, 2: un fotograma con 3 turnos y el dibujo se notaba)
+const MAX_TICKS_PER_FRAME = TOUCH ? 2 : 3;
+
+/**
+ * Un fotograma. El siguiente se pide lo primero y cada parte va por separado:
+ * si algo falla (simulación, dibujo, minimapa o paneles), se registra (ver
+ * errores.js) y la partida sigue; antes, un solo fallo la dejaba congelada.
+ */
 function frame(now) {
+  requestAnimationFrame(frame);
   const dt = Math.min(250, now - state.last);
   state.last = now;
   const game = state.game;
-  updateSpeedBox();
-  adaptQuality(now - (state.lastRaw || now));
-  state.lastRaw = now;
-
-  if (game && game.phase !== 'ended') {
-    if (state.net) {
-      state.net.update();
-    } else if (state.speed > 0) {
-      state.acc += dt * state.speed;
-      let steps = 0;
-      // Como mucho 3 turnos por fotograma: si el equipo va justo, la partida
-      // va un pelín más lenta en vez de dar tirones intentando recuperar
-      while (state.acc >= TICK_MS && steps < 3) {
-        game.tick();
-        state.acc -= TICK_MS;
-        steps++;
+  try {
+    updateSpeedBox();
+    adaptQuality(now - (state.lastRaw || now));
+    state.lastRaw = now;
+    if (game && game.phase !== 'ended') {
+      if (state.net) {
+        state.net.update();
+      } else if (state.speed > 0) {
+        state.acc += dt * state.speed;
+        let steps = 0;
+        while (state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
+          state.acc -= TICK_MS;
+          steps++;
+          game.tick();
+        }
+        if (steps === MAX_TICKS_PER_FRAME) state.acc = Math.min(state.acc, TICK_MS);
       }
-      if (steps === 3) state.acc = Math.min(state.acc, TICK_MS);
+    }
+  } catch (err) {
+    reportError(err, 'simulación');
+  }
+  try {
+    frameWorld(now, dt, game);
+  } catch (err) {
+    reportError(err, 'cámara y sonido');
+  }
+  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
+  state.frameNo = (state.frameNo || 0) + 1;
+  if (!(state.demo && TOUCH && state.frameNo & 1)) {
+    try {
+      state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+    } catch (err) {
+      reportError(err, 'dibujo del mapa');
     }
   }
+  try {
+    if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
+    sound.update(state.game, camera, state.human, state.demo);
+    updatePointer(now);
+  } catch (err) {
+    reportError(err, 'minimapa y sonido');
+  }
+  if (!state.demo && state.human && now - state.lastHud > 200) {
+    state.lastHud = now;
+    try {
+      ui.update(state.game, state.human, state.ratio, state.buildMode);
+      if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
+      if (state.net) ui.setNetNote(state.net.status);
+      if (tutorial.active) tutorial.update(tutorialState());
+    } catch (err) {
+      reportError(err, 'paneles');
+    }
+    try {
+      checkEnd();
+    } catch (err) {
+      reportError(err, 'final de partida');
+    }
+  }
+}
+
+/** Lo que va entre la simulación y el dibujo: resumen, cuenta atrás, demo, cámara y paneles vivos. */
+function frameWorld(now, dt, game) {
   if (!state.demo && state.rec && state.rec.game === game) state.rec.update();
   // Últimos 5 s del despliegue: un «tic» por segundo
   if (game && !state.demo && game.phase === 'spawn' && state.human?.alive) {
@@ -17462,24 +17814,6 @@ function frame(now) {
     ui.liveNumbers(state.game, state.human);
     ui.animate(dt);
   }
-  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
-  state.frameNo = (state.frameNo || 0) + 1;
-  if (!(state.demo && TOUCH && state.frameNo & 1)) {
-    state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
-  }
-  if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
-  sound.update(state.game, camera, state.human, state.demo);
-  updatePointer(now);
-
-  if (!state.demo && state.human && now - state.lastHud > 200) {
-    state.lastHud = now;
-    ui.update(state.game, state.human, state.ratio, state.buildMode);
-    if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
-    if (state.net) ui.setNetNote(state.net.status);
-    if (tutorial.active) tutorial.update(tutorialState());
-    checkEnd();
-  }
-  requestAnimationFrame(frame);
 }
 
 // ------------------------------------------------------------ arranque
@@ -17511,6 +17845,8 @@ for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) {
   });
 }
 document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
+// Por si el navegador descartó los lienzos sin avisar: rehace mapa, territorio y minimapa
+document.getElementById('mp-repintar').addEventListener('click', () => state.renderer?.restoreCanvases());
 document.getElementById('mp-salir').addEventListener('click', () => {
   cerrarDialogo(document.getElementById('menu-partida'));
   if (stillPlaying()) ui.confirmExit(!!state.ranked);
@@ -17545,6 +17881,25 @@ state.version = { motor: MECH_VERSION, perfiles: Object.fromEntries(Object.entri
 state.camera = camera; // para pruebas automáticas
 state.sound = sound;
 state.profile = profile;
+
+// Fallos: con qué partida y versión ocurrieron, y un aviso discreto (como
+// mucho uno cada 30 s; la partida sigue)
+setErrorContext(() => ({
+  build: state.version.build,
+  tick: state.game ? state.game.ticks : null,
+  phase: state.game ? (state.demo ? 'menú' : state.game.phase) : null,
+  map: state.mapSize || null,
+  device: `${TOUCH ? 'táctil' : 'ratón'} · ${window.innerWidth}×${window.innerHeight} · ${navigator.userAgent.slice(0, 120)}`,
+}));
+let lastErrorHint = -Infinity;
+setErrorNotifier(() => {
+  home.renderLastError?.();
+  const now = performance.now();
+  if (now - lastErrorHint < 30000 || state.demo) return;
+  lastErrorHint = now;
+  ui.hint('Algo ha fallado, pero la partida sigue. Si se repite: Ajustes → Más → Último error', 'warn');
+});
+installGlobalHandlers();
 
 // El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
 state.demo = true;
@@ -18070,6 +18425,7 @@ function loadRealMap(id) {
     i += n;
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
+  carveStraits(data, terrain);
   const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
   markRivers(w, h, terrain, RIVERS[id] || [], map.river);
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
@@ -18079,9 +18435,83 @@ function loadRealMap(id) {
     const mid = (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180;
     map.tileKm = ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w;
   }
+  map.rowWeight = data.lat ? rowWeights(data.lat, h) : null;
   const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' }));
   lastReal = { id, map, countries };
   return { map, countries: countries.map((c) => ({ ...c })) };
+}
+
+/**
+ * Estrechos que la resolución del mapa cierra pero por los que deben pasar
+ * los barcos, como líneas [lon, lat] (de mar a mar). El Bósforo y los
+ * Dardanelos miden 1-2 km: a ~13 km por casilla desaparecían y el Mar Negro
+ * quedaba aislado.
+ */
+const STRAITS = [
+  // Mar Negro → Bósforo → Mármara → Dardanelos → Egeo
+  [
+    [29.2, 41.35],
+    [29.07, 41.15],
+    [28.99, 40.98],
+    [28.6, 40.85],
+    [27.6, 40.7],
+    [26.9, 40.45],
+    [26.55, 40.2],
+    [26.2, 40.02],
+    [25.9, 39.95],
+  ],
+];
+
+/** Miller (como herramientas/mapas.js): la y del mapa crece hacia el sur. */
+const millerY = (lat) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((lat * Math.PI) / 180)));
+
+/**
+ * Peso de cada fila (0-1): superficie real de una casilla de esa fila frente
+ * a la del ecuador. En Miller, una casilla mide cos φ · cos(0,8 φ) veces lo
+ * del ecuador: el norte sale estirado y, colocando al azar por casillas, se
+ * llenaba de colonias (Groenlandia, el Ártico) y África se quedaba corta.
+ */
+function rowWeights([lat0, lat1], h) {
+  const top = millerY(lat1);
+  const span = top - millerY(lat0);
+  const out = new Float32Array(h);
+  for (let y = 0; y < h; y++) {
+    // Latitud del centro de la fila (Miller inversa)
+    const m = top - ((y + 0.5) / h) * span;
+    const lat = 2.5 * Math.atan(Math.exp(0.8 * m)) - (5 * Math.PI) / 8;
+    out[y] = Math.max(0, Math.cos(lat) * Math.cos(0.8 * lat));
+  }
+  return out;
+}
+
+/** Abre en `terrain` un canal de 2 casillas a lo largo de cada estrecho que cae dentro del mapa. */
+function carveStraits(data, terrain) {
+  if (!data.lon || !data.lat) return;
+  const { w, h } = data;
+  const [lon0, lon1] = data.lon;
+  const [lat0, lat1] = data.lat;
+  const top = millerY(lat1);
+  const span = top - millerY(lat0);
+  const toXY = ([lon, lat]) => [((lon - lon0) / (lon1 - lon0)) * w, ((top - millerY(lat)) / span) * h];
+  for (const line of STRAITS) {
+    if (!line.every(([lon, lat]) => lon >= lon0 && lon <= lon1 && lat >= lat0 && lat <= lat1)) continue;
+    for (let k = 0; k + 1 < line.length; k++) {
+      const [ax, ay] = toXY(line[k]);
+      const [bx, by] = toXY(line[k + 1]);
+      const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 4));
+      for (let s = 0; s <= steps; s++) {
+        const x = Math.floor(ax + ((bx - ax) * s) / steps);
+        const y = Math.floor(ay + ((by - ay) * s) / steps);
+        for (let dy = 0; dy < 2; dy++) {
+          for (let dx = 0; dx < 2; dx++) {
+            const xx = x + dx;
+            const yy = y + dy;
+            if (xx >= 0 && yy >= 0 && xx < w && yy < h) terrain[yy * w + xx] = 0;
+          }
+        }
+      }
+    }
+  }
 }
 
 /** Máxima altura representable en el relieve (como en herramientas/mapas.js). */
@@ -18183,10 +18613,12 @@ __define('mecanicas', function () {
  * correcciones de la revisión (Industria, Milicia, victorias, pactos, cercos,
  * comercio por superficie). doc-1.2: tierra libre al doble de bajas, más
  * tropas = más rápido (también contra países), colonias rápidas y baratas en
- * tierra libre, crecimiento algo más cuadrado y sonda del cerco. En
- * multijugador, versiones distintas no juegan juntas.
+ * tierra libre, crecimiento algo más cuadrado y sonda del cerco. doc-1.3:
+ * desembarcos solo con puerto, barcos un 40 % más lentos, rutas por los
+ * estrechos (Ormuz, Bósforo) y mejor reparto inicial. En multijugador,
+ * versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.2';
+const MECH_VERSION = 'doc-1.3';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -18198,7 +18630,7 @@ const MECH_VERSION = 'doc-1.2';
  *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
- *   las fórmulas de doc-1.2 (mismos ritmos). Sin puntos estratégicos (ni bonos ni botín de
+ *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -18208,8 +18640,8 @@ const MECH_VERSION = 'doc-1.2';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-3', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-2', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-4', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-3', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -18579,6 +19011,20 @@ class Minimap {
     this.renderer = renderer;
     this.camera = camera;
     this._layout();
+  }
+
+  /** Vuelve a dibujar sus lienzos (si el navegador descartó su contenido). */
+  restore() {
+    if (this.game) this._layout();
+  }
+
+  /** Suelta la partida (y sus lienzos) al volver al menú o empezar otra. */
+  release() {
+    this.game = null;
+    this.renderer = null;
+    this.base = null;
+    this.terr = null;
+    this.terrImg = null;
   }
 
   _layout() {
@@ -22276,9 +22722,9 @@ const { BUILDINGS, CONFIG, RES, TICK_MS } = __require('config');
 const { mutedRgb, rgbToCss, shadeRgb, vividRgb } = __require('colors');
 const { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } = __require('format');
 const { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } = __require('icons');
-const { paintTerrain } = __require('terreno');
+const { forgetTerrain, paintTerrain } = __require('terreno');
 const { MECH } = __require('mecanicas');
-const { Fx, drawMissileSprite } = __require('fx');
+const { Fx, drawMissileSprite, resetFxSprites } = __require('fx');
 const { drawCargo, drawTransport, drawWarship } = __require('barcos');
 
 const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
@@ -22423,6 +22869,19 @@ class Renderer {
     this._allySig = this._allySignature();
     this._spawnStyle = game.phase === 'spawn';
     this._paintAllTerritory();
+    // Si el navegador descarta el contenido de los lienzos, se rehacen (ver restoreCanvases)
+    this._lost = false;
+    this._needRestore = false;
+    this._lostCheckAt = 0;
+    this.restores = 0;
+    this._onLost = () => {
+      this._lost = true;
+    };
+    this._onRestored = () => {
+      this._lost = false;
+      this._needRestore = true;
+    };
+    for (const c of [canvas, this.territoryCanvas, this.baseCanvas]) this._watchCanvas(c);
 
     // Destellos de casillas que cambian de dueño (cola circular)
     this._flash = { t: new Int32Array(FLASH_N), at: new Float64Array(FLASH_N), k: new Uint8Array(FLASH_N), head: 0, n: 0 };
@@ -22465,6 +22924,112 @@ class Renderer {
   setDpr(dpr) {
     this.dpr = dpr;
     this._vignette = null;
+  }
+
+  /** Escucha si el navegador pierde (y recupera) el contexto de dibujo de un lienzo. */
+  _watchCanvas(c) {
+    if (!c || !c.addEventListener) return;
+    c.addEventListener('contextlost', this._onLost);
+    c.addEventListener('contextrestored', this._onRestored);
+  }
+
+  /**
+   * ¿Se perdió el contenido de los lienzos? Chrome en Android (con poca
+   * memoria, o al volver de otra app) puede tirar el contexto de dibujo: el
+   * mapa y el territorio se quedaban en blanco para el resto de la partida
+   * (solo volvían los trozos de territorio que cambiaban). Cuando el contexto
+   * vuelve, se rehace todo. Además de los eventos, se mira cada ~2 s y al
+   * volver a la pestaña.
+   */
+  checkCanvases() {
+    let lost = false;
+    try {
+      lost = !!(this.ctx.isContextLost?.() || this.tctx.isContextLost?.() || this.baseCanvas.getContext('2d').isContextLost?.());
+    } catch {
+      lost = false;
+    }
+    if (lost) this._lost = true;
+    else if (this._lost) {
+      this._lost = false;
+      this._needRestore = true;
+    }
+    return lost;
+  }
+
+  /**
+   * Suelta la memoria de esta partida al empezar otra o volver al menú: la
+   * capa del territorio (imagen y lienzo: en el mundo, 36-144 MB), sus copias
+   * y cachés. El mapa base no (lo guarda terreno.js para la próxima partida en
+   * el mismo mapa). Deja de escuchar al lienzo principal, que sigue en uso.
+   */
+  dispose() {
+    for (const c of [this.canvas, this.territoryCanvas, this.baseCanvas]) {
+      c?.removeEventListener?.('contextlost', this._onLost);
+      c?.removeEventListener?.('contextrestored', this._onRestored);
+    }
+    if (this.territoryCanvas) {
+      // Ancho 0: el navegador suelta su memoria (también la de la tarjeta gráfica)
+      this.territoryCanvas.width = 0;
+      this.territoryCanvas.height = 0;
+    }
+    for (const m of Object.values(this._mips || {})) {
+      m.width = 0;
+      m.height = 0;
+    }
+    this.territoryCanvas = null;
+    this.tctx = null;
+    this.image = null;
+    this.pixels = null;
+    this.prevOwner = null;
+    this._queued = null;
+    this._mips = null;
+    this._spawnMaskCanvas = null;
+    this._lbOwner = null;
+    this.distField = null;
+    this._sprites?.clear();
+    this._labelSprites?.clear();
+    this._digitFonts?.clear();
+    this.labels = [];
+    this.labelById.clear();
+    this.onRestored = null;
+    this.disposed = true;
+  }
+
+  /** Sube otra vez el territorio entero desde sus píxeles (barato: no hay que pintarlo). */
+  refreshTerritory() {
+    this.tctx.putImageData(this.image, 0, 0);
+    for (const c of this._chunkList) this._chunkDirty[c] = 0;
+    this._chunkList.length = 0;
+  }
+
+  /**
+   * Vuelve a dibujar lo que vive en lienzos auxiliares: el mapa (terreno, sin
+   * la copia guardada) y sus copias reducidas, el territorio (sus píxeles
+   * siguen en memoria), la sombra del despliegue, la viñeta y las imágenes ya
+   * dibujadas (nombres, cifras, edificios, efectos). `onRestored` avisa al
+   * resto (minimapa e iconos del panel).
+   */
+  restoreCanvases() {
+    this._needRestore = false;
+    this._lost = false;
+    forgetTerrain();
+    const terrain = paintTerrain(this.game.map);
+    if (terrain.base !== this.baseCanvas) this._watchCanvas(terrain.base);
+    this.baseCanvas = terrain.base;
+    this.baseScale = terrain.scale;
+    this._mips = null;
+    this.tctx.putImageData(this.image, 0, 0);
+    for (const c of this._chunkList) this._chunkDirty[c] = 0;
+    this._chunkList.length = 0;
+    this._spawnMaskCanvas = null;
+    this._vignette = null;
+    this._youKey = null;
+    this._sprites?.clear();
+    this._labelSprites?.clear();
+    this._digitFonts?.clear();
+    resetFxSprites();
+    this.restores++;
+    this.onRestored?.();
   }
 
   get anim() {
@@ -22725,6 +23290,17 @@ class Renderer {
     }
   }
 
+  /** Repinta las casillas de los dueños marcados en `mask` (sus bloques se suben a medida que se ven). */
+  _repaintOwners(mask) {
+    const s = this.prevOwner;
+    const W = this.game.map.width;
+    for (let i = 0; i < s.length; i++) {
+      if (!mask[s[i]]) continue;
+      this._paintTile(i);
+      this._markChunk(i % W, (i / W) | 0);
+    }
+  }
+
   /** Todo el territorio de una vez (al empezar o si cambian tus alianzas). */
   _paintAllTerritory() {
     const N = this.prevOwner.length;
@@ -22747,6 +23323,16 @@ class Renderer {
   _flushDirty(now) {
     const game = this.game;
     const dirty = game.dirty;
+    if (game.dirtyOverflow) {
+      // Demasiados cambios sin dibujar (pestaña oculta en una sala): todo de una vez
+      game.dirtyOverflow = false;
+      dirty.length = 0;
+      this._runN = 0;
+      this._queued?.fill(0);
+      this.prevOwner.set(game.owner);
+      this._paintAllTerritory();
+      return;
+    }
     if (dirty.length) {
       // Turno nuevo: primero se termina de mostrar el anterior
       this._reveal(1, now);
@@ -23131,6 +23717,9 @@ class Renderer {
     old.clear();
     for (const [id, L] of this.labelById) old.set(id, L);
     this.labelById.clear();
+    // Los nombres ya dibujados de los eliminados, fuera (antes se guardaban
+    // todos hasta el final: cientos de lienzos pequeños)
+    if (this._labelSprites) for (const id of this._labelSprites.keys()) if (!players[id]?.alive) this._labelSprites.delete(id);
     const spawn = this.game.phase === 'spawn';
     for (const p of players) {
       if (!p || !p.alive || at[p.id] < 0) continue;
@@ -23188,11 +23777,25 @@ class Renderer {
       this.diploVersion = game.diploVersion;
       const sig = this._allySignature();
       if (sig !== this._allySig) {
+        // Solo las naciones cuyo trato contigo cambia (antes se repintaba y
+        // subía el mapa entero: en el móvil, medio segundo congelado)
+        const ids = (s) => new Set(s ? s.split(',').map(Number) : []);
+        const before = ids(this._allySig);
+        const after = ids(sig);
         this._allySig = sig;
         this._buildPalette();
-        this._paintAllTerritory();
+        const changed = new Uint8Array(game.players.length);
+        for (const id of before) if (!after.has(id)) changed[id] = 1;
+        for (const id of after) if (!before.has(id)) changed[id] = 1;
+        this._repaintOwners(changed);
       }
     }
+    // Lienzos descartados por el navegador: se rehacen en cuanto vuelve el contexto
+    if (now - this._lostCheckAt > 2000) {
+      this._lostCheckAt = now;
+      this.checkCanvases();
+    }
+    if (this._needRestore && !this._lost) this.restoreCanvases();
     if (this._spawnStyle && game.phase !== 'spawn') this._endSpawnStyle();
     this._flushDirty(now);
     this._updateGlowsAndUpload(now);
@@ -25333,6 +25936,12 @@ class Sound {
     this._musicTimer = null;
   }
 
+  /** Suelta lo que recordaba de la partida anterior (buques y datos del humano). */
+  releaseGame() {
+    this._shots.clear();
+    this._prev = null;
+  }
+
   /** Se llama en el primer gesto del usuario (los navegadores no dejan sonar antes). */
   unlock() {
     if (this.ctx) {
@@ -25984,6 +26593,15 @@ function paintTerrain(map) {
   return result;
 }
 
+/**
+ * Olvida el terreno guardado (el del último mapa). Si el navegador descarta el
+ * contenido de los lienzos (Chrome en Android, con poca memoria o al volver de
+ * otra app), la imagen guardada queda en blanco y hay que volver a pintarla.
+ */
+function forgetTerrain() {
+  lastPaint = null;
+}
+
 function paintTerrainNow(map) {
   const { width: W, height: H, size, terrain } = map;
   const S = terrainScale(map);
@@ -26319,7 +26937,7 @@ function paintMapPreview(canvas, data, crop = null) {
   ctx.putImageData(img, 0, 0);
 }
 
-return { terrainScale, paintTerrain, paintMapPreview };
+return { terrainScale, paintTerrain, forgetTerrain, paintMapPreview };
 });
 __define('toque', function () {
 // Toques con el dedo: un dedo tapa varias casillas, así que el objetivo de un
@@ -26803,6 +27421,7 @@ class UI {
     });
 
     this._buildButtons = new Map();
+    this._buildIcons = new Map();
     for (const kind of BUILDING_KINDS) {
       const def = BUILDINGS[kind];
       const btn = document.createElement('button');
@@ -26815,6 +27434,7 @@ class UI {
       icon.width = 48;
       icon.height = 48;
       drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
+      this._buildIcons.set(kind, icon);
       // Sin nombre (ocupa menos): el nombre sale al pasar el ratón
       btn.setAttribute('aria-label', def.name);
       const text = document.createElement('span');
@@ -26926,6 +27546,29 @@ class UI {
 
   on(handlers) {
     Object.assign(this.handlers, handlers);
+  }
+
+  /**
+   * Suelta todo lo que guardaba de la partida anterior (la pantalla final y
+   * los datos de economía la mantenían viva durante la siguiente: en el
+   * móvil, más de 100 MB del mapa del mundo).
+   */
+  releaseGame() {
+    if (this.fin) {
+      this.fin.hide();
+      this.fin.data = null;
+    }
+    if (this._ecoSnaps) this._ecoSnaps.length = 0;
+    this._textTweens?.clear();
+  }
+
+  /** Vuelve a dibujar los iconos del panel de construir (si el navegador descartó su contenido). */
+  repaintIcons() {
+    for (const [kind, icon] of this._buildIcons) {
+      const g = icon.getContext('2d');
+      g.clearRect(0, 0, icon.width, icon.height);
+      drawBuildingReal(g, kind, 24, 24, 44);
+    }
   }
 
   /** Oculta la interfaz de partida (al volver al inicio). */
