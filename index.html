@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="2c24e12 2026-11-12 01:26 UTC">
+<meta name="trinchera-build" content="e3fb644 2026-11-12 15:31 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -825,12 +825,14 @@ body.sin-animaciones .fin-logro { animation: none; }
 .logo-grande .logo-texto { font-size: clamp(44px, 10vw, 76px); }
 
 /* Fondo del inicio: barrido de radar muy suave sobre la partida de bots */
+/* Brillo fijo detrás del menú. Antes era un «radar» que giraba sin parar: una
+   capa del doble de la pantalla que obligaba a recomponerla entera en cada
+   fotograma (era lo que más pesaba del menú, sobre todo en el móvil) */
 .pantalla-inicio::before {
   content: "";
   position: fixed;
-  inset: -50%;
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(242, 179, 61, 0.07) 30deg, transparent 60deg);
-  animation: radar 14s linear infinite;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 55% at 50% 18%, rgba(242, 179, 61, 0.07), transparent 70%);
   pointer-events: none;
   z-index: -1;
 }
@@ -1641,11 +1643,13 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   width: 40%;
   left: -60%;
   background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  transform: skewX(-18deg);
+  transform: translateX(0) skewX(-18deg);
   animation: brilloBoton 3.2s ease-in-out infinite 1s;
   pointer-events: none;
+  will-change: transform;
 }
-@keyframes brilloBoton { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+/* Con transform (no con left): el brillo no repinta el botón en cada fotograma */
+@keyframes brilloBoton { 0%, 60% { transform: translateX(0) skewX(-18deg); } 100% { transform: translateX(475%) skewX(-18deg); } }
 
 /* Pestañas con icono */
 .ini-pestanas button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
@@ -3757,7 +3761,10 @@ body.sin-animaciones .despliegue { animation: none; }
   #aviso { z-index: 30; width: max-content; max-width: calc(100vw - 24px); padding: 8px 14px; border-radius: 14px; font-size: 13px; line-height: 1.3; }
 }
 
-/* ---------- Arranque: antes del menú, mientras se prepara todo ---------- */
+/* ---------- Arranque: antes del menú, mientras se prepara todo ----------
+   Todo se mueve con transform y opacity (sigue fluido aunque el navegador esté
+   ocupado cargando). Al acabar: el centro se aleja, una línea dorada cruza la
+   pantalla y las dos «puertas» se abren hacia arriba y hacia abajo */
 .arranque {
   position: fixed;
   inset: 0;
@@ -3765,34 +3772,90 @@ body.sin-animaciones .despliegue { animation: none; }
   display: grid;
   place-items: center;
   padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
-  background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%);
   color: var(--texto-1);
   overflow: hidden;
-  transition: opacity 0.55s ease, visibility 0s linear 0.55s;
 }
 .arranque[hidden] { display: none; }
-.arranque.saliendo { opacity: 0; visibility: hidden; pointer-events: none; }
-.arranque.saliendo .arr-centro { transform: scale(1.05) translateY(-8px); transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.arr-fondo { position: absolute; inset: 0; pointer-events: none; }
+.arranque.abriendo { pointer-events: none; }
+.arr-puerta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%);
+  background-size: 100% 198%;
+  transition: transform 0.85s cubic-bezier(0.7, 0, 0.2, 1);
+  will-change: transform;
+}
+.arr-arriba { top: 0; background-position: top; box-shadow: 0 1px 0 rgba(242, 179, 61, 0.0); }
+.arr-abajo { bottom: 0; background-position: bottom; }
+.arranque.abriendo .arr-arriba { transform: translateY(-101%); }
+.arranque.abriendo .arr-abajo { transform: translateY(101%); }
+/* La línea dorada por donde se abren */
+.arr-costura {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: linear-gradient(90deg, transparent, #ffd36b 20%, #fff3cf 50%, #ffd36b 80%, transparent);
+  box-shadow: 0 0 18px 3px rgba(242, 179, 61, 0.55);
+  transform: scaleX(0);
+  opacity: 0;
+  z-index: 3;
+}
+.arranque.saliendo .arr-costura { opacity: 1; transform: scaleX(1); transition: transform 0.42s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.2s; }
+.arranque.abriendo .arr-costura { opacity: 0; transform: scaleX(1) scaleY(6); transition: opacity 0.5s 0.1s, transform 0.6s; }
+.arr-fondo { position: absolute; inset: 0; pointer-events: none; z-index: 1; transition: opacity 0.4s; }
+.arranque.saliendo .arr-fondo { opacity: 0; }
 /* Rejilla de mapa de campaña que deriva despacio */
 .arr-rejilla {
   position: absolute;
   inset: -48px;
   background-image: linear-gradient(rgba(242, 179, 61, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(242, 179, 61, 0.055) 1px, transparent 1px);
   background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
-  mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 42%, #000 15%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 50% 42%, #000 15%, transparent 70%);
   animation: arrDeriva 16s linear infinite;
 }
 @keyframes arrDeriva { to { transform: translate(48px, 48px); } }
-.arr-halo { position: absolute; left: 50%; top: 40%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; background: radial-gradient(circle, rgba(242, 179, 61, 0.13), transparent 62%); animation: arrLatido 3.4s ease-in-out infinite; }
+.arr-halo { position: absolute; left: 50%; top: 38%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; background: radial-gradient(circle, rgba(242, 179, 61, 0.13), transparent 62%); animation: arrLatido 3.4s ease-in-out infinite; }
 @keyframes arrLatido { 50% { transform: scale(1.08); opacity: 0.7; } }
-.arr-centro { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px, 100%); text-align: center; }
-.arr-logo { gap: 10px; animation: arrEntra 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
-.arr-logo .logo-marca { width: 92px; height: 92px; filter: drop-shadow(0 8px 22px rgba(242, 179, 61, 0.25)); }
+/* Atardecer en el horizonte, con la línea del frente que marcha despacio */
+.arr-horizonte { position: absolute; left: -10%; right: -10%; bottom: -30vh; height: 62vh; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, rgba(255, 150, 60, 0.32), rgba(200, 90, 40, 0.12) 45%, transparent 70%); }
+.arr-frente { position: absolute; left: 0; bottom: 0; width: 200%; height: 90px; animation: marcha 60s linear infinite; }
+.arr-lejos { bottom: 26px; height: 70px; color: #0e1726; fill: #0e1726; opacity: 0.9; animation-duration: 110s; }
+.arr-cerca { color: #04070e; fill: #04070e; animation-duration: 55s; }
+@keyframes marcha { to { transform: translateX(-50%); } }
+/* Brasas que suben */
+.arr-brasas i { position: absolute; bottom: -10px; width: 4px; height: 4px; border-radius: 50%; background: #ffbf5e; box-shadow: 0 0 8px 2px rgba(255, 160, 60, 0.6); opacity: 0; animation: brasa 7s linear infinite; }
+.arr-brasas i:nth-child(1) { left: 8%; animation-delay: 0.2s; }
+.arr-brasas i:nth-child(2) { left: 17%; animation-delay: 3.1s; animation-duration: 8.5s; }
+.arr-brasas i:nth-child(3) { left: 26%; animation-delay: 1.4s; }
+.arr-brasas i:nth-child(4) { left: 35%; animation-delay: 5.2s; animation-duration: 9s; }
+.arr-brasas i:nth-child(5) { left: 44%; animation-delay: 2.3s; animation-duration: 6.5s; }
+.arr-brasas i:nth-child(6) { left: 53%; animation-delay: 4.4s; }
+.arr-brasas i:nth-child(7) { left: 61%; animation-delay: 0.9s; animation-duration: 8s; }
+.arr-brasas i:nth-child(8) { left: 69%; animation-delay: 3.7s; }
+.arr-brasas i:nth-child(9) { left: 77%; animation-delay: 1.8s; animation-duration: 9.5s; }
+.arr-brasas i:nth-child(10) { left: 85%; animation-delay: 5.8s; }
+.arr-brasas i:nth-child(11) { left: 92%; animation-delay: 2.7s; animation-duration: 7.5s; }
+.arr-brasas i:nth-child(12) { left: 4%; animation-delay: 6.3s; animation-duration: 8.8s; }
+@keyframes brasa {
+  0% { opacity: 0; transform: translate(0, 0) scale(1); }
+  10% { opacity: 0.9; }
+  60% { opacity: 0.5; }
+  100% { opacity: 0; transform: translate(30px, -55vh) scale(0.4); }
+}
+.arr-centro { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(500px, 100%); text-align: center; transition: transform 0.45s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.35s; }
+.arranque.saliendo .arr-centro { transform: scale(0.92) translateY(-6px); opacity: 0; }
+.arr-logo { gap: 6px; animation: arrEntra 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.arr-logo .logo-marca { width: 88px; height: 88px; filter: drop-shadow(0 8px 22px rgba(242, 179, 61, 0.28)); }
 .arr-logo .logo-texto { font-size: clamp(38px, 9vw, 60px); }
+.arr-lema { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--texto-2); animation: arrEntra 0.7s 0.35s both; }
 /* El mundo que se va cartografiando: radar mientras carga y, con el mapa ya
-   leído, un velo que se retira con una línea de escáner dorada */
+   leído, un velo que se retira con una línea de escáner y banderas que caen */
 .arr-mapa {
   position: relative;
   width: 100%;
@@ -3800,13 +3863,13 @@ body.sin-animaciones .despliegue { animation: none; }
   border-radius: 16px;
   overflow: hidden;
   background: repeating-radial-gradient(circle at 50% 50%, transparent 0 38px, rgba(242, 179, 61, 0.07) 39px 40px), #0c1930;
-  border: 1px solid rgba(242, 179, 61, 0.24);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 46px rgba(242, 179, 61, 0.08);
+  border: 1px solid rgba(242, 179, 61, 0.26);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 46px rgba(242, 179, 61, 0.1);
   animation: arrEntra 0.7s 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
 .arr-mapa canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.25s; }
 .arranque.con-mapa .arr-mapa canvas { opacity: 1; }
-.arr-velo { position: absolute; inset: 0; background: #0c1930; }
+.arr-velo { position: absolute; inset: 0; background: #0c1930; z-index: 1; }
 .arranque.con-mapa .arr-velo { transform: translateX(101%); transition: transform 1.7s cubic-bezier(0.45, 0.05, 0.25, 1); }
 .arr-escaner { position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #ffd36b; box-shadow: 0 0 14px 4px rgba(242, 179, 61, 0.55), 0 0 44px 12px rgba(242, 179, 61, 0.16); opacity: 0; }
 .arranque.con-mapa .arr-escaner { opacity: 1; }
@@ -3821,40 +3884,94 @@ body.sin-animaciones .despliegue { animation: none; }
   transform: translate(-50%, -50%);
   animation: arrGira 2.4s linear infinite;
   transition: opacity 0.9s;
+  z-index: 2;
 }
 .arranque.con-mapa .arr-radar { opacity: 0; }
 @keyframes arrGira { to { transform: translate(-50%, -50%) rotate(360deg); } }
-/* Barra: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
-.arr-barra { position: relative; width: 100%; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); animation: arrEntra 0.7s 0.2s both; }
+/* Banderas de los países sobre el mapa: caen cuando pasa el escáner */
+.arr-pines { position: absolute; inset: 0; z-index: 3; }
+.arr-pin { position: absolute; width: 0; height: 0; }
+.arr-pin .bandera { position: absolute; left: -9px; bottom: 5px; width: 18px; height: 13.5px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 3px 8px rgba(0, 0, 0, 0.45); opacity: 0; transform: translateY(-14px) scale(0.6); animation: pinCae 0.45s var(--d, 0.5s) cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
+.arr-pin::before { content: ""; position: absolute; left: -1px; top: -6px; width: 2px; height: 6px; background: rgba(255, 255, 255, 0.85); border-radius: 1px; opacity: 0; animation: pinAsta 0.2s var(--d, 0.5s) forwards; }
+.arr-pin::after { content: ""; position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255, 211, 107, 0.9); opacity: 0; transform: scale(0.2); animation: pinOnda 2.4s calc(var(--d, 0.5s) + 0.25s) ease-out infinite; }
+@keyframes pinCae { to { opacity: 1; transform: none; } }
+@keyframes pinAsta { to { opacity: 1; } }
+@keyframes pinOnda { 0% { opacity: 0.9; transform: scale(0.2); } 70%, 100% { opacity: 0; transform: scale(1.6); } }
+.arr-brillo-mapa { position: absolute; inset: 0; z-index: 4; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.12) 48%, transparent 60%); transform: translateX(-100%); pointer-events: none; }
+.arranque.listo .arr-brillo-mapa { animation: brilloMapa 1.1s ease-in-out forwards; }
+@keyframes brilloMapa { to { transform: translateX(100%); } }
+/* Barra y porcentaje: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
+.arr-progreso { width: 100%; display: flex; align-items: center; gap: 12px; animation: arrEntra 0.7s 0.2s both; }
+.arr-barra { position: relative; flex: 1; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
 .arr-barra span { display: block; height: 100%; transform-origin: left center; transform: scaleX(0.02); background: linear-gradient(90deg, #d99a2b, #ffd36b); box-shadow: 0 0 12px rgba(242, 179, 61, 0.6); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); }
 .arr-barra::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: translateX(-100%); animation: arrBrillo 1.6s ease-in-out infinite; }
 @keyframes arrBrillo { to { transform: translateX(340%); } }
-.arr-paso { margin: 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
+@property --arr-pct { syntax: '<integer>'; inherits: false; initial-value: 0; }
+.arr-pct { min-width: 44px; text-align: right; font-size: 14px; font-weight: 800; color: var(--oro-200); font-variant-numeric: tabular-nums; counter-reset: pct var(--arr-pct); }
+.arr-pct::after { content: counter(pct) " %"; }
+.arr-paso { margin: -4px 0 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
 .arr-paso.cambia { animation: arrTexto 0.35s ease-out; }
 @keyframes arrTexto { from { opacity: 0; transform: translateY(5px); } }
-.arr-consejo { margin: 4px 0 0; padding: 10px 14px; max-width: 440px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 13.5px; line-height: 1.45; color: var(--texto-1); animation: arrEntra 0.7s 0.3s both; }
-.arr-consejo:empty { visibility: hidden; }
-.arr-consejo::before { content: "Consejo · "; color: var(--oro-400); font-weight: 700; }
+/* Lista de pasos: se van marcando */
+.arr-pasos { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; animation: arrEntra 0.7s 0.25s both; }
+.arr-pasos li { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; color: var(--texto-3); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); transition: color 0.3s, background 0.3s, border-color 0.3s; }
+.arr-pasos li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); transition: background 0.3s, transform 0.3s; }
+.arr-pasos li.activo { color: var(--oro-200); border-color: rgba(242, 179, 61, 0.4); background: rgba(242, 179, 61, 0.08); }
+.arr-pasos li.activo::before { background: #ffd36b; animation: pasoLatido 0.9s ease-in-out infinite; }
+.arr-pasos li.hecho { color: #c9f5da; border-color: rgba(95, 211, 141, 0.35); background: rgba(95, 211, 141, 0.08); }
+.arr-pasos li.hecho::before { background: #5fd38d; transform: scale(1.15); }
+@keyframes pasoLatido { 50% { transform: scale(1.6); opacity: 0.6; } }
+/* Consejos: rotan solos con CSS (no se paran aunque la carga ocupe el navegador) */
+.arr-consejos { position: relative; width: 100%; max-width: 460px; margin-top: 2px; padding: 12px 16px 10px; border-radius: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)); border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); animation: arrEntra 0.7s 0.3s both; }
+.arr-consejos-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro-400); }
+.arr-consejos-titulo svg { width: 14px; height: 14px; }
+.arr-tips { position: relative; min-height: 44px; margin-top: 6px; }
+.arr-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; font-size: 14px; line-height: 1.45; color: var(--texto-1); opacity: 0; animation: tipCiclo var(--ciclo, 25s) var(--d, 0s) infinite both; }
+@keyframes tipCiclo {
+  0% { opacity: 0; transform: translateY(10px); }
+  3% { opacity: 1; transform: none; }
+  17% { opacity: 1; transform: none; }
+  20% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+.arr-puntos { display: flex; justify-content: center; gap: 5px; margin-top: 8px; }
+.arr-puntos i { width: 18px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.arr-puntos i::after { content: ""; display: block; height: 100%; background: #ffd36b; transform: scaleX(0); transform-origin: left center; animation: puntoCiclo var(--ciclo, 25s) var(--d, 0s) linear infinite both; }
+@keyframes puntoCiclo { 0% { transform: scaleX(0); } 20% { transform: scaleX(1); } 20.01%, 100% { transform: scaleX(0); } }
 @keyframes arrEntra { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
-@media (max-height: 560px) {
-  .arr-centro { gap: 10px; }
-  .arr-mapa { width: min(100%, 360px); }
-  .arr-logo .logo-marca { width: 64px; height: 64px; }
-  .arr-consejo { display: none; }
+@media (max-height: 640px) {
+  .arr-centro { gap: 9px; }
+  .arr-mapa { width: min(100%, 380px); }
+  .arr-logo .logo-marca { width: 60px; height: 60px; }
+  .arr-lema, .arr-pasos { display: none; }
+}
+@media (max-width: 480px) {
+  .arr-pasos li { padding: 3px 8px 3px 7px; font-size: 10.5px; }
+  .arr-tip { font-size: 13px; }
+  .arr-tips { min-height: 58px; }
 }
 
-/* El menú entra cuando se va el arranque: cabecera desde arriba y el contenido escalonado */
-#inicio.entrada .ini-barra { animation: iniBaja 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
-#inicio.entrada .vista:not([hidden]) > * { animation: iniSube 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(2) { animation-delay: 0.08s; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(3) { animation-delay: 0.16s; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(4) { animation-delay: 0.24s; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(n+5) { animation-delay: 0.3s; }
+/* El menú entra cuando se abren las puertas: cabecera desde arriba, pestañas y el contenido escalonado */
+#inicio.entrada .ini-barra { animation: iniBaja 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+#inicio.entrada .ini-pestanas button { animation: iniBaja 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+#inicio.entrada .ini-pestanas button:nth-child(2) { animation-delay: 0.04s; }
+#inicio.entrada .ini-pestanas button:nth-child(3) { animation-delay: 0.08s; }
+#inicio.entrada .ini-pestanas button:nth-child(4) { animation-delay: 0.12s; }
+#inicio.entrada .ini-pestanas button:nth-child(5) { animation-delay: 0.16s; }
+#inicio.entrada .ini-pestanas button:nth-child(n+6) { animation-delay: 0.2s; }
+#inicio.entrada .vista:not([hidden]) > * { animation: iniSube 0.75s cubic-bezier(0.2, 0.9, 0.3, 1) both; animation-delay: 0.12s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(2) { animation-delay: 0.2s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(3) { animation-delay: 0.28s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(4) { animation-delay: 0.36s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(n+5) { animation-delay: 0.42s; }
+#inicio.entrada .heroe { animation-name: iniHeroe; }
 @keyframes iniBaja { from { opacity: 0; transform: translateY(-18px); } }
-@keyframes iniSube { from { opacity: 0; transform: translateY(20px); } }
+@keyframes iniSube { from { opacity: 0; transform: translateY(26px) scale(0.985); } }
+@keyframes iniHeroe { from { opacity: 0; transform: scale(0.94); } }
 
 @media (prefers-reduced-motion: reduce) {
   .arranque, .arranque *, .arranque *::before, .arranque *::after, #inicio.entrada * { animation: none !important; transition: none !important; }
+  .arr-tip:first-child { opacity: 1; }
 }
 body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { animation: none !important; }
 
@@ -4040,9 +4157,31 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
     </defs>
   </svg>
 
-  <!-- Arranque: se ve desde el primer pintado, mientras se prepara todo (main.js) -->
+  <!-- Arranque: se ve desde el primer pintado, mientras se prepara todo (main.js).
+       Al terminar, las dos «puertas» se abren con una línea dorada y entra el menú -->
   <div id="arranque" class="arranque" role="status" aria-live="polite">
-    <div class="arr-fondo" aria-hidden="true"><span class="arr-rejilla"></span><span class="arr-halo"></span></div>
+    <div class="arr-puerta arr-arriba" aria-hidden="true"></div>
+    <div class="arr-puerta arr-abajo" aria-hidden="true"></div>
+    <span class="arr-costura" aria-hidden="true"></span>
+    <div class="arr-fondo" aria-hidden="true">
+      <span class="arr-rejilla"></span>
+      <span class="arr-halo"></span>
+      <span class="arr-horizonte"></span>
+      <span class="arr-brasas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <svg class="arr-frente arr-lejos" viewBox="0 0 2400 90" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <g id="arr-soldado"><path d="M-5.5 -33 q5.5 -7.5 11 0 z"/><circle cx="0" cy="-30" r="3.6"/><path d="M-4 -26 h8 l2 13 h-3 l-1 13 h-3 l-1 -10 l-1 10 h-3 l1 -13 h-2 z"/><path d="M2 -23 l15 -9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+          <g id="arr-poste"><path d="M0 0 v-22 M-14 -18 q7 4 14 0 q7 -4 14 0 M-14 -10 q7 4 14 0 q7 -4 14 0" fill="none" stroke="currentColor" stroke-width="1.6"/></g>
+          <g id="arr-bandera"><path d="M0 0 v-38" stroke="currentColor" stroke-width="2"/><path d="M1 -38 l16 5 l-16 5 z"/></g>
+        </defs>
+        <path d="M0 70 Q 60 58 120 66 T 240 64 T 360 68 T 480 62 T 600 67 T 720 63 T 840 68 T 960 62 T 1080 66 T 1200 64 T 1320 66 T 1440 64 T 1560 68 T 1680 62 T 1800 67 T 1920 63 T 2040 68 T 2160 62 T 2280 66 T 2400 64 V 90 H 0 Z"/>
+        <g><use href="#arr-soldado" transform="translate(20 64) scale(1.036057306323988)"/><use href="#arr-poste" transform="translate(85.89686165836555 66)"/><use href="#arr-soldado" transform="translate(169.69728294592932 64) scale(0.9032919978887186)"/><use href="#arr-soldado" transform="translate(268.3201186926815 64) scale(0.9585827402616741)"/><use href="#arr-poste" transform="translate(378.0152571784139 66)"/><use href="#arr-poste" transform="translate(476.5675587676211 66)"/><use href="#arr-soldado" transform="translate(561.3023286057124 64) scale(1.058715164571297)"/><use href="#arr-poste" transform="translate(662.0655001057432 66)"/><use href="#arr-poste" transform="translate(753.9531300398476 66)"/><use href="#arr-bandera" transform="translate(798.4353307157373 64)"/><use href="#arr-soldado" transform="translate(879.8123015209296 64) scale(0.9077529378674375)"/><use href="#arr-poste" transform="translate(980.3992081094558 66)"/></g><g transform="translate(1200 0)"><use href="#arr-soldado" transform="translate(20 64) scale(1.036057306323988)"/><use href="#arr-poste" transform="translate(85.89686165836555 66)"/><use href="#arr-soldado" transform="translate(169.69728294592932 64) scale(0.9032919978887186)"/><use href="#arr-soldado" transform="translate(268.3201186926815 64) scale(0.9585827402616741)"/><use href="#arr-poste" transform="translate(378.0152571784139 66)"/><use href="#arr-poste" transform="translate(476.5675587676211 66)"/><use href="#arr-soldado" transform="translate(561.3023286057124 64) scale(1.058715164571297)"/><use href="#arr-poste" transform="translate(662.0655001057432 66)"/><use href="#arr-poste" transform="translate(753.9531300398476 66)"/><use href="#arr-bandera" transform="translate(798.4353307157373 64)"/><use href="#arr-soldado" transform="translate(879.8123015209296 64) scale(0.9077529378674375)"/><use href="#arr-poste" transform="translate(980.3992081094558 66)"/></g>
+      </svg>
+      <svg class="arr-frente arr-cerca" viewBox="0 0 2400 90" preserveAspectRatio="xMidYMax slice">
+        <path d="M0 74 Q 50 62 100 70 T 200 68 T 300 72 T 400 66 T 500 71 T 600 67 T 700 72 T 800 66 T 900 70 T 1000 68 T 1100 71 T 1200 68 T 1300 70 T 1400 68 T 1500 72 T 1600 66 T 1700 71 T 1800 67 T 1900 72 T 2000 66 T 2100 70 T 2200 68 T 2300 71 T 2400 68 V 90 H 0 Z"/>
+        <g><use href="#arr-poste" transform="translate(20 66)"/><use href="#arr-poste" transform="translate(171.77957193261886 66)"/><use href="#arr-soldado" transform="translate(252.89650995211164 64) scale(1.0279771597604515)"/><use href="#arr-bandera" transform="translate(336.98830036728776 64)"/><use href="#arr-soldado" transform="translate(383.57694230333306 64) scale(0.9226676343729598)"/><use href="#arr-poste" transform="translate(480.2520597090355 66)"/><use href="#arr-poste" transform="translate(630.7167279337144 66)"/><use href="#arr-soldado" transform="translate(713.8061172542143 64) scale(0.9037501842374013)"/><use href="#arr-soldado" transform="translate(790.7928058861478 64) scale(0.9475520656994822)"/><use href="#arr-soldado" transform="translate(847.7288168427128 64) scale(1.0159836153058213)"/><use href="#arr-bandera" transform="translate(918.5659950086788 64)"/><use href="#arr-poste" transform="translate(994.9046830421642 66)"/><use href="#arr-poste" transform="translate(1069.8888036966396 66)"/><use href="#arr-soldado" transform="translate(1141.9018954086087 64) scale(1.149414050115771)"/></g><g transform="translate(1200 0)"><use href="#arr-poste" transform="translate(20 66)"/><use href="#arr-poste" transform="translate(171.77957193261886 66)"/><use href="#arr-soldado" transform="translate(252.89650995211164 64) scale(1.0279771597604515)"/><use href="#arr-bandera" transform="translate(336.98830036728776 64)"/><use href="#arr-soldado" transform="translate(383.57694230333306 64) scale(0.9226676343729598)"/><use href="#arr-poste" transform="translate(480.2520597090355 66)"/><use href="#arr-poste" transform="translate(630.7167279337144 66)"/><use href="#arr-soldado" transform="translate(713.8061172542143 64) scale(0.9037501842374013)"/><use href="#arr-soldado" transform="translate(790.7928058861478 64) scale(0.9475520656994822)"/><use href="#arr-soldado" transform="translate(847.7288168427128 64) scale(1.0159836153058213)"/><use href="#arr-bandera" transform="translate(918.5659950086788 64)"/><use href="#arr-poste" transform="translate(994.9046830421642 66)"/><use href="#arr-poste" transform="translate(1069.8888036966396 66)"/><use href="#arr-soldado" transform="translate(1141.9018954086087 64) scale(1.149414050115771)"/></g>
+      </svg>
+    </div>
     <div class="arr-centro">
       <div class="logo logo-grande arr-logo" role="img" aria-label="Trinchera">
         <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
@@ -4053,15 +4192,33 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
           <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
         </svg>
         <span class="logo-texto">TRINCHERA</span>
+        <span class="arr-lema">Conquista el mundo, casilla a casilla</span>
       </div>
       <div class="arr-mapa" aria-hidden="true">
         <canvas id="arr-lienzo" width="480" height="230"></canvas>
         <span class="arr-velo"><span class="arr-escaner"></span></span>
         <span class="arr-radar"></span>
+        <div class="arr-pines" id="arr-pines"></div>
+        <span class="arr-brillo-mapa"></span>
       </div>
-      <div class="arr-barra" aria-hidden="true"><span id="arr-progreso"></span></div>
+      <div class="arr-progreso">
+        <div class="arr-barra" aria-hidden="true"><span id="arr-progreso"></span></div>
+        <b class="arr-pct" id="arr-pct" aria-hidden="true"></b>
+      </div>
       <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
-      <p id="arr-consejo" class="arr-consejo"></p>
+      <ol class="arr-pasos" id="arr-pasos" aria-hidden="true">
+        <li data-paso="cuartel">Cuartel</li>
+        <li data-paso="banderas">Banderas</li>
+        <li data-paso="mapa">Mapa</li>
+        <li data-paso="terreno">Terreno</li>
+        <li data-paso="perfil">Perfil</li>
+        <li data-paso="frente">Frente</li>
+      </ol>
+      <div class="arr-consejos" id="arr-consejos">
+        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
+        <div class="arr-tips" id="arr-tips"></div>
+        <div class="arr-puntos" id="arr-puntos" aria-hidden="true"></div>
+      </div>
     </div>
   </div>
 
@@ -5002,7 +5159,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "2c24e12 2026-11-12 01:26 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "e3fb644 2026-11-12 15:31 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -5042,6 +5199,10 @@ class Attack {
     this.done = false;
     /** Retirada en curso: tick en el que las tropas vuelven a casa (0 = no se retira). */
     this.retreatAt = 0;
+    /** Casillas conquistadas cuyos cercos faltan por comprobar (ver Game._flushAnnex). */
+    this.annexQ = [];
+    /** Turno (módulo MECH.annexEvery) en el que se comprueban sus cercos. */
+    this.annexPhase = 0;
   }
 }
 
@@ -5393,14 +5554,16 @@ class BotBrain {
     // (sin vecinos por tierra, más a menudo y más lejos: si no, un líder
     // rodeado de mar se queda atascado sin poder cruzar el océano)
     const landlocked = counts.size === 0;
-    if (wild === 0 && coastal && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
+    if (wild === 0 && coastal && g.ticks >= (this.boatRetryAt || 0) && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
       // Sin puerto no hay barcos: primero hay que construirlo
       if (!p.active.port) {
         if (!p.buildings.port) this.needPort = true;
         return;
       }
       const tile = this._pickBoatTarget(landlocked);
-      if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)));
+      // Si no hay ruta, espera 20 s antes de volver a buscar (cada búsqueda
+      // fallida recorre mucho mar y daba tirones)
+      if (tile >= 0 && !g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)))) this.boatRetryAt = g.ticks + 200;
     }
   }
 
@@ -9421,6 +9584,7 @@ class Game {
     if (atk && !atk.done) atk.retreatAt = 0;
     if (!atk || atk.done) {
       atk = new Attack(p, targetId, 0);
+      atk.annexPhase = (this._attackSeq = (this._attackSeq || 0) + 1) % MECH.annexEvery;
       this._aim(atk, focus);
       this._initFrontier(atk);
       if (atk.inFrontier.size === 0) return false;
@@ -9913,8 +10077,10 @@ class Game {
       atk.troops -= c.loss;
       if (target) target.troops = Math.max(0, target.troops - c.defLoss);
       this.setOwner(t, aid);
-      this._annexAround(t, aid, tid);
+      atk.annexQ.push(t);
     }
+    // Cercos: cada MECH.annexEvery turnos (en su turno) o al acabar el ataque
+    if ((this.ticks + atk.annexPhase) % MECH.annexEvery === 0) this._flushAnnex(atk);
     if (traced) {
       this.trace.push({ t: 'frente', tick: this.ticks, jugador: aid, idFrente: atk.traceId, objetivo: tid, ancho: front, presupuesto: atk.budget, ganadas: A.tiles - traced.tiles, bajas: traced.troops - atk.troops, restantes: atk.troops });
     }
@@ -9956,6 +10122,22 @@ class Game {
       );
     }
     return true;
+  }
+
+  /**
+   * Comprueba los cercos de lo que conquistó `atk` desde la última vez. Las
+   * casillas interiores del frente no tienen vecinas libres: en la práctica
+   * solo se mira el borde exterior, una vez, en vez de capa a capa.
+   */
+  _flushAnnex(atk) {
+    const q = atk.annexQ;
+    if (!q || !q.length) return;
+    const aid = atk.attacker.id;
+    const owner = this.owner;
+    for (let i = 0; i < q.length; i++) {
+      if (owner[q[i]] === aid) this._annexAround(q[i], aid, atk.targetId);
+    }
+    q.length = 0;
   }
 
   /**
@@ -10115,6 +10297,8 @@ class Game {
   /** Termina un ataque; las tropas sobrantes (× refund) vuelven a casa. */
   _endAttack(atk, refund = 1) {
     if (atk.done) return;
+    // Los cercos que quedaban por comprobar, antes de cerrar el frente
+    this._flushAnnex(atk);
     atk.done = true;
     const A = atk.attacker;
     if (this.trace && atk.traceId) {
@@ -10410,11 +10594,19 @@ class Game {
    */
   _updateMerchants() {
     const map = this.map;
-    if (this.ticks % MECH.trade.checkEvery === 0) {
+    // Cada puerto consulta cada checkEvery turnos, en su turno (repartidos: antes
+    // todos a la vez, y el turno de la consulta daba un tirón). Como mucho una
+    // ruta nueva (sin calcular aún) por turno: la primera búsqueda entre dos
+    // puertos lejanos puede llevar decenas de ms; las demás esperan su turno
+    {
+      const every = MECH.trade.checkEvery;
+      const phase = this.ticks % every;
       const ports = this.buildings.filter((b) => b.kind === 'port' && b.water >= 0 && b.level > 0);
       let afloat = 0;
       for (const m of this.merchants) if (m.kind === 'trade') afloat++;
+      let fresh = 1;
       for (const b of ports) {
+        if (b.id % every !== phase) continue;
         const chance = tradeSpawnChance(b.level, b.rejections || 0, afloat);
         if (this.rng.float() >= chance) {
           b.rejections = (b.rejections || 0) + 1;
@@ -10427,6 +10619,10 @@ class Game {
           continue;
         }
         const dest = options[this.rng.int(0, options.length - 1)];
+        if (!this._pathCache.has(`${b.water},${dest.water},${SEARCH.trade}`)) {
+          if (fresh <= 0) continue; // ruta nueva: en otro turno
+          fresh--;
+        }
         const path = this._waterPath(b.water, dest.water, SEARCH.trade);
         if (!path) {
           b.rejections = (b.rejections || 0) + 1;
@@ -10794,7 +10990,11 @@ class Game {
     let path = null;
     if (this._coarseCorridor([from], (cell) => cell === this._cellOf(to), maxNodes / AREA)) {
       path = this._astarWater(from, to, maxNodes, true);
-      // Raro: el pasillo es demasiado estrecho; búsqueda fina acotada
+      // El pasillo es demasiado estrecho: uno más ancho y, si no, búsqueda fina acotada
+      if (!path) {
+        this._markCorridor(4);
+        path = this._astarWater(from, to, maxNodes, true);
+      }
       if (!path) path = this._astarWater(from, to, Math.min(maxNodes, 150000));
     }
     if (cache) {
@@ -10871,12 +11071,29 @@ class Game {
     const ch = Math.ceil(H / k);
     const n = cw * ch;
     const water = new Uint8Array(n);
+    // Enlaces con la celda de la derecha (east) y la de abajo (south): solo si
+    // el agua se toca de verdad en el borde entre las dos. Antes bastaba con
+    // que las dos celdas tuvieran algo de agua, y con los ríos la ruta gruesa
+    // saltaba de un río a otro por tierra (el Rin y el Danubio, por ejemplo):
+    // la búsqueda fina fallaba y caía en la completa, la cara (tirones)
+    const east = new Uint8Array(n);
+    const south = new Uint8Array(n);
+    const terrain = map.terrain;
     for (let y = 0; y < H; y++) {
-      const row = ((y / k) | 0) * cw;
-      for (let x = 0; x < W; x++) if (map.terrain[y * W + x] === 0) water[row + ((x / k) | 0)] = 1;
+      const cy = (y / k) | 0;
+      const row = cy * cw;
+      const lastRow = y % k === k - 1 && y < H - 1;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (terrain[i] !== 0) continue;
+        const c = row + ((x / k) | 0);
+        water[c] = 1;
+        if (x % k === k - 1 && x < W - 1 && terrain[i + 1] === 0) east[c] = 1;
+        if (lastRow && terrain[i + W] === 0) south[c] = 1;
+      }
     }
     this._cg = {
-      k, cw, ch, water,
+      k, cw, ch, water, east, south,
       seen: new Uint32Array(n), parent: new Int32Array(n), queue: new Int32Array(n), stamp: 0,
       mark: new Uint32Array(n), markStamp: 0, goal: new Uint32Array(n), goalStamp: 0,
     };
@@ -10896,7 +11113,7 @@ class Game {
    */
   _coarseCorridor(starts, isGoal, maxCells) {
     const cg = this._coarse();
-    const { cw, ch, water, seen, parent, queue } = cg;
+    const { cw, ch, east, south, seen, parent, queue } = cg;
     cg.stamp = cg.stamp >= 0xfffffff0 ? (seen.fill(0), 1) : cg.stamp + 1;
     const st = cg.stamp;
     let head = 0;
@@ -10918,28 +11135,42 @@ class Game {
       }
       const x = c % cw;
       const y = (c / cw) | 0;
-      if (x > 0 && water[c - 1] && seen[c - 1] !== st) { seen[c - 1] = st; parent[c - 1] = c; queue[tail++] = c - 1; }
-      if (x < cw - 1 && water[c + 1] && seen[c + 1] !== st) { seen[c + 1] = st; parent[c + 1] = c; queue[tail++] = c + 1; }
-      if (y > 0 && water[c - cw] && seen[c - cw] !== st) { seen[c - cw] = st; parent[c - cw] = c; queue[tail++] = c - cw; }
-      if (y < ch - 1 && water[c + cw] && seen[c + cw] !== st) { seen[c + cw] = st; parent[c + cw] = c; queue[tail++] = c + cw; }
+      if (x > 0 && east[c - 1] && seen[c - 1] !== st) { seen[c - 1] = st; parent[c - 1] = c; queue[tail++] = c - 1; }
+      if (x < cw - 1 && east[c] && seen[c + 1] !== st) { seen[c + 1] = st; parent[c + 1] = c; queue[tail++] = c + 1; }
+      if (y > 0 && south[c - cw] && seen[c - cw] !== st) { seen[c - cw] = st; parent[c - cw] = c; queue[tail++] = c - cw; }
+      if (y < ch - 1 && south[c] && seen[c + cw] !== st) { seen[c + cw] = st; parent[c + cw] = c; queue[tail++] = c + cw; }
     }
     if (found < 0) return false;
-    // Pasillo: la ruta y sus 8 vecinas
-    cg.markStamp = cg.markStamp >= 0xfffffff0 ? (cg.mark.fill(0), 1) : cg.markStamp + 1;
+    // Pasillo: la ruta y sus 8 vecinas (la ruta se guarda para ensancharlo)
+    const route = (cg.route ??= []);
+    route.length = 0;
+    for (let c = found; c !== -1; c = parent[c]) route.push(c);
+    this._markCorridor(1);
+    return true;
+  }
+
+  /**
+   * Marca como pasillo la última ruta gruesa y las celdas a `r` de ella. Si
+   * la búsqueda fina no cabe en el de radio 1, se prueba uno de radio 4 antes
+   * de recorrer el mar entero (eso daba tirones de decenas de ms).
+   */
+  _markCorridor(r) {
+    const cg = this._cg;
+    const { cw, ch, mark } = cg;
+    cg.markStamp = cg.markStamp >= 0xfffffff0 ? (mark.fill(0), 1) : cg.markStamp + 1;
     const ms = cg.markStamp;
-    for (let c = found; c !== -1; c = parent[c]) {
+    for (const c of cg.route) {
       const x = c % cw;
       const y = (c / cw) | 0;
-      for (let dy = -1; dy <= 1; dy++) {
+      for (let dy = -r; dy <= r; dy++) {
         const yy = y + dy;
         if (yy < 0 || yy >= ch) continue;
-        for (let dx = -1; dx <= 1; dx++) {
+        for (let dx = -r; dx <= r; dx++) {
           const xx = x + dx;
-          if (xx >= 0 && xx < cw) cg.mark[yy * cw + xx] = ms;
+          if (xx >= 0 && xx < cw) mark[yy * cw + xx] = ms;
         }
       }
     }
-    return true;
   }
 
   /** ¿Son enemigos? (ni la misma nación, ni aliados, ni con un pacto o paz en vigor) */
@@ -11272,7 +11503,10 @@ class Game {
     // Primero solo por el pasillo de la ruta gruesa. Si no llega (un estrecho
     // como Ormuz: la ruta gruesa cruza la península por celdas con algo de
     // agua y el pasillo no incluye el canal de verdad), otra vez sin pasillo
-    for (const restrict of [true, false]) {
+    // Pasillo de radio 1, luego de radio 4 y, solo si tampoco, sin pasillo
+    for (const widen of [1, 4, 0]) {
+      const restrict = widen > 0;
+      if (widen > 1) this._markCorridor(widen);
       const stamp = this._nextStamp();
       let head = 0;
       let tail = 0;
@@ -11284,7 +11518,7 @@ class Game {
         parent[n] = -1;
         queue[tail++] = n;
       }
-      while (head < tail && tail < cap) {
+      while (head < tail && tail < (restrict ? cap : cap / 3)) {
         const w = queue[head++];
         c = map.neighbors(w, nb);
         for (let k = 0; k < c; k++) {
@@ -12100,7 +12334,7 @@ const TABS = [
       ['tropas', 'Tropas', 'Se regeneran solas, más rápido cerca del 42 % de tu techo y nada al llenarlo: no esperes con la barra llena. Más territorio y ciudades, más techo.'],
       ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
-      ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas. Un río la cierra igual que tu frontera.'],
+      ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya enseguida (en menos de medio segundo) y sin bajas. Un río la cierra igual que tu frontera.'],
       ['mapa', 'Ríos', 'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar se navegan: puedes poner puertos en sus orillas y los barcos pasan por ellos, también para desembarcar en la otra orilla. Pasa el ratón por encima para ver si es navegable.'],
       ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
       ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
@@ -17240,6 +17474,7 @@ __define('loading', function () {
 // barra de progreso y un consejo. Dura un mínimo para que dé tiempo a leerlo.
 
 const { mostrar } = __require('movimiento');
+const { flagCss, hasFlag } = __require('icons');
 
 const $ = (id) => document.getElementById(id);
 
@@ -17312,42 +17547,121 @@ async function withLoading(title, steps, { minMs = 1300 } = {}) {
 
 /**
  * Pantalla de arranque (#arranque, en el HTML desde el principio): pasos con
- * su texto, la barra (con transform: sigue avanzando aunque el paso bloquee
- * el hilo principal) y el mapa del mundo que se va descubriendo.
+ * su texto, la lista de pasos que se van marcando, la barra y el porcentaje
+ * (con transform: sigue avanzando aunque el paso bloquee el hilo principal),
+ * consejos que rotan solos (animación CSS) y el mapa del mundo que se va
+ * descubriendo con las banderas de los países. Al terminar, las dos puertas se
+ * abren y entra el menú.
  */
 function bootLoader() {
   const box = $('arranque');
   if (!box) return null;
   const bar = $('arr-progreso');
   const text = $('arr-paso');
+  const pct = $('arr-pct');
   const started = performance.now();
-  $('arr-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  // Cinco consejos distintos al azar: cada uno 5 s, en bucle
+  const pool = [...TIPS];
+  const tips = [];
+  while (tips.length < 5 && pool.length) tips.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  const cycle = tips.length * 5;
+  $('arr-tips').replaceChildren(
+    ...tips.map((t, i) => {
+      const p = document.createElement('p');
+      p.className = 'arr-tip';
+      p.textContent = t;
+      p.style.setProperty('--d', `${i * 5}s`);
+      p.style.setProperty('--ciclo', `${cycle}s`);
+      return p;
+    }),
+  );
+  $('arr-puntos').replaceChildren(
+    ...tips.map((_, i) => {
+      const d = document.createElement('i');
+      d.style.setProperty('--d', `${i * 5}s`);
+      d.style.setProperty('--ciclo', `${cycle}s`);
+      return d;
+    }),
+  );
+  const marks = [...document.querySelectorAll('#arr-pasos li')];
   return {
-    /** Nuevo paso: la barra va hasta `to` (0-1) en unos `ms` (lo que suele tardar). */
-    step(label, to, ms = 500) {
+    /** Nuevo paso (`key`: su marca en la lista): la barra va hasta `to` (0-1) en unos `ms` (lo que suele tardar). */
+    step(label, to, ms = 500, key = '') {
       text.textContent = label;
       text.classList.remove('cambia');
       void text.offsetWidth;
       text.classList.add('cambia');
+      const f = Math.max(0.02, Math.min(1, to));
       bar.style.transitionDuration = `${ms}ms`;
-      bar.style.transform = `scaleX(${Math.max(0.02, Math.min(1, to))})`;
+      bar.style.transform = `scaleX(${f})`;
+      pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
+      if (key) {
+        let reached = false;
+        for (const li of marks) {
+          const here = li.dataset.paso === key;
+          li.classList.toggle('activo', here);
+          if (!reached && !here) li.classList.add('hecho');
+          if (here) reached = true;
+        }
+      }
     },
-    /** Pinta el mapa en su lienzo y lo descubre con el escáner. */
-    map(draw) {
+    /**
+     * Pinta el mapa en su lienzo y lo descubre con el escáner; `pins`
+     * ([{ iso, x, y }], 0-1 sobre el lienzo) son banderas que caen cuando pasa.
+     */
+    map(draw, pins = []) {
       try {
         draw($('arr-lienzo'));
+        const layer = $('arr-pines');
+        layer.replaceChildren(
+          ...pins.filter((p) => hasFlag(p.iso)).map((p) => {
+            const pin = document.createElement('span');
+            pin.className = 'arr-pin';
+            pin.style.left = `${(p.x * 100).toFixed(2)}%`;
+            pin.style.top = `${(p.y * 100).toFixed(2)}%`;
+            // Cae cuando el escáner (1,7 s de izquierda a derecha) pasa por encima
+            pin.style.setProperty('--d', `${(0.25 + p.x * 1.35).toFixed(2)}s`);
+            const flag = document.createElement('i');
+            flag.className = 'bandera';
+            flag.style.cssText = flagCss(p.iso, 18);
+            pin.append(flag);
+            return pin;
+          }),
+        );
         box.classList.add('con-mapa');
+        this.mapAt = performance.now();
       } catch {
         /* sin vista previa: sigue el radar */
       }
     },
-    /** Último paso y salida (un mínimo para que no sea un parpadeo). */
-    async done(minMs = 1500) {
+    /**
+     * Último paso y salida (un mínimo para que no sea un parpadeo): el centro
+     * se aleja, una línea dorada cruza la pantalla y las puertas se abren;
+     * `onOpen()` justo cuando empiezan a abrirse (para que entre el menú).
+     */
+    async done({ minMs = 1800, onOpen = () => {} } = {}) {
       this.step('¡A las trincheras!', 1, 300);
-      await wait(Math.max(260, minMs - (performance.now() - started)));
-      box.classList.add('saliendo');
+      for (const li of marks) {
+        li.classList.remove('activo');
+        li.classList.add('hecho');
+      }
+      box.classList.add('listo');
+      // Un mínimo total y, si el mapa salió hace poco, que dé tiempo a verlo
+      // descubrirse y a que caigan sus banderas
+      const now = performance.now();
+      await wait(Math.max(450, minMs - (now - started), this.mapAt ? 1700 - (now - this.mapAt) : 0));
+      const still = document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       document.body.classList.remove('arrancando');
-      await wait(560);
+      if (still) {
+        box.hidden = true;
+        onOpen();
+        return;
+      }
+      box.classList.add('saliendo');
+      await wait(420);
+      box.classList.add('abriendo');
+      onOpen();
+      await wait(880);
       box.hidden = true;
     },
   };
@@ -17626,8 +17940,8 @@ function startDemo({ background = false } = {}) {
   if (!background) leaveOnline();
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
-  // En el móvil, la partida de fondo del menú va más tranquila (gasta menos)
-  state.speed = TOUCH ? 1 : 2;
+  // La partida de fondo del menú va a velocidad normal (gasta menos)
+  state.speed = 1;
   ui.hideHud();
   ui.closeNation();
   if (state.sala || state.pendingEntry) {
@@ -17974,7 +18288,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   const groups = coopGroups(payload.players.length, game.rules.coop);
   const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer });
+  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true });
   // Rivales humanos para el Elo: su MMR (verificado) y su puesto al acabar
   state.rankedRivals = () =>
     payload.players
@@ -18910,9 +19224,13 @@ function frame(now) {
   } catch (err) {
     reportError(err, 'cámara y sonido');
   }
-  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
+  // La partida de fondo del menú se ve atenuada y tapada: se dibuja a 20 fps
+  // (15 en el móvil). Cada dibujo hace recomponer la pantalla entera, y a 60
+  // fps era casi la mitad del trabajo del menú
   state.frameNo = (state.frameNo || 0) + 1;
-  if (!(state.demo && TOUCH && state.frameNo & 1)) {
+  const demoGap = TOUCH ? 62 : 46;
+  if (!state.demo || now - (state.lastDemoDraw || 0) >= demoGap) {
+    if (state.demo) state.lastDemoDraw = now;
     try {
       state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
     } catch (err) {
@@ -19076,32 +19394,38 @@ async function boot() {
   const paint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const atMost = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
   try {
-    loader?.step('Preparando el cuartel…', 0.1, 400);
+    loader?.step('Preparando el cuartel…', 0.1, 400, 'cuartel');
     await atMost(document.fonts?.ready, 1200);
-    loader?.step('Izando las banderas…', 0.2, 400);
+    loader?.step('Izando las banderas…', 0.2, 400, 'banderas');
     await atMost(loadFlags(), 2000);
-    loader?.step('Cartografiando el mundo…', 0.42, 900);
+    loader?.step('Cartografiando el mundo…', 0.42, 900, 'mapa');
     await paint();
-    const { map } = loadRealMap('mundo');
+    const { map, countries } = loadRealMap('mundo');
+    const cropH = Math.min(map.height, Math.round((map.width * 230) / 480));
+    // Banderas de algunos países repartidos por el mundo, sobre su sitio real
+    const PIN_ISOS = ['us', 'ca', 'mx', 'br', 'ar', 'gb', 'fr', 'es', 'de', 'ru', 'tr', 'eg', 'ng', 'za', 'sa', 'in', 'cn', 'jp', 'id', 'au'];
+    const pins = countries
+      .filter((c) => PIN_ISOS.includes(c.iso) && map.y(c.tile) < cropH)
+      .map((c) => ({ iso: c.iso, x: (map.x(c.tile) + 0.5) / map.width, y: (map.y(c.tile) + 0.5) / cropH }));
     loader?.map((canvas) => {
       const data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river, lat: map.lat };
-      paintMapPreview(canvas, data, [0, 0, map.width, Math.min(map.height, Math.round((map.width * canvas.height) / canvas.width))]);
-    });
-    loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300);
+      paintMapPreview(canvas, data, [0, 0, map.width, cropH]);
+    }, pins);
+    loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300, 'terreno');
     await paint();
     await paint();
     paintTerrain(map); // queda guardado: la partida de fondo lo reutiliza
-    loader?.step('Sincronizando tu perfil…', 0.74, 500);
+    loader?.step('Sincronizando tu perfil…', 0.74, 500, 'perfil');
     await paint();
     await atMost(syncAtBoot(), 2500);
-    loader?.step('Abriendo el cuartel general…', 0.84, 500);
+    loader?.step('Abriendo el cuartel general…', 0.84, 500, 'perfil');
     await paint();
     home.renderChip();
     home.renderHero();
     // Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
     settlePendingRanked();
     home.renderAll();
-    loader?.step('Desplegando la partida de fondo…', 0.96, 700);
+    loader?.step('Desplegando el frente…', 0.96, 700, 'frente');
     await paint();
     if (!state.game) startDemo({ background: true });
     await paint();
@@ -19115,11 +19439,16 @@ async function boot() {
       reportError(err2, 'arranque (menú)');
     }
   } finally {
-    await loader?.done();
-    state.booted = true;
+    // El menú entra (escalonado) justo cuando se abren las puertas
     const inicio = document.getElementById('inicio');
-    inicio.classList.add('entrada');
-    setTimeout(() => inicio.classList.remove('entrada'), 1500);
+    await loader?.done({
+      onOpen: () => {
+        inicio.classList.add('entrada');
+        setTimeout(() => inicio.classList.remove('entrada'), 1700);
+      },
+    });
+    if (!loader) inicio.classList.add('entrada');
+    state.booted = true;
     for (const fn of afterBoot.splice(0)) {
       try {
         fn();
@@ -20137,10 +20466,11 @@ __define('mecanicas', function () {
  * desembarcos solo con puerto, barcos un 40 % más lentos, rutas por los
  * estrechos (Ormuz, Bósforo) y mejor reparto inicial. doc-1.4: los ríos son
  * agua (fronteras; los que llegan al mar se navegan) y colonias ágiles y
- * distintas (ritmo propio, sin depender de su población). En multijugador,
+ * distintas (ritmo propio, sin depender de su población). doc-1.5: cercos
+ * comprobados cada 4 turnos por ataque (más fluido). En multijugador,
  * versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.4';
+const MECH_VERSION = 'doc-1.5';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -20153,7 +20483,7 @@ const MECH_VERSION = 'doc-1.4';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -20163,8 +20493,8 @@ const MECH_VERSION = 'doc-1.4';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-5', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-4', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-6', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-5', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -20255,6 +20585,12 @@ const MECH = {
   // si la bolsa escapa (la tierra abierta deja de agotar el presupuesto y los
   // cercos de verdad se resuelven para todas las naciones)
   annexProbeAt: 8,
+  // doc-1.5: los cercos de cada ataque se comprueban cada 4 turnos con lo que
+  // conquistó entretanto (repartidos: cada turno, una parte de los ataques).
+  // Antes, en cada turno y por cada casilla: al principio de la partida eran
+  // ~3.300 comprobaciones por turno sobre la tierra salvaje del frente, la
+  // mitad del turno. Una bolsa cercada se anexiona como mucho 0,3 s después
+  annexEvery: 4,
 
   // Precios (sección 04.2)
   prices: {
@@ -21112,12 +21448,18 @@ function parsePackets(buf) {
 }
 
 /**
- * Cliente con reconexión: si se corta, vuelve a conectar (1, 2, 4… hasta 10 s)
+ * Cliente con reconexión: si se corta, vuelve a conectar (0,5, 1, 2… hasta 5 s)
  * y se vuelve a suscribir. Mientras está desconectado, publicar no hace nada
  * (QoS 0): las salas repiten lo importante (presencia cada 1,5 s).
+ *
+ * Conexiones «zombis» (el móvil cambia de wifi a datos, se suspende la
+ * pestaña…): el WebSocket puede seguir abierto sin que llegue nada. Un
+ * vigilante reconecta si pasa el 70 % de `keepAlive` sin recibir ni un byte (el
+ * latido trae respuesta cada 3 s), y al volver a la pestaña o
+ * recuperar la red se comprueba en el momento con un PINGREQ.
  */
 class MqttClient {
-  constructor(url, { clientId, keepAlive = 20, WebSocketImpl = globalThis.WebSocket } = {}) {
+  constructor(url, { clientId, keepAlive = 10, WebSocketImpl = globalThis.WebSocket } = {}) {
     this.url = url;
     this.clientId = clientId || `trinchera-${Math.random().toString(36).slice(2, 12)}`;
     this.keepAlive = keepAlive;
@@ -21132,6 +21474,10 @@ class MqttClient {
     this.nextId = 1;
     this.retry = 0;
     this._ping = null;
+    this._timer = null; // reconexión programada
+    this._probe = null; // comprobación tras volver a la pestaña
+    this.lastRx = 0;
+    this._wake = null;
   }
 
   /** Primera conexión: se resuelve con CONNACK o falla (timeout, error o rechazo). */
@@ -21164,8 +21510,19 @@ class MqttClient {
     }
     this.ws = ws;
     ws.binaryType = 'arraybuffer';
+    // Al reconectar no hay tiempo límite de connect(): si no llega el CONNACK, otro intento
+    clearTimeout(this._hung);
+    if (!onFirst) {
+      this._hung = setTimeout(() => {
+        if (this.ws === ws && !this.isConnected && !this.closed) {
+          this._drop();
+          this._schedule();
+        }
+      }, Math.max(4000, this.keepAlive * 800));
+    }
     ws.onopen = () => ws.send(connectPacket({ clientId: this.clientId, keepAlive: this.keepAlive }));
     ws.onmessage = (e) => {
+      this.lastRx = Date.now();
       const chunk = new Uint8Array(e.data instanceof ArrayBuffer ? e.data : e.data.buffer || e.data);
       const all = this.buf.length ? concat([this.buf, chunk]) : chunk;
       const { packets, rest } = parsePackets(all);
@@ -21194,9 +21551,15 @@ class MqttClient {
       }
       this.isConnected = true;
       this.retry = 0;
+      clearTimeout(this._hung);
       if (this.filters.size) this._send(subscribePacket(this._id(), [...this.filters]));
       clearInterval(this._ping);
-      this._ping = setInterval(() => this._send(PINGREQ), Math.max(5, this.keepAlive * 0.6) * 1000);
+      // Latido cada 3 s; si pasan 7 s sin recibir nada (dos latidos sin respuesta), está muerta
+      this._ping = setInterval(() => {
+        if (Date.now() - this.lastRx > this.keepAlive * 700) this._reconnect();
+        else this._send(PINGREQ);
+      }, Math.max(1, this.keepAlive * 0.3) * 1000);
+      this._bindWake();
       onFirst?.();
       this._emitState(true);
     } else if (p.type === 'publish') {
@@ -21204,18 +21567,66 @@ class MqttClient {
     }
   }
 
-  _schedule() {
+  _schedule(wait = Math.min(5000, 500 * 2 ** this.retry++) * (0.8 + Math.random() * 0.4)) {
     if (this.closed) return;
-    const wait = Math.min(10000, 1000 * 2 ** this.retry++);
-    setTimeout(() => {
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => {
+      this._timer = null;
       if (!this.closed && !this.isConnected) this._open(null);
     }, wait);
+  }
+
+  /** Cierra la conexión actual (muerta o sospechosa) y vuelve a conectar enseguida. */
+  _reconnect() {
+    if (this.closed) return;
+    const was = this.isConnected;
+    this._drop();
+    if (was) this._emitState(false);
+    this.retry = 0;
+    this._schedule(0);
+  }
+
+  /**
+   * Comprobación inmediata (al volver a la pestaña o recuperar la red): si
+   * está conectado, un PINGREQ que debe tener respuesta en 3 s; si no, se
+   * reconecta ya, sin esperar al siguiente intento programado.
+   */
+  check() {
+    if (this.closed) return;
+    if (!this.isConnected) {
+      if (!this.ws) this._schedule(0);
+      return;
+    }
+    const sent = Date.now();
+    this._send(PINGREQ);
+    clearTimeout(this._probe);
+    this._probe = setTimeout(() => {
+      this._probe = null;
+      if (this.isConnected && this.lastRx < sent) this._reconnect();
+    }, 3000);
+  }
+
+  _bindWake() {
+    if (this._wake || typeof window === 'undefined' || !window.addEventListener) return;
+    const onVisible = () => {
+      if (typeof document === 'undefined' || !document.hidden) this.check();
+    };
+    const onOnline = () => this.check();
+    window.addEventListener('online', onOnline);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible);
+    this._wake = () => {
+      window.removeEventListener('online', onOnline);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible);
+    };
   }
 
   _drop() {
     this.isConnected = false;
     clearInterval(this._ping);
     this._ping = null;
+    clearTimeout(this._probe);
+    this._probe = null;
+    clearTimeout(this._hung);
     this.buf = new Uint8Array(0);
     if (this.ws) {
       this.ws.onopen = this.ws.onmessage = this.ws.onerror = this.ws.onclose = null;
@@ -21277,6 +21688,9 @@ class MqttClient {
     if (this.closed) return;
     this.closed = true;
     this._send(DISCONNECT);
+    clearTimeout(this._timer);
+    this._wake?.();
+    this._wake = null;
     this._drop();
   }
 }
@@ -21361,7 +21775,16 @@ const TURN_TICKS = 2; // ticks por mensaje del anfitrión (≈5 mensajes/s)
 const MAX_MSG_BYTES = 3500; // por debajo del límite de 4 KiB
 const HASH_EVERY = 100; // ticks entre comprobaciones de sincronía
 const RESEND_AFTER_MS = 700;
+const GAP_RESEND_MS = 300; // falta un turno pero ya llegan los siguientes: se pide enseguida
+const RESEND_MAX_TURNS = 200; // por petición (los turnos vacíos ocupan ~10 bytes)
 const INTENT_RETRY_MS = 1500;
+// Reproducción suave del invitado: los turnos llegan de dos en dos (y con los
+// vaivenes de la red); se juegan de uno en uno cada 100 ms con un pequeño
+// colchón, y si se acumulan muchos (pestaña en segundo plano, corte) se
+// recuperan de golpe.
+const CATCHUP_TURNS = 10;
+const SMOOTH_BUFFER = 2;
+const OFFLINE_NOTE = 'Sin conexión: reconectando…';
 const LOAD_WAIT_MS = 20000; // el anfitrión espera como mucho esto a que carguen todos
 
 /**
@@ -21907,7 +22330,7 @@ class NetSync {
    * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
    * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, now = () => performance.now() }) {
     this.room = room;
     this.game = game;
     this.isHost = isHost;
@@ -21922,6 +22345,9 @@ class NetSync {
     this.hostGone = false;
     this.onHostLeft = null;
     this.myPeer = myPeer;
+    /** true en el juego: el invitado reproduce los turnos a ritmo constante (ver CATCHUP_TURNS). */
+    this.smooth = smooth;
+    this.now = now;
 
     if (isHost) {
       this.queue = []; // acciones para el próximo tick
@@ -21930,7 +22356,7 @@ class NetSync {
       this.batch = [];
       this.hashes = new Map();
       this.acc = 0;
-      this.last = performance.now();
+      this.last = now();
       this.lastResend = new Map();
       this.unsubs.push(room.on('intent', (m) => this._onIntent(m)));
       this.unsubs.push(room.on('resend', (m) => this._onResend(m)));
@@ -21938,7 +22364,7 @@ class NetSync {
       // Antes del primer turno, espera a que todos hayan cargado el mapa (si
       // no, quien carga despacio pierde parte del despliegue)
       this.waiting = new Set([...peerToPlayer.keys()].filter((peer) => peer !== hostPeer && peer !== myPeer));
-      this.waitStart = performance.now();
+      this.waitStart = now();
       this.unsubs.push(room.on('cargado', (m) => this.waiting.delete(m.peer)));
       this.unsubs.push(room.onPeers((c) => {
         for (const p of c.left) this.waiting.delete(p.peer);
@@ -21949,8 +22375,10 @@ class NetSync {
     } else {
       this.turns = new Map();
       this.outbox = new Map(); // uid → { intent, sentAt }
-      this.lastAdvance = performance.now();
+      this.lastAdvance = now();
       this.lastResendAsk = -Infinity;
+      this.playLast = now();
+      this.playAcc = TICK_MS; // el primer turno se juega en cuanto llega
       this.unsubs.push(room.on('turn', (m) => this._onTurn(m)));
       // Hashes del anfitrión, para que el invitado sepa si se ha desincronizado
       this.myHashes = new Map();
@@ -21985,7 +22413,7 @@ class NetSync {
     if (this.isHost) {
       this.queue.push({ ...clean, playerId: this.myPlayerId, u });
     } else {
-      this.outbox.set(u, { intent: clean, sentAt: performance.now() });
+      this.outbox.set(u, { intent: clean, sentAt: this.now() });
       this.room.emit('intent', { u, i: clean }).catch(() => {});
     }
   }
@@ -22005,12 +22433,12 @@ class NetSync {
   _onResend(m) {
     const from = m.data && m.data.from;
     if (!Number.isInteger(from)) return;
-    const now = performance.now();
-    if (now - (this.lastResend.get(m.peer) ?? -Infinity) < 400) return;
+    const now = this.now();
+    if (now - (this.lastResend.get(m.peer) ?? -Infinity) < 250) return;
     this.lastResend.set(m.peer, now);
     let turns = [];
     let bytes = 20;
-    for (let t = from; t <= this.game.ticks && t < from + 60; t++) {
+    for (let t = Math.max(from, this.game.ticks - 2999); t <= this.game.ticks && t < from + RESEND_MAX_TURNS; t++) {
       const entry = [t, this.history.get(t) || []];
       const size = JSON.stringify(entry).length;
       if (bytes + size > MAX_MSG_BYTES) break;
@@ -22104,10 +22532,30 @@ class NetSync {
 
   // ---- bucle
 
+  /** ¿Se ha cortado nuestra conexión con el servidor? (el canal se reconecta solo) */
+  _offline() {
+    return typeof this.room.connected === 'function' && !this.room.connected();
+  }
+
+  /** Turnos seguidos listos para jugar a partir del siguiente tick. */
+  _ready(max = 64) {
+    let n = 0;
+    while (n < max && this.turns.has(this.game.ticks + 1 + n)) n++;
+    return n;
+  }
+
+  _playNext() {
+    const t = this.game.ticks + 1;
+    const intents = this.turns.get(t);
+    this.turns.delete(t);
+    this._guestStep(intents);
+  }
+
   /** Llamar en cada frame: avanza la simulación al ritmo que toque. */
   update() {
     if (this.game.phase === 'ended' || this.hostGone) return;
-    const now = performance.now();
+    const now = this.now();
+    const offline = this._offline();
     if (this.isHost) {
       if (this.waiting.size && now - this.waitStart < LOAD_WAIT_MS) {
         this.last = now;
@@ -22119,6 +22567,9 @@ class NetSync {
         this.waiting.clear();
         this.status = '';
       }
+      // Sin conexión, el anfitrión sigue (los invitados piden lo que se pierda al volver)
+      if (offline) this.status = OFFLINE_NOTE;
+      else if (this.status === OFFLINE_NOTE) this.status = '';
       this.acc += Math.min(1000, now - this.last);
       this.last = now;
       let steps = 0;
@@ -22130,13 +22581,31 @@ class NetSync {
       return;
     }
     let steps = 0;
-    while (this.turns.has(this.game.ticks + 1) && steps < 60) {
-      const t = this.game.ticks + 1;
-      const intents = this.turns.get(t);
-      this.turns.delete(t);
-      this._guestStep(intents);
-      steps++;
+    const ready = this._ready();
+    if (!this.smooth || ready > CATCHUP_TURNS) {
+      // Sin suavizado, o muy por detrás: todo lo que haya (hasta 60 por llamada),
+      // dejando el colchón para no quedarse sin turnos al momento siguiente
+      const keep = this.smooth ? SMOOTH_BUFFER : 0;
+      while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1)) {
+        this._playNext();
+        steps++;
+      }
+      this.playAcc = 0;
+    } else {
+      const dt = Math.min(250, Math.max(0, now - this.playLast));
+      if (!ready) this.playAcc = Math.min(TICK_MS, this.playAcc + dt); // el próximo, en cuanto llegue
+      else {
+        this.playAcc += dt;
+        // A ritmo normal, y algo más deprisa si se acumulan (hasta volver al colchón)
+        const every = ready <= SMOOTH_BUFFER ? TICK_MS : ready <= 5 ? TICK_MS * 0.9 : TICK_MS * 0.75;
+        while (this.playAcc >= every && steps < ready) {
+          this._playNext();
+          this.playAcc -= every;
+          steps++;
+        }
+      }
     }
+    this.playLast = now;
     if (steps) {
       this.lastAdvance = now;
       this.status = this.desynced
@@ -22144,10 +22613,18 @@ class NetSync {
         : this.hostBackground
           ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
           : '';
-    } else if (now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
+    }
+    // Falta el siguiente turno pero ya llegan otros posteriores: se ha perdido
+    // un mensaje, se pide enseguida. Si no llega nada, se pide pasado un rato.
+    const gap = this.turns.size > 0 && !this.turns.has(this.game.ticks + 1);
+    if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !steps && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
       this.lastResendAsk = now;
       this.room.emit('resend', { from: this.game.ticks + 1 }).catch(() => {});
-      if (now - this.lastAdvance > 4000) this.status = 'Esperando al anfitrión…';
+    }
+    if (!steps) {
+      if (offline) this.status = OFFLINE_NOTE;
+      else if (now - this.lastAdvance > 4000) this.status = 'Esperando al anfitrión…';
+      else if (this.status === OFFLINE_NOTE) this.status = '';
     }
     for (const [u, entry] of this.outbox) {
       if (now - entry.sentAt > INTENT_RETRY_MS) {
@@ -22165,7 +22642,7 @@ class NetSync {
   }
 }
 
-return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, roomName, gameplayKey, openRooms, roomStatus, Sala, stateHash, NetSync };
+return { ROOM_TOPICS, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, OFFLINE_NOTE, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, roomName, gameplayKey, openRooms, roomStatus, Sala, stateHash, NetSync };
 });
 __define('names', function () {
 // Nombres de naciones ficticias para los bots, generados por sílabas.
@@ -22293,17 +22770,62 @@ async function connectTransport({ prefer = null, brokerUrl = null, peerId = null
       }
     }
     const order = Number.isInteger(prefer) && BROKERS[prefer] ? [prefer, ...BROKERS.keys()].filter((v, i, a) => a.indexOf(v) === i) : [...BROKERS.keys()];
-    for (const i of order) {
-      try {
-        const client = await new MqttClient(BROKERS[i], { clientId: `trinchera-${tabPeerId()}-${Math.random().toString(36).slice(2, 6)}` }).connect(5000);
-        return new MqttTransport(client, i, null, pid);
-      } catch {
-        /* siguiente servidor */
-      }
-    }
+    const won = await firstByPreference(order.map((i) => () => new MqttClient(BROKERS[i], { clientId: `trinchera-${tabPeerId()}-${Math.random().toString(36).slice(2, 6)}` }).connect(5000)));
+    if (won) return new MqttTransport(won.value, order[won.index], null, pid);
   }
   if (typeof BroadcastChannel !== 'undefined') return new LocalTransport(pid);
   return null;
+}
+
+/**
+ * Lanza todos los intentos a la vez y se queda con el primero de la lista que
+ * funcione: el n.º 2 solo gana si el n.º 1 ya ha fallado (todos los jugadores
+ * deben acabar en el mismo servidor para verse). Así, si el preferido no
+ * responde, no hay que esperar 5 s por cada uno, uno detrás de otro. Los que
+ * conectan y no se usan se cierran. Devuelve { value, index } o null.
+ */
+function firstByPreference(starts) {
+  return new Promise((resolve) => {
+    const n = starts.length;
+    const state = new Array(n).fill('wait');
+    const values = new Array(n);
+    let done = false;
+    const settle = () => {
+      if (done) return;
+      for (let k = 0; k < n; k++) {
+        if (state[k] === 'wait') return; // uno preferido aún puede llegar
+        if (state[k] === 'ok') {
+          done = true;
+          for (let j = 0; j < n; j++) if (j !== k && state[j] === 'ok') values[j]?.close?.();
+          resolve({ value: values[k], index: k });
+          return;
+        }
+      }
+      done = true;
+      resolve(null);
+    };
+    starts.forEach((start, k) => {
+      let p;
+      try {
+        p = Promise.resolve(start());
+      } catch (err) {
+        p = Promise.reject(err);
+      }
+      p.then(
+        (v) => {
+          values[k] = v;
+          state[k] = 'ok';
+          if (done) v?.close?.(); // llegó tarde: ya se eligió otro
+          settle();
+        },
+        () => {
+          state[k] = 'fail';
+          settle();
+        },
+      );
+    });
+    if (!n) resolve(null);
+  });
 }
 
 /** Etiqueta de esta pestaña dentro de un canal (o null si aún no se sabe). */
@@ -22458,9 +22980,14 @@ class PeerChannel {
       this._send({ t: 'p', presence: this.mine });
       this._expire();
     }, HEARTBEAT_MS);
-    // Al volver la conexión, se anuncia de nuevo (los demás responden con la suya)
+    // Al volver la conexión, se anuncia de nuevo (los demás responden con la suya).
+    // Si el corte era nuestro, los demás no se han ido: se les da margen para
+    // volver a dar señales antes de quitarlos de la lista.
     this._unConn = bus.onConnection((on) => {
-      if (on && this.open) this._send({ t: 'hola', presence: this.mine });
+      if (!on || !this.open) return;
+      const grace = Date.now() - STALE_MS - 1;
+      for (const info of this.others.values()) info.lastSeen = Math.max(info.lastSeen, grace);
+      this._send({ t: 'hola', presence: this.mine });
     });
     this._onHide = () => this.leave();
     if (hasWindow) window.addEventListener('pagehide', this._onHide);
@@ -22496,6 +23023,8 @@ class PeerChannel {
   }
 
   _expire() {
+    // Sin conexión no sabemos nada de los demás: no se les da por ido
+    if (!this.bus.connected()) return;
     const now = Date.now();
     const left = [];
     const stale = [];
@@ -22593,7 +23122,7 @@ class PeerChannel {
   }
 }
 
-return { BROKERS, TOPIC_PREFIX, STALE_MS, ROOM_TIMEOUT_MS, connectTransport, selfPeer, MqttTransport, PeerChannel };
+return { BROKERS, TOPIC_PREFIX, STALE_MS, ROOM_TIMEOUT_MS, connectTransport, firstByPreference, selfPeer, MqttTransport, PeerChannel };
 });
 __define('noise', function () {
 // Ruido de valor 2D con semilla + fBm (suma de octavas). Suficiente para generar
@@ -23016,9 +23545,10 @@ class CoverArt {
     this.ships = ships;
   }
 
-  /** ¿Animaciones apagadas? (Ajustes o el sistema; se mira en cada fotograma) */
+  /** ¿Animaciones apagadas? (Ajustes o el sistema; se mira en cada fotograma, la consulta del sistema se guarda) */
   _still() {
-    return document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    this._reduce ??= window.matchMedia?.('(prefers-reduced-motion: reduce)') || { matches: false };
+    return document.body.classList.contains('sin-animaciones') || this._reduce.matches;
   }
 
   start() {
@@ -24447,6 +24977,7 @@ class Renderer {
     this._seenFx = new WeakSet();
     for (const e of game.effects) this._seenFx.add(e);
     this._boats = new Map();
+    this._trailBoxes = new Map(); // recuadro de la ruta de cada barco (para no dibujar las estelas fuera de la pantalla)
     this._ships = new Map();
     this._attackFronts = new WeakMap();
     this._merch = new Map();
@@ -25867,12 +26398,12 @@ class Renderer {
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
       const p = game.players[b.owner];
-      this._drawBoatTrail(b, s, p);
+      const mine = human && (b.owner === human.id || b.targetId === human.id);
+      this._drawBoatTrail(b, s, p, mine);
       if (!this._onScreen(sx, sy, 60)) continue;
       const len = clamp(z * RES * 2.4, 8, 30);
       drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
       this._maybeWake(s, len, 8);
-      const mine = human && (b.owner === human.id || b.targetId === human.id);
       if (z * RES >= 4 || mine) {
         const text = fmtTroops(b.troops);
         ctx.font = '700 11px system-ui, sans-serif';
@@ -25891,6 +26422,7 @@ class Renderer {
     for (const [id, st] of this._boats) {
       if (st.gen === gen) continue;
       this._boats.delete(id);
+      this._trailBoxes.delete(id);
       if (!this.anim || !this._inView(st.x, st.y, 4)) continue;
       if (st.pos >= st.len - 2) fx.landing((st.end % W) + 0.5, Math.floor(st.end / W) + 0.5);
       else fx.sink(st.x, st.y, false);
@@ -25901,11 +26433,32 @@ class Renderer {
    * Línea fina del barco de tropas: sólida desde donde salió hasta donde va
    * y punteada hasta donde llegará. Todos la ven: así se sabe de dónde viene.
    */
-  _drawBoatTrail(b, s, p) {
+  _drawBoatTrail(b, s, p, mine = false) {
     const { ctx, camera } = this;
     const W = this.game.map.width;
     const z = camera.zoom;
     const path = b.path;
+    // Recuadro de la ruta (se calcula una vez): si no toca la pantalla, no se
+    // dibuja. Antes cada barco del mundo trazaba su estela en cada fotograma
+    let box = this._trailBoxes.get(b.id);
+    if (!box || box.path !== path) {
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      for (let i = 0; i < path.length; i++) {
+        const x = path[i] % W;
+        const y = (path[i] / W) | 0;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+      box = { path, x0, y0, x1: x1 + 1, y1: y1 + 1 };
+      this._trailBoxes.set(b.id, box);
+    }
+    const m = 8;
+    if ((box.x1 - camera.x) * z < -m || (box.x0 - camera.x) * z > camera.viewW + m || (box.y1 - camera.y) * z < -m || (box.y0 - camera.y) * z > camera.viewH + m) return;
     const step = Math.max(1, Math.floor(path.length / 90));
     const pt = (t) => [((t % W) + 0.5 - camera.x) * z, (Math.floor(t / W) + 0.5 - camera.y) * z];
     const color = prgb(p);
@@ -25921,9 +26474,12 @@ class Renderer {
       ctx.lineTo(x, y);
     }
     ctx.lineTo(hx, hy);
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    // Con contorno oscuro solo los barcos que te tocan (los demás, un trazo)
+    if (mine) {
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
     ctx.strokeStyle = `rgba(${color}, 0.9)`;
     ctx.lineWidth = 1.5;
     ctx.stroke();
