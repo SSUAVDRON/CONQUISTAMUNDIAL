@@ -213,6 +213,18 @@ export class Sound {
         this.play('defensa', 0.85, 20000);
         return;
       }
+      // Los que llegan en ráfaga (capturas, monedas, conquistas) se espacian y
+      // bajan de volumen cuanto más se repiten: conquistando mucho saturaban
+      if (BURSTY.has(evt.sfx)) {
+        const now = performance.now();
+        const seen = (this._bursts ??= new Map());
+        const list = (seen.get(evt.sfx) || []).filter((t) => now - t < 8000);
+        if (now - (list[list.length - 1] || 0) < 1100) return;
+        list.push(now);
+        seen.set(evt.sfx, list);
+        this.play(evt.sfx, 0.9 / (1 + 0.55 * (list.length - 1)), 0);
+        return;
+      }
       this.play(evt.sfx, 1, evt.sfx === 'fall' ? 3000 : 250);
       return;
     }
@@ -278,10 +290,12 @@ export class Sound {
       const same = prev && prev.game === game;
       if (same) {
         if (builtNow > prev.built) this.play('build', 0.8, 150);
-        // Edificio terminado (o subido de nivel): el sonido de su tipo
-        for (const k in BUILT_SFX) {
-          const n = (human.active[k] || 0) + (human.levels[k] || 0);
-          if (n > (prev.done[k] || 0)) this.play(BUILT_SFX[k], 0.75, 300);
+        // Obra tuya terminada (nueva o subida de nivel): el sonido de su tipo.
+        // Se cuenta lo que terminan tus obras (stats.finished), no los
+        // edificios activos: al capturar decenas sonaba uno por cada uno
+        if ((human.stats.finished || 0) > prev.finished) {
+          const k = human.stats.lastFinished;
+          if (BUILT_SFX[k]) this.play(BUILT_SFX[k], 0.75, 300);
         }
         if (human.boatCount > prev.boats) this.play('boat', 0.7, 300);
         if (human.spawned && !prev.spawned) this.play('despliegue', 0.9, 500);
@@ -300,9 +314,7 @@ export class Sound {
         const target = atk.targetId ? game.players[atk.targetId] : null;
         this._cue(!target || target.weak ? 'expandir' : 'ataque', now);
       }
-      const done = {};
-      for (const k in BUILT_SFX) done[k] = (human.active[k] || 0) + (human.levels[k] || 0);
-      this._prev = { game, built: builtNow, done, boats: human.boatCount, tiles: human.tiles, spawned: human.spawned, alive: human.alive };
+      this._prev = { game, built: builtNow, finished: human.stats.finished || 0, boats: human.boatCount, tiles: human.tiles, spawned: human.spawned, alive: human.alive };
       if (game.phase === 'ended' && !this._ended) {
         this._ended = true;
         const won = game.winner === human || !!(game.winningAlliance && game.winningAlliance.includes(human));
@@ -324,6 +336,9 @@ export class Sound {
     this.play(name, vol, 0);
   }
 }
+
+/** Avisos con sonido que pueden llegar muchos seguidos (se espacian y se atenúan). */
+const BURSTY = new Set(['capture', 'coin', 'coins', 'conquer', 'conquerColony', 'land', 'sink']);
 
 /** ¿Lucha el humano contra una nación (no una colonia), atacando o atacado? */
 function atWar(game, human) {

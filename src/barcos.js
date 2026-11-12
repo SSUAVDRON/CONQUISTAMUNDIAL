@@ -244,3 +244,48 @@ export function drawCargo(ctx, x, y, ang, len, color, mine, moving = 1, seed = 0
   ctx.fillRect(-len * 0.44, -w * 0.36, len * 0.13, w * 0.72);
   ctx.restore();
 }
+
+/**
+ * Pesquero (doc-1.6): casco de madera con una franja del color del dueño y
+ * un mástil; faenando (`fishing`), quieto y con la red echada alrededor.
+ */
+export function drawFishing(ctx, x, y, ang, len, color, mine, moving = 1, fishing = false, t = 0) {
+  if (len < 7) return tiny(ctx, x, y, ang, Math.max(5, len), color, mine);
+  const w = len * 0.42;
+  if (fishing) {
+    // La red: un círculo de puntos que gira despacio
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(t / 2400);
+    ctx.setLineDash([2, 3]);
+    ctx.lineWidth = Math.max(1, len * 0.07);
+    ctx.strokeStyle = 'rgba(235, 240, 245, 0.75)';
+    ctx.beginPath();
+    ctx.arc(0, 0, len * 0.95, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  if (!fishing) wakeLines(ctx, len, w, moving);
+  shadow(ctx, len, w);
+  hullPath(ctx, len, w, 0.42, 0.7);
+  ctx.fillStyle = '#8a5a32';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, len * 0.06);
+  ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
+  ctx.stroke();
+  // Franja del dueño y la cabina
+  ctx.fillStyle = color;
+  ctx.fillRect(-len * 0.3, -w * 0.22, len * 0.42, w * 0.44);
+  ctx.fillStyle = '#efe6d4';
+  ctx.fillRect(-len * 0.4, -w * 0.28, len * 0.16, w * 0.56);
+  // Mástil
+  ctx.fillStyle = '#3b2a1c';
+  ctx.beginPath();
+  ctx.arc(len * 0.18, 0, Math.max(1, len * 0.07), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}

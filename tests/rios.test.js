@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GameMap, generateMap, loadRealMap, markRivers, riversToWater } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { buildNow } from './ayuda.js';
+import { buildNow, DOC } from './ayuda.js';
 
 /** Mapa de prueba: tierra con mar a la izquierda (y a la derecha si se pide) y los ríos dados. */
 function synth(lines, { w = 120, h = 80, seaLeft = 6, seaRight = 0, extra = null } = {}) {
@@ -22,7 +22,7 @@ function synth(lines, { w = 120, h = 80, seaLeft = 6, seaRight = 0, extra = null
 
 /** Partida con A en (x, y) y los demás donde se diga ([nombre, x, y]), ya en juego. */
 function play(map, x, y, extraPlayers = []) {
-  const game = new Game({ map, seed: 3, rules: { winShare: 0.99 } });
+  const game = new Game({ map, seed: 3, rules: { ...DOC, winShare: 0.99 } });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const others = extraPlayers.map(([name], i) => game.addPlayer(name, [0, 0, 120 + i * 40], false));
   game.start();

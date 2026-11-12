@@ -500,16 +500,18 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   left: 0;
   top: 0;
   will-change: transform;
+  transform-origin: 0 0; /* escala según el zoom (ui.js) desde su esquina */
   pointer-events: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgba(8, 12, 20, 0.92);
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: rgba(8, 12, 20, 0.9);
   border: 1px solid var(--panel-borde);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.3;
   white-space: nowrap;
   z-index: 10;
 }
-#tooltip b { font-size: 13px; }
+#tooltip b { font-size: 12px; }
 #tooltip .suave { color: var(--texto-suave); }
 
 /* ---------- Móvil ---------- */
@@ -2055,8 +2057,8 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #panel-jugador .cifras { grid-template-columns: 1.6fr 1fr 0.95fr 0.95fr; }
 
 /* Tooltip: punto estratégico cercano y estimación del ataque */
-#tooltip .tip-punto { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 260px; }
-#tooltip .tip-estim { margin-top: 4px; color: #ffd98a; font-size: 12px; }
+#tooltip .tip-punto { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 240px; white-space: normal; }
+#tooltip .tip-estim { margin-top: 2px; color: #ffd98a; font-size: 11px; }
 
 /* ===================================================== Mejoras estratégicas */
 /* Botón de desarrollo en la barra superior, con un punto si puedes investigar */
@@ -2802,7 +2804,7 @@ body.sin-animaciones .novedad { transition: none; }
 .frente.retirada .f-leyenda span:first-child { color: #ffe3a1; }
 
 /* Tooltip: las descripciones largas se ajustan a la caja (la primera línea, nombre y tropas, sin cortes) */
-#tooltip { white-space: normal; max-width: min(320px, calc(100vw - 16px)); line-height: 1.35; }
+#tooltip { white-space: normal; max-width: min(260px, calc(100vw - 16px)); line-height: 1.3; }
 #tooltip > b:first-child { white-space: nowrap; }
 #tooltip .tip-punto { max-width: none; }
 

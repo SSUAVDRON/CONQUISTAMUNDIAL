@@ -10,8 +10,10 @@ import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emb
 import { forgetTerrain, paintTerrain } from './terreno.js';
 import { MECH } from './mecanicas.js';
 import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
-import { drawCargo, drawTransport, drawWarship } from './barcos.js';
+import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
+import { LUGARES } from './lugares.js';
 
+const COLONY_ALPHA = 108; // las colonias, más tenues
 const FILL_ALPHA = 142; // territorio semitransparente: se ve el terreno debajo (algo menos que antes: colores más nítidos)
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
@@ -114,6 +116,9 @@ function makeCanvas(w, h) {
 
 /** Empaqueta RGBA en un uint32 (little-endian, como ImageData en la práctica). */
 const pack = (r, g, b, a) => ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+// Frente de combate (doc-1.6): rojo intenso si es tuyo, algo más apagado si es de otros
+const HOT_MINE = pack(245, 38, 32, 255);
+const HOT_OTHER = pack(214, 52, 44, 235);
 
 /** Ángulo `a` acercándose a `b` por el camino corto. */
 function turn(a, b, k) {
@@ -281,6 +286,8 @@ export class Renderer {
     this.labelById.clear();
     this.exclaves = [];
     this._exComp = this._exQueue = null;
+    this.hot = null;
+    this._hotList = null;
     this.onRestored = null;
     this.disposed = true;
   }
@@ -350,7 +357,9 @@ export class Renderer {
       const [r, g, b] = pale;
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
-      this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
+      // Las colonias, más tenues y con frontera suave: el mapa se lee más
+      // limpio y destacan las naciones
+      this.fill[p.id] = pack(r, g, b, p.weak ? COLONY_ALPHA : FILL_ALPHA);
       this.inner[p.id] = this.fill[p.id]; // sin franja interior: el territorio es plano
       // Patrón del perfil: algunas casillas con un tono más oscuro.
       // Los aliados llevan franjas verdes en diagonal: se reconocen de un vistazo.
@@ -359,7 +368,7 @@ export class Renderer {
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para ti y verde para tus aliados; las demás, su tono
       // pálido más oscuro
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(pale, 0.12, 0.6, 0.16, 0.46);
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : p.weak ? shadeRgb(pale, 0.74) : vividRgb(pale, 0.12, 0.6, 0.16, 0.46);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
       // Tu nación, resaltada: por dentro de la frontera blanca, otra media
       // casilla en tu color vivo
@@ -422,6 +431,12 @@ export class Renderer {
     const W = this.game.map.width;
     const x = i % W;
     const y = (i / W) | 0;
+    // En un frente de combate: roja entera (ver _updateHot)
+    const hv = this.hot ? this.hot[i] & 3 : 0;
+    if (hv) {
+      this._setTile(i, hv === 2 ? HOT_MINE : HOT_OTHER);
+      return;
+    }
     if (this._spawnStyle) {
       // Aro de una casilla entera (la que toca a otro por un lado) e interior teñido
       const inner = x > 0 && x < W - 1 && s[i - 1] === o && s[i + 1] === o && s[i - W] === o && s[i + W] === o;
@@ -1170,6 +1185,8 @@ export class Renderer {
     if (this._needRestore && !this._lost) this.restoreCanvases();
     if (this._spawnStyle && game.phase !== 'spawn') this._endSpawnStyle();
     this._flushDirty(now);
+    // Cada 3 turnos (0,3 s): el frente avanza despacio y así se repinta menos
+    if (this._hotTick === undefined || game.ticks - this._hotTick >= 3 || game.ticks < this._hotTick) this._updateHot();
     this._updateGlowsAndUpload(now);
     // Nombres: el cálculo se reparte en tres fotogramas seguidos. Si cambias
     // de sitio en el despliegue, el tuyo va con su círculo al momento
@@ -1235,7 +1252,9 @@ export class Renderer {
     this.fx.drawDecals(ctx, camera);
     this._drawRails();
     this._drawBuildings(now);
+    this._drawCapitals(now);
     this._drawPoints(now);
+    this._drawLugares(now);
     this._gen++;
     this._trackEffects();
     this._drawMerchants();
@@ -1257,6 +1276,70 @@ export class Renderer {
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
     if (overlay.ping) this._drawPing(now, overlay.ping);
+  }
+
+  /**
+   * Frontera roja donde se lucha (doc-1.6): en cada ataque contra un país o
+   * una colonia, las casillas de la línea de frente del que se defiende se
+   * pintan en rojo en la propia capa del territorio (más intenso si el
+   * combate es tuyo). Una vez por turno se repintan solo las que entran o
+   * salen del frente: no cuesta nada en cada fotograma. (Antes se dibujaba
+   * encima en cada fotograma y era lo que más pesaba de la partida.)
+   * `hot`: bits 0-1, lo pintado ahora (1 combate ajeno, 2 tuyo); bits 2-3, lo nuevo.
+   */
+  _updateHot() {
+    const game = this.game;
+    this._hotTick = game.ticks;
+    const owner = game.owner;
+    const W = game.map.width;
+    if (!this.hot) this.hot = new Uint8Array(owner.length);
+    const hot = this.hot;
+    const human = game.human;
+    const old = this._hotList || [];
+    const next = [];
+    if (game.phase === 'playing') {
+      const H = owner.length;
+      const mark = (t, v) => {
+        const nv = hot[t] >> 2;
+        if (nv >= v) return;
+        if (!nv) next.push(t);
+        hot[t] = (hot[t] & 3) | (v << 2);
+      };
+      for (const atk of game.attacks) {
+        if (atk.done || !atk.targetId || !atk.inFrontier.size) continue;
+        const v = human && (atk.attacker === human || atk.targetId === human.id) ? 2 : 1;
+        const a = atk.attacker.id;
+        for (const t of atk.inFrontier) {
+          if (owner[t] !== atk.targetId) continue;
+          mark(t, v);
+          // …y la casilla del atacante de enfrente: la franja queda centrada en la frontera
+          const x = t % W;
+          if (x > 0 && owner[t - 1] === a) mark(t - 1, v);
+          if (x < W - 1 && owner[t + 1] === a) mark(t + 1, v);
+          if (t >= W && owner[t - W] === a) mark(t - W, v);
+          if (t + W < H && owner[t + W] === a) mark(t + W, v);
+        }
+      }
+    }
+    const repaint = (t) => {
+      this._paintTile(t);
+      this._markChunk(t % W, (t / W) | 0);
+    };
+    // Las que salen del frente…
+    for (const t of old) {
+      if (!(hot[t] >> 2) && hot[t] & 3) {
+        hot[t] = 0;
+        repaint(t);
+      }
+    }
+    // …y las que entran o cambian
+    for (const t of next) {
+      const v = hot[t] >> 2;
+      const changed = (hot[t] & 3) !== v;
+      hot[t] = v;
+      if (changed) repaint(t);
+    }
+    this._hotList = next;
   }
 
   // -------------------------------------------------------------- ambiente
@@ -1348,6 +1431,7 @@ export class Renderer {
     const map = game.map;
     const size = this._buildingSize();
     for (const b of game.buildings) {
+      if (b.kind === 'capital') continue; // aparte (_drawCapitals), también de lejos
       const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
       if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size) continue;
       const p = game.players[b.owner];
@@ -1368,6 +1452,126 @@ export class Renderer {
         if (b.level > 1) this._drawLevel(sx, sy, size, b.level);
       }
     }
+  }
+
+  /**
+   * Capitales (doc-1.6): siempre a la vista, más grandes que un edificio, con
+   * su muralla (un anillo almenado del color del dueño) de cerca. La tuya y
+   * las de tus aliados, también de lejos; las demás, al acercarse un poco.
+   */
+  _drawCapitals(now) {
+    const { ctx, game, camera } = this;
+    if (!game.capitals || !game.capitals.length) return;
+    const map = game.map;
+    const zr = camera.zoom * RES;
+    const human = game.human;
+    const size = clamp(this._buildingSize() * 1.45, 12, 34);
+    const wallR = CONFIG.capitalWallRadius * camera.zoom;
+    for (const b of game.capitals) {
+      const p = game.players[b.owner];
+      if (!p) continue;
+      const mine = p === human;
+      const friend = mine || (human && human.allies.has(p.id));
+      if (zr < 0.6 && !friend) continue;
+      const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+      const m = Math.max(size, wallR) + 4;
+      if (sx < -m || sy < -m || sx > camera.viewW + m || sy > camera.viewH + m) continue;
+      // Muralla: un anillo almenado. La tuya, en cuanto se distingue; las
+      // demás, solo de cerca (con decenas de capitales a la vista recargaban)
+      if (wallR >= (mine ? 14 : 44)) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, wallR, 0, Math.PI * 2);
+        ctx.lineWidth = Math.max(2, Math.min(5, wallR * 0.06));
+        ctx.setLineDash([Math.max(3, wallR * 0.09), Math.max(2, wallR * 0.05)]);
+        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.85 : 0.6})`;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(20, 16, 10, 0.45)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, wallR + ctx.lineWidth * 2.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (mine && this.anim) {
+        const k = 0.5 + 0.5 * Math.sin(now / 520);
+        ctx.fillStyle = `rgba(255, 214, 110, ${0.16 + 0.12 * k})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, size * (0.72 + 0.1 * k), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const spr = this._buildingSprite('capital', p, size);
+      const w = spr.width / this.dpr;
+      ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      const prog = game.capitalProgress ? game.capitalProgress(b) : null;
+      if (prog !== null) this._drawConstruction(sx, sy, size, prog, now);
+      else if (b.ind + b.pop > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.ind + b.pop);
+    }
+  }
+
+  /**
+   * Lugares de interés (doc-1.6): un disco dorado que late con su icono,
+   * siempre a la vista; de cerca, con su nombre.
+   */
+  _drawLugares(now) {
+    const { ctx, game, camera } = this;
+    if (!game.lugares || !game.lugares.length) return;
+    const size = clamp(camera.zoom * RES * 4, 15, 30);
+    const named = camera.zoom * RES >= 2.6;
+    const k = this.anim ? 0.5 + 0.5 * Math.sin(now / 360) : 0.5;
+    for (const l of game.lugares) {
+      const [sx, sy] = camera.worldToScreen(l.x + 0.5, l.y + 0.5);
+      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size * 2) continue;
+      // Halo que late
+      ctx.fillStyle = `rgba(255, 210, 90, ${0.18 + 0.16 * k})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, size * (0.78 + 0.16 * k), 0, Math.PI * 2);
+      ctx.fill();
+      const spr = this._lugarSprite(l.kind, size);
+      const w = spr.width / this.dpr;
+      ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      if (named) {
+        const def = LUGARES[l.kind];
+        ctx.font = '700 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(10, 14, 24, 0.8)';
+        ctx.fillStyle = '#ffe3a1';
+        ctx.strokeText(def.name, sx, sy + size * 0.62);
+        ctx.fillText(def.name, sx, sy + size * 0.62);
+      }
+    }
+  }
+
+  _lugarSprite(kind, size) {
+    const px = Math.max(12, Math.round((size * this.dpr) / 2) * 2);
+    const key = `lugar|${kind}|${px}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil(px * 1.2);
+      c = makeCanvas(S, S);
+      const g = c.getContext('2d');
+      const r = px / 2;
+      const grad = g.createRadialGradient(S / 2, S / 2 - r * 0.3, r * 0.1, S / 2, S / 2, r);
+      grad.addColorStop(0, '#fff2c4');
+      grad.addColorStop(1, '#d9a12e');
+      g.beginPath();
+      g.arc(S / 2, S / 2, r, 0, Math.PI * 2);
+      g.fillStyle = grad;
+      g.fill();
+      g.lineWidth = Math.max(1.5, px * 0.07);
+      g.strokeStyle = '#5b3a0a';
+      g.stroke();
+      g.font = `${Math.round(px * 0.56)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(LUGARES[kind].icon, S / 2, S / 2 + px * 0.03);
+      this._sprites.set(key, c);
+    }
+    return c;
   }
 
   /**
@@ -1584,23 +1788,40 @@ export class Renderer {
   }
 
   /** Nivel del edificio (2 o más): el número en una chapa dorada encima del icono. */
+  /**
+   * Insignia de nivel de un edificio: ya dibujada (una por nivel y tamaño) y
+   * pegada. Antes era un círculo con texto en cada fotograma por edificio, y
+   * con cientos a la vista pesaba.
+   */
   _drawLevel(sx, sy, size, level) {
-    const { ctx } = this;
     const r = Math.max(6.5, size * 0.3);
-    const x = sx;
-    const y = sy - size * 0.62 - r * 0.35;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffd34d';
-    ctx.fill();
-    ctx.lineWidth = Math.max(1.5, r * 0.22);
-    ctx.strokeStyle = 'rgba(40, 26, 0, 0.9)';
-    ctx.stroke();
-    ctx.fillStyle = '#2a1a00';
-    ctx.font = `900 ${Math.round(r * 1.35)}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(level), x, y + r * 0.08);
+    const rq = Math.round(r * 2) / 2;
+    const key = `nivel|${level}|${rq}|${this.dpr}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil((rq * 2 + 4) * this.dpr);
+      c = makeCanvas(S, S);
+      const g = c.getContext('2d');
+      g.scale(this.dpr, this.dpr);
+      const m = rq + 2;
+      g.beginPath();
+      g.arc(m, m, rq, 0, Math.PI * 2);
+      g.fillStyle = '#ffd34d';
+      g.fill();
+      g.lineWidth = Math.max(1.5, rq * 0.22);
+      g.strokeStyle = 'rgba(40, 26, 0, 0.9)';
+      g.stroke();
+      g.fillStyle = '#2a1a00';
+      g.font = `900 ${Math.round(rq * 1.35)}px system-ui, sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(String(level), m, m + rq * 0.08);
+      this._sprites.set(key, c);
+    }
+    const w = c.width / this.dpr;
+    this.ctx.drawImage(c, sx - w / 2, sy - size * 0.62 - r * 0.35 - w / 2, w, w);
   }
 
   _hpBar(cx, cy, width, frac) {
@@ -1722,8 +1943,10 @@ export class Renderer {
       const color = pcss(p);
       const mine = p === game.human;
       const moving = clamp((s.speed / RES) * 3, 0, 1);
-      const len = clamp(z * RES * 2.6, 6, 30);
-      drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
+      const fish = m.kind === 'fish';
+      const len = clamp(z * RES * (fish ? 1.9 : 2.6), 6, fish ? 22 : 30);
+      if (fish) drawFishing(ctx, sx, sy, s.ang, len, color, mine, moving, m.phase === 'fishing', this._lastNow || 0);
+      else drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
       // Su bandera, en cuanto el barco se ve lo bastante grande
       if (len >= 11) this._shipEnsign(p, sx, sy - len * 0.12, Math.round(clamp(len * 0.42, 7, 12)));
       this._maybeWake(s, len, 5);
@@ -1846,9 +2069,9 @@ export class Renderer {
     }
     [x, y] = pt(path[path.length - 1]);
     ctx.lineTo(x, y);
-    ctx.setLineDash([3, 5]);
-    ctx.strokeStyle = `rgba(${color}, 0.45)`;
-    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = `rgba(${color}, ${mine ? 0.8 : 0.55})`;
+    ctx.lineWidth = mine ? 1.8 : 1.3;
     ctx.stroke();
     ctx.setLineDash([]);
     // Origen marcado
@@ -1857,6 +2080,38 @@ export class Renderer {
     ctx.arc(x, y, 2.5, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${color}, 0.9)`;
     ctx.fill();
+    // Destino: dónde va a desembarcar (diana que late; roja si viene a por ti)
+    const end = b.dest >= 0 ? b.dest : path[path.length - 1];
+    [x, y] = pt(end);
+    const human = this.game.human;
+    const hostile = human && b.targetId === human.id;
+    this._drawLanding(x, y, hostile ? '255, 80, 70' : color, mine);
+  }
+
+  /** Diana del punto de desembarco de una lancha. */
+  _drawLanding(x, y, rgb, strong) {
+    const { ctx } = this;
+    const k = this.anim ? 0.5 + 0.5 * Math.sin((this._lastNow || 0) / 260) : 0.5;
+    const r = strong ? 7 : 5.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 3 + 3 * k, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${rgb}, ${0.25 + 0.35 * (1 - k)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(10, 14, 24, 0.55)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${rgb}, 0.95)`;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.55, y);
+    ctx.lineTo(x + r * 0.55, y);
+    ctx.moveTo(x, y - r * 0.55);
+    ctx.lineTo(x, y + r * 0.55);
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
   }
 
   /** Buques de guerra: torretas que apuntan, fogonazos, proyectiles y hundimiento. */
@@ -1928,6 +2183,26 @@ export class Renderer {
       const visible = this._inView(e.x, e.y, 16);
       const shake = fx.shake;
       const flash = fx.flash;
+      if (e.kind === 'fish') {
+        // Pesca: el oro, solo de los tuyos y si se ve
+        const h = game.human;
+        if (h && visible && e.owner === h.id) fx.label(e.x, e.y - 1.2 * RES, `+${formatNumber(e.gold)}`, '#ffd76a', 11, 1.2);
+        continue;
+      }
+      if (e.kind === 'lugar') {
+        if (!visible) continue;
+        const p = game.players[e.owner];
+        fx.capture(e.x, e.y, p ? pcss(p) : '#ffd76a');
+        fx.label(e.x, e.y - 1.6 * RES, `${LUGARES[e.lugar].icon} ${LUGARES[e.lugar].name}`, '#ffe3a1', 13, 2.2);
+        continue;
+      }
+      if (e.kind === 'capitalFall') {
+        if (!visible) continue;
+        const p = game.players[e.owner];
+        fx.capture(e.x, e.y, p ? pcss(p) : '#ffffff');
+        fx.label(e.x, e.y - 2 * RES, '🏰 ¡Capital tomada!', '#ffffff', 15, 2.6);
+        continue;
+      }
       if (e.kind === 'train') {
         // Oro de un tren: solo si es tuyo o pasa por tu estación, y si se ve
         const h = game.human;

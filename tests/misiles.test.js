@@ -3,14 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { buildNow, terminarObras } from './ayuda.js';
+import { buildNow, terminarObras, DOC } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
 /** Tres naciones en la masa de tierra mayor, ya en juego y con oro de sobra. */
 function setup(seed = 11) {
   const map = generateMap(240 * RES, 140 * RES, seed);
   // Victoria al 90 %: B crece mucho (para tener qué arrasar) y no debe ganar la partida
-  const game = new Game({ map, seed, rules: { winShare: 0.9 } });
+  const game = new Game({ map, seed, rules: { ...DOC, winShare: 0.9 } });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 0, 255], false);
   const c = game.addPlayer('C', [0, 255, 0], false);

@@ -442,6 +442,82 @@ Fuera del enlace de Claude y sin cuenta, el perfil y la clasificación general
 se guardan en cada navegador; el multijugador entre ordenadores va por el
 servidor de salas público.
 
+## Economía, capital y lugares de interés (doc-1.6)
+
+Versión de reglas `doc-1.6` (perfiles `clasico-7` y `trinchera-6`): en línea,
+versiones distintas no juegan juntas. Todo está en `MECH` (`mecanicas.js`) y
+en `src/lugares.js`.
+
+- **El territorio produce.** Oro por turno = `taxK × casillas^0,55` (casillas
+  del documento, el mundo de 2000 × 1000): 1.000 casillas dan +44, 20.000 dan
+  +232 y medio mundo (~300.000) +1.030 por turno, diez veces el oro base. Las
+  colonias, la mitad. Antes el oro pasivo era fijo y con medio mundo apenas se
+  ganaba más que al empezar. Regla `taxes` (activada por defecto).
+- **Capital amurallada.** Cada nación (y cada jugador; las colonias no) nace
+  con su capital donde se despliega. Murallas: hasta 7·RES casillas
+  alrededor, conquistarte cuesta ×4 de tiempo y bajas (+0,15 por nivel de
+  mejora) y las bombas matan tropas pero no arrasan ni la casilla ni lo que
+  hay en ella. Se mejora desde la barra (sin elegir sitio, teclas Z y X):
+  **Industria** +25 % del oro pasivo por nivel y **Población** +10 % de techo
+  de tropas y +8 % de crecimiento por nivel; cada nivel cuesta 150k × 1,75^n y
+  tarda (una obra a la vez, hasta nivel 10). Así no hace falta llenar el mapa
+  de edificios. Si cae, quien la toma se lleva el 20 % del oro del dueño más
+  250k, y la nación la refunda al final del turno en su mejor ciudad (o cerca
+  del centro de su territorio) con la mitad de las mejoras. Alrededor de la
+  capital se puede construir (solo aparta 3 casillas). Regla `capitals`.
+- **Pueblos** (tecla B): pequeños y baratos (40k, +40k cada uno, hasta 400k),
+  +300 de oro por segundo y +6.000 de techo de tropas por nivel.
+- **Puertos.** Lanzan **pesqueros** (tantos como su nivel, hasta 3) a sus
+  caladeros cercanos (hasta 4 por puerto, con la ruta guardada): pescan 10 s y
+  vuelven con (6.000 + 300 × casillas) de oro, +25 % por nivel del puerto. Los
+  **mercantes** salen bastante más a menudo (probabilidad base 1/30 en vez de
+  1/100) hacia puertos de otros países (cobráis los dos) y, si no hay ninguno a
+  mano, a uno propio (el 60 %, solo el dueño).
+- **Lugares de interés.** Discos dorados en tierra libre (uno cada ~81.000
+  casillas de tierra, entre 6 y 30). Quien los conquista se lleva el premio:
+  tesoro (150k + 30 s de sus ingresos), mercenarios (+20 % de tropas), granero
+  (+60 % de crecimiento 60 s), forja antigua (ataques un 30 % más baratos 45
+  s), ruinas (+4 % de oro para siempre) o fortaleza olvidada (+5 % de techo
+  para siempre). Reaparecen en otro sitio al cabo de 1-2 min; cuando ya no
+  queda tierra libre, dentro de algún país (un objetivo por el que pelear). Las
+  colonias no los cobran.
+- **Bots:** mejoran su capital (industria y población, alternando), levantan
+  pueblos y se llevan los lugares al expandirse.
+
+En pantalla:
+
+- **Frontera roja donde se lucha:** en cada ataque contra un país o una
+  colonia, las dos casillas a cada lado de la línea de frente se pintan de
+  rojo en la propia capa del territorio (más intenso si es tu combate). Se
+  actualiza cada 3 turnos y solo repinta las casillas que entran o salen del
+  frente: no cuesta nada en cada fotograma.
+- **Destino de los barcos:** cada lancha marca dónde va a desembarcar con una
+  diana que late (roja si viene a por ti) y la ruta que le queda, discontinua.
+- La **capital** se ve siempre (más grande, con su bandera en la torre); su
+  muralla, un anillo almenado (la tuya en cuanto se distingue; las demás, de
+  cerca). Los **pesqueros** son barquitas de madera con la franja de su dueño
+  y, faenando, la red echada.
+- **Tooltip** más pequeño y simple (quién, tropas y territorio; debajo, solo el
+  edificio, las murallas o la defensa, el lugar de interés y la estimación del
+  próximo envío) y escala con el zoom (del 80 % alejado al 110 % de cerca).
+- **Colores:** paleta de 108 (36 tonos × 3 luces); con 90 naciones casi no se
+  repite ninguno (88 distintos) y las vecinas siguen distinguiéndose. Las
+  colonias, más tenues y con frontera suave.
+- **Sonidos de captura:** al conquistar un país con muchos edificios sonaba la
+  campana o el yunque de «edificio terminado» por cada uno capturado (contaba
+  los edificios activos). Ahora solo suena al terminar una obra tuya; las
+  capturas se avisan una vez por turno («Has capturado 7 edificios») y los
+  sonidos que llegan en ráfaga se espacian y bajan de volumen.
+
+Rendimiento (partida del mundo con 90 naciones y 300 colonias, 5,5 min en
+Node): 3,9 ms por turno de media y ningún turno por encima de 40 ms (refundar
+una capital llegaba a 150 ms: ahora busca en espiral desde el centro del país,
+con la frontera como alternativa). Los bots reutilizan el resumen de sus
+vecinos hasta 10 turnos (la interfaz tiene su propia caché, para no cambiar
+lo que deciden y desincronizar una partida en línea) y las rutas de los
+pesqueros se guardan. En el dibujo, las insignias de nivel de los edificios
+se pintan una vez y se reutilizan.
+
 ## Reglas
 
 | Concepto | Cómo funciona |

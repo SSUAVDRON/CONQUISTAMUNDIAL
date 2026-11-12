@@ -4,6 +4,9 @@
 import { AREA, CONFIG, RES } from './config.js';
 import { TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 
+/** Turnos que puede tener el resumen de vecinos con el que decide un bot (ver Game.neighborSummary). */
+const BOT_SUMMARY_AGE = 10;
+
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 // Las heurísticas se ajustaron con RES 2: medidas en casillas de entonces
@@ -39,7 +42,7 @@ export class BotBrain {
     const p = this.player;
     const r = g.rng;
     const max = p.maxTroops();
-    const summary = g.neighborSummary(p);
+    const summary = g.neighborSummary(p, BOT_SUMMARY_AGE);
     const { wild, coastal } = summary;
     // Ni los aliados, ni quien tiene un pacto o la paz con ella, ni (durante
     // la tregua) las otras naciones cuentan como objetivos: si no, elegía uno
@@ -170,7 +173,7 @@ export class BotBrain {
     if (this.grudges.has(from.id) || g.isTraitor(from)) return false;
     let score = 0.25 + this.diplomacy * 0.4 - this.aggression * 0.3;
     if (from.troops > p.troops * 1.2) score += 0.35;
-    if (g.neighborSummary(p).counts.has(from.id) && from.troops < p.troops * 0.6) score -= 0.5;
+    if (g.neighborSummary(p, BOT_SUMMARY_AGE).counts.has(from.id) && from.troops < p.troops * 0.6) score -= 0.5;
     const leader = g.leader();
     if (from === leader && from.tiles / g.map.landCount > 0.3) score -= 0.5;
     return g.rng.float() < clamp(score, 0.05, 0.9);
@@ -317,6 +320,9 @@ export class BotBrain {
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
     else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
+    // Su capital (doc-1.6): industria y población, alternando; y pueblos baratos
+    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = p.capital.ind <= p.capital.pop ? 'capInd' : 'capPop';
+    else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
     else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / (6000 * AREA)) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
@@ -325,6 +331,10 @@ export class BotBrain {
     else if (p.tiles > 2000 * AREA && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
     else if (p.active.port > 0 && p.buildings.warship < p.active.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
+    if (want === 'capInd' || want === 'capPop') {
+      if (p.gold < g.buildCost(p, want)) return false;
+      return g.build(p, want, -1);
+    }
     if (want === 'warship') {
       if (p.gold < g.buildCost(p, want)) return false;
       const port = g.buildings.find((b) => b.owner === p.id && b.kind === 'port' && b.level > 0);
@@ -394,7 +404,7 @@ export class BotBrain {
     for (let i = 0; i < 150; i++) {
       const t = pool[r.int(0, pool.length - 1)];
       if (g.owner[t] !== p.id) continue;
-      if (kind === 'city' && p.border.has(t)) continue;
+      if ((kind === 'city' || kind === 'village') && p.border.has(t)) continue;
       if (g.canBuild(p, kind, t).ok) return t;
     }
     return -1;
@@ -453,7 +463,7 @@ export class BotBrain {
       const other = g.players[r.int(1, g.players.length - 1)];
       if (other.alive && !other.weak) candidates.add(other.id);
     }
-    const leaderNeighbors = leader ? g.neighborSummary(leader).counts : new Map();
+    const leaderNeighbors = leader ? g.neighborSummary(leader, BOT_SUMMARY_AGE).counts : new Map();
     for (const id of candidates) {
       const other = g.players[id];
       if (other === p || !g.canPropose(p, other).ok) continue;
@@ -479,13 +489,13 @@ export class BotBrain {
     if (p.allies.size >= CONFIG.maxAllies || this.grudges.has(from.id) || g.isTraitor(from)) return false;
     const leader = g.leader();
     const share = leader ? leader.tiles / g.map.landCount : 0;
-    const neighbors = g.neighborSummary(p).counts;
+    const neighbors = g.neighborSummary(p, BOT_SUMMARY_AGE).counts;
     let score = 0.2 + this.diplomacy * 0.5 - from.betrayals * 0.25;
     if (from === leader && share > 0.3) score -= 0.5;
     if (neighbors.has(from.id) && from.troops > p.troops * 1.5) score += 0.3; // mejor tenerlo de amigo
     if (from.attacks.has(p.id) && from.troops > p.troops) score += 0.2; // pedir la paz si va perdiendo
     if (leader && leader !== from && leader !== p) {
-      const ln = g.neighborSummary(leader).counts;
+      const ln = g.neighborSummary(leader, BOT_SUMMARY_AGE).counts;
       if (ln.has(p.id) && ln.has(from.id)) score += 0.3;
     }
     return g.rng.float() < Math.min(0.95, Math.max(0.05, score));

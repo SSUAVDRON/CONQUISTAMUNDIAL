@@ -7,6 +7,7 @@ import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
 import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
+import { LUGARES } from './lugares.js';
 import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } from './movimiento.js';
 import { PantallaFin, abrirFin } from './fin.js';
 
@@ -281,7 +282,9 @@ export class UI {
         btn.type = 'button';
         btn.className = 'obra';
         btn.dataset.kind = kind;
-        btn.title = def.unit
+        btn.title = def.unit === 'capital'
+          ? `${def.name}: ${def.desc}. Se aplica al momento, sin elegir sitio (tecla ${def.key.slice(3)})`
+          : def.unit
           ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
           : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
         const icon = document.createElement('canvas');
@@ -1071,7 +1074,18 @@ export class UI {
       // Lo que falta para poder pagarlo, como relleno del botón
       btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
       btn.classList.toggle('en-obras', !!works[kind]);
-      if (BUILDINGS[kind].unit === 'missile') {
+      if (BUILDINGS[kind].unit === 'capital') {
+        // Mejoras de la capital: su nivel y si están en obras
+        const cap = human.capital;
+        const track = BUILDINGS[kind].track;
+        const lvl = cap ? cap[track] || 0 : 0;
+        const working = !!(cap && cap.work && cap.work.track === track);
+        btn.classList.toggle('en-obras', working);
+        btn.querySelector('.b-coste').textContent = lvl >= MECH.capital.maxLevel ? 'Máx.' : formatNumber(cost);
+        // Nivel en estrellas (corto: va en la esquina del botón; la obra ya se marca con su clase)
+        btn.querySelector('.b-num').textContent = cap && lvl ? `★${lvl}` : '';
+        unavailable = unavailable || !cap || !!cap.work || lvl >= MECH.capital.maxLevel;
+      } else if (BUILDINGS[kind].unit === 'missile') {
         // Coste y silos listos
         const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
         const ready = silos.filter((b) => b.readyAt <= game.ticks).length;
@@ -1257,7 +1271,10 @@ export class UI {
       const techs = game.profile.techs;
       const rows = [
         ['Oro base (pasivo, cada turno)', inc.base],
-        game.profile.points || techs ? ['Bonos (puntos estratégicos, tecnologías, especialización)', inc.bonus] : null,
+        ['Territorio (cuanto más grande, más)', inc.tax],
+        ['Pueblos', inc.villages],
+        [game.profile.points || techs ? 'Bonos (industria de la capital, puntos, tecnologías…)' : 'Industria de la capital', inc.bonus],
+        ['Pesqueros', inc.fishing],
         h.economy === 'workers' ? ['Trabajadores', inc.workers] : null,
         ['Trenes y mercantes', inc.trade],
         game.profile.points ? ['Puntos estratégicos tomados', inc.conquest] : null,
@@ -1311,7 +1328,7 @@ export class UI {
     const now = performance.now();
     if (now - (this._adviceAt || 0) < 1000) return;
     this._adviceAt = now;
-    const last = (this._tipLast ??= {});
+    const last = (this._adviceLast ??= {}); // (no _tipLast: ese es el texto del tooltip)
     const say = (key, text, every) => {
       if (now - (last[key] || -Infinity) < every) return false;
       last[key] = now;
@@ -1324,7 +1341,7 @@ export class UI {
     if (this._fullSince && now - this._fullSince > 10000 && say('lleno', 'Tu población está al máximo y ya no crece: amplía territorio, construye ciudades o ataca', 90000)) return;
     const cheapest = Math.min(game.buildCost(h, 'city'), game.buildCost(h, 'fort'));
     if (h.gold > Math.max(600000, cheapest * 2) && !h.research && say('oro', `Tienes ${formatNumber(h.gold)} de oro sin usar: construye o investiga (tecla I)`, 120000)) return;
-    const nbs = game.neighborSummary(h).counts;
+    const nbs = game.neighborSummaryView(h).counts;
     for (const id of nbs.keys()) {
       const t = game.players[id];
       if (!t || t.weak || h.allies.has(id) || game.pactBetween(h.id, id)) continue;
@@ -1856,11 +1873,17 @@ export class UI {
 
   /** Línea del tooltip con el punto estratégico cercano y su efecto. */
   _pointTip(game, tile) {
+    // Lugar de interés (doc-1.6): qué da al tomarlo
+    const lg = game.lugarNear ? game.lugarNear(tile) : null;
+    if (lg) {
+      const def = LUGARES[lg.kind];
+      return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave">· ${def.desc}</span></div>`;
+    }
     const pt = game.pointNear(tile);
     if (!pt) return '';
     const o = game.owner[pt.tile];
     const who = o ? ` · de ${escapeHtml(game.players[o].name)}` : ' · sin dueño';
-    return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}<br><span class="suave">${POI_TYPES[pt.kind].desc}</span></div>`;
+    return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}</div>`;
   }
 
   /** Estimación de lo que daría un ataque con la fuerza de ataque actual. */
@@ -1870,12 +1893,15 @@ export class UI {
     const troops = this.nextSend(h);
     if (troops < 1) return '';
     const e = game.estimateAttack(h, targetId, troops);
-    const risk = targetId ? ` · riesgo ${e.risk}` : '';
-    return `<div class="tip-estim">Próximo envío ${fmtTroops(troops)}: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
+    const risk = targetId ? ` · ${e.risk}` : '';
+    return `<div class="tip-estim">⚔ ${fmtTroops(troops)} → ~${formatNumber(e.tiles)} cas.${risk}${e.uncertain ? ' ?' : ''}</div>`;
   }
 
-  updateTooltip(game, tile, sx, sy) {
+  updateTooltip(game, tile, sx, sy, zoom = 1) {
     const tip = $('tooltip');
+    // Tamaño según el zoom: algo más pequeño alejado, algo más grande de cerca
+    const zr = Math.max(0.05, zoom * RES);
+    const k = Math.round(Math.max(0.8, Math.min(1.1, 0.86 + 0.09 * Math.log2(zr))) * 20) / 20;
     if (tile < 0) {
       tip.hidden = true;
       this._tipTile = -1;
@@ -1908,7 +1934,8 @@ export class UI {
     // Dentro de la ventana: se mide la caja (solo si cambió el texto) y, si
     // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
     const size = (this._tipSize ??= [tip.offsetWidth, tip.offsetHeight]);
-    const [w, h] = size;
+    const w = size[0] * k;
+    const h = size[1] * k;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
@@ -1916,7 +1943,7 @@ export class UI {
     left = Math.max(8, Math.min(vw - w - 8, left));
     top = Math.max(8, Math.min(vh - h - 8, top));
     // Con transform (sin recolocar la página)
-    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px) scale(${k})`;
   }
 
   /** Texto del tooltip de una casilla de tierra (o de un río). */
@@ -1930,23 +1957,22 @@ export class UI {
     const terrain = TERRAIN_NAMES[map.terrain[tile]];
     const o = game.owner[tile];
     if (o) {
+      // Lo justo: quién, tropas y territorio; debajo, solo lo que importa ahí
+      // (edificio, murallas o defensa)
       const p = game.players[o];
       const b = game.buildingNear(tile, 2 * RES);
       const extra = [];
       if (b) {
-        const lvl = b.level ? ` nv. ${b.level}` : '';
-        const work = b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : '';
-        extra.push(`${BUILDINGS[b.kind].name}${lvl}${work}`);
+        if (b.kind === 'capital') extra.push(`🏰 Capital${b.ind + b.pop ? ` · ind. ${b.ind} · pob. ${b.pop}` : ''}`);
+        else extra.push(`${BUILDINGS[b.kind].name}${b.level > 1 ? ` ${b.level}` : ''}${b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : ''}`);
       }
-      if (game.fortMultiplier(p, tile) > 1) extra.push('puesto defensivo cerca');
-      extra.push(terrain);
+      const def = game.fortMultiplier(p, tile);
+      if (def > 1 && !(b && b.kind === 'capital')) extra.push(game.wallMultiplier(p, tile) > 1 ? `murallas ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
       const human = game.human;
-      const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
-      return `<b>${escapeHtml(p.name)}</b>${tag}<br>
-        ${fmtTroops(p.troops)} tropas · ${formatShare(p.tiles, map.landCount)}<br>
-        <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
+      const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
+      return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
     }
-    return `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
+    return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
   }
 }
 

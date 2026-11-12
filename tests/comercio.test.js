@@ -3,15 +3,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { buildNow, terminarObras } from './ayuda.js';
+import { buildNow, terminarObras, DOC } from './ayuda.js';
 import { CONFIG, RES } from '../src/config.js';
-import { tradeGold, tradeSpawnChance } from '../src/mecanicas.js';
+import { MECH, tradeGold, tradeSpawnChance } from '../src/mecanicas.js';
 
 /** Dos naciones con puerto en el mismo mar y un tercero neutral. */
 function setup() {
   for (let seed = 1; seed < 60; seed++) {
     const map = generateMap(220 * RES, 130 * RES, seed);
-    const game = new Game({ map, seed });
+    const game = new Game({ map, seed, rules: DOC });
     const a = game.addPlayer('A', [255, 0, 0], true);
     const b = game.addPlayer('B', [0, 0, 255], false);
     const c = game.addPlayer('C', [0, 255, 0], false);
@@ -36,20 +36,26 @@ function setup() {
   throw new Error('sin semilla válida');
 }
 
-test('los puertos solo dan oro con mercantes: sin pesqueros, y la salida es probabilística', () => {
+test('puertos (doc-1.6): pesqueros que faenan cerca y vuelven con oro; los mercantes salen con probabilidad', () => {
   const { game, a } = setup();
-  for (let i = 0; i < 300; i++) game.tick();
-  assert.equal(game.merchants.filter((m) => m.kind === 'fish').length, 0, 'no hay pesqueros');
-  // El oro de cada turno es el pasivo (100) y nada más por tener puerto
-  const g0 = a.gold;
-  const m0 = game.merchants.length;
-  game.tick();
-  assert.equal(a.baseGold(), 100);
-  if (game.merchants.length === m0 && !game.merchants.some((m) => m.done)) assert.ok(Math.abs(a.gold - g0 - a.goldPerTick()) < 1e-6);
-  // Probabilidad (PROPUESTA del documento): 1 / max(1, floor(100 / boost² / (rechazos + 1) / saturación))
-  assert.equal(tradeSpawnChance(1, 0, 0), 1 / 100);
-  assert.equal(tradeSpawnChance(2, 0, 0), 1 / 25);
-  assert.equal(tradeSpawnChance(1, 9, 0), 1 / 10);
+  // Pesqueros: tantos como el nivel del puerto (nivel 1: uno), del mismo mar
+  let fish = null;
+  for (let i = 0; i < 600 && !fish; i++) {
+    game.tick();
+    fish = game.merchants.find((m) => m.kind === 'fish' && m.owner === a.id);
+  }
+  assert.ok(fish, 'el puerto lanza un pesquero');
+  assert.equal(game.merchants.filter((m) => m.kind === 'fish' && m.owner === a.id).length, 1, 'uno por nivel');
+  // Va a su caladero, pesca un rato y vuelve: al llegar cobra su dueño
+  const g0 = a.income.fishing;
+  for (let i = 0; i < 3000 && !fish.done; i++) game.tick();
+  assert.ok(fish.done, 'vuelve a puerto');
+  const expected = Math.round((MECH.fishing.base + MECH.fishing.perTile * (fish.value / (RES / 2))) * a.goldMult * (1 + a.mods.trade));
+  assert.equal(a.income.fishing - g0, expected, 'cobra su pesca');
+  // Probabilidad de los mercantes (doc-1.6: base 30): 1 / max(1, floor(30 / boost² / (rechazos + 1) / saturación))
+  assert.equal(tradeSpawnChance(1, 0, 0), 1 / 30);
+  assert.equal(tradeSpawnChance(2, 0, 0), 1 / 7);
+  assert.equal(tradeSpawnChance(1, 9, 0), 1 / 3);
   assert.ok(tradeSpawnChance(1, 0, 140) < tradeSpawnChance(1, 0, 0), 'con muchos mercantes navegando salen menos');
 });
 

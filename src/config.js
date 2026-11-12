@@ -78,6 +78,8 @@ export const CONFIG = {
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   fortRadius: 12 * RES,
+  capitalWallRadius: 7 * RES, // murallas de la capital (casillas; mecánica en MECH.capital)
+  capitalClearance: 3, // casillas libres alrededor de la capital (se construye junto a ella)
   fortDefenseMult: 3, // efecto de defensa (× tiempo y bajas del atacante) dentro del radio del puesto
   // Niveles y obras (el precio de un nivel es el del siguiente edificio de su tipo: mecanicas.js)
   maxLevel: 5,
@@ -161,6 +163,8 @@ export const DEFAULT_RULES = {
   coopRoles: false, // con roles: uno el mando militar y otro la economía y la diplomacia
   economy: 'fixed', // 'fixed': oro pasivo fijo (OpenFront moderno) | 'workers': tropas + trabajadores (variante FrontWars)
   profile: 'clasico', // perfil de reglas (src/mecanicas.js, PROFILES): 'clasico' | 'trinchera'
+  capitals: true, // doc-1.6: cada nación nace con su capital amurallada
+  taxes: true, // doc-1.6: el territorio produce oro
 };
 /** Perfiles de reglas (ver PROFILES en src/mecanicas.js). Sin perfil = 'trinchera' (valor histórico). */
 export const PROFILE_IDS = ['clasico', 'trinchera'];
@@ -218,6 +222,8 @@ export function cleanRules(raw) {
     coopRoles: r.coop === true && r.coopRoles === true,
     economy: ECONOMY_MODES.includes(r.economy) ? r.economy : 'fixed',
     profile: PROFILE_IDS.includes(r.profile) ? r.profile : 'trinchera',
+    capitals: r.capitals !== false,
+    taxes: r.taxes !== false,
   };
 }
 
@@ -229,6 +235,12 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
  */
 export const BUILDINGS = {
   city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+25.000 de techo de tropas por nivel' },
+  village: { name: 'Pueblo', fem: false, base: 40000, build: 30, key: 'KeyB', desc: 'Pequeño y barato: +300 de oro/s y +6.000 de techo de tropas por nivel' },
+  // La capital: una por nación, nace con ella (no se construye). Sus mejoras
+  // se compran desde la barra y se aplican al momento, sin elegir sitio
+  capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada: defensa ×4 alrededor y las bombas no destruyen lo que hay dentro' },
+  capInd: { name: 'Industria de la capital', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'ind', desc: '+25 % de oro pasivo (territorio, base y pueblos) por nivel' },
+  capPop: { name: 'Población de la capital', fem: true, base: 150000, build: 0, key: 'KeyX', unit: 'capital', track: 'pop', desc: '+10 % de techo de tropas y +8 % de crecimiento por nivel' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
   fort: { name: 'Puesto defensivo', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },
@@ -241,14 +253,15 @@ export const BUILDINGS = {
   mirv: { name: 'MIRV', fem: false, base: 25000000, build: 0, key: 'KeyK', unit: 'missile', fixed: true, desc: 'Se divide en muchas cabezas que caen por todo el país enemigo' },
 };
 /** Edificios de verdad (no unidades). */
-export const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'];
-export const BUILDING_KINDS = Object.keys(BUILDINGS);
+export const STRUCTURE_KINDS = ['city', 'village', 'capital', 'port', 'fort', 'factory', 'silo', 'sam'];
+/** Lo que se puede pedir desde la barra (la capital no: nace con la nación). */
+export const BUILDING_KINDS = Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].unique);
 /**
  * Grupos de la barra de construcción (los mismos que el Arsenal del inicio).
  * `icon`: el edificio que la representa en su botón.
  */
 export const BUILD_GROUPS = [
-  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['city', 'port', 'factory'] },
+  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['capInd', 'capPop', 'village', 'city', 'port', 'factory'] },
   { id: 'defensa', name: 'Defensa', icon: 'fort', kinds: ['fort', 'sam', 'warship'] },
   { id: 'ataque', name: 'Ataque', icon: 'missile', kinds: ['silo', 'missile', 'hbomb', 'mirv'] },
 ];

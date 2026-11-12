@@ -3,13 +3,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { buildNow } from './ayuda.js';
+import { buildNow, DOC } from './ayuda.js';
 import { CONFIG, RES } from '../src/config.js';
 
 /** A con fábrica y ciudad; B (enemigo) con una ciudad al alcance de la fábrica de A. */
 function setup(seed = 7) {
   const map = generateMap(240 * RES, 140 * RES, seed);
-  const game = new Game({ map, seed, rules: { winShare: 0.9 } });
+  const game = new Game({ map, seed, rules: { ...DOC, winShare: 0.9 } });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 0, 255], false);
   const c = game.addPlayer('C', [0, 255, 0], false);

@@ -8,10 +8,11 @@ import { DEFAULT_RULES, RES, cleanRules, migrateRules } from '../src/config.js';
 import { MECH, PROFILES, maxTroopsFor, profileOf, regenPerTick, rulesetId } from '../src/mecanicas.js';
 import { defaultProfile, normalizeProfile } from '../src/profile.js';
 import { checkStartPayload, roomRuleset } from '../src/multiplayer.js';
+import { DOC } from './ayuda.js';
 
 function play(rules) {
   const map = generateMap(220 * RES, 130 * RES, 9);
-  const game = new Game({ map, seed: 9, rules });
+  const game = new Game({ map, seed: 9, rules: { ...rules, ...DOC } });
   const h = game.addPlayer('Yo', [0, 0, 255], true);
   game.addPlayer('Otro', [255, 0, 0], false);
   game.start();
@@ -50,7 +51,7 @@ test('perfil Clásico: sin capitales (ni victoria por capitales ni botín), sin 
   assert.equal(cleanRules({ profile: 'clasico', victory: 'capitales' }).victory, 'dominio', 'la victoria por capitales sería inalcanzable');
   assert.equal(cleanRules({ profile: 'trinchera', victory: 'capitales' }).victory, 'capitales');
   const { game, h } = play({ profile: 'clasico' });
-  assert.equal(game.profile.id, 'clasico-6');
+  assert.equal(game.profile.id, 'clasico-7');
   assert.equal(game.points.length, 0, 'sin puntos estratégicos: ni capitales ni su botín');
   assert.equal(h.capitalTile, -1);
   h.gold = 1e7;
@@ -95,7 +96,7 @@ test('diagnóstico (?diag=1): registra turnos, envíos, frentes y reembolsos con
   game.retreat(h.attacks.get(0));
   for (let i = 0; i < 30; i++) game.tick();
   const data = diag.exportar(false);
-  assert.equal(data.perfil, 'clasico-6');
+  assert.equal(data.perfil, 'clasico-7');
   const kinds = new Set(data.eventos.map((e) => e.t));
   for (const k of ['turno', 'envio', 'frente', 'fin']) assert.ok(kinds.has(k), `hay eventos «${k}»`);
   const envio = data.eventos.find((e) => e.t === 'envio');

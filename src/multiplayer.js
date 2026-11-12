@@ -6,7 +6,7 @@
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-import { BUILDINGS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from './config.js';
 import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
 
@@ -597,7 +597,8 @@ function cleanIntent(raw) {
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
-  if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile', 'hbomb', 'mirv'].includes(raw.kind)) out.kind = raw.kind;
+  // Lo que se puede pedir desde la barra (la tabla de edificios; la capital nace con la nación)
+  if (typeof raw.kind === 'string' && BUILDING_KINDS.includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;

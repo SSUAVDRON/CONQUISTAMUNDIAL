@@ -3,14 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { buildNow, terminarObras } from './ayuda.js';
+import { buildNow, terminarObras, DOC } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 
 /** Dos naciones con puerto en la misma costa (busca una semilla que sirva). */
 function navalSetup() {
   for (let seed = 1; seed < 60; seed++) {
     const map = generateMap(220 * RES, 130 * RES, seed);
-    const game = new Game({ map, seed });
+    const game = new Game({ map, seed, rules: DOC });
     const a = game.addPlayer('A', [255, 0, 0], true);
     const b = game.addPlayer('B', [0, 0, 255], false);
     // Un tercero neutral: con solo dos naciones aliadas la partida terminaría en victoria compartida
@@ -39,7 +39,7 @@ function navalSetup() {
 
 test('construir un buque exige puerto y oro, y su coste sube', () => {
   const map = generateMap(220 * RES, 130 * RES, 21);
-  const game = new Game({ map, seed: 21 });
+  const game = new Game({ map, seed: 21, rules: DOC });
   const p = game.addPlayer('P', [0, 0, 0], true);
   game.start();
   game.spawnPlayer(p, game.findSpawnTile());

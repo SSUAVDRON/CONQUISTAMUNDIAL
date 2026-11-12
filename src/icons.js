@@ -368,7 +368,39 @@ function glyphs() {
   const mirv = new Path2D();
   for (const [x, y] of [[-4.5, 3], [0, -1.5], [4.5, 3]]) mirv.addPath(silo, new DOMMatrix().translate(x, y).rotate(45).scale(0.55));
 
+  // Pueblo: dos casitas con tejado a dos aguas
+  const village = new Path2D();
+  polyTo(village, [-8.4, 7, -8.4, 0.6, -4.6, -3.2, -0.8, 0.6, -0.8, 7]);
+  polyTo(village, [0.6, 7, 0.6, -1.8, 4.6, -6, 8.6, -1.8, 8.6, 7]);
+  village.rect(-5.6, 3, 2, 4);
+  village.rect(3.6, 2.4, 2, 4.6);
+  // Capital: muralla almenada con dos torres y la torre del homenaje con su bandera
+  const capital = new Path2D();
+  polyTo(capital, [-9.4, 8, -9.4, -3.4, -7.6, -3.4, -7.6, -1.8, -5.8, -1.8, -5.8, -3.4, -4, -3.4, -4, 0.4, -2.4, 0.4, -2.4, -5.6, 2.4, -5.6, 2.4, 0.4, 4, 0.4, 4, -3.4, 5.8, -3.4, 5.8, -1.8, 7.6, -1.8, 7.6, -3.4, 9.4, -3.4, 9.4, 8]);
+  capital.moveTo(-1.6, 8);
+  capital.lineTo(-1.6, 4.4);
+  capital.arc(0, 4.4, 1.6, Math.PI, 0);
+  capital.lineTo(1.6, 8);
+  capital.closePath();
+  const capFlag = new Path2D();
+  capFlag.moveTo(0, -5.6);
+  capFlag.lineTo(0, -10.4);
+  polyTo(capFlag, [0, -10.4, 4.2, -9.2, 0, -8]);
+  // Corona pequeña (las mejoras de la capital)
+  const crown = new Path2D();
+  polyTo(crown, [-5, -5.4, -5, -9.6, -2.6, -7.4, 0, -10.4, 2.6, -7.4, 5, -9.6, 5, -5.4]);
+  const capInd = new Path2D();
+  capInd.addPath(factory, new DOMMatrix().translate(0, 2.4).scale(0.8));
+  capInd.addPath(crown);
+  const capPop = new Path2D();
+  capPop.addPath(city, new DOMMatrix().translate(0, 2.4).scale(0.8));
+  capPop.addPath(crown);
+
   GLYPHS = {
+    village: { fill: village, rule: 'evenodd' },
+    capital: { fill: capital, rule: 'evenodd', stroke: capFlag, lw: 1.4 },
+    capInd: { fill: capInd, rule: 'evenodd' },
+    capPop: { fill: capPop, rule: 'evenodd' },
     city: { fill: city, rule: 'evenodd' },
     factory: { fill: factory, rule: 'evenodd' },
     port: { fill: port, rule: 'nonzero', stroke: anchor, lw: 2.2 },

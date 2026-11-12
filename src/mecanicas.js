@@ -19,10 +19,12 @@
  * estrechos (Ormuz, Bósforo) y mejor reparto inicial. doc-1.4: los ríos son
  * agua (fronteras; los que llegan al mar se navegan) y colonias ágiles y
  * distintas (ritmo propio, sin depender de su población). doc-1.5: cercos
- * comprobados cada 4 turnos por ataque (más fluido). En multijugador,
- * versiones distintas no juegan juntas.
+ * comprobados cada 4 turnos por ataque (más fluido). doc-1.6: economía
+ * productiva (impuestos por territorio), capital amurallada con mejoras de
+ * industria y población, pueblos, pesqueros, comercio más frecuente y
+ * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.5';
+export const MECH_VERSION = 'doc-1.6';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -35,7 +37,7 @@ export const MECH_VERSION = 'doc-1.5';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -45,8 +47,8 @@ export const MECH_VERSION = 'doc-1.5';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-6', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-5', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-7', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-6', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -167,13 +169,67 @@ export const MECH = {
     // PROPUESTA (la fórmula exacta de «boost» y «saturación» depende de la versión):
     // probabilidad = 1 / max(1, floor(100 / boost² / (rechazos + 1) / saturación))
     // con boost = nivel del puerto y saturación = max(0,05, 1 − mercantes / 150)
-    probBase: 100,
+    // doc-1.6: los mercantes salen bastante más a menudo (antes probBase 100:
+    // un puerto de nivel 1 lanzaba uno cada ~100 s y casi no se notaban)
+    probBase: 30,
     saturationShips: 150,
     saturationMin: 0.05,
+    ownPortShare: 0.6, // sin puertos de otros a mano, a uno propio (cobra solo el dueño, el 60 %)
   },
+  // Pesqueros (doc-1.6): cada puerto tiene tantos faenando como su nivel (hasta
+  // 3); salen a un caladero cercano, pescan un rato y vuelven con oro:
+  // (base + perTile × casillas de ida) × (1 + 0,25 por nivel por encima del 1)
+  fishing: { checkEvery: 20, maxPerPort: 3, base: 6000, perTile: 300, levelBonus: 0.25, fishTicks: 100, minDist: 6, maxDist: 20 },
   // Comercio ferroviario (sección 04.4, wiki OpenFront Train): oro al llegar a cada estación según la relación
   trainRewards: { self: 10000, neutral: 10000, ally: 35000, enemy: 0 },
+
+  // doc-1.6 (PROPUESTA nuestra): el territorio produce. Oro por turno =
+  // taxK × casillas^taxExp, con las casillas del documento (mundo de
+  // 2000×1000): 1.000 casillas → +44; 20.000 → +232; medio mundo (~300.000)
+  // → +1.030 por turno (10 veces el oro base). Las colonias, la mitad
+  tax: { k: 1, exp: 0.55, colonyShare: 0.5 },
+  // Capital (doc-1.6): cada nación nace con la suya, amurallada. Sus mejoras
+  // (sin ocupar más mapa): Industria +25 % del oro pasivo por nivel y
+  // Población +10 % de techo de tropas y +8 % de crecimiento por nivel. Precio
+  // de cada nivel: 150k × 1,75^nivel. Murallas: defensa ×4 (+0,15 por nivel
+  // de mejora) hasta wallRadius casillas del documento. Si cae, el
+  // conquistador se lleva botín y la capital se traslada con la mitad de sus
+  // niveles. Las bombas no destruyen lo que hay dentro de las murallas
+  capital: {
+    maxLevel: 10,
+    indGold: 0.25,
+    popCap: 0.1,
+    popGrowth: 0.08,
+    priceBase: 150000,
+    priceGrowth: 1.75,
+    buildTicks: 50,
+    buildTicksPerLevel: 10,
+    wallRadius: 7,
+    wallMult: 4,
+    wallMultPerLevel: 0.15,
+    lootBase: 250000,
+    lootShare: 0.2,
+    keepShare: 0.5,
+  },
+  // Pueblos (doc-1.6): pequeños y baratos; +30 de oro por turno y +60k de techo por nivel
+  village: { gold: 30, cap: 60000, step: 40000, priceCap: 400000 },
 };
+
+/**
+ * Oro por turno del territorio (doc-1.6): taxK × casillas^taxExp, con las
+ * casillas en unidades del documento (`docArea` casillas actuales por cada una).
+ */
+export function territoryGold(tiles, docArea = 1) {
+  if (tiles <= 0) return 0;
+  return MECH.tax.k * detPow(tiles / docArea, MECH.tax.exp);
+}
+
+/** Precio del siguiente nivel de una mejora de la capital (`level`: el que tiene ahora). */
+export function capitalPrice(level) {
+  let v = MECH.capital.priceBase;
+  for (let i = 0; i < level; i++) v *= MECH.capital.priceGrowth;
+  return Math.round(v);
+}
 
 // ------------------------------------------------------- matemáticas deterministas
 
@@ -354,6 +410,8 @@ export function priceFor(kind, n) {
       return Math.min(P.warship.cap, P.warship.step * ((n.warship || 0) + 1));
     case 'sam':
       return Math.min(P.sam.cap, P.sam.step * ((n.sam || 0) + 1));
+    case 'village':
+      return Math.min(MECH.village.priceCap, MECH.village.step * ((n.village || 0) + 1));
     case 'silo':
       return P.silo;
     case 'missile':

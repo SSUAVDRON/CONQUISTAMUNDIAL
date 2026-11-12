@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { CONFIG, RES } from '../src/config.js';
-import { buildNow, casillaPara } from './ayuda.js';
+import { buildNow, casillaPara, DOC } from './ayuda.js';
 
 function checksum(arr) {
   let h = 2166136261 >>> 0;
@@ -14,7 +14,7 @@ function checksum(arr) {
 
 function runBots(seed, bots, ticks) {
   const map = generateMap(220 * RES, 130 * RES, seed);
-  const game = new Game({ map, seed });
+  const game = new Game({ map, seed, rules: DOC });
   game.addBots(bots);
   game.start();
   for (let i = 0; i < ticks && game.phase !== 'ended'; i++) game.tick();
@@ -78,7 +78,7 @@ test('misma semilla, misma partida', () => {
 
 test('el jugador humano elige posición, se expande y puede recolocarse durante el despliegue', () => {
   const map = generateMap(220 * RES, 130 * RES, 5);
-  const game = new Game({ map, seed: 5 });
+  const game = new Game({ map, seed: 5, rules: DOC });
   const human = game.addPlayer('Yo', [0, 0, 255], true);
   game.start();
 
@@ -117,7 +117,7 @@ test('el jugador humano elige posición, se expande y puede recolocarse durante 
 
 test('un ataque contra un vecino conquista casillas y el defensor pierde tropas', () => {
   const map = generateMap(220 * RES, 130 * RES, 11);
-  const game = new Game({ map, seed: 11 });
+  const game = new Game({ map, seed: 11, rules: DOC });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 255, 0], false);
   game.start();
@@ -164,7 +164,7 @@ test('sin puerto no salen barcos; con puerto cruzan el agua y desembarcan', () =
     const map = generateMap(220 * RES, 130 * RES, seed);
     const big = map.landBodySizes.map((s, i) => [s, i]).filter(([s]) => s >= CONFIG.minSpawnBodySize);
     if (big.length < 2) continue;
-    const game = new Game({ map, seed });
+    const game = new Game({ map, seed, rules: DOC });
     const p = game.addPlayer('Marino', [0, 0, 255], true);
     game.start();
     const home = [...map.coastTiles].find((t) => map.landBody[t] === big[0][1]);

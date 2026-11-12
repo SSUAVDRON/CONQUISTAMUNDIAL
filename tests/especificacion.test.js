@@ -6,14 +6,14 @@ import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { RES } from '../src/config.js';
 import { MECH, PROFILES, detPow, maxTroopsFor, neutralTimeCost, priceFor, regenPerTick, startOffsets } from '../src/mecanicas.js';
-import { buildNow } from './ayuda.js';
+import { buildNow, DOC } from './ayuda.js';
 
 const near = (a, b, eps = 0.01) => Math.abs(a - b) <= eps;
 
 /** Partida con un humano (y un bot para que no gane al instante), lista para jugar. */
 function setup({ seed = 21, rules = {}, place = null } = {}) {
   const map = generateMap(220 * RES, 130 * RES, seed);
-  const game = new Game({ map, seed, rules });
+  const game = new Game({ map, seed, rules: { ...DOC, ...rules } });
   const human = game.addPlayer('Yo', [0, 0, 255], true);
   const other = game.addPlayer('Otro', [255, 0, 0], false);
   game.start();
@@ -235,7 +235,7 @@ test('T12: con trabajadores, deslizar al 50 % solo cambia el reparto y el oro pr
 test('T13: misma semilla y mismas órdenes → mismo resultado, con el orden de ticks estable', () => {
   const run = () => {
     const map = generateMap(180 * RES, 110 * RES, 9);
-    const game = new Game({ map, seed: 9 });
+    const game = new Game({ map, seed: 9, rules: DOC });
     const h = game.addPlayer('Yo', [0, 0, 255], true);
     game.addBots(6);
     game.addColonies(4);
@@ -272,7 +272,7 @@ test('T14: aparición tocando el mar o casillas ocupadas → se recorta o se rec
 
 test('criterios 8.1: casillas = cambios de dueño, los ataques no crean tropas y el oro trae su motivo', () => {
   const map = generateMap(180 * RES, 110 * RES, 4);
-  const game = new Game({ map, seed: 4 });
+  const game = new Game({ map, seed: 4, rules: DOC });
   game.addBots(8);
   game.addColonies(6);
   game.start();
@@ -299,7 +299,7 @@ test('criterios 8.1: casillas = cambios de dueño, los ataques no crean tropas y
 
 test('partida simulada de 5 minutos: evolución de tropas, oro y casillas (para comparar con una grabación)', () => {
   const map = generateMap(360 * RES, 210 * RES, 12);
-  const game = new Game({ map, seed: 12, rules: { winShare: 0.9 } });
+  const game = new Game({ map, seed: 12, rules: { ...DOC, winShare: 0.9 } });
   game.addBots(12);
   game.addColonies(10);
   game.start();

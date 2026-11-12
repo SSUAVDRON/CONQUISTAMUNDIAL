@@ -7,11 +7,12 @@ import { Game } from '../src/game.js';
 import { CONFIG, RES, cleanRules } from '../src/config.js';
 import { POI, placePoints } from '../src/estrategia.js';
 import { TECHS, techAvailable } from '../src/tecnologias.js';
+import { DOC } from './ayuda.js';
 
 /** Dos naciones pegadas (A humana y B bot sin cerebro activo), ya en juego. */
 function twoNeighbors(seed = 11, rules = null, { third = false } = {}) {
   const map = generateMap(220 * RES, 130 * RES, seed);
-  const game = new Game({ map, seed, rules });
+  const game = new Game({ map, seed, rules: { ...DOC, ...rules } });
   const a = game.addPlayer('A', [255, 0, 0], true);
   const b = game.addPlayer('B', [0, 255, 0], false);
   // Un tercero lejos, para que la partida no acabe si cae B

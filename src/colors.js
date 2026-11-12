@@ -112,13 +112,14 @@ export function territoryRgb(rgb) {
 }
 
 /**
- * Paleta de las naciones: 24 tonos repartidos en el círculo cromático, cada
- * uno con tres luces (oscuro, medio y claro): 72 colores bien distintos.
+ * Paleta de las naciones: 36 tonos repartidos en el círculo cromático, cada
+ * uno con tres luces (oscuro, medio y claro): 108 colores. Con 90 naciones
+ * casi no se repite ninguno.
  */
 export const NATION_PALETTE = (() => {
   const out = [];
-  for (const [s, l] of [[0.62, 0.5], [0.55, 0.62], [0.5, 0.72]]) {
-    for (let h = 0; h < 360; h += 15) out.push(hslToRgb(h + (l > 0.6 ? 7 : 0), s, l));
+  for (const [s, l, off] of [[0.62, 0.5, 0], [0.55, 0.62, 3.3], [0.5, 0.72, 6.6]]) {
+    for (let h = 0; h < 360; h += 10) out.push(hslToRgb(h + off, s, l));
   }
   return out;
 })();
@@ -170,8 +171,9 @@ export function assignNationColors(nations, fixed, radius) {
         const v = deltaE(labs[c], fl) - 12;
         if (v < worst) worst = v;
       }
-      // A igualdad, el color menos usado y, entre esos, uno que dependa de la nación
-      const score = Math.min(worst, 60) - uses[c] * 3 - ((c * 7 + nations[i].id * 13) % 17) * 0.01;
+      // Pasado un ΔE de 40 ya se distinguen bien: entonces manda no repetir
+      // (y, a igualdad, uno que dependa de la nación)
+      const score = Math.min(worst, 40) - uses[c] * 12 - ((c * 7 + nations[i].id * 13) % 17) * 0.01;
       if (score > bestScore) {
         bestScore = score;
         best = c;

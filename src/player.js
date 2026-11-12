@@ -1,7 +1,10 @@
 // Estado de una nación (humana o bot).
-import { CONFIG } from './config.js';
+import { CONFIG, RES } from './config.js';
 import { emptyMods } from './tecnologias.js';
-import { MECH, maxTroopsFor, regenPerTick } from './mecanicas.js';
+import { MECH, maxTroopsFor, regenPerTick, territoryGold } from './mecanicas.js';
+
+/** Casillas actuales por cada casilla del documento (mundo de 2000×1000, RES 2). */
+const DOC_AREA = (RES / 2) * (RES / 2);
 
 /**
  * x^0,75 solo con raíces cuadradas: a diferencia de Math.pow, da el mismo
@@ -30,6 +33,8 @@ export class Player {
     // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
     this.troopMult = 1;
     this.goldMult = 1;
+    /** doc-1.6: el territorio produce oro (regla `taxes`). */
+    this.taxes = true;
     /** Resumen de vecinos de la IA guardado (ver Game.neighborSummary). */
     this._nbSummary = null;
     /** Última casilla que perdió (donde sale el botín al ser eliminado). */
@@ -41,12 +46,17 @@ export class Player {
     this.spec = '';
     this.mods = emptyMods();
     this.capitalTile = -1;
+    /** Su capital (doc-1.6): edificio único con murallas y mejoras de industria y población. */
+    this.capital = null;
+    /** Lugares de interés (doc-1.6): bonos que duran unos segundos ({ kind, until }) y mejoras para siempre. */
+    this.buffs = [];
+    this.permMods = null;
     this.passes = 0; // pasos de montaña que controla
     this.helpAt = -Infinity; // última vez que pidió ayuda a sus aliados
     /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). */
     // Oro ganado por fuente (TR04): base pasiva, bonos (puntos estratégicos,
     // tecnologías, especialización), trabajadores, comercio, conquistas, botín y regalos
-    this.income = { base: 0, bonus: 0, workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
+    this.income = { base: 0, tax: 0, villages: 0, bonus: 0, workers: 0, trade: 0, fishing: 0, conquest: 0, loot: 0, gifts: 0 };
     this.spent = { buildings: 0, research: 0 };
     /** Total ingresado cada 10 s (último minuto), para el ritmo de oro y la victoria económica. */
     this.incomeHist = [];
@@ -71,12 +81,12 @@ export class Player {
     this.boatCount = 0;
     /** Edificios por tipo (se actualiza al construir, capturar o perder). */
     // warship = buques a flote; missile no se usa (el misil no se acumula)
-    this.buildings = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0, missile: 0 };
+    this.buildings = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0, missile: 0 };
     /** Edificios terminados por tipo y suma de sus niveles (los que están en obras no cuentan). */
-    this.active = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
-    this.levels = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
+    this.active = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
+    this.levels = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
     /** Para los precios: niveles que tiene de cada edificio, contando los que están en obras o mejorándose. */
-    this.owned = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0 };
+    this.owned = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0 };
     /** Fortalezas propias terminadas (casillas), para calcular la defensa. */
     this.forts = new Set();
 
@@ -112,7 +122,7 @@ export class Player {
    * según la dificultad. No añade tropas: solo fija el límite.
    */
   maxTroops() {
-    return maxTroopsFor(this.tiles, this.levels.city) * this.capMult * (1 + this.mods.cap);
+    return (maxTroopsFor(this.tiles, this.levels.city) + MECH.village.cap * (this.levels.village || 0)) * this.capMult * (1 + this.mods.cap);
   }
 
   /**
@@ -137,7 +147,7 @@ export class Player {
    */
   goldPerTick() {
     const b = this.goldBreakdown();
-    return b.base + b.workers + b.bonus;
+    return b.base + b.tax + b.villages + b.workers + b.bonus;
   }
 
   /**
@@ -146,10 +156,14 @@ export class Player {
    * puntos estratégicos, tecnologías y especialización sobre lo anterior).
    */
   goldBreakdown() {
-    if (!this.tiles) return { base: 0, workers: 0, bonus: 0 };
+    if (!this.tiles) return { base: 0, tax: 0, villages: 0, workers: 0, bonus: 0 };
     const base = this.baseGold() * this.goldMult;
+    // doc-1.6: el territorio produce (impuestos) y los pueblos también
+    const tax = this.taxes ? territoryGold(this.tiles, DOC_AREA) * (this.weak ? MECH.tax.colonyShare : 1) * this.goldMult : 0;
+    const villages = MECH.village.gold * (this.levels.village || 0) * this.goldMult;
     const workers = this.economy === 'workers' ? Math.floor(this.workers / MECH.workersPerGold) * this.goldMult : 0;
-    return { base, workers, bonus: (base + workers) * this.mods.gold };
+    // Bonos (industria de la capital, puntos, tecnologías…) sobre todo lo anterior
+    return { base, tax, villages, workers, bonus: (base + tax + villages + workers) * this.mods.gold };
   }
 
   maxBoats() {

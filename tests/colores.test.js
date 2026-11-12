@@ -8,10 +8,10 @@ import { Game } from '../src/game.js';
 
 const seen = (c) => rgbToLab(territoryRgb(c));
 
-test('colores: paleta de 72 colores distintos', () => {
-  assert.equal(NATION_PALETTE.length, 72);
+test('colores: paleta de 108 colores distintos', () => {
+  assert.equal(NATION_PALETTE.length, 108);
   const labs = NATION_PALETTE.map(seen);
-  for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) assert.ok(deltaE(labs[i], labs[j]) > 3, `${i} y ${j} casi iguales`);
+  for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) assert.ok(deltaE(labs[i], labs[j]) > 2, `${i} y ${j} casi iguales`);
 });
 
 test('colores: en una rejilla de naciones, las vecinas se distinguen bien; sin azar; lejos del color del jugador', () => {

@@ -1625,6 +1625,13 @@ function humanIntent(intent) {
 function setBuildMode(kind) {
   const { game, human } = state;
   if (state.demo || !human || !human.alive || game.phase !== 'playing') return;
+  // Las mejoras de la capital no se colocan: se piden al momento
+  if (BUILDINGS[kind] && BUILDINGS[kind].unit === 'capital') {
+    state.buildMode = null;
+    humanIntent({ type: 'build', kind });
+    ui.update(game, human, state.ratio, state.buildMode);
+    return;
+  }
   state.buildMode = state.buildMode === kind ? null : kind;
   ui.update(game, human, state.ratio, state.buildMode);
 }
@@ -1695,7 +1702,7 @@ const input = new Input(canvas, camera, {
   onBuildKey: setBuildMode,
   onHover(sx, sy) {
     state.hover = { tile: sx < 0 ? -1 : tileAt(sx, sy), x: sx, y: sy };
-    if (!state.demo && state.game && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, sx, sy);
+    if (!state.demo && state.game && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, sx, sy, camera.zoom);
   },
   onRatio: setRatio,
   onRatioStep: (d) => setRatio(state.ratio + d),
@@ -1821,7 +1828,7 @@ function frame(now) {
     state.lastHud = now;
     try {
       ui.update(state.game, state.human, state.ratio, state.buildMode);
-      if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
+      if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y, camera.zoom);
       if (state.net) ui.setNetNote(state.net.status);
       if (tutorial.active) tutorial.update(tutorialState());
     } catch (err) {

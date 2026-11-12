@@ -20,3 +20,10 @@ export function casillaPara(game, p, kind) {
   }
   return -1;
 }
+
+/**
+ * Reglas para comprobar las fórmulas del documento aisladas: sin la capital
+ * amurallada (que ocupa la casilla de salida) ni el oro del territorio de
+ * doc-1.6. Lo nuevo tiene sus propios tests (economia.test.js).
+ */
+export const DOC = { capitals: false, taxes: false };

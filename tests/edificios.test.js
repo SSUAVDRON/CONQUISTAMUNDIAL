@@ -3,14 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { buildNow, terminarObras } from './ayuda.js';
+import { buildNow, terminarObras, DOC } from './ayuda.js';
 import { BUILDINGS, CONFIG, RES } from '../src/config.js';
 import { MECH, PROFILES, regenPerTick } from '../src/mecanicas.js';
 
 /** Partida con un humano ya desplegado en la mayor masa de tierra. */
 function setup(seed = 21) {
   const map = generateMap(220 * RES, 130 * RES, seed);
-  const game = new Game({ map, seed });
+  const game = new Game({ map, seed, rules: DOC });
   const human = game.addPlayer('Yo', [0, 0, 255], true);
   game.start();
   const body = map.landBodySizes.indexOf(Math.max(...map.landBodySizes));
@@ -92,7 +92,7 @@ test('tropas: techo y regeneración del documento; con trabajadores, la poblaci�
 
   // Variante con trabajadores (sección 07): P = soldados + trabajadores
   const map = generateMap(220 * RES, 130 * RES, 21);
-  const g = new Game({ map, seed: 21, rules: { economy: 'workers' } });
+  const g = new Game({ map, seed: 21, rules: { ...DOC, economy: 'workers' } });
   const w = g.addPlayer('W', [0, 0, 255], true);
   g.start();
   g.spawnPlayer(w, g.findSpawnTile());
@@ -120,7 +120,7 @@ test('tropas: techo y regeneración del documento; con trabajadores, la poblaci�
 test('reparto con trabajadores (TR02): 70/30 → 30/70 conserva la población y el ataque sale solo de los soldados', async () => {
   const { TROOP_SCALE } = await import('../src/format.js');
   const map = generateMap(220 * RES, 130 * RES, 21);
-  const g = new Game({ map, seed: 21, rules: { economy: 'workers' } });
+  const g = new Game({ map, seed: 21, rules: { ...DOC, economy: 'workers' } });
   const w = g.addPlayer('W', [0, 0, 255], true);
   const o = g.addPlayer('O', [255, 0, 0], false);
   g.start();
@@ -276,7 +276,7 @@ test('los bots construyen durante la partida', () => {
   const map = generateMap(220 * RES, 130 * RES, 3);
   // Con oro inicial: el ingreso fijo solo no da para un edificio en 4 min (sin
   // colonias que eliminar en este mapa de prueba)
-  const game = new Game({ map, seed: 3, rules: { startGold: 500000 } });
+  const game = new Game({ map, seed: 3, rules: { ...DOC, startGold: 500000 } });
   game.addBots(10);
   game.start();
   for (let i = 0; i < 2500 && game.phase !== 'ended'; i++) game.tick();
@@ -295,7 +295,7 @@ test('los bots construyen durante la partida', () => {
 
 test('las reglas de la partida: oro inicial, victoria y armas desactivadas', () => {
   const map = generateMap(220 * RES, 130 * RES, 21);
-  const game = new Game({ map, seed: 21, rules: { startGold: 600000, winShare: 0.5, missiles: false, warships: false } });
+  const game = new Game({ map, seed: 21, rules: { ...DOC, startGold: 600000, winShare: 0.5, missiles: false, warships: false } });
   const p = game.addPlayer('P', [0, 0, 0], true);
   game.addBots(3);
   game.start();
@@ -359,7 +359,7 @@ test('subir de nivel: cuesta lo mismo que el siguiente de su tipo, tarda y suma 
 
 test('colonias (los bots del documento): un tercio del techo, mitad de regeneración, 50 de oro y sin oro por casilla', () => {
   const map = generateMap(220 * RES, 130 * RES, 21);
-  const game = new Game({ map, seed: 21 });
+  const game = new Game({ map, seed: 21, rules: DOC });
   const a = game.addPlayer('A', [255, 0, 0], true);
   game.addColonies(4);
   game.start();
@@ -403,7 +403,7 @@ test('reglas personalizadas: cualquier oro inicial y número de colonias', async
   assert.equal(cleanRules({ colonies: 9999 }).colonies, C.colonyMax);
   // La partida usa el oro inicial elegido
   const map = generateMap(160 * RES, 100 * RES, 3);
-  const game = new Game({ map, seed: 3, rules: { startGold: 5000000 } });
+  const game = new Game({ map, seed: 3, rules: { ...DOC, startGold: 5000000 } });
   const p = game.addPlayer('P', [0, 0, 0], true);
   game.start();
   assert.equal(p.gold, 5000000);
