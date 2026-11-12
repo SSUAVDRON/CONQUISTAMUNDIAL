@@ -277,7 +277,7 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .ratio strong { color: var(--texto); }
 
 #construir { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
-#construir button {
+#hud .obra {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -286,15 +286,15 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
   position: relative;
   min-width: 0;
 }
-#construir canvas { width: 24px; height: 24px; flex: none; }
-#construir .b-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
-#construir .b-nombre { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#construir .b-coste { font-size: 11px; color: var(--acento); font-variant-numeric: tabular-nums; white-space: nowrap; }
-#construir .b-num { position: absolute; top: 3px; right: 6px; font-size: 11px; color: var(--texto-suave); }
-#construir button.caro .b-coste { color: var(--texto-suave); }
-#construir button.caro canvas { opacity: 0.45; }
-#construir button.activo { background: rgba(242, 179, 61, 0.22); border-color: var(--acento); }
-#construir button:disabled { opacity: 0.5; cursor: default; }
+#hud .obra canvas { width: 24px; height: 24px; flex: none; }
+#hud .obra .b-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+#hud .obra .b-nombre { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud .obra .b-coste { font-size: 11px; color: var(--acento); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud .obra .b-num { position: absolute; top: 3px; right: 6px; font-size: 11px; color: var(--texto-suave); }
+#hud .obra.caro .b-coste { color: var(--texto-suave); }
+#hud .obra.caro canvas { opacity: 0.45; }
+#hud .obra.activo { background: rgba(242, 179, 61, 0.22); border-color: var(--acento); }
+#hud .obra:disabled { opacity: 0.5; cursor: default; }
 button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 .centrado { text-align: center; color: var(--texto-suave); }
 
@@ -525,9 +525,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   #panel-jugador { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px 10px; }
   /* En móvil la barra de construcción se desliza en horizontal */
   #construir { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
-  #construir button { flex: 0 0 auto; min-width: 116px; padding: 4px 6px 4px 4px; gap: 4px; }
-  #construir canvas { width: 20px; height: 20px; }
-  #construir .b-nombre { font-size: 12px; }
+  #hud .obra { flex: 0 0 auto; min-width: 116px; padding: 4px 6px 4px 4px; gap: 4px; }
+  #hud .obra canvas { width: 20px; height: 20px; }
+  #hud .obra .b-nombre { font-size: 12px; }
   .cifras { gap: 4px; grid-template-columns: 1.5fr 1fr 1fr 0.8fr; }
   .cifras .valor { font-size: 13px; }
   #tooltip { display: none !important; }
@@ -1014,10 +1014,10 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 .cifras .sub { transition: color 0.3s; }
 
 /* Construcción: respuesta al pasar y al pulsar */
-#construir button { transition: transform 0.12s, border-color 0.15s, background 0.15s, box-shadow 0.15s; }
-#construir button:not(:disabled):not(.caro):hover { transform: translateY(-2px); border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
-#construir button:not(:disabled):active { transform: translateY(0) scale(0.97); }
-#construir button.activo { box-shadow: 0 0 0 1px var(--acento), 0 0 16px rgba(242, 179, 61, 0.35); }
+#hud .obra { transition: transform 0.12s, border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+#hud .obra:not(:disabled):not(.caro):hover { transform: translateY(-2px); border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
+#hud .obra:not(:disabled):active { transform: translateY(0) scale(0.97); }
+#hud .obra.activo { box-shadow: 0 0 0 1px var(--acento), 0 0 16px rgba(242, 179, 61, 0.35); }
 
 /* ---------- Clasificación ---------- */
 #lista-clasificacion li { position: relative; overflow: hidden; transition: background 0.2s; }
@@ -1287,13 +1287,13 @@ body.con-tutorial #eventos { top: auto; }
 
 /* Botones de construcción: compactos, con relleno de «cuánto falta» */
 #construir { margin-top: 0; gap: 5px; }
-#construir button {
+#hud .obra {
   height: 40px;
   padding: 4px 8px 4px 5px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
 }
-#construir button::after {
+#hud .obra::after {
   content: "";
   position: absolute;
   left: 0;
@@ -1304,10 +1304,10 @@ body.con-tutorial #eventos { top: auto; }
   opacity: 0.65;
   transition: width 0.22s linear;
 }
-#construir button:not(.caro)::after { background: var(--bien); opacity: 0.55; }
-#construir canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
-#construir button.en-obras canvas { animation: martillo 0.9s ease-in-out infinite; }
-#construir .b-num { top: 2px; right: 5px; font-size: 10.5px; }
+#hud .obra:not(.caro)::after { background: var(--bien); opacity: 0.55; }
+#hud .obra canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
+#hud .obra.en-obras canvas { animation: martillo 0.9s ease-in-out infinite; }
+#hud .obra .b-num { top: 2px; right: 5px; font-size: 10.5px; }
 @keyframes martillo { 50% { transform: rotate(-9deg) translateY(-1px); } }
 
 /* Plegado: solo tropas, oro, territorio, barcos y la fuerza de ataque */
@@ -1338,7 +1338,7 @@ body.con-tutorial #eventos { top: auto; }
   .pj-resumen { flex: 1 1 100%; }
   .pj-ataque { flex: 1 1 100%; padding: 0; border: none; }
   .ratio-cifra strong { font-size: 16px; }
-  #construir button { height: 38px; }
+  #hud .obra { height: 38px; }
   #aviso { bottom: calc(var(--pj-alto, 250px) + 20px + env(safe-area-inset-bottom, 0px)); }
   .tutorial { bottom: calc(var(--pj-alto, 250px) + 20px + env(safe-area-inset-bottom, 0px)); }
   #eventos {
@@ -1515,10 +1515,10 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador .cifras .valor { font-size: 14px; }
 #panel-jugador .etq { font-size: 10px; }
 .ratio-cifra strong { font-size: 18px; }
-#construir button { height: 36px; }
-#construir .b-nombre { font-size: 12px; }
-#construir .b-coste { font-size: 10.5px; }
-#construir canvas { width: 24px; height: 24px; }
+#hud .obra { height: 36px; }
+#hud .obra .b-nombre { font-size: 12px; }
+#hud .obra .b-coste { font-size: 10.5px; }
+#hud .obra canvas { width: 24px; height: 24px; }
 
 /* Pantallas bajas: menos tarjetas */
 @media (max-height: 760px) { #combates .frente:nth-child(n+4) { display: none; } }
@@ -1551,8 +1551,8 @@ body.con-tutorial #eventos { top: auto; }
 #lista-clasificacion li.colonia .nom-txt { color: var(--texto-suave); font-style: italic; }
 
 /* Edificios que no puedes pagar: grises de un vistazo */
-#construir button.caro { filter: grayscale(1) brightness(0.85); opacity: 0.62; }
-#construir button.caro:hover { filter: grayscale(0.6); opacity: 0.85; }
+#hud .obra.caro { filter: grayscale(1) brightness(0.85); opacity: 0.62; }
+#hud .obra.caro:hover { filter: grayscale(0.6); opacity: 0.85; }
 
 /* Panel central más estrecho y compacto (mismos textos e iconos) */
 #panel-jugador { gap: 10px; padding: 7px 36px 7px 12px; }
@@ -1562,8 +1562,8 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador .cabecera { margin-bottom: 3px; }
 #panel-jugador .barra { margin-bottom: 5px; }
 #construir { gap: 4px; }
-#construir button { height: 34px; padding: 3px 6px 3px 4px; gap: 5px; }
-#construir canvas { padding: 1px; }
+#hud .obra { height: 34px; padding: 3px 6px 3px 4px; gap: 5px; }
+#hud .obra canvas { padding: 1px; }
 .pj-plegar { top: 5px; right: 5px; width: 24px; height: 24px; }
 @media (min-width: 1100px) {
   /* Centrado y con anchura justa: no ocupa toda la pantalla */
@@ -1584,7 +1584,7 @@ body.con-tutorial #eventos { top: auto; }
 @media (min-width: 1500px) {
   #panel-jugador { width: min(1010px, calc(100vw - 600px)); }
 }
-#construir button { padding: 3px 5px 3px 4px; gap: 4px; }
+#hud .obra { padding: 3px 5px 3px 4px; gap: 4px; }
 
 /* =========================================================== Inicio renovado */
 
@@ -1829,9 +1829,9 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 #panel-jugador .cifras .valor .max #pj-tropas-max { color: #f3f5f9; }
 
 /* Panel de edificios: solo icono (a color) y precio; el nombre sale al pasar el ratón */
-#construir button { justify-content: center; gap: 5px; padding: 3px 6px; }
-#construir canvas { width: 28px; height: 28px; padding: 0; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3)); }
-#construir .b-coste { font-size: 11px; font-weight: 700; }
+#hud .obra { justify-content: center; gap: 5px; padding: 3px 6px; }
+#hud .obra canvas { width: 28px; height: 28px; padding: 0; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3)); }
+#hud .obra .b-coste { font-size: 11px; font-weight: 700; }
 #panel-jugador .pj-obras { flex: 1.1 1 0; }
 @media (min-width: 1100px) {
   #panel-jugador { width: min(900px, calc(100vw - 24px)); }
@@ -1841,9 +1841,9 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   #panel-jugador { width: min(900px, calc(100vw - 600px)); }
 }
 @media (max-width: 720px) {
-  #construir button { min-width: 78px; }
+  #hud .obra { min-width: 78px; }
 }
-#construir canvas { background: none; width: 30px; height: 30px; }
+#hud .obra canvas { background: none; width: 30px; height: 30px; }
 
 /* Botón de sonido de la barra superior */
 .btn-sonido { display: inline-flex; align-items: center; justify-content: center; width: 34px; padding: 5px; }
@@ -1857,10 +1857,10 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .volumenes input[type="range"] { width: 100%; }
 #barra-superior .btn-sonido { padding: 5px; width: 34px; }
 /* Panel de edificios: pictograma blanco y la tecla arriba a la izquierda */
-#construir canvas { background: none; width: 26px; height: 26px; margin-left: 6px; }
-#construir .b-tecla { position: absolute; top: 2px; left: 5px; font-size: 9.5px; font-weight: 700; color: var(--texto-suave); line-height: 1; pointer-events: none; }
-#construir .b-coste { color: #e9eef6; font-weight: 600; }
-#construir button:not(.caro) .b-coste { color: var(--acento); }
+#hud .obra canvas { background: none; width: 26px; height: 26px; margin-left: 6px; }
+#hud .obra .b-tecla { position: absolute; top: 2px; left: 5px; font-size: 9.5px; font-weight: 700; color: var(--texto-suave); line-height: 1; pointer-events: none; }
+#hud .obra .b-coste { color: #e9eef6; font-weight: 600; }
+#hud .obra:not(.caro) .b-coste { color: var(--acento); }
 /* Portada: nuestro mapa pintado en un lienzo */
 canvas.portada-arte { object-fit: cover; background: #122d5a; }
 /* Barra de tropas: franja donde más rápido crecen (entre el 35 y el 65 % del máximo) */
@@ -1916,11 +1916,11 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #ratio::-webkit-slider-thumb { width: 22px; height: 22px; }
   /* Los 8 edificios a la vez: icono encima y precio debajo */
   #construir { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; overflow: visible; padding: 0; }
-  #construir button { flex-direction: column; justify-content: center; gap: 0; height: 44px; min-width: 0; padding: 2px 1px; }
-  #construir canvas { width: 22px; height: 22px; }
-  #construir .b-coste { font-size: 9.5px; }
-  #construir .b-tecla { display: none; }
-  #construir .b-num { top: 1px; right: 3px; font-size: 9px; }
+  #hud .obra { flex-direction: column; justify-content: center; gap: 0; height: 44px; min-width: 0; padding: 2px 1px; }
+  #hud .obra canvas { width: 22px; height: 22px; }
+  #hud .obra .b-coste { font-size: 9.5px; }
+  #hud .obra .b-tecla { display: none; }
+  #hud .obra .b-num { top: 1px; right: 3px; font-size: 9px; }
   /* Clasificación y combates, compactos */
   #columna-izquierda { gap: 5px; }
   #clasificacion li:nth-child(n+4):not(.yo) { display: none; }
@@ -1954,7 +1954,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #panel-jugador .cabecera { display: none; }
   #panel-jugador .etq-icono { display: none; }
   #panel-jugador .ratio { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-  #construir button { height: 40px; }
+  #hud .obra { height: 40px; }
   #barra-superior { top: calc(6px + env(safe-area-inset-top, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); gap: 6px; padding: 3px 5px; }
   #barra-superior .dato { font-size: 12px; }
   #barra-superior .dato + .dato { padding-left: 6px; }
@@ -2288,9 +2288,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 #hud.escritorio #barra-obras .pj-obras { flex: none; opacity: 1; margin: 0; height: auto; pointer-events: auto; }
 #hud.escritorio #construir { display: grid; grid-template-columns: repeat(5, 96px); gap: 6px; margin: 0; }
-#hud.escritorio #construir button { height: 44px; }
-#hud.escritorio #construir canvas { width: 28px; height: 28px; }
-#hud.escritorio #construir .b-num { font-size: 11px; font-weight: 800; color: #fff; }
+#hud.escritorio .obra { height: 44px; }
+#hud.escritorio .obra canvas { width: 28px; height: 28px; }
+#hud.escritorio .obra .b-num { font-size: 11px; font-weight: 800; color: #fff; }
 #hud.escritorio.pj-plegado #barra-obras { display: none; }
 
 /* Avisos: abajo a la derecha (el panel ya no les quita el sitio) */
@@ -3605,4 +3605,145 @@ body.sin-animaciones .despliegue { animation: none; }
   .dp-textos small { font-size: 12px; }
   .dp-auto { grid-column: 1 / -1; padding: 9px 14px; }
   .dp-barra { margin: 0 -12px; }
+}
+
+/* ---------- Edificios en tres grupos: Economía, Defensa y Ataque ---------- */
+.grupo-obras[data-grupo="economia"], .bandeja-obras[data-grupo="economia"] { --g-color: #f2b33d; --g-glow: rgba(242, 179, 61, 0.35); }
+.grupo-obras[data-grupo="defensa"], .bandeja-obras[data-grupo="defensa"] { --g-color: #6cc0ff; --g-glow: rgba(108, 192, 255, 0.35); }
+.grupo-obras[data-grupo="ataque"], .bandeja-obras[data-grupo="ataque"] { --g-color: #ff7a6b; --g-glow: rgba(255, 122, 107, 0.35); }
+#hud .obra .b-nombre { display: none; }
+
+/* Móvil y pantallas estrechas: una fila con los tres grupos */
+#construir.agrupado { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 6px; padding: 0; overflow: visible; }
+#construir.agrupado .grupo-obras { min-width: 0; }
+#construir.agrupado .grupo-obras[hidden] { display: none; }
+#construir.agrupado .g-items { display: none; }
+.g-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 40px;
+  padding: 4px 9px 4px 5px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  color: var(--texto-1);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, background 0.2s, border-color 0.2s, box-shadow 0.25s;
+}
+/* Franja de color del grupo, abajo */
+.g-tab::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--g-color);
+  opacity: 0.55;
+  transform: scaleX(0.35);
+  transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.3s;
+}
+.g-tab:active { transform: scale(0.97); }
+.g-tab .g-icono { flex: none; width: 26px; height: 26px; padding: 2px; border-radius: 8px; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.32)); }
+.g-tab .g-nombre { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-tab .g-punto { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(95, 211, 141, 0.18); opacity: 0; transform: scale(0.3); transition: opacity 0.25s, transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.g-tab.listo .g-punto { opacity: 1; transform: none; }
+.grupo-obras.abierto .g-tab { background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); border-color: color-mix(in srgb, var(--g-color) 55%, transparent); }
+.grupo-obras.abierto .g-tab::after, .g-tab.activo::after { transform: none; opacity: 1; }
+.g-tab.activo { border-color: var(--g-color); background: linear-gradient(180deg, color-mix(in srgb, var(--g-color) 26%, transparent), color-mix(in srgb, var(--g-color) 8%, transparent)); box-shadow: 0 0 14px var(--g-glow); }
+.g-tab:disabled { opacity: 0.5; }
+
+/* Bandeja: sube desde los grupos con los edificios del elegido */
+.bandeja-obras {
+  position: fixed;
+  z-index: 40;
+  padding: 8px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #182134, #0a0e18);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.bandeja-obras[hidden] { display: none; }
+.bandeja-obras.abierto { opacity: 1; transform: none; pointer-events: auto; }
+.bandeja-obras::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--g-color), transparent);
+  box-shadow: 0 0 10px var(--g-glow);
+}
+.bandeja-obras .g-items { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.bandeja-obras .obra {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  height: auto;
+  min-height: 74px;
+  padding: 7px 3px 6px;
+  border-radius: 12px;
+}
+.bandeja-obras.abierto .obra { animation: obraSube 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.bandeja-obras.abierto .obra:nth-child(2) { animation-delay: 0.035s; }
+.bandeja-obras.abierto .obra:nth-child(3) { animation-delay: 0.07s; }
+.bandeja-obras.abierto .obra:nth-child(4) { animation-delay: 0.105s; }
+@keyframes obraSube { from { opacity: 0; transform: translateY(10px) scale(0.92); } }
+#hud .bandeja-obras .obra canvas { width: 32px; height: 32px; margin: 0; padding: 0; background: none; }
+#hud .bandeja-obras .obra .b-nombre { display: block; max-width: 100%; font-size: 11px; font-weight: 700; color: var(--texto-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud .bandeja-obras .obra .b-coste { font-size: 10.5px; }
+#hud .bandeja-obras .obra .b-tecla { display: none; }
+#hud .bandeja-obras .obra .b-num { top: 4px; right: 6px; font-size: 10px; }
+
+/* Ordenador: los tres grupos a la vista, cada uno con su título */
+#hud.escritorio #construir.agrupado { display: flex; align-items: stretch; gap: 0; margin: 0; }
+#hud.escritorio #construir.agrupado .grupo-obras { display: flex; flex-direction: column; gap: 6px; padding: 0 10px; }
+#hud.escritorio #construir.agrupado .grupo-obras:first-child { padding-left: 0; }
+#hud.escritorio #construir.agrupado .grupo-obras:last-child { padding-right: 0; }
+#hud.escritorio #construir.agrupado .grupo-obras + .grupo-obras { border-left: 1px solid rgba(255, 255, 255, 0.07); }
+#hud.escritorio .g-tab { height: auto; padding: 0 2px; gap: 5px; border: 0; background: none; box-shadow: none; pointer-events: none; font-size: 10px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--g-color); overflow: visible; }
+#hud.escritorio .g-tab::after, #hud.escritorio .g-tab .g-icono { display: none; }
+#hud.escritorio .g-tab .g-punto { width: 5px; height: 5px; box-shadow: none; }
+#hud.escritorio .g-tab.activo { background: none; box-shadow: none; }
+/* Icono encima y precio debajo; en dos filas si la pantalla no da para una */
+#hud.escritorio #construir.agrupado .g-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 44px); grid-auto-columns: 66px; gap: 5px; }
+#hud.escritorio .obra { height: 44px; flex-direction: column; justify-content: center; gap: 1px; padding: 2px 3px; }
+#hud.escritorio .obra canvas { width: 24px; height: 24px; margin: 0; }
+#hud.escritorio .obra .b-coste { font-size: 10.5px; }
+@media (min-width: 1500px) {
+  #hud.escritorio #construir.agrupado .g-items { grid-template-rows: 48px; grid-auto-columns: 64px; }
+  #hud.escritorio .obra { height: 48px; }
+  #hud.escritorio .obra canvas { width: 26px; height: 26px; }
+}
+/* Centrada entre el panel de la izquierda y los avisos */
+#hud.escritorio #barra-obras { left: 356px; right: 314px; width: max-content; max-width: calc(100vw - 670px); margin-inline: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bandeja-obras, .bandeja-obras.abierto .obra, .g-tab, .g-tab::after { transition: none; animation: none !important; }
+}
+/* Móvil: el aviso de construir (o de la tregua) va por encima del minimapa y
+   de los avisos, como tarjeta (la píldora con varias líneas parecía una mancha) */
+@media (max-width: 720px) {
+  #aviso { z-index: 30; width: max-content; max-width: calc(100vw - 24px); padding: 8px 14px; border-radius: 14px; font-size: 13px; line-height: 1.3; }
 }

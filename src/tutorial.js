@@ -5,6 +5,9 @@ import { AREA } from './config.js';
 
 const $ = (id) => document.getElementById(id);
 
+/** Abre un grupo de la barra de edificios (en el móvil están plegados en una bandeja). */
+const openGroup = (id) => $('construir')?.dispatchEvent(new CustomEvent('abrir-grupo', { detail: id }));
+
 /**
  * Pasos: `text`, `check(s)` (¿cumplido?), `enter(s)` (al empezar el paso),
  * `highlight` (selector CSS) e `info` (solo se avanza con «Siguiente»).
@@ -33,10 +36,11 @@ const STEPS = [
     check: (s) => Math.abs(s.ratio - 0.2) > 0.04,
   },
   {
-    text: 'Construye una ciudad: pulsa Q (o el botón Ciudad) y haz clic dentro de tu territorio. Te damos el oro.',
-    highlight: '#construir [data-kind="city"]',
+    text: 'Construye una ciudad: pulsa Q (o Economía → Ciudad) y haz clic dentro de tu territorio. Te damos el oro.',
+    highlight: '#hud [data-kind="city"]',
     enter: (s) => {
       s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'city'));
+      openGroup('economia');
     },
     check: (s) => s.human.buildings.city >= 1,
   },
@@ -49,10 +53,11 @@ const STEPS = [
     check: (s) => s.human.allies.size > 0 || s.game.requests.some((r) => r.from === s.human.id),
   },
   {
-    text: 'Construye un puerto en tu costa con la tecla E. Sus mercantes irán a puertos de otros países y os darán oro a los dos al llegar. Si no tienes costa, salta este paso.',
-    highlight: '#construir [data-kind="port"]',
+    text: 'Construye un puerto en tu costa (o en la orilla de un río que llegue al mar) con la tecla E, o Economía → Puerto. Sus mercantes irán a puertos de otros países y os darán oro a los dos al llegar. Si no tienes costa, salta este paso.',
+    highlight: '#hud [data-kind="port"]',
     enter: (s) => {
       s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'port'));
+      openGroup('economia');
     },
     check: (s) => s.human.buildings.port >= 1,
   },

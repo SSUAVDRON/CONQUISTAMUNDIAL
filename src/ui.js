@@ -1,6 +1,6 @@
 // Interfaz HTML de la partida: panel del jugador, clasificación, diplomacia,
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
-import { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
+import { BUILDINGS, BUILD_GROUPS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } from './config.js';
 import { rgbToCss } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatShare, formatTime, hudSnapshot } from './format.js';
 import { drawBuildingReal, flagCss, hasFlag } from './icons.js';
@@ -241,37 +241,98 @@ export class UI {
       this._removeRequest(kind ? `${kind}:${from}` : from);
     });
 
+    // Edificios en tres grupos (Economía, Defensa y Ataque). En el ordenador
+    // se ven todos, con el título de su grupo; en el móvil, solo los tres
+    // grupos y al tocar uno sube una bandeja con sus edificios
     this._buildButtons = new Map();
     this._buildIcons = new Map();
-    for (const kind of BUILDING_KINDS) {
-      const def = BUILDINGS[kind];
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.dataset.kind = kind;
-      btn.title = def.unit
-        ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
-        : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
-      const icon = document.createElement('canvas');
-      icon.width = 48;
-      icon.height = 48;
-      drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
-      this._buildIcons.set(kind, icon);
-      // Sin nombre (ocupa menos): el nombre sale al pasar el ratón
-      btn.setAttribute('aria-label', def.name);
-      const text = document.createElement('span');
-      text.className = 'b-texto';
-      text.innerHTML = '<span class="b-coste"></span>';
-      const count = document.createElement('span');
-      count.className = 'b-num';
-      // La tecla, arriba a la izquierda
-      const key = document.createElement('span');
-      key.className = 'b-tecla';
-      key.textContent = def.key.slice(3);
-      btn.append(key, icon, text, count);
-      btn.addEventListener('click', () => this.handlers.onBuildMode?.(kind));
-      $('construir').append(btn);
-      this._buildButtons.set(kind, btn);
+    this._groups = [];
+    const bar = $('construir');
+    bar.classList.add('agrupado');
+    for (const group of BUILD_GROUPS) {
+      const box = document.createElement('div');
+      box.className = 'grupo-obras';
+      box.dataset.grupo = group.id;
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'g-tab';
+      tab.setAttribute('aria-expanded', 'false');
+      tab.title = group.name;
+      const gIcon = document.createElement('canvas');
+      gIcon.width = 40;
+      gIcon.height = 40;
+      gIcon.className = 'g-icono';
+      drawBuildingReal(gIcon.getContext('2d'), group.icon, 20, 20, 36);
+      const gName = document.createElement('span');
+      gName.className = 'g-nombre';
+      gName.textContent = group.name;
+      const dot = document.createElement('span');
+      dot.className = 'g-punto';
+      dot.setAttribute('aria-hidden', 'true');
+      tab.append(gIcon, gName, dot);
+      tab.addEventListener('click', () => this.openGroup(this._openGroup === group.id ? null : group.id));
+      const list = document.createElement('div');
+      list.className = 'g-items';
+      list.setAttribute('role', 'group');
+      list.setAttribute('aria-label', group.name);
+      for (const kind of group.kinds) {
+        const def = BUILDINGS[kind];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'obra';
+        btn.dataset.kind = kind;
+        btn.title = def.unit
+          ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
+          : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
+        const icon = document.createElement('canvas');
+        icon.width = 48;
+        icon.height = 48;
+        drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
+        this._buildIcons.set(kind, icon);
+        // Sin nombre en el ordenador (ocupa menos): sale al pasar el ratón; en
+        // la bandeja del móvil sí se lee
+        btn.setAttribute('aria-label', def.name);
+        const name = document.createElement('span');
+        name.className = 'b-nombre';
+        name.textContent = def.name;
+        const text = document.createElement('span');
+        text.className = 'b-texto';
+        text.innerHTML = '<span class="b-coste"></span>';
+        const count = document.createElement('span');
+        count.className = 'b-num';
+        // La tecla, arriba a la izquierda
+        const key = document.createElement('span');
+        key.className = 'b-tecla';
+        key.textContent = def.key.slice(3);
+        btn.append(key, icon, name, text, count);
+        btn.addEventListener('click', () => {
+          this.handlers.onBuildMode?.(kind);
+          this.openGroup(null);
+        });
+        list.append(btn);
+        this._buildButtons.set(kind, btn);
+      }
+      box.append(tab, list);
+      bar.append(box);
+      this._groups.push({ group, box, tab, list, icon: gIcon, shown: group.icon });
     }
+    // Bandeja del móvil: flota encima del panel (que recorta lo que sobresale)
+    const tray = document.createElement('div');
+    tray.id = 'bandeja-obras';
+    tray.className = 'bandeja-obras';
+    tray.hidden = true;
+    $('hud').append(tray);
+    this._tray = tray;
+    // El tutorial abre un grupo para enseñar uno de sus edificios
+    bar.addEventListener('abrir-grupo', (e) => this.openGroup(e.detail || null));
+    // La bandeja se cierra al tocar fuera o con Escape
+    document.addEventListener('pointerdown', (e) => {
+      if (this._openGroup && !bar.contains(e.target) && !tray.contains(e.target)) this.openGroup(null);
+    });
+    window.addEventListener('resize', () => this.openGroup(null));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this._openGroup) this.openGroup(null);
+    });
 
     // Clasificación, combates y avisos: cabecera que pliega el panel (se recuerda)
     this._unread = 0;
@@ -328,6 +389,7 @@ export class UI {
     const wide = window.matchMedia?.('(min-width: 1100px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
     const layout = () => {
       const desk = !!wide?.matches;
+      if (desk) this.openGroup(null);
       $('hud').classList.toggle('escritorio', desk);
       $('barra-obras').hidden = !desk;
       if (desk && obras.parentElement !== $('barra-obras')) $('barra-obras').append(obras);
@@ -1025,6 +1087,23 @@ export class UI {
       btn.classList.toggle('activo', buildMode === kind);
       btn.disabled = !playing || !human.alive;
     }
+    // Grupos: un punto si hay algo que puedas pagar; el del edificio elegido,
+    // resaltado y con su icono
+    for (const g of this._groups) {
+      const btns = g.group.kinds.map((k) => this._buildButtons.get(k));
+      const visible = btns.filter((b) => !b.hidden);
+      g.box.hidden = !visible.length;
+      g.tab.classList.toggle('listo', playing && visible.some((b) => !b.classList.contains('caro')));
+      const active = g.group.kinds.includes(buildMode) ? buildMode : null;
+      g.tab.classList.toggle('activo', !!active);
+      const want = active || g.group.icon;
+      if (g.shown !== want) {
+        g.shown = want;
+        const ctx = g.icon.getContext('2d');
+        ctx.clearRect(0, 0, 40, 40);
+        drawBuildingReal(ctx, want, 20, 20, 36);
+      }
+    }
 
     this._updateAttacks(game, human);
     this._updateTopBar(game, human);
@@ -1041,6 +1120,54 @@ export class UI {
       const roi = buildMode && this._roi(game, human)[buildMode];
       if (roi) this._hint(roi, 'info');
     }
+  }
+
+  /**
+   * Abre la bandeja de un grupo de edificios (en el móvil) o la cierra con
+   * null. En el ordenador los grupos se ven siempre y esto no cambia nada.
+   */
+  openGroup(id) {
+    id = id || null;
+    // En el ordenador los grupos se ven enteros: no hay bandeja
+    if ($('hud').classList.contains('escritorio')) id = null;
+    if (id === this._openGroup) return;
+    this._openGroup = id;
+    const bar = $('construir');
+    const tray = this._tray;
+    bar.classList.toggle('con-bandeja', !!id);
+    for (const g of this._groups) {
+      const open = g.group.id === id;
+      g.box.classList.toggle('abierto', open);
+      g.tab.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    clearTimeout(this._trayTimer);
+    if (!id) {
+      // Se desvanece y sus botones vuelven a su grupo
+      tray.classList.remove('abierto');
+      const back = () => {
+        for (const g of this._groups) if (g.list.parentElement !== g.box) g.box.append(g.list);
+        tray.hidden = true;
+      };
+      if (tray.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) back();
+      else this._trayTimer = setTimeout(back, 220);
+      return;
+    }
+    const g = this._groups.find((x) => x.group.id === id);
+    for (const o of this._groups) if (o !== g && o.list.parentElement !== o.box) o.box.append(o.list);
+    tray.dataset.grupo = id;
+    tray.replaceChildren(g.list);
+    // Encima del panel, con su mismo ancho
+    const r = $('panel-jugador').getBoundingClientRect();
+    tray.style.left = `${Math.round(r.left)}px`;
+    tray.style.width = `${Math.round(r.width)}px`;
+    tray.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`;
+    const wasHidden = tray.hidden;
+    tray.hidden = false;
+    if (wasHidden) {
+      tray.classList.remove('abierto');
+      void tray.offsetWidth; // que la transición arranque desde cerrada
+    }
+    tray.classList.add('abierto');
   }
 
   // ---------------------------------------------------- órdenes y desarrollo

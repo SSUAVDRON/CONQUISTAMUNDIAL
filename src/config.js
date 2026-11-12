@@ -243,6 +243,15 @@ export const BUILDINGS = {
 /** Edificios de verdad (no unidades). */
 export const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'];
 export const BUILDING_KINDS = Object.keys(BUILDINGS);
+/**
+ * Grupos de la barra de construcción (los mismos que el Arsenal del inicio).
+ * `icon`: el edificio que la representa en su botón.
+ */
+export const BUILD_GROUPS = [
+  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['city', 'port', 'factory'] },
+  { id: 'defensa', name: 'Defensa', icon: 'fort', kinds: ['fort', 'sam', 'warship'] },
+  { id: 'ataque', name: 'Ataque', icon: 'missile', kinds: ['silo', 'missile', 'hbomb', 'mirv'] },
+];
 
 /** Mapas aleatorios (generados con la semilla). */
 /**
