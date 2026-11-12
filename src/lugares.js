@@ -9,15 +9,16 @@
 /**
  * Tipos. `weight`: lo frecuente que sale. `instant`: premio al momento;
  * `buff`: modificadores durante `ticks` turnos; `perm`: modificadores para
- * siempre (los mismos nombres que en tecnologias.js, emptyMods).
+ * siempre (los mismos nombres que en tecnologias.js, emptyMods). `short`: lo
+ * que da en pocas palabras (el rótulo del mapa y los bonos del panel).
  */
 export const LUGARES = {
-  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)' },
-  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)' },
-  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s' },
-  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s' },
-  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre' },
-  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre' },
+  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)', short: 'Oro al momento' },
+  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)', short: '+20 % tropas' },
+  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s', short: '+60 % crecimiento' },
+  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s', short: 'Ataques −30 %' },
+  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre', short: '+4 % oro siempre' },
+  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre', short: '+5 % techo siempre' },
 };
 export const LUGAR_IDS = Object.keys(LUGARES);
 

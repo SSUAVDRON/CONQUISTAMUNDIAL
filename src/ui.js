@@ -8,6 +8,8 @@ import { POI_TYPES } from './estrategia.js';
 import { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
 import { LUGARES } from './lugares.js';
+import { FichaUI } from './ficha-ui.js';
+import { activeBonuses, shortEffect } from './fichas.js';
 import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } from './movimiento.js';
 import { PantallaFin, abrirFin } from './fin.js';
 
@@ -285,11 +287,8 @@ export class UI {
         btn.type = 'button';
         btn.className = 'obra';
         btn.dataset.kind = kind;
-        btn.title = def.unit === 'capital'
-          ? `${def.name}: ${def.desc}. Se aplica al momento, sin elegir sitio (tecla ${def.key.slice(3)})`
-          : def.unit
-          ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
-          : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
+        // Lo que da cada uno: una ficha al pasar el ratón (o al mantenerlo
+        // pulsado en el móvil), no el título del navegador (doc-1.7)
         const icon = document.createElement('canvas');
         icon.width = 48;
         icon.height = 48;
@@ -310,11 +309,39 @@ export class UI {
         const key = document.createElement('span');
         key.className = 'b-tecla';
         key.textContent = def.key.slice(3);
-        btn.append(key, icon, name, text, count);
+        // Lo principal que da, en una línea (se ve en la bandeja del móvil)
+        const effect = document.createElement('span');
+        effect.className = 'b-efecto';
+        btn.append(key, icon, name, text, effect, count);
         btn.addEventListener('click', () => {
+          // Tras mantenerlo pulsado (para ver su ficha) no se elige
+          if (this._pressedKind === kind) {
+            this._pressedKind = null;
+            return;
+          }
+          this._ficha?.hide();
           this.handlers.onBuildMode?.(kind);
           this.openGroup(null);
         });
+        btn.addEventListener('pointerenter', (e) => {
+          if (e.pointerType === 'mouse' && this._game && this._human) this._ficha.showBuilding(this._game, this._human, kind, btn, 'hover');
+        });
+        btn.addEventListener('pointerleave', (e) => {
+          clearTimeout(this._pressTimer);
+          if (e.pointerType === 'mouse' && this._ficha.cur?.mode === 'hover') this._ficha.hide();
+        });
+        btn.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse') return;
+          clearTimeout(this._pressTimer);
+          this._pressedKind = null;
+          this._pressTimer = setTimeout(() => {
+            if (!this._game || !this._human) return;
+            this._pressedKind = kind;
+            this._ficha.showBuilding(this._game, this._human, kind, btn, 'press');
+          }, 420);
+        });
+        for (const ev of ['pointerup', 'pointercancel']) btn.addEventListener(ev, () => clearTimeout(this._pressTimer));
+        btn.addEventListener('contextmenu', (e) => e.preventDefault());
         list.append(btn);
         this._buildButtons.set(kind, btn);
       }
@@ -322,6 +349,40 @@ export class UI {
       bar.append(box);
       this._groups.push({ group, box, tab, list, icon: gIcon, shown: group.icon });
     }
+    // Ficha de lo que da cada cosa (doc-1.7)
+    this._ficha = new FichaUI($('hud'), {
+      iconFor: (k) => {
+        this._iconUrls ??= new Map();
+        if (!this._iconUrls.has(k)) {
+          const c = this._buildIcons.get(k);
+          this._iconUrls.set(k, c ? c.toDataURL() : '');
+        }
+        return this._iconUrls.get(k);
+      },
+      onCancel: (k) => k && this.handlers.onBuildMode?.(k),
+    });
+    // Tocar fuera cierra la ficha que se abrió al mantener pulsado o al tocar un bono
+    document.addEventListener('pointerdown', (e) => {
+      const f = this._ficha;
+      if (!f.cur || f.cur.mode === 'hover' || f.cur.mode === 'dock') return;
+      if (f.el.contains(e.target) || (f.cur.anchor && f.cur.anchor.contains(e.target))) return;
+      f.hide();
+    });
+    // Bonos activos (lugares de interés, capital): en la cabecera del panel
+    $('pj-bonos').addEventListener('pointerover', (e) => {
+      const chip = e.target.closest('.bono');
+      if (e.pointerType === 'mouse' && chip) this._showBonus(chip);
+    });
+    $('pj-bonos').addEventListener('pointerout', (e) => {
+      if (e.pointerType === 'mouse' && this._ficha.cur?.mode === 'bono' && !e.relatedTarget?.closest?.('.bono')) this._ficha.hide();
+    });
+    $('pj-bonos').addEventListener('click', (e) => {
+      const chip = e.target.closest('.bono');
+      if (!chip) return;
+      if (this._ficha.cur?.mode === 'bono' && this._ficha.cur.anchor === chip) this._ficha.hide();
+      else this._showBonus(chip);
+    });
+
     // Bandeja del móvil: flota encima del panel (que recorta lo que sobresale)
     const tray = document.createElement('div');
     tray.id = 'bandeja-obras';
@@ -975,6 +1036,8 @@ export class UI {
 
   update(game, human, ratio, buildMode) {
     this._ratio = ratio;
+    this._game = game;
+    this._human = human;
     const landCount = game.map.landCount;
 
     // Aviso central: despliegue o construcción en curso
@@ -993,9 +1056,13 @@ export class UI {
       // el estado de la red tiene prioridad
     } else if (game.phase === 'spawn') {
       ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
+    } else if (buildMode && !$('hud').classList.contains('escritorio') && BUILDINGS[buildMode].unit !== 'capital') {
+      // Móvil y pantallas estrechas: la ficha del edificio, encima del panel, hace de aviso
+      ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));
+      const what = shortEffect(game, human, buildMode);
       if (def.unit === 'missile') {
         setAviso(`Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`);
       } else if (def.unit === 'ship') {
@@ -1003,7 +1070,7 @@ export class UI {
       } else {
         const where = def.coastal ? 'en tu costa' : 'en tu territorio';
         const up = ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
-        setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`);
+        setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro${what ? ` · ${what}` : ''})${up}. Esc para cancelar`);
       }
       mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (game.inTruce?.()) {
@@ -1144,11 +1211,55 @@ export class UI {
     this._sampleEconomy(game, human);
     if (!$('panel-desarrollo').hidden) this._renderDev(game, human);
     this._advise(game, human);
-    if (buildMode !== this._lastBuildMode) {
-      this._lastBuildMode = buildMode;
-      const roi = buildMode && this._roi(game, human)[buildMode];
-      if (roi) this._hint(roi, 'info');
+    this._updateFichas(game, human, buildMode);
+  }
+
+  /**
+   * Fichas de lo que da cada cosa (doc-1.7): la del edificio que colocas (en
+   * el móvil, encima del panel), las que están abiertas, la línea corta de
+   * cada botón de la bandeja y los bonos activos de la cabecera del panel.
+   */
+  _updateFichas(game, human, buildMode) {
+    const f = this._ficha;
+    const desk = $('hud').classList.contains('escritorio');
+    const dock = buildMode && !desk && BUILDINGS[buildMode].unit !== 'capital' && game.phase === 'playing' && human.alive;
+    if (dock && !(f.cur && f.cur.mode === 'dock' && f.cur.kind === buildMode) && !(f.cur && f.cur.mode === 'press')) {
+      f.showBuilding(game, human, buildMode, null, 'dock');
+    } else if (!dock && f.cur && f.cur.mode === 'dock') {
+      f.hide();
     }
+    if (f.cur) {
+      if (f.cur.type === 'obra') f.refresh(game, human);
+      else if (f.cur.type === 'bono') {
+        const b = activeBonuses(game, human).find((x) => x.id === f.cur.bonus.id);
+        if (b && b.left !== f.cur.bonus.left) f.showBonus(b, f.cur.anchor);
+        else if (!b) f.hide();
+      }
+    }
+    const now = performance.now();
+    if (now - (this._fichasAt || 0) < 500) return;
+    this._fichasAt = now;
+    for (const [kind, btn] of this._buildButtons) {
+      const el = btn.querySelector('.b-efecto');
+      const t = shortEffect(game, human, kind);
+      if (el.textContent !== t) el.textContent = t;
+    }
+    // Bonos activos: una pastilla por bono (los de un rato, con su cuenta atrás)
+    const box = $('pj-bonos');
+    const list = activeBonuses(game, human);
+    this._bonuses = list;
+    const html = list
+      .map((b) => `<button type="button" class="bono${b.left != null ? ' temporal' : ''}" data-id="${b.id}" aria-label="${escapeHtml(`${b.title}: ${b.value}`)}"><span class="bono-ic">${b.icon}</span><span class="bono-v">${escapeHtml(b.value)}</span>${b.left != null ? `<span class="bono-t">${b.left}s</span>` : ''}</button>`)
+      .join('');
+    if (this._bonusHtml !== html) {
+      this._bonusHtml = html;
+      actualizarHtml(box, html);
+    }
+  }
+
+  _showBonus(chip) {
+    const b = (this._bonuses || []).find((x) => x.id === chip.dataset.id);
+    if (b) this._ficha.showBonus(b, chip);
   }
 
   /**

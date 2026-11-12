@@ -34,7 +34,7 @@ const TABS = [
       ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
+      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
       ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
     ],
   },

@@ -4694,3 +4694,116 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
   #hud:not(.escritorio) .banco-btn { flex: 1 1 40%; height: 24px; padding: 0 4px; }
   #hud:not(.escritorio) .banco-btn + .banco-btn { margin-left: 0; }
 }
+
+/* ---------- Ficha de lo que da cada cosa (doc-1.7) ---------- */
+.ficha[data-grupo="economia"] { --g-color: #f2b33d; --g-glow: rgba(242, 179, 61, 0.35); }
+.ficha[data-grupo="defensa"] { --g-color: #6cc0ff; --g-glow: rgba(108, 192, 255, 0.35); }
+.ficha[data-grupo="ataque"] { --g-color: #ff7a6b; --g-glow: rgba(255, 122, 107, 0.35); }
+.ficha[data-grupo="bono"] { --g-color: #9be38f; --g-glow: rgba(155, 227, 143, 0.35); }
+.ficha {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  width: 304px;
+  max-width: calc(100vw - 16px);
+  padding: 12px 13px 11px;
+  border-radius: 15px;
+  background: linear-gradient(180deg, rgba(27, 36, 58, 0.98), rgba(11, 15, 25, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--texto-1);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transform-origin: var(--flecha, 50%) 100%;
+  transition: opacity 0.14s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.ficha[hidden] { display: none; }
+.ficha.visible { opacity: 1; transform: none; }
+.ficha.debajo { transform-origin: var(--flecha, 50%) 0; }
+/* Franja del color del grupo, arriba, y flechita hacia el botón */
+.ficha::before { content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--g-color), transparent); box-shadow: 0 0 10px var(--g-glow); }
+.ficha::after { content: ""; position: absolute; left: calc(var(--flecha, 50%) - 6px); bottom: -7px; width: 12px; height: 12px; background: #0c101b; border-right: 1px solid rgba(255, 255, 255, 0.1); border-bottom: 1px solid rgba(255, 255, 255, 0.1); transform: rotate(45deg); }
+.ficha.debajo::after { bottom: auto; top: -7px; background: #1b243a; transform: rotate(225deg); }
+.ficha.ficha-dock::after { display: none; }
+
+.ficha-cab { display: flex; align-items: center; gap: 10px; }
+.ficha-icono { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--g-color) 32%, transparent), rgba(0, 0, 0, 0.35)); border: 1px solid color-mix(in srgb, var(--g-color) 42%, transparent); }
+.ficha-icono img { width: 30px; height: 30px; }
+.ficha-icono.emoji { font-size: 22px; line-height: 1; }
+.ficha-titulos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ficha-titulos small { font-size: 9.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--g-color); }
+.ficha-titulos strong { font-size: 15.5px; font-weight: 800; line-height: 1.15; color: #fff; }
+.ficha-precio { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.ficha-precio b { font-size: 16px; font-weight: 800; color: var(--acento); font-variant-numeric: tabular-nums; }
+.ficha-precio small { font-size: 10px; color: var(--texto-suave); white-space: nowrap; }
+.ficha-precio.caro b { color: #aab4c4; }
+.ficha-precio.caro small { color: #ff9f8f; }
+.ficha-precio.bono b { font-size: 13px; color: #9be38f; text-align: right; }
+.ficha-meta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 10.5px; color: var(--texto-suave); }
+.ficha-meta svg { width: 12px; height: 12px; flex: none; }
+.ficha kbd { display: inline-grid; place-items: center; min-width: 19px; height: 19px; margin-left: auto; padding: 0 5px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-bottom-width: 2px; font: 700 10px/1 system-ui, sans-serif; color: #fff; }
+.ficha-resumen { margin: 7px 0 0; font-size: 12px; color: #cdd6e4; }
+.ficha-sec { margin-top: 10px; }
+.ficha-sec h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-suave); }
+.ficha-sec h4::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+.ficha-da { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ficha-da li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.045); }
+.ficha-da .fi { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: color-mix(in srgb, var(--g-color) 16%, transparent); color: var(--g-color); }
+.ficha-da .fi svg { width: 14px; height: 14px; }
+.fd-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding-top: 3px; }
+.fd-l { font-weight: 700; color: #e9eef6; }
+.fd-txt small { font-size: 10.5px; line-height: 1.3; color: var(--texto-suave); }
+.fd-v { flex: none; max-width: 52%; padding-top: 3px; font-size: 13px; font-weight: 800; text-align: right; color: var(--acento); font-variant-numeric: tabular-nums; }
+.ficha-niv { display: flex; flex-direction: column; gap: 4px; padding: 7px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1); }
+.fn-fila { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; }
+.fn-l { flex: 1; min-width: 0; color: #cdd6e4; }
+.fn-de { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.fn-a { font-style: normal; font-weight: 800; color: var(--g-color); }
+.fn-fila b { font-weight: 800; color: #9be38f; font-variant-numeric: tabular-nums; }
+.ficha-tienes { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; font-size: 11px; color: #cdd6e4; }
+.ficha-tienes .fi { flex: none; display: grid; place-items: center; width: 16px; height: 16px; color: #5fd38d; }
+.ficha-tienes .fi svg { width: 13px; height: 13px; }
+.ficha-como { margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 11px; color: var(--texto-suave); }
+.ficha-tiempo { height: 4px; margin-top: 9px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.ficha-tiempo span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f2b33d, #ffe3a1); transition: width 0.5s linear; }
+.ficha-cancelar { display: block; width: 100%; height: 36px; margin-top: 9px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.07); color: var(--texto-1); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ficha-cancelar:active { transform: scale(0.98); }
+/* Al pasar el ratón no estorba al ratón */
+#hud.escritorio .ficha:not(.ficha-dock) { pointer-events: none; }
+/* Móvil, mientras colocas: fija encima del panel y más compacta (lo que da, en dos columnas) */
+.ficha.ficha-dock { left: calc(8px + env(safe-area-inset-left, 0px)) !important; right: calc(8px + env(safe-area-inset-right, 0px)); top: auto !important; bottom: calc(var(--pj-alto, 200px) + 16px + env(safe-area-inset-bottom, 0px)); width: auto; max-width: 520px; margin: 0 auto; padding: 10px 11px; transform-origin: 50% 100%; }
+.ficha.ficha-dock .ficha-sec { margin-top: 8px; }
+.ficha.ficha-dock .ficha-da { flex-direction: row; flex-wrap: wrap; }
+.ficha.ficha-dock .ficha-da li { flex: 1 1 calc(50% - 5px); min-width: 0; }
+.ficha.ficha-dock .fd-txt small { display: none; }
+@media (prefers-reduced-motion: reduce) { .ficha { transition: opacity 0.1s; transform: none; } }
+
+/* Lo principal que da cada edificio, en la bandeja del móvil */
+#hud .obra .b-efecto { display: none; }
+#hud .bandeja-obras .obra .b-efecto { display: -webkit-box; max-width: 100%; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 9.5px; font-weight: 700; line-height: 1.15; text-align: center; color: #9be38f; }
+
+/* Bonos activos, en la cabecera del panel */
+.pj-bonos { display: inline-flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; overflow: hidden; }
+.pj-bonos:empty { display: none; }
+.bono { display: inline-flex; align-items: center; gap: 3px; flex: none; height: 20px; padding: 0 7px 0 5px; border-radius: 999px; border: 1px solid rgba(155, 227, 143, 0.38); background: rgba(155, 227, 143, 0.1); color: #cdf3c6; font: 700 10.5px/1 system-ui, sans-serif; white-space: nowrap; cursor: help; -webkit-tap-highlight-color: transparent; }
+.bono.temporal { border-color: rgba(242, 179, 61, 0.5); background: rgba(242, 179, 61, 0.13); color: #ffe3a1; }
+.bono-ic { font-size: 11px; }
+.bono-t { font-weight: 600; opacity: 0.8; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .bono .bono-v { display: none; } }
+/* Ajustes de la ficha y la bandeja (doc-1.7) */
+.ficha { z-index: 90; }
+.ficha-tienes.falta { color: #ffc9a8; }
+.ficha-tienes.falta .fi { color: #ff9f6b; }
+.ficha.ficha-dock .ficha-meta { display: none; }
+.ficha.ficha-dock .ficha-resumen { font-size: 11.5px; margin-top: 5px; }
+.ficha.ficha-dock .ficha-cancelar { height: 32px; margin-top: 8px; }
+#hud .bandeja-obras .obra { height: auto; min-height: 0; padding: 7px 3px 7px; gap: 2px; }
+/* Bonos activos: una fila propia bajo el nombre (no le quitan sitio) */
+#panel-jugador .cabecera { flex-wrap: wrap; row-gap: 4px; }
+.pj-bonos { order: 9; flex: 1 1 100%; margin-left: 0; flex-wrap: wrap; }
+.ficha { background: linear-gradient(180deg, #1b243a, #0b0f19); }

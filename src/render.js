@@ -1525,7 +1525,7 @@ export class Renderer {
     const { ctx, game, camera } = this;
     if (!game.lugares || !game.lugares.length) return;
     const size = clamp(camera.zoom * RES * 4, 15, 30);
-    const named = camera.zoom * RES >= 2.6;
+    const named = camera.zoom * RES >= 1.8;
     const k = this.anim ? 0.5 + 0.5 * Math.sin(now / 360) : 0.5;
     for (const l of game.lugares) {
       const [sx, sy] = camera.worldToScreen(l.x + 0.5, l.y + 0.5);
@@ -1549,6 +1549,13 @@ export class Renderer {
         ctx.fillStyle = '#ffe3a1';
         ctx.strokeText(def.name, sx, sy + size * 0.62);
         ctx.fillText(def.name, sx, sy + size * 0.62);
+        // Debajo, lo que da (doc-1.7: antes solo el nombre y no se sabía)
+        if (def.short) {
+          ctx.font = '600 9.5px system-ui, sans-serif';
+          ctx.fillStyle = '#9be38f';
+          ctx.strokeText(def.short, sx, sy + size * 0.62 + 12);
+          ctx.fillText(def.short, sx, sy + size * 0.62 + 12);
+        }
       }
     }
   }

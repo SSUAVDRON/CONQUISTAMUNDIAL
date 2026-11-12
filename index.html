@@ -24,11 +24,13 @@
       "./src/emparejamiento.js": "./src/emparejamiento.js?v=9aa2bffef5",
       "./src/errores.js": "./src/errores.js?v=1a5ed3f3a9",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
+      "./src/ficha-ui.js": "./src/ficha-ui.js?v=a2a31045bb",
+      "./src/fichas.js": "./src/fichas.js?v=5a822205e6",
       "./src/fin.js": "./src/fin.js?v=72a8fd1796",
       "./src/format.js": "./src/format.js?v=66b8e86f09",
       "./src/fx.js": "./src/fx.js?v=ab7609d597",
       "./src/game.js": "./src/game.js?v=3c7838293a",
-      "./src/guia.js": "./src/guia.js?v=c9288543e7",
+      "./src/guia.js": "./src/guia.js?v=83d13257a1",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
       "./src/home.js": "./src/home.js?v=0880fda645",
       "./src/icons.js": "./src/icons.js?v=e11a5f0f58",
@@ -37,7 +39,7 @@
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
-      "./src/lugares.js": "./src/lugares.js?v=c147c74cd2",
+      "./src/lugares.js": "./src/lugares.js?v=5289949ba5",
       "./src/main.js": "./src/main.js?v=1f70ac6a05",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
@@ -55,7 +57,7 @@
       "./src/presentacion.js": "./src/presentacion.js?v=853ea16b6c",
       "./src/profile.js": "./src/profile.js?v=4551c371f3",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
-      "./src/render.js": "./src/render.js?v=0a53e73869",
+      "./src/render.js": "./src/render.js?v=1f70e1d3c6",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=ee313e0dbb",
@@ -65,12 +67,12 @@
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=c7841f8591",
-      "./src/ui.js": "./src/ui.js?v=3f43b0bd54"
+      "./src/ui.js": "./src/ui.js?v=4a12e2282f"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=b033a09099">
+  <link rel="stylesheet" href="css/estilo.css?v=01cc386c19">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -839,6 +841,7 @@
         <span id="pj-color" class="muestra"></span>
         <strong id="pj-nombre"></strong>
         <span id="pj-estado"></span>
+        <span id="pj-bonos" class="pj-bonos" aria-label="Bonos activos"></span>
       </div>
       <div class="barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido en la franja marcada, hacia el 42 % del techo"><div id="pj-barra"></div></div>
       <div class="cifras">
