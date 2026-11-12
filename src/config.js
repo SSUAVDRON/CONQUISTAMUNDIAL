@@ -239,8 +239,8 @@ export const BUILDINGS = {
   // La capital: una por nación, nace con ella (no se construye). Sus mejoras
   // se compran desde la barra y se aplican al momento, sin elegir sitio
   capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada: defensa ×4 alrededor y las bombas no destruyen lo que hay dentro' },
-  capInd: { name: 'Industria de la capital', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'ind', desc: '+25 % de oro pasivo (territorio, base y pueblos) por nivel' },
-  capPop: { name: 'Población de la capital', fem: true, base: 150000, build: 0, key: 'KeyX', unit: 'capital', track: 'pop', desc: '+10 % de techo de tropas y +8 % de crecimiento por nivel' },
+  capInd: { name: 'Industria de la capital', short: 'Industria', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'ind', desc: '+25 % de oro pasivo (territorio, base y pueblos) por nivel' },
+  capPop: { name: 'Población de la capital', short: 'Población', fem: true, base: 150000, build: 0, key: 'KeyX', unit: 'capital', track: 'pop', desc: '+10 % de techo de tropas y +8 % de crecimiento por nivel' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
   fort: { name: 'Puesto defensivo', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },

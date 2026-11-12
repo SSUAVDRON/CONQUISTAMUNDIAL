@@ -297,7 +297,7 @@ export class UI {
         btn.setAttribute('aria-label', def.name);
         const name = document.createElement('span');
         name.className = 'b-nombre';
-        name.textContent = def.name;
+        name.textContent = def.short || def.name;
         const text = document.createElement('span');
         text.className = 'b-texto';
         text.innerHTML = '<span class="b-coste"></span>';
