@@ -90,14 +90,16 @@ export class BotBrain {
     // (sin vecinos por tierra, más a menudo y más lejos: si no, un líder
     // rodeado de mar se queda atascado sin poder cruzar el océano)
     const landlocked = counts.size === 0;
-    if (wild === 0 && coastal && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
+    if (wild === 0 && coastal && g.ticks >= (this.boatRetryAt || 0) && p.boatCount < (landlocked ? p.maxBoats() : 1) && p.troops > max * 0.3 && r.chance(landlocked ? 0.6 : 0.25)) {
       // Sin puerto no hay barcos: primero hay que construirlo
       if (!p.active.port) {
         if (!p.buildings.port) this.needPort = true;
         return;
       }
       const tile = this._pickBoatTarget(landlocked);
-      if (tile >= 0) g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)));
+      // Si no hay ruta, espera 20 s antes de volver a buscar (cada búsqueda
+      // fallida recorre mucho mar y daba tirones)
+      if (tile >= 0 && !g.launchBoat(p, tile, Math.floor(p.troops * (landlocked ? 0.45 : 0.35)))) this.boatRetryAt = g.ticks + 200;
     }
   }
 

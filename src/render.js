@@ -181,6 +181,7 @@ export class Renderer {
     this._seenFx = new WeakSet();
     for (const e of game.effects) this._seenFx.add(e);
     this._boats = new Map();
+    this._trailBoxes = new Map(); // recuadro de la ruta de cada barco (para no dibujar las estelas fuera de la pantalla)
     this._ships = new Map();
     this._attackFronts = new WeakMap();
     this._merch = new Map();
@@ -1601,12 +1602,12 @@ export class Renderer {
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
       const p = game.players[b.owner];
-      this._drawBoatTrail(b, s, p);
+      const mine = human && (b.owner === human.id || b.targetId === human.id);
+      this._drawBoatTrail(b, s, p, mine);
       if (!this._onScreen(sx, sy, 60)) continue;
       const len = clamp(z * RES * 2.4, 8, 30);
       drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
       this._maybeWake(s, len, 8);
-      const mine = human && (b.owner === human.id || b.targetId === human.id);
       if (z * RES >= 4 || mine) {
         const text = fmtTroops(b.troops);
         ctx.font = '700 11px system-ui, sans-serif';
@@ -1625,6 +1626,7 @@ export class Renderer {
     for (const [id, st] of this._boats) {
       if (st.gen === gen) continue;
       this._boats.delete(id);
+      this._trailBoxes.delete(id);
       if (!this.anim || !this._inView(st.x, st.y, 4)) continue;
       if (st.pos >= st.len - 2) fx.landing((st.end % W) + 0.5, Math.floor(st.end / W) + 0.5);
       else fx.sink(st.x, st.y, false);
@@ -1635,11 +1637,32 @@ export class Renderer {
    * Línea fina del barco de tropas: sólida desde donde salió hasta donde va
    * y punteada hasta donde llegará. Todos la ven: así se sabe de dónde viene.
    */
-  _drawBoatTrail(b, s, p) {
+  _drawBoatTrail(b, s, p, mine = false) {
     const { ctx, camera } = this;
     const W = this.game.map.width;
     const z = camera.zoom;
     const path = b.path;
+    // Recuadro de la ruta (se calcula una vez): si no toca la pantalla, no se
+    // dibuja. Antes cada barco del mundo trazaba su estela en cada fotograma
+    let box = this._trailBoxes.get(b.id);
+    if (!box || box.path !== path) {
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      for (let i = 0; i < path.length; i++) {
+        const x = path[i] % W;
+        const y = (path[i] / W) | 0;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+      box = { path, x0, y0, x1: x1 + 1, y1: y1 + 1 };
+      this._trailBoxes.set(b.id, box);
+    }
+    const m = 8;
+    if ((box.x1 - camera.x) * z < -m || (box.x0 - camera.x) * z > camera.viewW + m || (box.y1 - camera.y) * z < -m || (box.y0 - camera.y) * z > camera.viewH + m) return;
     const step = Math.max(1, Math.floor(path.length / 90));
     const pt = (t) => [((t % W) + 0.5 - camera.x) * z, (Math.floor(t / W) + 0.5 - camera.y) * z];
     const color = prgb(p);
@@ -1655,9 +1678,12 @@ export class Renderer {
       ctx.lineTo(x, y);
     }
     ctx.lineTo(hx, hy);
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    // Con contorno oscuro solo los barcos que te tocan (los demás, un trazo)
+    if (mine) {
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
     ctx.strokeStyle = `rgba(${color}, 0.9)`;
     ctx.lineWidth = 1.5;
     ctx.stroke();

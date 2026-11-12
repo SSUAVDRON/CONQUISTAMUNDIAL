@@ -18,10 +18,11 @@
  * desembarcos solo con puerto, barcos un 40 % más lentos, rutas por los
  * estrechos (Ormuz, Bósforo) y mejor reparto inicial. doc-1.4: los ríos son
  * agua (fronteras; los que llegan al mar se navegan) y colonias ágiles y
- * distintas (ritmo propio, sin depender de su población). En multijugador,
+ * distintas (ritmo propio, sin depender de su población). doc-1.5: cercos
+ * comprobados cada 4 turnos por ataque (más fluido). En multijugador,
  * versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.4';
+export const MECH_VERSION = 'doc-1.5';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -34,7 +35,7 @@ export const MECH_VERSION = 'doc-1.4';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -44,8 +45,8 @@ export const MECH_VERSION = 'doc-1.4';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-5', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-4', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-6', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-5', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -136,6 +137,12 @@ export const MECH = {
   // si la bolsa escapa (la tierra abierta deja de agotar el presupuesto y los
   // cercos de verdad se resuelven para todas las naciones)
   annexProbeAt: 8,
+  // doc-1.5: los cercos de cada ataque se comprueban cada 4 turnos con lo que
+  // conquistó entretanto (repartidos: cada turno, una parte de los ataques).
+  // Antes, en cada turno y por cada casilla: al principio de la partida eran
+  // ~3.300 comprobaciones por turno sobre la tierra salvaje del frente, la
+  // mitad del turno. Una bolsa cercada se anexiona como mucho 0,3 s después
+  annexEvery: 4,
 
   // Precios (sección 04.2)
   prices: {

@@ -828,6 +828,7 @@ export class Game {
     if (atk && !atk.done) atk.retreatAt = 0;
     if (!atk || atk.done) {
       atk = new Attack(p, targetId, 0);
+      atk.annexPhase = (this._attackSeq = (this._attackSeq || 0) + 1) % MECH.annexEvery;
       this._aim(atk, focus);
       this._initFrontier(atk);
       if (atk.inFrontier.size === 0) return false;
@@ -1320,8 +1321,10 @@ export class Game {
       atk.troops -= c.loss;
       if (target) target.troops = Math.max(0, target.troops - c.defLoss);
       this.setOwner(t, aid);
-      this._annexAround(t, aid, tid);
+      atk.annexQ.push(t);
     }
+    // Cercos: cada MECH.annexEvery turnos (en su turno) o al acabar el ataque
+    if ((this.ticks + atk.annexPhase) % MECH.annexEvery === 0) this._flushAnnex(atk);
     if (traced) {
       this.trace.push({ t: 'frente', tick: this.ticks, jugador: aid, idFrente: atk.traceId, objetivo: tid, ancho: front, presupuesto: atk.budget, ganadas: A.tiles - traced.tiles, bajas: traced.troops - atk.troops, restantes: atk.troops });
     }
@@ -1363,6 +1366,22 @@ export class Game {
       );
     }
     return true;
+  }
+
+  /**
+   * Comprueba los cercos de lo que conquistó `atk` desde la última vez. Las
+   * casillas interiores del frente no tienen vecinas libres: en la práctica
+   * solo se mira el borde exterior, una vez, en vez de capa a capa.
+   */
+  _flushAnnex(atk) {
+    const q = atk.annexQ;
+    if (!q || !q.length) return;
+    const aid = atk.attacker.id;
+    const owner = this.owner;
+    for (let i = 0; i < q.length; i++) {
+      if (owner[q[i]] === aid) this._annexAround(q[i], aid, atk.targetId);
+    }
+    q.length = 0;
   }
 
   /**
@@ -1522,6 +1541,8 @@ export class Game {
   /** Termina un ataque; las tropas sobrantes (× refund) vuelven a casa. */
   _endAttack(atk, refund = 1) {
     if (atk.done) return;
+    // Los cercos que quedaban por comprobar, antes de cerrar el frente
+    this._flushAnnex(atk);
     atk.done = true;
     const A = atk.attacker;
     if (this.trace && atk.traceId) {
@@ -1817,11 +1838,19 @@ export class Game {
    */
   _updateMerchants() {
     const map = this.map;
-    if (this.ticks % MECH.trade.checkEvery === 0) {
+    // Cada puerto consulta cada checkEvery turnos, en su turno (repartidos: antes
+    // todos a la vez, y el turno de la consulta daba un tirón). Como mucho una
+    // ruta nueva (sin calcular aún) por turno: la primera búsqueda entre dos
+    // puertos lejanos puede llevar decenas de ms; las demás esperan su turno
+    {
+      const every = MECH.trade.checkEvery;
+      const phase = this.ticks % every;
       const ports = this.buildings.filter((b) => b.kind === 'port' && b.water >= 0 && b.level > 0);
       let afloat = 0;
       for (const m of this.merchants) if (m.kind === 'trade') afloat++;
+      let fresh = 1;
       for (const b of ports) {
+        if (b.id % every !== phase) continue;
         const chance = tradeSpawnChance(b.level, b.rejections || 0, afloat);
         if (this.rng.float() >= chance) {
           b.rejections = (b.rejections || 0) + 1;
@@ -1834,6 +1863,10 @@ export class Game {
           continue;
         }
         const dest = options[this.rng.int(0, options.length - 1)];
+        if (!this._pathCache.has(`${b.water},${dest.water},${SEARCH.trade}`)) {
+          if (fresh <= 0) continue; // ruta nueva: en otro turno
+          fresh--;
+        }
         const path = this._waterPath(b.water, dest.water, SEARCH.trade);
         if (!path) {
           b.rejections = (b.rejections || 0) + 1;
@@ -2201,7 +2234,11 @@ export class Game {
     let path = null;
     if (this._coarseCorridor([from], (cell) => cell === this._cellOf(to), maxNodes / AREA)) {
       path = this._astarWater(from, to, maxNodes, true);
-      // Raro: el pasillo es demasiado estrecho; búsqueda fina acotada
+      // El pasillo es demasiado estrecho: uno más ancho y, si no, búsqueda fina acotada
+      if (!path) {
+        this._markCorridor(4);
+        path = this._astarWater(from, to, maxNodes, true);
+      }
       if (!path) path = this._astarWater(from, to, Math.min(maxNodes, 150000));
     }
     if (cache) {
@@ -2278,12 +2315,29 @@ export class Game {
     const ch = Math.ceil(H / k);
     const n = cw * ch;
     const water = new Uint8Array(n);
+    // Enlaces con la celda de la derecha (east) y la de abajo (south): solo si
+    // el agua se toca de verdad en el borde entre las dos. Antes bastaba con
+    // que las dos celdas tuvieran algo de agua, y con los ríos la ruta gruesa
+    // saltaba de un río a otro por tierra (el Rin y el Danubio, por ejemplo):
+    // la búsqueda fina fallaba y caía en la completa, la cara (tirones)
+    const east = new Uint8Array(n);
+    const south = new Uint8Array(n);
+    const terrain = map.terrain;
     for (let y = 0; y < H; y++) {
-      const row = ((y / k) | 0) * cw;
-      for (let x = 0; x < W; x++) if (map.terrain[y * W + x] === 0) water[row + ((x / k) | 0)] = 1;
+      const cy = (y / k) | 0;
+      const row = cy * cw;
+      const lastRow = y % k === k - 1 && y < H - 1;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (terrain[i] !== 0) continue;
+        const c = row + ((x / k) | 0);
+        water[c] = 1;
+        if (x % k === k - 1 && x < W - 1 && terrain[i + 1] === 0) east[c] = 1;
+        if (lastRow && terrain[i + W] === 0) south[c] = 1;
+      }
     }
     this._cg = {
-      k, cw, ch, water,
+      k, cw, ch, water, east, south,
       seen: new Uint32Array(n), parent: new Int32Array(n), queue: new Int32Array(n), stamp: 0,
       mark: new Uint32Array(n), markStamp: 0, goal: new Uint32Array(n), goalStamp: 0,
     };
@@ -2303,7 +2357,7 @@ export class Game {
    */
   _coarseCorridor(starts, isGoal, maxCells) {
     const cg = this._coarse();
-    const { cw, ch, water, seen, parent, queue } = cg;
+    const { cw, ch, east, south, seen, parent, queue } = cg;
     cg.stamp = cg.stamp >= 0xfffffff0 ? (seen.fill(0), 1) : cg.stamp + 1;
     const st = cg.stamp;
     let head = 0;
@@ -2325,28 +2379,42 @@ export class Game {
       }
       const x = c % cw;
       const y = (c / cw) | 0;
-      if (x > 0 && water[c - 1] && seen[c - 1] !== st) { seen[c - 1] = st; parent[c - 1] = c; queue[tail++] = c - 1; }
-      if (x < cw - 1 && water[c + 1] && seen[c + 1] !== st) { seen[c + 1] = st; parent[c + 1] = c; queue[tail++] = c + 1; }
-      if (y > 0 && water[c - cw] && seen[c - cw] !== st) { seen[c - cw] = st; parent[c - cw] = c; queue[tail++] = c - cw; }
-      if (y < ch - 1 && water[c + cw] && seen[c + cw] !== st) { seen[c + cw] = st; parent[c + cw] = c; queue[tail++] = c + cw; }
+      if (x > 0 && east[c - 1] && seen[c - 1] !== st) { seen[c - 1] = st; parent[c - 1] = c; queue[tail++] = c - 1; }
+      if (x < cw - 1 && east[c] && seen[c + 1] !== st) { seen[c + 1] = st; parent[c + 1] = c; queue[tail++] = c + 1; }
+      if (y > 0 && south[c - cw] && seen[c - cw] !== st) { seen[c - cw] = st; parent[c - cw] = c; queue[tail++] = c - cw; }
+      if (y < ch - 1 && south[c] && seen[c + cw] !== st) { seen[c + cw] = st; parent[c + cw] = c; queue[tail++] = c + cw; }
     }
     if (found < 0) return false;
-    // Pasillo: la ruta y sus 8 vecinas
-    cg.markStamp = cg.markStamp >= 0xfffffff0 ? (cg.mark.fill(0), 1) : cg.markStamp + 1;
+    // Pasillo: la ruta y sus 8 vecinas (la ruta se guarda para ensancharlo)
+    const route = (cg.route ??= []);
+    route.length = 0;
+    for (let c = found; c !== -1; c = parent[c]) route.push(c);
+    this._markCorridor(1);
+    return true;
+  }
+
+  /**
+   * Marca como pasillo la última ruta gruesa y las celdas a `r` de ella. Si
+   * la búsqueda fina no cabe en el de radio 1, se prueba uno de radio 4 antes
+   * de recorrer el mar entero (eso daba tirones de decenas de ms).
+   */
+  _markCorridor(r) {
+    const cg = this._cg;
+    const { cw, ch, mark } = cg;
+    cg.markStamp = cg.markStamp >= 0xfffffff0 ? (mark.fill(0), 1) : cg.markStamp + 1;
     const ms = cg.markStamp;
-    for (let c = found; c !== -1; c = parent[c]) {
+    for (const c of cg.route) {
       const x = c % cw;
       const y = (c / cw) | 0;
-      for (let dy = -1; dy <= 1; dy++) {
+      for (let dy = -r; dy <= r; dy++) {
         const yy = y + dy;
         if (yy < 0 || yy >= ch) continue;
-        for (let dx = -1; dx <= 1; dx++) {
+        for (let dx = -r; dx <= r; dx++) {
           const xx = x + dx;
-          if (xx >= 0 && xx < cw) cg.mark[yy * cw + xx] = ms;
+          if (xx >= 0 && xx < cw) mark[yy * cw + xx] = ms;
         }
       }
     }
-    return true;
   }
 
   /** ¿Son enemigos? (ni la misma nación, ni aliados, ni con un pacto o paz en vigor) */
@@ -2679,7 +2747,10 @@ export class Game {
     // Primero solo por el pasillo de la ruta gruesa. Si no llega (un estrecho
     // como Ormuz: la ruta gruesa cruza la península por celdas con algo de
     // agua y el pasillo no incluye el canal de verdad), otra vez sin pasillo
-    for (const restrict of [true, false]) {
+    // Pasillo de radio 1, luego de radio 4 y, solo si tampoco, sin pasillo
+    for (const widen of [1, 4, 0]) {
+      const restrict = widen > 0;
+      if (widen > 1) this._markCorridor(widen);
       const stamp = this._nextStamp();
       let head = 0;
       let tail = 0;
@@ -2691,7 +2762,7 @@ export class Game {
         parent[n] = -1;
         queue[tail++] = n;
       }
-      while (head < tail && tail < cap) {
+      while (head < tail && tail < (restrict ? cap : cap / 3)) {
         const w = queue[head++];
         c = map.neighbors(w, nb);
         for (let k = 0; k < c; k++) {

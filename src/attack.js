@@ -23,5 +23,9 @@ export class Attack {
     this.done = false;
     /** Retirada en curso: tick en el que las tropas vuelven a casa (0 = no se retira). */
     this.retreatAt = 0;
+    /** Casillas conquistadas cuyos cercos faltan por comprobar (ver Game._flushAnnex). */
+    this.annexQ = [];
+    /** Turno (módulo MECH.annexEvery) en el que se comprueban sus cercos. */
+    this.annexPhase = 0;
   }
 }
