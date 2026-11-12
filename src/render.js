@@ -4,7 +4,7 @@
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
 import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
-import { mutedRgb, rgbToCss, shadeRgb, vividRgb } from './colors.js';
+import { rgbToCss, shadeRgb, territoryRgb, vividRgb } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
 import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { forgetTerrain, paintTerrain } from './terreno.js';
@@ -12,7 +12,7 @@ import { MECH } from './mecanicas.js';
 import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
 import { drawCargo, drawTransport, drawWarship } from './barcos.js';
 
-const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
+const FILL_ALPHA = 142; // territorio semitransparente: se ve el terreno debajo (algo menos que antes: colores más nítidos)
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
@@ -202,6 +202,7 @@ export class Renderer {
     this.distField = null;
     this.labels = [];
     this.labelById = new Map();
+    this.exclaves = []; // trozos sueltos de cada nación (con su bandera)
     this.lastLabelTime = -Infinity;
     this.highlightTile = -1;
     this.options = { badges: true, emojis: true, pointer: true, animations: true };
@@ -274,9 +275,12 @@ export class Renderer {
     this.distField = null;
     this._sprites?.clear();
     this._labelSprites?.clear();
+    this._ensigns?.clear();
     this._digitFonts?.clear();
     this.labels = [];
     this.labelById.clear();
+    this.exclaves = [];
+    this._exComp = this._exQueue = null;
     this.onRestored = null;
     this.disposed = true;
   }
@@ -312,6 +316,7 @@ export class Renderer {
     this._youKey = null;
     this._sprites?.clear();
     this._labelSprites?.clear();
+    this._ensigns?.clear();
     this._digitFonts?.clear();
     resetFxSprites();
     this.restores++;
@@ -338,9 +343,10 @@ export class Renderer {
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
-      // Relleno: el color de la nación en un tono pálido y semitransparente
-      // (se ve el terreno debajo). Frontera fina y opaca en el mismo tono, más oscuro
-      const pale = mutedRgb(p.color, 0.34, 0.64, 0.74);
+      // Relleno: el color de la nación algo apagado y semitransparente (se ve
+      // el terreno debajo). Frontera fina y opaca en el mismo tono, más oscuro
+      // y algo más vivo (antes, gris: dos vecinas parecidas se confundían)
+      const pale = territoryRgb(p.color);
       const [r, g, b] = pale;
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
@@ -353,7 +359,7 @@ export class Renderer {
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para ti y verde para tus aliados; las demás, su tono
       // pálido más oscuro
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(pale, 0.58);
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(pale, 0.12, 0.6, 0.16, 0.46);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
       // Tu nación, resaltada: por dentro de la frontera blanca, otra media
       // casilla en tu color vivo
@@ -912,7 +918,7 @@ export class Renderer {
    * tamaño de letra. Todo de una vez (ver _labelStage para el reparto).
    */
   _updateLabels() {
-    for (let k = 0; k < 3; k++) this._labelStage(k);
+    for (let k = 0; k < 4; k++) this._labelStage(k);
   }
 
   /**
@@ -936,6 +942,10 @@ export class Renderer {
     }
     const own = this._lbOwner;
     const d = this.distField;
+    if (stage === 3) {
+      this._findExclaves(W, H, F);
+      return;
+    }
     if (stage === 0) {
       this._eliminations();
       const half = F >> 1;
@@ -1032,6 +1042,82 @@ export class Renderer {
   }
 
   /**
+   * Trozos sueltos de cada nación (un enclave, una isla, lo que queda al otro
+   * lado de un río): llevan su bandera para saber de quién son. Sobre la
+   * rejilla de los nombres (ya con la distancia a la frontera), tomando una
+   * celda de cada 2×2: así es un recorrido rápido, en su propio fotograma.
+   * El trozo principal (donde va el nombre) no cuenta.
+   */
+  _findExclaves(W, H, F) {
+    const out = [];
+    this.exclaves = out;
+    if (this.game.phase === 'spawn') return;
+    const own = this._lbOwner;
+    const d = this.distField;
+    const W2 = Math.ceil(W / 2);
+    const H2 = Math.ceil(H / 2);
+    const n2 = W2 * H2;
+    if (!this._exComp || this._exComp.length !== n2) {
+      this._exComp = new Int32Array(n2);
+      this._exQueue = new Int32Array(n2);
+    }
+    const comp = this._exComp.fill(-1);
+    const queue = this._exQueue;
+    const players = this.game.players;
+    // Por dueño, sus trozos: [celda con más distancia a la frontera, esa distancia, tamaño]
+    const pieces = new Map();
+    let id = 0;
+    for (let c = 0; c < n2; c++) {
+      if (comp[c] >= 0) continue;
+      const cx = c % W2;
+      const cy = (c / W2) | 0;
+      const o = own[cy * 2 * W + cx * 2];
+      if (!o) continue;
+      const p = players[o];
+      if (!p || !p.alive || p.weak) {
+        comp[c] = -2;
+        continue;
+      }
+      let head = 0;
+      let tail = 0;
+      queue[tail++] = c;
+      comp[c] = id;
+      let bestD = 0;
+      let bestCell = -1;
+      let size = 0;
+      while (head < tail) {
+        const k = queue[head++];
+        size++;
+        const kx = k % W2;
+        const ky = (k / W2) | 0;
+        const fine = ky * 2 * W + kx * 2;
+        if (d[fine] > bestD) {
+          bestD = d[fine];
+          bestCell = fine;
+        }
+        if (kx > 0 && comp[k - 1] < 0 && own[fine - 2] === o) (comp[k - 1] = id), (queue[tail++] = k - 1);
+        if (kx < W2 - 1 && comp[k + 1] < 0 && own[fine + 2] === o) (comp[k + 1] = id), (queue[tail++] = k + 1);
+        if (ky > 0 && comp[k - W2] < 0 && own[fine - 2 * W] === o) (comp[k - W2] = id), (queue[tail++] = k - W2);
+        if (ky < H2 - 1 && comp[k + W2] < 0 && own[fine + 2 * W] === o) (comp[k + W2] = id), (queue[tail++] = k + W2);
+      }
+      id++;
+      let list = pieces.get(o);
+      if (!list) pieces.set(o, (list = []));
+      list.push([bestCell, bestD, size]);
+    }
+    for (const [o, list] of pieces) {
+      if (list.length < 2) continue;
+      // El más grande lleva el nombre; los demás (como mucho 8, los mayores), su bandera
+      list.sort((a, b) => b[2] - a[2]);
+      for (let i = 1; i < list.length && i <= 8; i++) {
+        const [cell, bd, size] = list[i];
+        if (size < 3 || bd < 2 || cell < 0) continue;
+        out.push({ player: players[o], x: (cell % W) * F + F / 2, y: Math.floor(cell / W) * F + F / 2, r: bd * F });
+      }
+    }
+  }
+
+  /**
    * `overlay`: { buildMode, hoverTile, ping } para la vista previa de
    * construcción y el aviso de la cámara.
    */
@@ -1095,7 +1181,7 @@ export class Renderer {
       this.lastLabelTime = now;
     } else if (this._lbStep) {
       this._labelStage(this._lbStep);
-      this._lbStep = (this._lbStep + 1) % 3;
+      this._lbStep = (this._lbStep + 1) % 4;
     } else if (now - this.lastLabelTime > (this.lite ? 2 : 1) * LABEL_INTERVAL_MS) {
       // La primera vez, todo de golpe (para que los nombres salgan ya)
       if (!this.labels.length) this._updateLabels();
@@ -1529,6 +1615,62 @@ export class Renderer {
     ctx.fill();
   }
 
+  /**
+   * Enseña de una nación ya dibujada (en caché por nación y tamaño): la
+   * bandera de su país o, si no tiene (naciones inventadas, colonias,
+   * jugadores sin bandera), un paño de su color con su emblema. Con `pole`,
+   * en un mástil (los barcos): así se sabe de quién es cada barco.
+   * Devuelve el lienzo con { w, h, ax, ay }: tamaño en px de pantalla y el
+   * punto de anclaje (pie del mástil, o el centro sin mástil).
+   */
+  _ensign(p, h, pole) {
+    const cache = (this._ensigns ??= new Map());
+    const flag = flagReady() && hasFlag(p.flag);
+    const key = `${p.id}|${h}|${pole ? 1 : 0}|${flag ? 1 : 0}|${this.dpr}`;
+    let c = cache.get(key);
+    if (c) return c;
+    if (cache.size > 600) cache.clear();
+    const fw = Math.round((h * 4) / 3);
+    const poleH = pole ? Math.round(h * 0.9) : 0;
+    const pad = 1;
+    const w = fw + pad * 2 + (pole ? 1.5 : 0);
+    const H = h + pad * 2 + poleH;
+    c = document.createElement('canvas');
+    c.width = Math.ceil(w * this.dpr);
+    c.height = Math.ceil(H * this.dpr);
+    const g = c.getContext('2d');
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const fx = pad + (pole ? 1.5 : 0);
+    const fy = pad;
+    if (pole) {
+      // Mástil oscuro con un borde claro (se ve sobre el mar y sobre tierra)
+      g.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      g.fillRect(0.5, fy, 2, h + poleH);
+      g.fillStyle = '#1b222c';
+      g.fillRect(1, fy, 1.2, h + poleH);
+    }
+    if (!flag || !drawFlag(g, p.flag, fx + fw / 2, fy + h / 2, h)) {
+      g.fillStyle = rgbToCss(p.color);
+      g.fillRect(fx, fy, fw, h);
+      if (h >= 8) drawEmblem(g, emblemFor(p), fx + fw / 2, fy + h / 2, h * 0.92);
+      g.lineWidth = 1;
+      g.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+      g.strokeRect(fx, fy, fw, h);
+    }
+    c.w = w;
+    c.h = H;
+    c.ax = pole ? 1.6 : w / 2;
+    c.ay = pole ? H : H / 2;
+    cache.set(key, c);
+    return c;
+  }
+
+  /** Bandera en su mástil sobre un barco: el pie del mástil en (x, y). */
+  _shipEnsign(p, x, y, h) {
+    const e = this._ensign(p, h, true);
+    this.ctx.drawImage(e, Math.round(x - e.ax), Math.round(y - e.ay), e.w, e.h);
+  }
+
   // ----------------------------------------------------------------- barcos
 
   /** Punto (con decimales) de una unidad que sigue un camino de casillas. */
@@ -1582,6 +1724,8 @@ export class Renderer {
       const moving = clamp((s.speed / RES) * 3, 0, 1);
       const len = clamp(z * RES * 2.6, 6, 30);
       drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
+      // Su bandera, en cuanto el barco se ve lo bastante grande
+      if (len >= 11) this._shipEnsign(p, sx, sy - len * 0.12, Math.round(clamp(len * 0.42, 7, 12)));
       this._maybeWake(s, len, 5);
     }
     for (const [id, st] of this._merch) if (st.gen !== gen) this._merch.delete(id);
@@ -1609,18 +1753,24 @@ export class Renderer {
       drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
       this._maybeWake(s, len, 8);
       if (z * RES >= 4 || mine) {
+        // Etiqueta con la bandera del dueño y sus tropas
         const text = fmtTroops(b.troops);
         ctx.font = '700 11px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const tw = ctx.measureText(text).width + 10;
+        const flag = this._ensign(p, 10, false);
+        const fw = flag.w + 3;
+        const tw = ctx.measureText(text).width + 10 + fw;
         const ty = sy - len * 0.55 - 10;
         ctx.beginPath();
         ctx.roundRect(sx - tw / 2, ty - 8, tw, 16, 8);
         ctx.fillStyle = human && b.targetId === human.id ? 'rgba(190, 40, 40, 0.92)' : b.owner === human?.id ? 'rgba(24, 140, 78, 0.92)' : 'rgba(10, 16, 28, 0.85)';
         ctx.fill();
+        ctx.drawImage(flag, Math.round(sx - tw / 2 + 5), Math.round(ty - flag.h / 2), flag.w, flag.h);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(text, sx, ty + 0.5);
+        ctx.fillText(text, sx + fw / 2, ty + 0.5);
+      } else if (len >= 10) {
+        this._shipEnsign(p, sx, sy - len * 0.1, Math.round(clamp(len * 0.4, 6, 11)));
       }
     }
     for (const [id, st] of this._boats) {
@@ -1751,6 +1901,8 @@ export class Renderer {
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
       drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
+      // Su bandera en el mástil (de quién es, de un vistazo)
+      this._shipEnsign(p, sx, sy - r * 0.2, Math.round(clamp(r * 0.78, 10, 15)));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
       this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
@@ -2215,6 +2367,25 @@ export class Renderer {
       if (L.alpha < 1) ctx.globalAlpha = 1;
     }
     for (const L of order) if (!L.shown && !L.fading) L.alpha = 0;
+    // Trozos sueltos de cada nación: su bandera, si se ven y hay sitio
+    for (const X of this.exclaves) {
+      if (!X.player.alive) continue;
+      const [sx, sy] = camera.worldToScreen(X.x, X.y);
+      if (sx < -20 || sy < -20 || sx > camera.viewW + 20 || sy > camera.viewH + 20) continue;
+      const rp = X.r * camera.zoom;
+      if (rp < 5) continue;
+      const h = Math.round(clamp(rp * 0.7, 9, 16));
+      const e = this._ensign(X.player, h, false);
+      const x0 = sx - e.w / 2;
+      const y0 = sy - e.h / 2;
+      const x1 = x0 + e.w;
+      const y1 = y0 + e.h;
+      let hit = false;
+      for (let i = 0; i < boxes.length && !hit; i += 4) hit = x0 < boxes[i + 2] && x1 > boxes[i] && y0 < boxes[i + 3] && y1 > boxes[i + 1];
+      if (hit) continue;
+      boxes.push(x0, y0, x1, y1);
+      ctx.drawImage(e, Math.round(x0), Math.round(y0), e.w, e.h);
+    }
   }
 
   /**

@@ -8,7 +8,7 @@ import { Player } from './player.js';
 import { Attack } from './attack.js';
 import { BotBrain, ColonyBrain } from './bot.js';
 import { generateColonyNames, generateNames } from './names.js';
-import { botColor } from './colors.js';
+import { assignNationColors, botColor } from './colors.js';
 import { POI, POI_TYPES, placePoints } from './estrategia.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
 import { MECH, bigEmpireBonus, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
@@ -48,6 +48,12 @@ const ANNEX_PROBE_AT = MECH.annexProbeAt;
 const DIRTY_MAX = 2_000_000;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+/** Tonos de las colonias: apagados (tierra, piedra, pizarra) y variados. */
+const COLONY_TONES = [
+  [150, 128, 104], [128, 132, 140], [146, 134, 116], [120, 128, 112], [150, 120, 120], [118, 116, 138],
+  [104, 130, 128], [140, 142, 108], [164, 142, 118], [112, 104, 96], [134, 112, 134], [100, 116, 140],
+];
 
 export class Game {
   constructor({ map, seed = 1, rules = null }) {
@@ -186,8 +192,10 @@ export class Game {
     const existing = this.players.filter(Boolean).map((p) => p.name);
     const names = generateColonyNames(this.rng, count, existing);
     for (const name of names) {
-      // Tonos apagados (tierra, piedra): se distinguen de las naciones
-      const base = this.rng.pick([[150, 128, 104], [128, 132, 140], [146, 134, 116], [120, 128, 112], [150, 120, 120], [118, 116, 138]]);
+      // Tonos apagados (tierra, piedra): se distinguen de las naciones. Doce,
+      // para que dos colonias vecinas no salgan casi siempre iguales (la misma
+      // tirada de `rng` que con seis: no cambia la partida)
+      const base = this.rng.pick(COLONY_TONES);
       const v = this.rng.int(-14, 14);
       const p = this.addPlayer(name, base.map((c) => Math.max(0, Math.min(255, c + v))), false);
       p.weak = true;
@@ -223,7 +231,30 @@ export class Game {
       const t = this.findSpawnTile({ colony: !!p.weak });
       if (t >= 0) this.spawnPlayer(p, t);
     }
+    this._colorNations();
     this._emit('Elige dónde empezar haciendo clic en el mapa', 'info');
+  }
+
+  /**
+   * Ya en su sitio, cada nación de la IA toma el color que más se distingue
+   * de sus vecinas y de los jugadores (antes iban por orden de llegada y dos
+   * vecinas podían salir casi iguales). Solo es dibujo: no gasta `rng` ni
+   * cambia la simulación, y sale igual en todos los navegadores.
+   */
+  _colorNations() {
+    const map = this.map;
+    const nations = [];
+    for (const b of this.bots) {
+      const p = b.player;
+      if (p.weak || p.spawnTile < 0) continue;
+      nations.push({ id: p.id, x: map.x(p.spawnTile), y: map.y(p.spawnTile) });
+    }
+    if (!nations.length) return;
+    const fixed = this.players.filter((p) => p && p.isHuman).map((p) => p.color);
+    // Vecinas: a menos de unas 2,5 veces la separación media entre naciones
+    const radius = 2.5 * Math.sqrt(map.landCount / nations.length);
+    const colors = assignNationColors(nations, fixed, radius);
+    for (const [id, c] of colors) this.players[id].color = c;
   }
 
   /** Casillas de la zona inicial (52) que caben en `t`: tierra libre de la misma masa. */

@@ -79,3 +79,107 @@ export function shadeRgb([r, g, b], f) {
   const t = f - 1;
   return [Math.round(r + (255 - r) * t), Math.round(g + (255 - g) * t), Math.round(b + (255 - b) * t)];
 }
+
+// ---------------------------------------------------------------- naciones
+
+/** [L, a, b] (CIELAB, D65) de un color [r, g, b]: para medir cuánto se parecen dos colores a la vista. */
+export function rgbToLab([r, g, b]) {
+  const lin = (c) => {
+    c /= 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const R = lin(r);
+  const G = lin(g);
+  const B = lin(b);
+  const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  const x = f((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047);
+  const y = f(R * 0.2126 + G * 0.7152 + B * 0.0722);
+  const z = f((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+
+/** Diferencia de color (ΔE de 1976): por debajo de ~10 cuesta distinguirlos en un mapa. */
+export function deltaE(a, b) {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+/**
+ * Relleno con el que se pinta el territorio de una nación (render.js): el
+ * mismo tono algo apagado. Aquí para comparar los colores tal como se ven.
+ */
+export function territoryRgb(rgb) {
+  return mutedRgb(rgb, 0.46, 0.5, 0.72);
+}
+
+/**
+ * Paleta de las naciones: 24 tonos repartidos en el círculo cromático, cada
+ * uno con tres luces (oscuro, medio y claro): 72 colores bien distintos.
+ */
+export const NATION_PALETTE = (() => {
+  const out = [];
+  for (const [s, l] of [[0.62, 0.5], [0.55, 0.62], [0.5, 0.72]]) {
+    for (let h = 0; h < 360; h += 15) out.push(hslToRgb(h + (l > 0.6 ? 7 : 0), s, l));
+  }
+  return out;
+})();
+
+/**
+ * Colores de las naciones según quién tienen al lado: cada una elige de la
+ * paleta el que más se distingue (tal como se pinta) de sus vecinas ya
+ * coloreadas, de los jugadores (`fixed`, que no se mueven de su color) y,
+ * a igualdad, el menos repetido. Sin azar: el mismo resultado en todos los
+ * navegadores de una partida en línea.
+ *   nations: [{ id, x, y }] · fixed: [[r, g, b]] · radius: distancia (en
+ *   casillas) a la que dos naciones cuentan como vecinas.
+ * Devuelve Map id → [r, g, b].
+ */
+export function assignNationColors(nations, fixed, radius) {
+  const labs = NATION_PALETTE.map((c) => rgbToLab(territoryRgb(c)));
+  const fixedLabs = fixed.map((c) => rgbToLab(territoryRgb(c)));
+  const n = nations.length;
+  const r2 = radius * radius;
+  const near = nations.map(() => []);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const d2 = (nations[i].x - nations[j].x) ** 2 + (nations[i].y - nations[j].y) ** 2;
+      if (d2 < r2) {
+        const closeness = 1 - Math.sqrt(d2) / radius; // 1 pegadas, 0 en el límite
+        near[i].push([j, closeness]);
+        near[j].push([i, closeness]);
+      }
+    }
+  }
+  // Primero las que más vecinas tienen (las difíciles), luego por id
+  const order = nations.map((_, i) => i).sort((a, b) => near[b].length - near[a].length || nations[a].id - nations[b].id);
+  const chosen = new Array(n).fill(-1);
+  const uses = new Array(NATION_PALETTE.length).fill(0);
+  const out = new Map();
+  for (const i of order) {
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let c = 0; c < labs.length; c++) {
+      // La vecina más parecida manda (las más cercanas pesan más)
+      let worst = 999;
+      for (const [j, closeness] of near[i]) {
+        if (chosen[j] < 0) continue;
+        const v = deltaE(labs[c], labs[chosen[j]]) - 18 * closeness;
+        if (v < worst) worst = v;
+      }
+      // Los jugadores: que ninguna nación se confunda con ellos
+      for (const fl of fixedLabs) {
+        const v = deltaE(labs[c], fl) - 12;
+        if (v < worst) worst = v;
+      }
+      // A igualdad, el color menos usado y, entre esos, uno que dependa de la nación
+      const score = Math.min(worst, 60) - uses[c] * 3 - ((c * 7 + nations[i].id * 13) % 17) * 0.01;
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    chosen[i] = best;
+    uses[best]++;
+    out.set(nations[i].id, NATION_PALETTE[best]);
+  }
+  return out;
+}

@@ -53,6 +53,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Mapa', title: 'Colores y banderas', text: 'Cada país se distingue de sus vecinos, los barcos llevan su bandera y los territorios sueltos de una nación, también.', art: 2 },
   { tag: 'Mapas', title: 'Seis regiones nuevas', text: 'Mediterráneo, Oriente Medio, Centroamérica y el Caribe, Sudeste Asiático, Extremo Oriente y Asia del Sur: más detalle por país y partidas más cortas.', art: 2 },
   { tag: 'Menús', title: 'Menú más fluido', text: 'Pestañas y páginas cambian sin tirones y el menú gasta mucho menos mientras lo miras, también en el móvil.', art: 0 },
   { tag: 'Mapa', title: 'Cámara fluida', text: 'El zoom y el desplazamiento se deslizan con suavidad, con inercia al soltar, y la cámara vuela hasta cada frente.', art: 2 },
