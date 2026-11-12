@@ -2,6 +2,7 @@
 // barra de progreso y un consejo. Dura un mínimo para que dé tiempo a leerlo.
 
 import { mostrar } from './movimiento.js';
+import { flagCss, hasFlag } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -74,42 +75,121 @@ export async function withLoading(title, steps, { minMs = 1300 } = {}) {
 
 /**
  * Pantalla de arranque (#arranque, en el HTML desde el principio): pasos con
- * su texto, la barra (con transform: sigue avanzando aunque el paso bloquee
- * el hilo principal) y el mapa del mundo que se va descubriendo.
+ * su texto, la lista de pasos que se van marcando, la barra y el porcentaje
+ * (con transform: sigue avanzando aunque el paso bloquee el hilo principal),
+ * consejos que rotan solos (animación CSS) y el mapa del mundo que se va
+ * descubriendo con las banderas de los países. Al terminar, las dos puertas se
+ * abren y entra el menú.
  */
 export function bootLoader() {
   const box = $('arranque');
   if (!box) return null;
   const bar = $('arr-progreso');
   const text = $('arr-paso');
+  const pct = $('arr-pct');
   const started = performance.now();
-  $('arr-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  // Cinco consejos distintos al azar: cada uno 5 s, en bucle
+  const pool = [...TIPS];
+  const tips = [];
+  while (tips.length < 5 && pool.length) tips.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  const cycle = tips.length * 5;
+  $('arr-tips').replaceChildren(
+    ...tips.map((t, i) => {
+      const p = document.createElement('p');
+      p.className = 'arr-tip';
+      p.textContent = t;
+      p.style.setProperty('--d', `${i * 5}s`);
+      p.style.setProperty('--ciclo', `${cycle}s`);
+      return p;
+    }),
+  );
+  $('arr-puntos').replaceChildren(
+    ...tips.map((_, i) => {
+      const d = document.createElement('i');
+      d.style.setProperty('--d', `${i * 5}s`);
+      d.style.setProperty('--ciclo', `${cycle}s`);
+      return d;
+    }),
+  );
+  const marks = [...document.querySelectorAll('#arr-pasos li')];
   return {
-    /** Nuevo paso: la barra va hasta `to` (0-1) en unos `ms` (lo que suele tardar). */
-    step(label, to, ms = 500) {
+    /** Nuevo paso (`key`: su marca en la lista): la barra va hasta `to` (0-1) en unos `ms` (lo que suele tardar). */
+    step(label, to, ms = 500, key = '') {
       text.textContent = label;
       text.classList.remove('cambia');
       void text.offsetWidth;
       text.classList.add('cambia');
+      const f = Math.max(0.02, Math.min(1, to));
       bar.style.transitionDuration = `${ms}ms`;
-      bar.style.transform = `scaleX(${Math.max(0.02, Math.min(1, to))})`;
+      bar.style.transform = `scaleX(${f})`;
+      pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
+      if (key) {
+        let reached = false;
+        for (const li of marks) {
+          const here = li.dataset.paso === key;
+          li.classList.toggle('activo', here);
+          if (!reached && !here) li.classList.add('hecho');
+          if (here) reached = true;
+        }
+      }
     },
-    /** Pinta el mapa en su lienzo y lo descubre con el escáner. */
-    map(draw) {
+    /**
+     * Pinta el mapa en su lienzo y lo descubre con el escáner; `pins`
+     * ([{ iso, x, y }], 0-1 sobre el lienzo) son banderas que caen cuando pasa.
+     */
+    map(draw, pins = []) {
       try {
         draw($('arr-lienzo'));
+        const layer = $('arr-pines');
+        layer.replaceChildren(
+          ...pins.filter((p) => hasFlag(p.iso)).map((p) => {
+            const pin = document.createElement('span');
+            pin.className = 'arr-pin';
+            pin.style.left = `${(p.x * 100).toFixed(2)}%`;
+            pin.style.top = `${(p.y * 100).toFixed(2)}%`;
+            // Cae cuando el escáner (1,7 s de izquierda a derecha) pasa por encima
+            pin.style.setProperty('--d', `${(0.25 + p.x * 1.35).toFixed(2)}s`);
+            const flag = document.createElement('i');
+            flag.className = 'bandera';
+            flag.style.cssText = flagCss(p.iso, 18);
+            pin.append(flag);
+            return pin;
+          }),
+        );
         box.classList.add('con-mapa');
+        this.mapAt = performance.now();
       } catch {
         /* sin vista previa: sigue el radar */
       }
     },
-    /** Último paso y salida (un mínimo para que no sea un parpadeo). */
-    async done(minMs = 1500) {
+    /**
+     * Último paso y salida (un mínimo para que no sea un parpadeo): el centro
+     * se aleja, una línea dorada cruza la pantalla y las puertas se abren;
+     * `onOpen()` justo cuando empiezan a abrirse (para que entre el menú).
+     */
+    async done({ minMs = 1800, onOpen = () => {} } = {}) {
       this.step('¡A las trincheras!', 1, 300);
-      await wait(Math.max(260, minMs - (performance.now() - started)));
-      box.classList.add('saliendo');
+      for (const li of marks) {
+        li.classList.remove('activo');
+        li.classList.add('hecho');
+      }
+      box.classList.add('listo');
+      // Un mínimo total y, si el mapa salió hace poco, que dé tiempo a verlo
+      // descubrirse y a que caigan sus banderas
+      const now = performance.now();
+      await wait(Math.max(450, minMs - (now - started), this.mapAt ? 1700 - (now - this.mapAt) : 0));
+      const still = document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       document.body.classList.remove('arrancando');
-      await wait(560);
+      if (still) {
+        box.hidden = true;
+        onOpen();
+        return;
+      }
+      box.classList.add('saliendo');
+      await wait(420);
+      box.classList.add('abriendo');
+      onOpen();
+      await wait(880);
       box.hidden = true;
     },
   };

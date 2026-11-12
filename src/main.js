@@ -1722,32 +1722,38 @@ async function boot() {
   const paint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const atMost = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
   try {
-    loader?.step('Preparando el cuartel…', 0.1, 400);
+    loader?.step('Preparando el cuartel…', 0.1, 400, 'cuartel');
     await atMost(document.fonts?.ready, 1200);
-    loader?.step('Izando las banderas…', 0.2, 400);
+    loader?.step('Izando las banderas…', 0.2, 400, 'banderas');
     await atMost(loadFlags(), 2000);
-    loader?.step('Cartografiando el mundo…', 0.42, 900);
+    loader?.step('Cartografiando el mundo…', 0.42, 900, 'mapa');
     await paint();
-    const { map } = loadRealMap('mundo');
+    const { map, countries } = loadRealMap('mundo');
+    const cropH = Math.min(map.height, Math.round((map.width * 230) / 480));
+    // Banderas de algunos países repartidos por el mundo, sobre su sitio real
+    const PIN_ISOS = ['us', 'ca', 'mx', 'br', 'ar', 'gb', 'fr', 'es', 'de', 'ru', 'tr', 'eg', 'ng', 'za', 'sa', 'in', 'cn', 'jp', 'id', 'au'];
+    const pins = countries
+      .filter((c) => PIN_ISOS.includes(c.iso) && map.y(c.tile) < cropH)
+      .map((c) => ({ iso: c.iso, x: (map.x(c.tile) + 0.5) / map.width, y: (map.y(c.tile) + 0.5) / cropH }));
     loader?.map((canvas) => {
       const data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river, lat: map.lat };
-      paintMapPreview(canvas, data, [0, 0, map.width, Math.min(map.height, Math.round((map.width * canvas.height) / canvas.width))]);
-    });
-    loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300);
+      paintMapPreview(canvas, data, [0, 0, map.width, cropH]);
+    }, pins);
+    loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300, 'terreno');
     await paint();
     await paint();
     paintTerrain(map); // queda guardado: la partida de fondo lo reutiliza
-    loader?.step('Sincronizando tu perfil…', 0.74, 500);
+    loader?.step('Sincronizando tu perfil…', 0.74, 500, 'perfil');
     await paint();
     await atMost(syncAtBoot(), 2500);
-    loader?.step('Abriendo el cuartel general…', 0.84, 500);
+    loader?.step('Abriendo el cuartel general…', 0.84, 500, 'perfil');
     await paint();
     home.renderChip();
     home.renderHero();
     // Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
     settlePendingRanked();
     home.renderAll();
-    loader?.step('Desplegando la partida de fondo…', 0.96, 700);
+    loader?.step('Desplegando el frente…', 0.96, 700, 'frente');
     await paint();
     if (!state.game) startDemo({ background: true });
     await paint();
@@ -1761,11 +1767,16 @@ async function boot() {
       reportError(err2, 'arranque (menú)');
     }
   } finally {
-    await loader?.done();
-    state.booted = true;
+    // El menú entra (escalonado) justo cuando se abren las puertas
     const inicio = document.getElementById('inicio');
-    inicio.classList.add('entrada');
-    setTimeout(() => inicio.classList.remove('entrada'), 1500);
+    await loader?.done({
+      onOpen: () => {
+        inicio.classList.add('entrada');
+        setTimeout(() => inicio.classList.remove('entrada'), 1700);
+      },
+    });
+    if (!loader) inicio.classList.add('entrada');
+    state.booted = true;
     for (const fn of afterBoot.splice(0)) {
       try {
         fn();

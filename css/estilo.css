@@ -3752,7 +3752,10 @@ body.sin-animaciones .despliegue { animation: none; }
   #aviso { z-index: 30; width: max-content; max-width: calc(100vw - 24px); padding: 8px 14px; border-radius: 14px; font-size: 13px; line-height: 1.3; }
 }
 
-/* ---------- Arranque: antes del menú, mientras se prepara todo ---------- */
+/* ---------- Arranque: antes del menú, mientras se prepara todo ----------
+   Todo se mueve con transform y opacity (sigue fluido aunque el navegador esté
+   ocupado cargando). Al acabar: el centro se aleja, una línea dorada cruza la
+   pantalla y las dos «puertas» se abren hacia arriba y hacia abajo */
 .arranque {
   position: fixed;
   inset: 0;
@@ -3760,34 +3763,90 @@ body.sin-animaciones .despliegue { animation: none; }
   display: grid;
   place-items: center;
   padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
-  background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%);
   color: var(--texto-1);
   overflow: hidden;
-  transition: opacity 0.55s ease, visibility 0s linear 0.55s;
 }
 .arranque[hidden] { display: none; }
-.arranque.saliendo { opacity: 0; visibility: hidden; pointer-events: none; }
-.arranque.saliendo .arr-centro { transform: scale(1.05) translateY(-8px); transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.arr-fondo { position: absolute; inset: 0; pointer-events: none; }
+.arranque.abriendo { pointer-events: none; }
+.arr-puerta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%);
+  background-size: 100% 198%;
+  transition: transform 0.85s cubic-bezier(0.7, 0, 0.2, 1);
+  will-change: transform;
+}
+.arr-arriba { top: 0; background-position: top; box-shadow: 0 1px 0 rgba(242, 179, 61, 0.0); }
+.arr-abajo { bottom: 0; background-position: bottom; }
+.arranque.abriendo .arr-arriba { transform: translateY(-101%); }
+.arranque.abriendo .arr-abajo { transform: translateY(101%); }
+/* La línea dorada por donde se abren */
+.arr-costura {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: linear-gradient(90deg, transparent, #ffd36b 20%, #fff3cf 50%, #ffd36b 80%, transparent);
+  box-shadow: 0 0 18px 3px rgba(242, 179, 61, 0.55);
+  transform: scaleX(0);
+  opacity: 0;
+  z-index: 3;
+}
+.arranque.saliendo .arr-costura { opacity: 1; transform: scaleX(1); transition: transform 0.42s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.2s; }
+.arranque.abriendo .arr-costura { opacity: 0; transform: scaleX(1) scaleY(6); transition: opacity 0.5s 0.1s, transform 0.6s; }
+.arr-fondo { position: absolute; inset: 0; pointer-events: none; z-index: 1; transition: opacity 0.4s; }
+.arranque.saliendo .arr-fondo { opacity: 0; }
 /* Rejilla de mapa de campaña que deriva despacio */
 .arr-rejilla {
   position: absolute;
   inset: -48px;
   background-image: linear-gradient(rgba(242, 179, 61, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(242, 179, 61, 0.055) 1px, transparent 1px);
   background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
-  mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 42%, #000 15%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 50% 42%, #000 15%, transparent 70%);
   animation: arrDeriva 16s linear infinite;
 }
 @keyframes arrDeriva { to { transform: translate(48px, 48px); } }
-.arr-halo { position: absolute; left: 50%; top: 40%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; background: radial-gradient(circle, rgba(242, 179, 61, 0.13), transparent 62%); animation: arrLatido 3.4s ease-in-out infinite; }
+.arr-halo { position: absolute; left: 50%; top: 38%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; background: radial-gradient(circle, rgba(242, 179, 61, 0.13), transparent 62%); animation: arrLatido 3.4s ease-in-out infinite; }
 @keyframes arrLatido { 50% { transform: scale(1.08); opacity: 0.7; } }
-.arr-centro { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px, 100%); text-align: center; }
-.arr-logo { gap: 10px; animation: arrEntra 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
-.arr-logo .logo-marca { width: 92px; height: 92px; filter: drop-shadow(0 8px 22px rgba(242, 179, 61, 0.25)); }
+/* Atardecer en el horizonte, con la línea del frente que marcha despacio */
+.arr-horizonte { position: absolute; left: -10%; right: -10%; bottom: -30vh; height: 62vh; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, rgba(255, 150, 60, 0.32), rgba(200, 90, 40, 0.12) 45%, transparent 70%); }
+.arr-frente { position: absolute; left: 0; bottom: 0; width: 200%; height: 90px; animation: marcha 60s linear infinite; }
+.arr-lejos { bottom: 26px; height: 70px; color: #0e1726; fill: #0e1726; opacity: 0.9; animation-duration: 110s; }
+.arr-cerca { color: #04070e; fill: #04070e; animation-duration: 55s; }
+@keyframes marcha { to { transform: translateX(-50%); } }
+/* Brasas que suben */
+.arr-brasas i { position: absolute; bottom: -10px; width: 4px; height: 4px; border-radius: 50%; background: #ffbf5e; box-shadow: 0 0 8px 2px rgba(255, 160, 60, 0.6); opacity: 0; animation: brasa 7s linear infinite; }
+.arr-brasas i:nth-child(1) { left: 8%; animation-delay: 0.2s; }
+.arr-brasas i:nth-child(2) { left: 17%; animation-delay: 3.1s; animation-duration: 8.5s; }
+.arr-brasas i:nth-child(3) { left: 26%; animation-delay: 1.4s; }
+.arr-brasas i:nth-child(4) { left: 35%; animation-delay: 5.2s; animation-duration: 9s; }
+.arr-brasas i:nth-child(5) { left: 44%; animation-delay: 2.3s; animation-duration: 6.5s; }
+.arr-brasas i:nth-child(6) { left: 53%; animation-delay: 4.4s; }
+.arr-brasas i:nth-child(7) { left: 61%; animation-delay: 0.9s; animation-duration: 8s; }
+.arr-brasas i:nth-child(8) { left: 69%; animation-delay: 3.7s; }
+.arr-brasas i:nth-child(9) { left: 77%; animation-delay: 1.8s; animation-duration: 9.5s; }
+.arr-brasas i:nth-child(10) { left: 85%; animation-delay: 5.8s; }
+.arr-brasas i:nth-child(11) { left: 92%; animation-delay: 2.7s; animation-duration: 7.5s; }
+.arr-brasas i:nth-child(12) { left: 4%; animation-delay: 6.3s; animation-duration: 8.8s; }
+@keyframes brasa {
+  0% { opacity: 0; transform: translate(0, 0) scale(1); }
+  10% { opacity: 0.9; }
+  60% { opacity: 0.5; }
+  100% { opacity: 0; transform: translate(30px, -55vh) scale(0.4); }
+}
+.arr-centro { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(500px, 100%); text-align: center; transition: transform 0.45s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.35s; }
+.arranque.saliendo .arr-centro { transform: scale(0.92) translateY(-6px); opacity: 0; }
+.arr-logo { gap: 6px; animation: arrEntra 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.arr-logo .logo-marca { width: 88px; height: 88px; filter: drop-shadow(0 8px 22px rgba(242, 179, 61, 0.28)); }
 .arr-logo .logo-texto { font-size: clamp(38px, 9vw, 60px); }
+.arr-lema { font-size: 12px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--texto-2); animation: arrEntra 0.7s 0.35s both; }
 /* El mundo que se va cartografiando: radar mientras carga y, con el mapa ya
-   leído, un velo que se retira con una línea de escáner dorada */
+   leído, un velo que se retira con una línea de escáner y banderas que caen */
 .arr-mapa {
   position: relative;
   width: 100%;
@@ -3795,13 +3854,13 @@ body.sin-animaciones .despliegue { animation: none; }
   border-radius: 16px;
   overflow: hidden;
   background: repeating-radial-gradient(circle at 50% 50%, transparent 0 38px, rgba(242, 179, 61, 0.07) 39px 40px), #0c1930;
-  border: 1px solid rgba(242, 179, 61, 0.24);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 46px rgba(242, 179, 61, 0.08);
+  border: 1px solid rgba(242, 179, 61, 0.26);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 46px rgba(242, 179, 61, 0.1);
   animation: arrEntra 0.7s 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
 .arr-mapa canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.25s; }
 .arranque.con-mapa .arr-mapa canvas { opacity: 1; }
-.arr-velo { position: absolute; inset: 0; background: #0c1930; }
+.arr-velo { position: absolute; inset: 0; background: #0c1930; z-index: 1; }
 .arranque.con-mapa .arr-velo { transform: translateX(101%); transition: transform 1.7s cubic-bezier(0.45, 0.05, 0.25, 1); }
 .arr-escaner { position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #ffd36b; box-shadow: 0 0 14px 4px rgba(242, 179, 61, 0.55), 0 0 44px 12px rgba(242, 179, 61, 0.16); opacity: 0; }
 .arranque.con-mapa .arr-escaner { opacity: 1; }
@@ -3816,40 +3875,94 @@ body.sin-animaciones .despliegue { animation: none; }
   transform: translate(-50%, -50%);
   animation: arrGira 2.4s linear infinite;
   transition: opacity 0.9s;
+  z-index: 2;
 }
 .arranque.con-mapa .arr-radar { opacity: 0; }
 @keyframes arrGira { to { transform: translate(-50%, -50%) rotate(360deg); } }
-/* Barra: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
-.arr-barra { position: relative; width: 100%; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); animation: arrEntra 0.7s 0.2s both; }
+/* Banderas de los países sobre el mapa: caen cuando pasa el escáner */
+.arr-pines { position: absolute; inset: 0; z-index: 3; }
+.arr-pin { position: absolute; width: 0; height: 0; }
+.arr-pin .bandera { position: absolute; left: -9px; bottom: 5px; width: 18px; height: 13.5px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 3px 8px rgba(0, 0, 0, 0.45); opacity: 0; transform: translateY(-14px) scale(0.6); animation: pinCae 0.45s var(--d, 0.5s) cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
+.arr-pin::before { content: ""; position: absolute; left: -1px; top: -6px; width: 2px; height: 6px; background: rgba(255, 255, 255, 0.85); border-radius: 1px; opacity: 0; animation: pinAsta 0.2s var(--d, 0.5s) forwards; }
+.arr-pin::after { content: ""; position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255, 211, 107, 0.9); opacity: 0; transform: scale(0.2); animation: pinOnda 2.4s calc(var(--d, 0.5s) + 0.25s) ease-out infinite; }
+@keyframes pinCae { to { opacity: 1; transform: none; } }
+@keyframes pinAsta { to { opacity: 1; } }
+@keyframes pinOnda { 0% { opacity: 0.9; transform: scale(0.2); } 70%, 100% { opacity: 0; transform: scale(1.6); } }
+.arr-brillo-mapa { position: absolute; inset: 0; z-index: 4; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.12) 48%, transparent 60%); transform: translateX(-100%); pointer-events: none; }
+.arranque.listo .arr-brillo-mapa { animation: brilloMapa 1.1s ease-in-out forwards; }
+@keyframes brilloMapa { to { transform: translateX(100%); } }
+/* Barra y porcentaje: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
+.arr-progreso { width: 100%; display: flex; align-items: center; gap: 12px; animation: arrEntra 0.7s 0.2s both; }
+.arr-barra { position: relative; flex: 1; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
 .arr-barra span { display: block; height: 100%; transform-origin: left center; transform: scaleX(0.02); background: linear-gradient(90deg, #d99a2b, #ffd36b); box-shadow: 0 0 12px rgba(242, 179, 61, 0.6); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); }
 .arr-barra::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: translateX(-100%); animation: arrBrillo 1.6s ease-in-out infinite; }
 @keyframes arrBrillo { to { transform: translateX(340%); } }
-.arr-paso { margin: 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
+@property --arr-pct { syntax: '<integer>'; inherits: false; initial-value: 0; }
+.arr-pct { min-width: 44px; text-align: right; font-size: 14px; font-weight: 800; color: var(--oro-200); font-variant-numeric: tabular-nums; counter-reset: pct var(--arr-pct); }
+.arr-pct::after { content: counter(pct) " %"; }
+.arr-paso { margin: -4px 0 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
 .arr-paso.cambia { animation: arrTexto 0.35s ease-out; }
 @keyframes arrTexto { from { opacity: 0; transform: translateY(5px); } }
-.arr-consejo { margin: 4px 0 0; padding: 10px 14px; max-width: 440px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 13.5px; line-height: 1.45; color: var(--texto-1); animation: arrEntra 0.7s 0.3s both; }
-.arr-consejo:empty { visibility: hidden; }
-.arr-consejo::before { content: "Consejo · "; color: var(--oro-400); font-weight: 700; }
+/* Lista de pasos: se van marcando */
+.arr-pasos { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; animation: arrEntra 0.7s 0.25s both; }
+.arr-pasos li { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; color: var(--texto-3); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); transition: color 0.3s, background 0.3s, border-color 0.3s; }
+.arr-pasos li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); transition: background 0.3s, transform 0.3s; }
+.arr-pasos li.activo { color: var(--oro-200); border-color: rgba(242, 179, 61, 0.4); background: rgba(242, 179, 61, 0.08); }
+.arr-pasos li.activo::before { background: #ffd36b; animation: pasoLatido 0.9s ease-in-out infinite; }
+.arr-pasos li.hecho { color: #c9f5da; border-color: rgba(95, 211, 141, 0.35); background: rgba(95, 211, 141, 0.08); }
+.arr-pasos li.hecho::before { background: #5fd38d; transform: scale(1.15); }
+@keyframes pasoLatido { 50% { transform: scale(1.6); opacity: 0.6; } }
+/* Consejos: rotan solos con CSS (no se paran aunque la carga ocupe el navegador) */
+.arr-consejos { position: relative; width: 100%; max-width: 460px; margin-top: 2px; padding: 12px 16px 10px; border-radius: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)); border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); animation: arrEntra 0.7s 0.3s both; }
+.arr-consejos-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro-400); }
+.arr-consejos-titulo svg { width: 14px; height: 14px; }
+.arr-tips { position: relative; min-height: 44px; margin-top: 6px; }
+.arr-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; font-size: 14px; line-height: 1.45; color: var(--texto-1); opacity: 0; animation: tipCiclo var(--ciclo, 25s) var(--d, 0s) infinite both; }
+@keyframes tipCiclo {
+  0% { opacity: 0; transform: translateY(10px); }
+  3% { opacity: 1; transform: none; }
+  17% { opacity: 1; transform: none; }
+  20% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+.arr-puntos { display: flex; justify-content: center; gap: 5px; margin-top: 8px; }
+.arr-puntos i { width: 18px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.arr-puntos i::after { content: ""; display: block; height: 100%; background: #ffd36b; transform: scaleX(0); transform-origin: left center; animation: puntoCiclo var(--ciclo, 25s) var(--d, 0s) linear infinite both; }
+@keyframes puntoCiclo { 0% { transform: scaleX(0); } 20% { transform: scaleX(1); } 20.01%, 100% { transform: scaleX(0); } }
 @keyframes arrEntra { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
-@media (max-height: 560px) {
-  .arr-centro { gap: 10px; }
-  .arr-mapa { width: min(100%, 360px); }
-  .arr-logo .logo-marca { width: 64px; height: 64px; }
-  .arr-consejo { display: none; }
+@media (max-height: 640px) {
+  .arr-centro { gap: 9px; }
+  .arr-mapa { width: min(100%, 380px); }
+  .arr-logo .logo-marca { width: 60px; height: 60px; }
+  .arr-lema, .arr-pasos { display: none; }
+}
+@media (max-width: 480px) {
+  .arr-pasos li { padding: 3px 8px 3px 7px; font-size: 10.5px; }
+  .arr-tip { font-size: 13px; }
+  .arr-tips { min-height: 58px; }
 }
 
-/* El menú entra cuando se va el arranque: cabecera desde arriba y el contenido escalonado */
-#inicio.entrada .ini-barra { animation: iniBaja 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
-#inicio.entrada .vista:not([hidden]) > * { animation: iniSube 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(2) { animation-delay: 0.08s; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(3) { animation-delay: 0.16s; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(4) { animation-delay: 0.24s; }
-#inicio.entrada .vista:not([hidden]) > :nth-child(n+5) { animation-delay: 0.3s; }
+/* El menú entra cuando se abren las puertas: cabecera desde arriba, pestañas y el contenido escalonado */
+#inicio.entrada .ini-barra { animation: iniBaja 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+#inicio.entrada .ini-pestanas button { animation: iniBaja 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+#inicio.entrada .ini-pestanas button:nth-child(2) { animation-delay: 0.04s; }
+#inicio.entrada .ini-pestanas button:nth-child(3) { animation-delay: 0.08s; }
+#inicio.entrada .ini-pestanas button:nth-child(4) { animation-delay: 0.12s; }
+#inicio.entrada .ini-pestanas button:nth-child(5) { animation-delay: 0.16s; }
+#inicio.entrada .ini-pestanas button:nth-child(n+6) { animation-delay: 0.2s; }
+#inicio.entrada .vista:not([hidden]) > * { animation: iniSube 0.75s cubic-bezier(0.2, 0.9, 0.3, 1) both; animation-delay: 0.12s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(2) { animation-delay: 0.2s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(3) { animation-delay: 0.28s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(4) { animation-delay: 0.36s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(n+5) { animation-delay: 0.42s; }
+#inicio.entrada .heroe { animation-name: iniHeroe; }
 @keyframes iniBaja { from { opacity: 0; transform: translateY(-18px); } }
-@keyframes iniSube { from { opacity: 0; transform: translateY(20px); } }
+@keyframes iniSube { from { opacity: 0; transform: translateY(26px) scale(0.985); } }
+@keyframes iniHeroe { from { opacity: 0; transform: scale(0.94); } }
 
 @media (prefers-reduced-motion: reduce) {
   .arranque, .arranque *, .arranque *::before, .arranque *::after, #inicio.entrada * { animation: none !important; transition: none !important; }
+  .arr-tip:first-child { opacity: 1; }
 }
 body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { animation: none !important; }
 
