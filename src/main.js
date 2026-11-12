@@ -268,8 +268,8 @@ function startDemo({ background = false } = {}) {
   if (!background) leaveOnline();
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
-  // En el móvil, la partida de fondo del menú va más tranquila (gasta menos)
-  state.speed = TOUCH ? 1 : 2;
+  // La partida de fondo del menú va a velocidad normal (gasta menos)
+  state.speed = 1;
   ui.hideHud();
   ui.closeNation();
   if (state.sala || state.pendingEntry) {
@@ -1552,9 +1552,13 @@ function frame(now) {
   } catch (err) {
     reportError(err, 'cámara y sonido');
   }
-  // La partida de fondo del menú, en el móvil, se dibuja a 30 fps (casi no se ve)
+  // La partida de fondo del menú se ve atenuada y tapada: se dibuja a 20 fps
+  // (15 en el móvil). Cada dibujo hace recomponer la pantalla entera, y a 60
+  // fps era casi la mitad del trabajo del menú
   state.frameNo = (state.frameNo || 0) + 1;
-  if (!(state.demo && TOUCH && state.frameNo & 1)) {
+  const demoGap = TOUCH ? 62 : 46;
+  if (!state.demo || now - (state.lastDemoDraw || 0) >= demoGap) {
+    if (state.demo) state.lastDemoDraw = now;
     try {
       state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
     } catch (err) {

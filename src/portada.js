@@ -167,9 +167,10 @@ export class CoverArt {
     this.ships = ships;
   }
 
-  /** ¿Animaciones apagadas? (Ajustes o el sistema; se mira en cada fotograma) */
+  /** ¿Animaciones apagadas? (Ajustes o el sistema; se mira en cada fotograma, la consulta del sistema se guarda) */
   _still() {
-    return document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    this._reduce ??= window.matchMedia?.('(prefers-reduced-motion: reduce)') || { matches: false };
+    return document.body.classList.contains('sin-animaciones') || this._reduce.matches;
   }
 
   start() {

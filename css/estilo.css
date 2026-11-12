@@ -816,12 +816,14 @@ body.sin-animaciones .fin-logro { animation: none; }
 .logo-grande .logo-texto { font-size: clamp(44px, 10vw, 76px); }
 
 /* Fondo del inicio: barrido de radar muy suave sobre la partida de bots */
+/* Brillo fijo detrás del menú. Antes era un «radar» que giraba sin parar: una
+   capa del doble de la pantalla que obligaba a recomponerla entera en cada
+   fotograma (era lo que más pesaba del menú, sobre todo en el móvil) */
 .pantalla-inicio::before {
   content: "";
   position: fixed;
-  inset: -50%;
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(242, 179, 61, 0.07) 30deg, transparent 60deg);
-  animation: radar 14s linear infinite;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 55% at 50% 18%, rgba(242, 179, 61, 0.07), transparent 70%);
   pointer-events: none;
   z-index: -1;
 }
@@ -1632,11 +1634,13 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   width: 40%;
   left: -60%;
   background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  transform: skewX(-18deg);
+  transform: translateX(0) skewX(-18deg);
   animation: brilloBoton 3.2s ease-in-out infinite 1s;
   pointer-events: none;
+  will-change: transform;
 }
-@keyframes brilloBoton { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+/* Con transform (no con left): el brillo no repinta el botón en cada fotograma */
+@keyframes brilloBoton { 0%, 60% { transform: translateX(0) skewX(-18deg); } 100% { transform: translateX(475%) skewX(-18deg); } }
 
 /* Pestañas con icono */
 .ini-pestanas button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
