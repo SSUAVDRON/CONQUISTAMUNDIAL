@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="7f216d1 2026-11-11 23:06 UTC">
+<meta name="trinchera-build" content="2c24e12 2026-11-12 01:26 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -286,7 +286,7 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
 .ratio strong { color: var(--texto); }
 
 #construir { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
-#construir button {
+#hud .obra {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -295,15 +295,15 @@ input[type=range] { accent-color: var(--acento); width: 100%; }
   position: relative;
   min-width: 0;
 }
-#construir canvas { width: 24px; height: 24px; flex: none; }
-#construir .b-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
-#construir .b-nombre { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#construir .b-coste { font-size: 11px; color: var(--acento); font-variant-numeric: tabular-nums; white-space: nowrap; }
-#construir .b-num { position: absolute; top: 3px; right: 6px; font-size: 11px; color: var(--texto-suave); }
-#construir button.caro .b-coste { color: var(--texto-suave); }
-#construir button.caro canvas { opacity: 0.45; }
-#construir button.activo { background: rgba(242, 179, 61, 0.22); border-color: var(--acento); }
-#construir button:disabled { opacity: 0.5; cursor: default; }
+#hud .obra canvas { width: 24px; height: 24px; flex: none; }
+#hud .obra .b-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+#hud .obra .b-nombre { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud .obra .b-coste { font-size: 11px; color: var(--acento); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud .obra .b-num { position: absolute; top: 3px; right: 6px; font-size: 11px; color: var(--texto-suave); }
+#hud .obra.caro .b-coste { color: var(--texto-suave); }
+#hud .obra.caro canvas { opacity: 0.45; }
+#hud .obra.activo { background: rgba(242, 179, 61, 0.22); border-color: var(--acento); }
+#hud .obra:disabled { opacity: 0.5; cursor: default; }
 button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 .centrado { text-align: center; color: var(--texto-suave); }
 
@@ -534,9 +534,9 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   #panel-jugador { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px 10px; }
   /* En móvil la barra de construcción se desliza en horizontal */
   #construir { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
-  #construir button { flex: 0 0 auto; min-width: 116px; padding: 4px 6px 4px 4px; gap: 4px; }
-  #construir canvas { width: 20px; height: 20px; }
-  #construir .b-nombre { font-size: 12px; }
+  #hud .obra { flex: 0 0 auto; min-width: 116px; padding: 4px 6px 4px 4px; gap: 4px; }
+  #hud .obra canvas { width: 20px; height: 20px; }
+  #hud .obra .b-nombre { font-size: 12px; }
   .cifras { gap: 4px; grid-template-columns: 1.5fr 1fr 1fr 0.8fr; }
   .cifras .valor { font-size: 13px; }
   #tooltip { display: none !important; }
@@ -1023,10 +1023,10 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 .cifras .sub { transition: color 0.3s; }
 
 /* Construcción: respuesta al pasar y al pulsar */
-#construir button { transition: transform 0.12s, border-color 0.15s, background 0.15s, box-shadow 0.15s; }
-#construir button:not(:disabled):not(.caro):hover { transform: translateY(-2px); border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
-#construir button:not(:disabled):active { transform: translateY(0) scale(0.97); }
-#construir button.activo { box-shadow: 0 0 0 1px var(--acento), 0 0 16px rgba(242, 179, 61, 0.35); }
+#hud .obra { transition: transform 0.12s, border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+#hud .obra:not(:disabled):not(.caro):hover { transform: translateY(-2px); border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
+#hud .obra:not(:disabled):active { transform: translateY(0) scale(0.97); }
+#hud .obra.activo { box-shadow: 0 0 0 1px var(--acento), 0 0 16px rgba(242, 179, 61, 0.35); }
 
 /* ---------- Clasificación ---------- */
 #lista-clasificacion li { position: relative; overflow: hidden; transition: background 0.2s; }
@@ -1296,13 +1296,13 @@ body.con-tutorial #eventos { top: auto; }
 
 /* Botones de construcción: compactos, con relleno de «cuánto falta» */
 #construir { margin-top: 0; gap: 5px; }
-#construir button {
+#hud .obra {
   height: 40px;
   padding: 4px 8px 4px 5px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
 }
-#construir button::after {
+#hud .obra::after {
   content: "";
   position: absolute;
   left: 0;
@@ -1313,10 +1313,10 @@ body.con-tutorial #eventos { top: auto; }
   opacity: 0.65;
   transition: width 0.22s linear;
 }
-#construir button:not(.caro)::after { background: var(--bien); opacity: 0.55; }
-#construir canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
-#construir button.en-obras canvas { animation: martillo 0.9s ease-in-out infinite; }
-#construir .b-num { top: 2px; right: 5px; font-size: 10.5px; }
+#hud .obra:not(.caro)::after { background: var(--bien); opacity: 0.55; }
+#hud .obra canvas { width: 26px; height: 26px; padding: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.25); }
+#hud .obra.en-obras canvas { animation: martillo 0.9s ease-in-out infinite; }
+#hud .obra .b-num { top: 2px; right: 5px; font-size: 10.5px; }
 @keyframes martillo { 50% { transform: rotate(-9deg) translateY(-1px); } }
 
 /* Plegado: solo tropas, oro, territorio, barcos y la fuerza de ataque */
@@ -1347,7 +1347,7 @@ body.con-tutorial #eventos { top: auto; }
   .pj-resumen { flex: 1 1 100%; }
   .pj-ataque { flex: 1 1 100%; padding: 0; border: none; }
   .ratio-cifra strong { font-size: 16px; }
-  #construir button { height: 38px; }
+  #hud .obra { height: 38px; }
   #aviso { bottom: calc(var(--pj-alto, 250px) + 20px + env(safe-area-inset-bottom, 0px)); }
   .tutorial { bottom: calc(var(--pj-alto, 250px) + 20px + env(safe-area-inset-bottom, 0px)); }
   #eventos {
@@ -1433,7 +1433,8 @@ body.con-tutorial #eventos { top: auto; }
 #frentes.frentes { gap: 6px; }
 #combates .frente { padding: 6px 9px 7px; gap: 2px; border-radius: 10px; border-left-width: 3px; overflow: hidden; }
 #combates .f-lado { font-size: 11px; gap: 5px; }
-#combates .f-a, #combates .f-d { font-size: 15px; display: inline-block; }
+#combates .f-a, #combates .f-d { font-size: 13px; display: inline-block; }
+@media (max-width: 720px) { #combates .f-a, #combates .f-d { font-size: 12px; } }
 #combates .f-vs { font-size: 9.5px; padding: 1px 6px; }
 #combates .f-leyenda { font-size: 8.5px; margin-top: -2px; }
 #combates .f-barra { height: 4px; }
@@ -1523,10 +1524,10 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador .cifras .valor { font-size: 14px; }
 #panel-jugador .etq { font-size: 10px; }
 .ratio-cifra strong { font-size: 18px; }
-#construir button { height: 36px; }
-#construir .b-nombre { font-size: 12px; }
-#construir .b-coste { font-size: 10.5px; }
-#construir canvas { width: 24px; height: 24px; }
+#hud .obra { height: 36px; }
+#hud .obra .b-nombre { font-size: 12px; }
+#hud .obra .b-coste { font-size: 10.5px; }
+#hud .obra canvas { width: 24px; height: 24px; }
 
 /* Pantallas bajas: menos tarjetas */
 @media (max-height: 760px) { #combates .frente:nth-child(n+4) { display: none; } }
@@ -1559,8 +1560,8 @@ body.con-tutorial #eventos { top: auto; }
 #lista-clasificacion li.colonia .nom-txt { color: var(--texto-suave); font-style: italic; }
 
 /* Edificios que no puedes pagar: grises de un vistazo */
-#construir button.caro { filter: grayscale(1) brightness(0.85); opacity: 0.62; }
-#construir button.caro:hover { filter: grayscale(0.6); opacity: 0.85; }
+#hud .obra.caro { filter: grayscale(1) brightness(0.85); opacity: 0.62; }
+#hud .obra.caro:hover { filter: grayscale(0.6); opacity: 0.85; }
 
 /* Panel central más estrecho y compacto (mismos textos e iconos) */
 #panel-jugador { gap: 10px; padding: 7px 36px 7px 12px; }
@@ -1570,8 +1571,8 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador .cabecera { margin-bottom: 3px; }
 #panel-jugador .barra { margin-bottom: 5px; }
 #construir { gap: 4px; }
-#construir button { height: 34px; padding: 3px 6px 3px 4px; gap: 5px; }
-#construir canvas { padding: 1px; }
+#hud .obra { height: 34px; padding: 3px 6px 3px 4px; gap: 5px; }
+#hud .obra canvas { padding: 1px; }
 .pj-plegar { top: 5px; right: 5px; width: 24px; height: 24px; }
 @media (min-width: 1100px) {
   /* Centrado y con anchura justa: no ocupa toda la pantalla */
@@ -1592,7 +1593,7 @@ body.con-tutorial #eventos { top: auto; }
 @media (min-width: 1500px) {
   #panel-jugador { width: min(1010px, calc(100vw - 600px)); }
 }
-#construir button { padding: 3px 5px 3px 4px; gap: 4px; }
+#hud .obra { padding: 3px 5px 3px 4px; gap: 4px; }
 
 /* =========================================================== Inicio renovado */
 
@@ -1837,9 +1838,9 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 #panel-jugador .cifras .valor .max #pj-tropas-max { color: #f3f5f9; }
 
 /* Panel de edificios: solo icono (a color) y precio; el nombre sale al pasar el ratón */
-#construir button { justify-content: center; gap: 5px; padding: 3px 6px; }
-#construir canvas { width: 28px; height: 28px; padding: 0; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3)); }
-#construir .b-coste { font-size: 11px; font-weight: 700; }
+#hud .obra { justify-content: center; gap: 5px; padding: 3px 6px; }
+#hud .obra canvas { width: 28px; height: 28px; padding: 0; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3)); }
+#hud .obra .b-coste { font-size: 11px; font-weight: 700; }
 #panel-jugador .pj-obras { flex: 1.1 1 0; }
 @media (min-width: 1100px) {
   #panel-jugador { width: min(900px, calc(100vw - 24px)); }
@@ -1849,9 +1850,9 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
   #panel-jugador { width: min(900px, calc(100vw - 600px)); }
 }
 @media (max-width: 720px) {
-  #construir button { min-width: 78px; }
+  #hud .obra { min-width: 78px; }
 }
-#construir canvas { background: none; width: 30px; height: 30px; }
+#hud .obra canvas { background: none; width: 30px; height: 30px; }
 
 /* Botón de sonido de la barra superior */
 .btn-sonido { display: inline-flex; align-items: center; justify-content: center; width: 34px; padding: 5px; }
@@ -1865,10 +1866,10 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .volumenes input[type="range"] { width: 100%; }
 #barra-superior .btn-sonido { padding: 5px; width: 34px; }
 /* Panel de edificios: pictograma blanco y la tecla arriba a la izquierda */
-#construir canvas { background: none; width: 26px; height: 26px; margin-left: 6px; }
-#construir .b-tecla { position: absolute; top: 2px; left: 5px; font-size: 9.5px; font-weight: 700; color: var(--texto-suave); line-height: 1; pointer-events: none; }
-#construir .b-coste { color: #e9eef6; font-weight: 600; }
-#construir button:not(.caro) .b-coste { color: var(--acento); }
+#hud .obra canvas { background: none; width: 26px; height: 26px; margin-left: 6px; }
+#hud .obra .b-tecla { position: absolute; top: 2px; left: 5px; font-size: 9.5px; font-weight: 700; color: var(--texto-suave); line-height: 1; pointer-events: none; }
+#hud .obra .b-coste { color: #e9eef6; font-weight: 600; }
+#hud .obra:not(.caro) .b-coste { color: var(--acento); }
 /* Portada: nuestro mapa pintado en un lienzo */
 canvas.portada-arte { object-fit: cover; background: #122d5a; }
 /* Barra de tropas: franja donde más rápido crecen (entre el 35 y el 65 % del máximo) */
@@ -1924,11 +1925,11 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #ratio::-webkit-slider-thumb { width: 22px; height: 22px; }
   /* Los 8 edificios a la vez: icono encima y precio debajo */
   #construir { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; overflow: visible; padding: 0; }
-  #construir button { flex-direction: column; justify-content: center; gap: 0; height: 44px; min-width: 0; padding: 2px 1px; }
-  #construir canvas { width: 22px; height: 22px; }
-  #construir .b-coste { font-size: 9.5px; }
-  #construir .b-tecla { display: none; }
-  #construir .b-num { top: 1px; right: 3px; font-size: 9px; }
+  #hud .obra { flex-direction: column; justify-content: center; gap: 0; height: 44px; min-width: 0; padding: 2px 1px; }
+  #hud .obra canvas { width: 22px; height: 22px; }
+  #hud .obra .b-coste { font-size: 9.5px; }
+  #hud .obra .b-tecla { display: none; }
+  #hud .obra .b-num { top: 1px; right: 3px; font-size: 9px; }
   /* Clasificación y combates, compactos */
   #columna-izquierda { gap: 5px; }
   #clasificacion li:nth-child(n+4):not(.yo) { display: none; }
@@ -1962,7 +1963,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #panel-jugador .cabecera { display: none; }
   #panel-jugador .etq-icono { display: none; }
   #panel-jugador .ratio { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-  #construir button { height: 40px; }
+  #hud .obra { height: 40px; }
   #barra-superior { top: calc(6px + env(safe-area-inset-top, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); gap: 6px; padding: 3px 5px; }
   #barra-superior .dato { font-size: 12px; }
   #barra-superior .dato + .dato { padding-left: 6px; }
@@ -2296,9 +2297,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 #hud.escritorio #barra-obras .pj-obras { flex: none; opacity: 1; margin: 0; height: auto; pointer-events: auto; }
 #hud.escritorio #construir { display: grid; grid-template-columns: repeat(5, 96px); gap: 6px; margin: 0; }
-#hud.escritorio #construir button { height: 44px; }
-#hud.escritorio #construir canvas { width: 28px; height: 28px; }
-#hud.escritorio #construir .b-num { font-size: 11px; font-weight: 800; color: #fff; }
+#hud.escritorio .obra { height: 44px; }
+#hud.escritorio .obra canvas { width: 28px; height: 28px; }
+#hud.escritorio .obra .b-num { font-size: 11px; font-weight: 800; color: #fff; }
 #hud.escritorio.pj-plegado #barra-obras { display: none; }
 
 /* Avisos: abajo a la derecha (el panel ya no les quita el sitio) */
@@ -3615,12 +3616,421 @@ body.sin-animaciones .despliegue { animation: none; }
   .dp-barra { margin: 0 -12px; }
 }
 
+/* ---------- Edificios en tres grupos: Economía, Defensa y Ataque ---------- */
+.grupo-obras[data-grupo="economia"], .bandeja-obras[data-grupo="economia"] { --g-color: #f2b33d; --g-glow: rgba(242, 179, 61, 0.35); }
+.grupo-obras[data-grupo="defensa"], .bandeja-obras[data-grupo="defensa"] { --g-color: #6cc0ff; --g-glow: rgba(108, 192, 255, 0.35); }
+.grupo-obras[data-grupo="ataque"], .bandeja-obras[data-grupo="ataque"] { --g-color: #ff7a6b; --g-glow: rgba(255, 122, 107, 0.35); }
+#hud .obra .b-nombre { display: none; }
+
+/* Móvil y pantallas estrechas: una fila con los tres grupos */
+#construir.agrupado { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 6px; padding: 0; overflow: visible; }
+#construir.agrupado .grupo-obras { min-width: 0; }
+#construir.agrupado .grupo-obras[hidden] { display: none; }
+#construir.agrupado .g-items { display: none; }
+.g-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 40px;
+  padding: 4px 9px 4px 5px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  color: var(--texto-1);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, background 0.2s, border-color 0.2s, box-shadow 0.25s;
+}
+/* Franja de color del grupo, abajo */
+.g-tab::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--g-color);
+  opacity: 0.55;
+  transform: scaleX(0.35);
+  transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.3s;
+}
+.g-tab:active { transform: scale(0.97); }
+.g-tab .g-icono { flex: none; width: 26px; height: 26px; padding: 2px; border-radius: 8px; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.32)); }
+.g-tab .g-nombre { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-tab .g-punto { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(95, 211, 141, 0.18); opacity: 0; transform: scale(0.3); transition: opacity 0.25s, transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.g-tab.listo .g-punto { opacity: 1; transform: none; }
+.grupo-obras.abierto .g-tab { background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)); border-color: color-mix(in srgb, var(--g-color) 55%, transparent); }
+.grupo-obras.abierto .g-tab::after, .g-tab.activo::after { transform: none; opacity: 1; }
+.g-tab.activo { border-color: var(--g-color); background: linear-gradient(180deg, color-mix(in srgb, var(--g-color) 26%, transparent), color-mix(in srgb, var(--g-color) 8%, transparent)); box-shadow: 0 0 14px var(--g-glow); }
+.g-tab:disabled { opacity: 0.5; }
+
+/* Bandeja: sube desde los grupos con los edificios del elegido */
+.bandeja-obras {
+  position: fixed;
+  z-index: 40;
+  padding: 8px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #182134, #0a0e18);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.bandeja-obras[hidden] { display: none; }
+.bandeja-obras.abierto { opacity: 1; transform: none; pointer-events: auto; }
+.bandeja-obras::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--g-color), transparent);
+  box-shadow: 0 0 10px var(--g-glow);
+}
+.bandeja-obras .g-items { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.bandeja-obras .obra {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  height: auto;
+  min-height: 74px;
+  padding: 7px 3px 6px;
+  border-radius: 12px;
+}
+.bandeja-obras.abierto .obra { animation: obraSube 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.bandeja-obras.abierto .obra:nth-child(2) { animation-delay: 0.035s; }
+.bandeja-obras.abierto .obra:nth-child(3) { animation-delay: 0.07s; }
+.bandeja-obras.abierto .obra:nth-child(4) { animation-delay: 0.105s; }
+@keyframes obraSube { from { opacity: 0; transform: translateY(10px) scale(0.92); } }
+#hud .bandeja-obras .obra canvas { width: 32px; height: 32px; margin: 0; padding: 0; background: none; }
+#hud .bandeja-obras .obra .b-nombre { display: block; max-width: 100%; font-size: 11px; font-weight: 700; color: var(--texto-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud .bandeja-obras .obra .b-coste { font-size: 10.5px; }
+#hud .bandeja-obras .obra .b-tecla { display: none; }
+#hud .bandeja-obras .obra .b-num { top: 4px; right: 6px; font-size: 10px; }
+
+/* Ordenador: los tres grupos a la vista, cada uno con su título */
+#hud.escritorio #construir.agrupado { display: flex; align-items: stretch; gap: 0; margin: 0; }
+#hud.escritorio #construir.agrupado .grupo-obras { display: flex; flex-direction: column; gap: 6px; padding: 0 10px; }
+#hud.escritorio #construir.agrupado .grupo-obras:first-child { padding-left: 0; }
+#hud.escritorio #construir.agrupado .grupo-obras:last-child { padding-right: 0; }
+#hud.escritorio #construir.agrupado .grupo-obras + .grupo-obras { border-left: 1px solid rgba(255, 255, 255, 0.07); }
+#hud.escritorio .g-tab { height: auto; padding: 0 2px; gap: 5px; border: 0; background: none; box-shadow: none; pointer-events: none; font-size: 10px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--g-color); overflow: visible; }
+#hud.escritorio .g-tab::after, #hud.escritorio .g-tab .g-icono { display: none; }
+#hud.escritorio .g-tab .g-punto { width: 5px; height: 5px; box-shadow: none; }
+#hud.escritorio .g-tab.activo { background: none; box-shadow: none; }
+/* Icono encima y precio debajo; en dos filas si la pantalla no da para una */
+#hud.escritorio #construir.agrupado .g-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 44px); grid-auto-columns: 66px; gap: 5px; }
+#hud.escritorio .obra { height: 44px; flex-direction: column; justify-content: center; gap: 1px; padding: 2px 3px; }
+#hud.escritorio .obra canvas { width: 24px; height: 24px; margin: 0; }
+#hud.escritorio .obra .b-coste { font-size: 10.5px; }
+@media (min-width: 1500px) {
+  #hud.escritorio #construir.agrupado .g-items { grid-template-rows: 48px; grid-auto-columns: 64px; }
+  #hud.escritorio .obra { height: 48px; }
+  #hud.escritorio .obra canvas { width: 26px; height: 26px; }
+}
+/* Centrada entre el panel de la izquierda y los avisos */
+#hud.escritorio #barra-obras { left: 356px; right: 314px; width: max-content; max-width: calc(100vw - 670px); margin-inline: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bandeja-obras, .bandeja-obras.abierto .obra, .g-tab, .g-tab::after { transition: none; animation: none !important; }
+}
+/* Móvil: el aviso de construir (o de la tregua) va por encima del minimapa y
+   de los avisos, como tarjeta (la píldora con varias líneas parecía una mancha) */
+@media (max-width: 720px) {
+  #aviso { z-index: 30; width: max-content; max-width: calc(100vw - 24px); padding: 8px 14px; border-radius: 14px; font-size: 13px; line-height: 1.3; }
+}
+
+/* ---------- Arranque: antes del menú, mientras se prepara todo ---------- */
+.arranque {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%);
+  color: var(--texto-1);
+  overflow: hidden;
+  transition: opacity 0.55s ease, visibility 0s linear 0.55s;
+}
+.arranque[hidden] { display: none; }
+.arranque.saliendo { opacity: 0; visibility: hidden; pointer-events: none; }
+.arranque.saliendo .arr-centro { transform: scale(1.05) translateY(-8px); transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.arr-fondo { position: absolute; inset: 0; pointer-events: none; }
+/* Rejilla de mapa de campaña que deriva despacio */
+.arr-rejilla {
+  position: absolute;
+  inset: -48px;
+  background-image: linear-gradient(rgba(242, 179, 61, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(242, 179, 61, 0.055) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
+  animation: arrDeriva 16s linear infinite;
+}
+@keyframes arrDeriva { to { transform: translate(48px, 48px); } }
+.arr-halo { position: absolute; left: 50%; top: 40%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; background: radial-gradient(circle, rgba(242, 179, 61, 0.13), transparent 62%); animation: arrLatido 3.4s ease-in-out infinite; }
+@keyframes arrLatido { 50% { transform: scale(1.08); opacity: 0.7; } }
+.arr-centro { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px, 100%); text-align: center; }
+.arr-logo { gap: 10px; animation: arrEntra 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.arr-logo .logo-marca { width: 92px; height: 92px; filter: drop-shadow(0 8px 22px rgba(242, 179, 61, 0.25)); }
+.arr-logo .logo-texto { font-size: clamp(38px, 9vw, 60px); }
+/* El mundo que se va cartografiando: radar mientras carga y, con el mapa ya
+   leído, un velo que se retira con una línea de escáner dorada */
+.arr-mapa {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 480 / 230;
+  border-radius: 16px;
+  overflow: hidden;
+  background: repeating-radial-gradient(circle at 50% 50%, transparent 0 38px, rgba(242, 179, 61, 0.07) 39px 40px), #0c1930;
+  border: 1px solid rgba(242, 179, 61, 0.24);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 46px rgba(242, 179, 61, 0.08);
+  animation: arrEntra 0.7s 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.arr-mapa canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.25s; }
+.arranque.con-mapa .arr-mapa canvas { opacity: 1; }
+.arr-velo { position: absolute; inset: 0; background: #0c1930; }
+.arranque.con-mapa .arr-velo { transform: translateX(101%); transition: transform 1.7s cubic-bezier(0.45, 0.05, 0.25, 1); }
+.arr-escaner { position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #ffd36b; box-shadow: 0 0 14px 4px rgba(242, 179, 61, 0.55), 0 0 44px 12px rgba(242, 179, 61, 0.16); opacity: 0; }
+.arranque.con-mapa .arr-escaner { opacity: 1; }
+.arr-radar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 140%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(242, 179, 61, 0.22), rgba(242, 179, 61, 0) 16%);
+  transform: translate(-50%, -50%);
+  animation: arrGira 2.4s linear infinite;
+  transition: opacity 0.9s;
+}
+.arranque.con-mapa .arr-radar { opacity: 0; }
+@keyframes arrGira { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* Barra: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
+.arr-barra { position: relative; width: 100%; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); animation: arrEntra 0.7s 0.2s both; }
+.arr-barra span { display: block; height: 100%; transform-origin: left center; transform: scaleX(0.02); background: linear-gradient(90deg, #d99a2b, #ffd36b); box-shadow: 0 0 12px rgba(242, 179, 61, 0.6); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); }
+.arr-barra::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: translateX(-100%); animation: arrBrillo 1.6s ease-in-out infinite; }
+@keyframes arrBrillo { to { transform: translateX(340%); } }
+.arr-paso { margin: 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
+.arr-paso.cambia { animation: arrTexto 0.35s ease-out; }
+@keyframes arrTexto { from { opacity: 0; transform: translateY(5px); } }
+.arr-consejo { margin: 4px 0 0; padding: 10px 14px; max-width: 440px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 13.5px; line-height: 1.45; color: var(--texto-1); animation: arrEntra 0.7s 0.3s both; }
+.arr-consejo:empty { visibility: hidden; }
+.arr-consejo::before { content: "Consejo · "; color: var(--oro-400); font-weight: 700; }
+@keyframes arrEntra { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+@media (max-height: 560px) {
+  .arr-centro { gap: 10px; }
+  .arr-mapa { width: min(100%, 360px); }
+  .arr-logo .logo-marca { width: 64px; height: 64px; }
+  .arr-consejo { display: none; }
+}
+
+/* El menú entra cuando se va el arranque: cabecera desde arriba y el contenido escalonado */
+#inicio.entrada .ini-barra { animation: iniBaja 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+#inicio.entrada .vista:not([hidden]) > * { animation: iniSube 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(2) { animation-delay: 0.08s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(3) { animation-delay: 0.16s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(4) { animation-delay: 0.24s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(n+5) { animation-delay: 0.3s; }
+@keyframes iniBaja { from { opacity: 0; transform: translateY(-18px); } }
+@keyframes iniSube { from { opacity: 0; transform: translateY(20px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .arranque, .arranque *, .arranque *::before, .arranque *::after, #inicio.entrada * { animation: none !important; transition: none !important; }
+}
+body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { animation: none !important; }
+
+/* ===================================================== Cuenta (cuenta-ui.js) */
+/* Cabecera: «Entrar» dorado si no hay sesión; con sesión, una nube en la ficha */
+.btn-cuenta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 0;
+  padding: 9px 16px 9px 12px;
+  border-radius: var(--r-pildora);
+  border: 1px solid rgba(255, 227, 154, 0.5);
+  background: linear-gradient(180deg, #ffd36b, #e2a23a);
+  color: #241703;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 6px 18px rgba(242, 179, 61, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition: transform var(--dur-1), box-shadow 0.2s, filter 0.2s;
+  animation: cuentaAparece 0.5s 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.btn-cuenta[hidden] { display: none; }
+.btn-cuenta svg { width: 16px; height: 16px; }
+.btn-cuenta:hover { transform: translateY(-1px); box-shadow: 0 9px 24px rgba(242, 179, 61, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+.btn-cuenta:active { transform: translateY(1px); }
+@keyframes cuentaAparece { from { opacity: 0; transform: translateY(-6px) scale(0.94); } }
+.chip-nube { position: absolute; right: -5px; bottom: -4px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: #5fd38d; color: #e9fff1; box-shadow: 0 0 0 2px #0b1426, 0 2px 8px rgba(95, 211, 141, 0.45); animation: cuentaAparece 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.4) both; }
+.chip-nube[hidden] { display: none; }
+.chip-nube svg { width: 13px; height: 13px; color: #fff; }
+/* Sin sitio para el texto en la cabecera: solo el icono (con su título) */
+@media (max-width: 1399px) {
+  .btn-cuenta { padding: 9px 10px; }
+  .btn-cuenta span { display: none; }
+}
+
+/* Tarjeta para los nuevos: guarda tu progreso */
+.tarjeta-cuenta {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e4) var(--e5);
+  padding: var(--e4) var(--e6) var(--e4) var(--e5);
+  border-radius: var(--r-l);
+  overflow: hidden;
+  background: radial-gradient(ellipse at 0% 50%, rgba(95, 211, 141, 0.16), transparent 55%), linear-gradient(100deg, rgba(18, 46, 40, 0.92), rgba(12, 18, 34, 0.94));
+  border: 1px solid rgba(95, 211, 141, 0.32);
+  box-shadow: var(--sombra-2);
+  animation: iniSube 0.6s 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.tarjeta-cuenta[hidden] { display: none; }
+.tcu-arte svg { width: 64px; height: 64px; display: block; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45)); }
+.tcu-arte .tcu-nube { animation: nubeFlota 3.6s ease-in-out infinite; transform-origin: 32px 32px; }
+.tcu-arte .tcu-check { stroke-dasharray: 22; stroke-dashoffset: 22; animation: trazar 0.7s 0.9s ease-out forwards; }
+@keyframes nubeFlota { 50% { transform: translateY(-2.5px); } }
+.tcu-textos h2 { margin: 0 0 4px; font-family: var(--serif); font-weight: 800; font-size: 19px; color: #c9f5da; letter-spacing: 0.02em; }
+.tcu-textos p { margin: 0; font-size: 13.5px; color: var(--texto-2); line-height: 1.45; }
+.tcu-botones { display: flex; gap: var(--e2); flex-wrap: wrap; justify-content: flex-end; }
+.tcu-cerrar { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; min-height: 0; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.06); color: var(--texto-3); font-size: 12px; }
+.tcu-cerrar:hover { background: rgba(255, 255, 255, 0.12); color: var(--texto-1); }
+@media (max-width: 720px) {
+  .tarjeta-cuenta { grid-template-columns: auto minmax(0, 1fr); padding: var(--e3) var(--e5) var(--e3) var(--e3); gap: var(--e2) var(--e3); }
+  .tcu-arte svg { width: 46px; height: 46px; }
+  .tcu-botones { grid-column: 1 / -1; justify-content: stretch; }
+  .tcu-botones button { flex: 1; }
+}
+
+/* Bloque «Cuenta» del perfil */
+.perfil-cuenta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--e2) var(--e3);
+  margin-top: var(--e3);
+  padding: var(--e3);
+  border-radius: var(--r-m);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--borde-1);
+}
+.perfil-cuenta[hidden] { display: none; }
+.pc-icono { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: rgba(255, 255, 255, 0.06); color: var(--texto-3); transition: color 0.3s, background 0.3s; }
+.pc-icono svg { width: 20px; height: 20px; }
+.perfil-cuenta.con-sesion .pc-icono { color: #5fd38d; background: rgba(95, 211, 141, 0.12); }
+.perfil-cuenta.sincronizando .pc-icono svg { animation: nubeFlota 1s ease-in-out infinite; }
+.pc-textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pc-textos strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-textos small { color: var(--texto-2); }
+.pc-botones { grid-column: 1 / -1; display: flex; gap: var(--e2); flex-wrap: wrap; }
+
+/* Diálogo: cabecera con el escudo, pestañas con subrayado que se desliza,
+   campos con su etiqueta, medidor de fuerza, carga y ✔ al terminar */
+.dialogo-cuenta { width: min(440px, 100%); }
+.cu-cabecera {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e5) var(--e5) var(--e4);
+  background: radial-gradient(ellipse at 15% 0%, rgba(242, 179, 61, 0.18), transparent 60%), linear-gradient(180deg, rgba(28, 42, 70, 0.9), rgba(14, 22, 40, 0));
+}
+.cu-escudo svg { width: 52px; height: 52px; display: block; filter: drop-shadow(0 6px 16px rgba(242, 179, 61, 0.22)); animation: aparecer 0.5s ease-out both; }
+.cu-titulos { flex: 1; min-width: 0; }
+.cu-titulos h2 { margin: 0; font-family: var(--serif); font-weight: 800; font-size: 20px; letter-spacing: 0.03em; color: var(--oro-200); }
+.cu-titulos p { margin: 3px 0 0; font-size: 13px; color: var(--texto-2); }
+.cu-cabecera .dialogo-cerrar { align-self: flex-start; }
+.cu-pestanas { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin: 0 var(--e5); border-bottom: 1px solid var(--borde-1); }
+.cu-pestanas[hidden] { display: none; }
+.cu-pestanas [role="tab"] { min-height: 0; padding: 11px 8px; border: 0; background: none; color: var(--texto-2); font-weight: 700; font-size: 14.5px; border-radius: 0; transition: color 0.2s; }
+.cu-pestanas [role="tab"][aria-selected="true"] { color: var(--oro-200); }
+.cu-subrayado { position: absolute; left: 0; bottom: -1px; width: 50%; height: 3px; border-radius: 3px; background: linear-gradient(90deg, #ffd36b, #e2a23a); box-shadow: 0 0 12px rgba(242, 179, 61, 0.5); transition: transform 0.32s cubic-bezier(0.3, 0.9, 0.3, 1.1); }
+.dialogo-cuenta[data-modo="crear"] .cu-subrayado, #dialogo-cuenta[data-modo="crear"] .cu-subrayado { transform: translateX(100%); }
+.cu-cuerpo { padding: var(--e4) var(--e5) var(--e5); overflow: hidden auto; }
+.cu-form { display: flex; flex-direction: column; gap: var(--e3); }
+.cu-form[hidden], .cu-campo[hidden], .cu-fuerza[hidden], .cu-nota[hidden] { display: none; }
+.cu-campo { display: flex; flex-direction: column; gap: 6px; animation: campoEntra 0.3s ease-out both; }
+@keyframes campoEntra { from { opacity: 0; transform: translateY(-4px); } }
+.cu-campo > span:first-child { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--texto-2); }
+.cu-campo input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--borde-2);
+  background: rgba(4, 8, 18, 0.55);
+  color: var(--texto-1);
+  font: inherit;
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.cu-campo input::placeholder { color: var(--texto-3); }
+.cu-campo input:focus { outline: none; border-color: rgba(242, 179, 61, 0.7); box-shadow: 0 0 0 3px rgba(242, 179, 61, 0.16); background: rgba(4, 8, 18, 0.75); }
+.cu-campo input.mal { border-color: rgba(255, 107, 107, 0.8); box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.15); }
+.cu-clave { position: relative; display: block; }
+.cu-clave input { padding-right: 48px; }
+.cu-ver { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; min-height: 0; padding: 0; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--texto-3); }
+.cu-ver:hover { color: var(--texto-1); background: rgba(255, 255, 255, 0.06); }
+.cu-ver svg { width: 18px; height: 18px; }
+.cu-ver .cu-ver-tacha { transition: opacity 0.2s; }
+.cu-ver[aria-pressed="true"] .cu-ver-tacha { opacity: 0; }
+.cu-fuerza { display: flex; align-items: center; gap: var(--e2); margin-top: -4px; }
+.cu-fuerza-barra { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.cu-fuerza-barra span { display: block; height: 100%; transform: scaleX(0); transform-origin: left center; background: #ff6b6b; transition: transform 0.3s cubic-bezier(0.3, 0.9, 0.3, 1), background 0.3s; }
+.cu-fuerza-barra span[data-nivel="2"] { background: #ffc857; }
+.cu-fuerza-barra span[data-nivel="3"], .cu-fuerza-barra span[data-nivel="4"] { background: #5fd38d; }
+.cu-fuerza small { min-width: 74px; text-align: right; font-size: 12px; color: var(--texto-2); }
+.cu-error { margin: 0; min-height: 0; max-height: 0; overflow: hidden; padding: 0 12px; border-radius: var(--r-s); background: rgba(255, 107, 107, 0.12); border: 1px solid transparent; color: #ffc4c4; font-size: 13.5px; opacity: 0; transition: max-height 0.25s, padding 0.25s, opacity 0.2s, border-color 0.2s; }
+.cu-error.visible { max-height: 80px; padding: 9px 12px; opacity: 1; border-color: rgba(255, 107, 107, 0.35); }
+.cu-enviar { position: relative; margin-top: 2px; justify-content: center; overflow: hidden; }
+.cu-enviar .cu-spinner { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 2.5px solid rgba(36, 23, 3, 0.25); border-top-color: #241703; opacity: 0; animation: girar 0.75s linear infinite; transition: opacity 0.2s; }
+.cu-enviar.cargando .cu-spinner { opacity: 1; }
+.cu-enviar .cu-enviar-txt { transition: opacity 0.2s, transform 0.2s; }
+.cu-enviar.cargando .cu-enviar-txt { opacity: 0; transform: scale(0.9); }
+@keyframes girar { to { transform: rotate(360deg); } }
+.cu-proveedores[hidden] { display: none; }
+.cu-nota { margin: 0; text-align: center; font-size: 12.5px; color: var(--texto-3); }
+.cu-hecho { display: flex; flex-direction: column; align-items: center; gap: var(--e2); padding: var(--e3) 0 var(--e2); text-align: center; animation: campoEntra 0.35s ease-out both; }
+.cu-hecho[hidden] { display: none; }
+.cu-hecho-icono { width: 84px; height: 84px; }
+.cu-hecho-circulo { stroke-dasharray: 170; stroke-dashoffset: 170; animation: trazar 0.6s ease-out forwards; transform-origin: 32px 32px; }
+.cu-hecho-check { stroke-dasharray: 40; stroke-dashoffset: 40; animation: trazar 0.45s 0.45s cubic-bezier(0.3, 0.9, 0.3, 1.2) forwards; }
+.cu-hecho h3 { margin: var(--e2) 0 0; font-family: var(--serif); font-weight: 800; font-size: 21px; color: #c9f5da; }
+.cu-hecho p { margin: 0 0 var(--e3); color: var(--texto-2); font-size: 14px; max-width: 320px; }
+@media (max-width: 480px) {
+  .cu-cabecera { padding: var(--e4) var(--e4) var(--e3); }
+  .cu-pestanas { margin: 0 var(--e4); }
+  .cu-cuerpo { padding: var(--e3) var(--e4) var(--e4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-cuenta, .chip-nube, .tarjeta-cuenta, .tcu-arte *, .cu-campo, .cu-hecho, .cu-hecho *, .cu-escudo svg { animation: none !important; }
+  .tcu-arte .tcu-check, .cu-hecho-circulo, .cu-hecho-check { stroke-dashoffset: 0; }
+}
+#nota-nube:empty { display: none; }
+
 </style>
 </head>
 <body>
-<canvas id="lienzo"></canvas>
-
-  <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
+<!-- Definiciones gráficas compartidas (degradado del logotipo) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="lg-oro" x1="0" y1="0" x2="0" y2="1">
@@ -3629,6 +4039,33 @@ body.sin-animaciones .despliegue { animation: none; }
       </linearGradient>
     </defs>
   </svg>
+
+  <!-- Arranque: se ve desde el primer pintado, mientras se prepara todo (main.js) -->
+  <div id="arranque" class="arranque" role="status" aria-live="polite">
+    <div class="arr-fondo" aria-hidden="true"><span class="arr-rejilla"></span><span class="arr-halo"></span></div>
+    <div class="arr-centro">
+      <div class="logo logo-grande arr-logo" role="img" aria-label="Trinchera">
+        <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
+          <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
+          <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-texto">TRINCHERA</span>
+      </div>
+      <div class="arr-mapa" aria-hidden="true">
+        <canvas id="arr-lienzo" width="480" height="230"></canvas>
+        <span class="arr-velo"><span class="arr-escaner"></span></span>
+        <span class="arr-radar"></span>
+      </div>
+      <div class="arr-barra" aria-hidden="true"><span id="arr-progreso"></span></div>
+      <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
+      <p id="arr-consejo" class="arr-consejo"></p>
+    </div>
+  </div>
+
+  <canvas id="lienzo"></canvas>
 
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">
@@ -3655,8 +4092,12 @@ body.sin-animaciones .despliegue { animation: none; }
           <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clasificación</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
+        <button type="button" id="btn-cuenta" class="btn-cuenta" title="Entrar o crear una cuenta" aria-label="Entrar o crear una cuenta" hidden>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.2" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 14 c0.6 -3 2.6 -4.4 5.2 -4.4 s4.6 1.4 5.2 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Entrar</span>
+        </button>
         <button type="button" id="chip-perfil" class="chip-perfil" data-ir="perfil" aria-label="Abrir tu perfil">
-          <span class="chip-avatar"><canvas id="chip-emblema" width="80" height="80"></canvas><span class="chip-rango" id="chip-rango"></span></span>
+          <span class="chip-avatar"><canvas id="chip-emblema" width="80" height="80"></canvas><span class="chip-rango" id="chip-rango"></span><span class="chip-nube" id="chip-nube" title="Progreso guardado en tu cuenta" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/><path d="M6 9.2 l1.4 1.4 l2.8 -2.8" fill="none" stroke="#0b1426" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
           <span class="chip-textos">
             <strong id="chip-nombre"></strong>
             <span class="chip-linea"><small id="chip-nivel"></small><small id="chip-xp-txt" class="chip-xp-txt"></small></span>
@@ -3691,6 +4132,21 @@ body.sin-animaciones .despliegue { animation: none; }
           </div>
         </div>
         <!-- Clasificatoria: tu rango de la temporada y las partidas que cuentan -->
+        <section class="tarjeta-cuenta" id="tarjeta-cuenta" aria-labelledby="tcu-titulo" hidden>
+          <div class="tcu-arte" aria-hidden="true">
+            <svg viewBox="0 0 64 64"><path d="M32 6 L54 13 V30 C54 44 44 53 32 58 C20 53 10 44 10 30 V13 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/><path class="tcu-nube" d="M21 40 h20 a6.5 6.5 0 0 0 0.6 -13 a9 9 0 0 0 -17.2 -1.4 a7.2 7.2 0 0 0 -3.4 14.4 z" fill="#e9eef7"/><path class="tcu-check" d="M25.5 33.5 l4.5 4.5 l8.5 -8.5" fill="none" stroke="#3fae6b" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="tcu-textos">
+            <h2 id="tcu-titulo">Guarda tu progreso</h2>
+            <p>Crea una cuenta gratis y sigue con tu nivel, tus monedas, tu aspecto y tu rango en el móvil y en el ordenador.</p>
+          </div>
+          <div class="tcu-botones">
+            <button type="button" class="principal" id="tcu-crear">Crear cuenta</button>
+            <button type="button" class="btn-sec" id="tcu-entrar">Ya tengo cuenta</button>
+          </div>
+          <button type="button" class="tcu-cerrar" id="tcu-cerrar" aria-label="Ahora no">✕</button>
+        </section>
+
         <section class="clasificatoria" id="clasificatoria" aria-labelledby="cl-titulo">
           <div class="cl-insignia" id="cl-insignia"></div>
           <div class="cl-datos">
@@ -3860,6 +4316,14 @@ body.sin-animaciones .despliegue { animation: none; }
               </div>
               <dl id="estadisticas" class="estadisticas"></dl>
               <p id="nota-nube" class="nota"></p>
+              <div id="perfil-cuenta" class="perfil-cuenta" hidden>
+                <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/></svg></span>
+                <div class="pc-textos">
+                  <strong id="pc-titulo">Cuenta</strong>
+                  <small id="pc-estado"></small>
+                </div>
+                <div class="pc-botones" id="pc-botones"></div>
+              </div>
             </div>
           </div>
           <div class="bloque perfil-clasif">
@@ -4384,6 +4848,63 @@ body.sin-animaciones .despliegue { animation: none; }
     </div>
   </div>
 
+  <!-- Tu cuenta: entrar o crear cuenta (cuenta-ui.js) -->
+  <div id="dialogo-cuenta" class="pantalla dialogo" aria-labelledby="dcu-titulo" hidden>
+    <div class="dialogo-caja dialogo-cuenta">
+      <header class="cu-cabecera">
+        <span class="cu-escudo" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/><path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/><path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/><path d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div class="cu-titulos">
+          <h2 id="dcu-titulo">Tu cuenta de Trinchera</h2>
+          <p>Tu progreso, a salvo y en todos tus dispositivos.</p>
+        </div>
+        <button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+      </header>
+      <div class="cu-pestanas" role="tablist" aria-label="Cuenta">
+        <button type="button" role="tab" id="cu-tab-entrar" data-modo="entrar" aria-selected="true">Entrar</button>
+        <button type="button" role="tab" id="cu-tab-crear" data-modo="crear" aria-selected="false">Crear cuenta</button>
+        <span class="cu-subrayado" aria-hidden="true"></span>
+      </div>
+      <div class="cu-cuerpo" id="cu-cuerpo">
+        <form id="cu-form" class="cu-form" novalidate>
+          <label class="cu-campo" data-solo="crear">
+            <span>Nombre de comandante</span>
+            <input id="cu-nombre" type="text" autocomplete="nickname" maxlength="18" placeholder="Como te verán en la tabla">
+          </label>
+          <label class="cu-campo">
+            <span>Correo electrónico</span>
+            <input id="cu-email" type="email" autocomplete="email" inputmode="email" required placeholder="tu@correo.com">
+          </label>
+          <label class="cu-campo">
+            <span>Contraseña</span>
+            <span class="cu-clave">
+              <input id="cu-password" type="password" autocomplete="current-password" required minlength="8" placeholder="Al menos 8 caracteres">
+              <button type="button" id="cu-ver" class="cu-ver" aria-label="Mostrar la contraseña" aria-pressed="false">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8 C3.2 4.8 5.4 3.4 8 3.4 S12.8 4.8 14.5 8 C12.8 11.2 10.6 12.6 8 12.6 S3.2 11.2 1.5 8 z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2.1" fill="currentColor"/><path class="cu-ver-tacha" d="M3 13 L13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </button>
+            </span>
+          </label>
+          <div class="cu-fuerza" data-solo="crear" aria-live="polite"><span class="cu-fuerza-barra"><span id="cu-fuerza"></span></span><small id="cu-fuerza-txt"></small></div>
+          <p id="cu-error" class="cu-error" role="alert"></p>
+          <button type="submit" id="cu-enviar" class="principal grande cu-enviar">
+            <span class="cu-enviar-txt">Entrar</span>
+            <span class="cu-spinner" aria-hidden="true"></span>
+          </button>
+          <div class="cu-proveedores" id="cu-proveedores" hidden></div>
+          <p class="cu-nota" data-solo="entrar">¿Olvidaste la contraseña? Pronto podrás recuperarla por correo.</p>
+          <p class="cu-nota" data-solo="crear">Lo que llevas en este dispositivo (nivel, monedas, aspecto y rango) se une a tu cuenta.</p>
+        </form>
+        <div class="cu-hecho" id="cu-hecho" hidden>
+          <svg class="cu-hecho-icono" viewBox="0 0 64 64" aria-hidden="true"><circle class="cu-hecho-circulo" cx="32" cy="32" r="27" fill="none" stroke="#3fae6b" stroke-width="4"/><path class="cu-hecho-check" d="M20 33 l8 8 l16 -17" fill="none" stroke="#5fd38d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 id="cu-hecho-titulo">¡Listo, comandante!</h3>
+          <p id="cu-hecho-texto">Tu progreso se ha unido a tu cuenta.</p>
+          <button type="button" class="principal" data-cerrar>Continuar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Todas las novedades -->
   <div id="dialogo-novedades" class="pantalla dialogo" aria-labelledby="dn-titulo" hidden>
     <div class="dialogo-caja">
@@ -4481,7 +5002,7 @@ body.sin-animaciones .despliegue { animation: none; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "7f216d1 2026-11-11 23:06 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "2c24e12 2026-11-12 01:26 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -4689,47 +5210,42 @@ function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving = 1) {
     }
     ctx.restore();
   }
-  // Sombra
-  ctx.fillStyle = 'rgba(0, 10, 25, 0.4)';
-  ctx.beginPath();
-  ctx.ellipse(r * 0.08, r * 0.16, r * 1.05, r * 1.05, 0, 0, Math.PI * 2);
+  // Sin círculo alrededor: el casco, más grande, con la cubierta del color
+  // de su dueño y el contorno blanco si es tuyo
+  const L = r * 1.9;
+  const W = r * 0.56;
+  const hull = () => {
+    ctx.beginPath();
+    ctx.moveTo(L * 0.5, 0);
+    ctx.quadraticCurveTo(L * 0.3, -W * 0.5, L * 0.15, -W * 0.5);
+    ctx.lineTo(-L * 0.44, -W * 0.5);
+    ctx.lineTo(-L * 0.5, -W * 0.3);
+    ctx.lineTo(-L * 0.5, W * 0.3);
+    ctx.lineTo(-L * 0.44, W * 0.5);
+    ctx.lineTo(L * 0.15, W * 0.5);
+    ctx.quadraticCurveTo(L * 0.3, W * 0.5, L * 0.5, 0);
+    ctx.closePath();
+  };
+  // Sombra con la forma del casco (desplazada en pantalla, no con el rumbo)
+  ctx.save();
+  ctx.translate(r * 0.08, r * 0.14);
+  ctx.rotate(ang);
+  hull();
+  ctx.fillStyle = 'rgba(0, 10, 25, 0.38)';
   ctx.fill();
-  // Anillo del dueño
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.lineWidth = Math.max(1.5, r * 0.1);
-  ctx.strokeStyle = mine ? '#ffffff' : 'rgba(0, 0, 0, 0.75)';
-  ctx.stroke();
-  // Fondo
-  const inner = r * 0.78;
-  const bg = ctx.createRadialGradient(-inner * 0.3, -inner * 0.3, inner * 0.1, 0, 0, inner);
-  bg.addColorStop(0, '#24344a');
-  bg.addColorStop(1, '#0c1420');
-  ctx.beginPath();
-  ctx.arc(0, 0, inner, 0, Math.PI * 2);
-  ctx.fillStyle = bg;
-  ctx.fill();
+  ctx.restore();
   // Silueta del buque, girada con su rumbo
   ctx.save();
   ctx.rotate(ang);
-  const L = inner * 1.62;
-  const W = inner * 0.5;
-  ctx.beginPath();
-  ctx.moveTo(L * 0.5, 0);
-  ctx.quadraticCurveTo(L * 0.3, -W * 0.5, L * 0.15, -W * 0.5);
-  ctx.lineTo(-L * 0.44, -W * 0.5);
-  ctx.lineTo(-L * 0.5, -W * 0.3);
-  ctx.lineTo(-L * 0.5, W * 0.3);
-  ctx.lineTo(-L * 0.44, W * 0.5);
-  ctx.lineTo(L * 0.15, W * 0.5);
-  ctx.quadraticCurveTo(L * 0.3, W * 0.5, L * 0.5, 0);
-  ctx.closePath();
+  hull();
   ctx.fillStyle = '#c9d2da';
   ctx.fill();
-  ctx.fillStyle = '#8796a3';
-  ctx.fillRect(-L * 0.36, -W * 0.22, L * 0.62, W * 0.44);
+  ctx.lineWidth = Math.max(1.2, r * 0.09);
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = mine ? '#ffffff' : 'rgba(10, 16, 24, 0.7)';
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.fillRect(-L * 0.36, -W * 0.24, L * 0.62, W * 0.48);
   ctx.fillStyle = '#eef2f5';
   ctx.fillRect(-L * 0.1, -W * 0.3, L * 0.2, W * 0.6);
   const turret = (tx) => {
@@ -5421,24 +5937,44 @@ class BotBrain {
 }
 
 /**
+ * Rasgo propio de una colonia (0-1), igual en todos los equipos y sin gastar
+ * el azar de la partida (así no cambia nada más de lo que pasa).
+ */
+function colonyTrait(game, id, k) {
+  let h = (Math.imul(game.seed ^ 0x9e3779b9, 31) ^ Math.imul(id + 1, 2654435761) ^ Math.imul(k + 1, 40503)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/**
  * Cerebro de una colonia: solo se expande por tierra libre. No ataca a las
  * naciones, no construye y no firma alianzas: es una presa fácil con oro.
+ * Se expande casi como una nación y sin esperar a llenar su población; cada
+ * una a su manera (cuánto manda, cada cuánto piensa, su ritmo y su forma).
  */
 class ColonyBrain {
   constructor(game, player) {
     this.game = game;
     this.player = player;
     this.nextThink = 0;
-    this.thinkScale = 1.6;
     this.grudges = new Set();
+    const t = (k) => colonyTrait(game, player.id, k);
+    this.sendShare = 0.3 + t(0) * 0.15; // 30-45 % de sus tropas
+    this.thinkScale = 0.75 + t(1) * 0.5; // como una nación (0,85), con variación
+    player.pace = 0.8 + t(2) * 0.5; // ritmo propio en tierra libre (0,8-1,3)
+    player.growNoise = CONFIG.growRandom * (0.6 + t(3) * 2.4); // de pareja a irregular
   }
 
   think() {
     const g = this.game;
     const p = this.player;
-    // Lo barato primero: solo se mira la frontera si de verdad puede expandirse
-    if (!p.attacks.has(0) && p.population() > p.maxTroops() * 0.3 && g.hasWildNeighbor(p)) {
-      g.launchAttack(p, 0, Math.floor(p.troops * 0.2));
+    // Manda tropas en cuanto no tiene expansión o la que tiene se queda sin
+    // tropas (antes esperaba a tener el 30 % de su máximo y a que acabara la anterior)
+    const atk = p.attacks.get(0);
+    const starving = atk && atk.troops < Math.max(600, p.maxTroops() * 0.03);
+    if ((!atk || starving) && p.troops > 500 && g.hasWildNeighbor(p)) {
+      g.launchAttack(p, 0, Math.floor(p.troops * this.sendShare));
     }
   }
 
@@ -6126,6 +6662,15 @@ const BUILDINGS = {
 /** Edificios de verdad (no unidades). */
 const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'];
 const BUILDING_KINDS = Object.keys(BUILDINGS);
+/**
+ * Grupos de la barra de construcción (los mismos que el Arsenal del inicio).
+ * `icon`: el edificio que la representa en su botón.
+ */
+const BUILD_GROUPS = [
+  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['city', 'port', 'factory'] },
+  { id: 'defensa', name: 'Defensa', icon: 'fort', kinds: ['fort', 'sam', 'warship'] },
+  { id: 'ataque', name: 'Ataque', icon: 'missile', kinds: ['silo', 'missile', 'hbomb', 'mirv'] },
+];
 
 /** Mapas aleatorios (generados con la semilla). */
 /**
@@ -6160,7 +6705,495 @@ function mapLabel(id) {
   return REAL_MAPS[id] || (MAP_SIZES[id] && MAP_SIZES[id].label) || '—';
 }
 
-return { TICK_MS, RES, AREA, TERRAIN, TERRAIN_NAMES, CONFIG, DEFAULT_RULES, PROFILE_IDS, migrateRules, ECONOMY_MODES, DIFFICULTIES, VICTORY_MODES, RULE_MULTS, TRUCE_MINS, TIME_LIMITS, WIN_SHARES, GOLD_STEPS, cleanRules, EMOJIS, BUILDINGS, STRUCTURE_KINDS, BUILDING_KINDS, colonyCount, MAP_SIZES, REAL_MAPS, MAP_IDS, mapLabel };
+return { TICK_MS, RES, AREA, TERRAIN, TERRAIN_NAMES, CONFIG, DEFAULT_RULES, PROFILE_IDS, migrateRules, ECONOMY_MODES, DIFFICULTIES, VICTORY_MODES, RULE_MULTS, TRUCE_MINS, TIME_LIMITS, WIN_SHARES, GOLD_STEPS, cleanRules, EMOJIS, BUILDINGS, STRUCTURE_KINDS, BUILDING_KINDS, BUILD_GROUPS, colonyCount, MAP_SIZES, REAL_MAPS, MAP_IDS, mapLabel };
+});
+__define('cuenta-ui', function () {
+// Interfaz de la cuenta: botón «Entrar» de la cabecera, diálogo con las
+// pestañas Entrar y Crear cuenta, bloque «Cuenta» del perfil y la tarjeta que
+// invita a los nuevos a guardar su progreso. La lógica está en cuenta.js.
+const { abrirDialogo, cerrarDialogo, sinMovimiento } = __require('movimiento');
+
+const $ = (id) => document.getElementById(id);
+const DISMISS_KEY = 'trinchera.cuenta.aviso';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Fuerza de una contraseña: { score 0-4, label }. */
+function passwordStrength(pw) {
+  const s = String(pw || '');
+  if (!s) return { score: 0, label: '' };
+  let score = 0;
+  if (s.length >= 8) score++;
+  if (s.length >= 12) score++;
+  const kinds = [/[a-záéíóúñü]/, /[A-ZÁÉÍÓÚÑÜ]/, /\d/, /[^\wáéíóúñüÁÉÍÓÚÑÜ]/].filter((re) => re.test(s)).length;
+  if (kinds >= 2) score++;
+  if (kinds >= 3) score++;
+  if (s.length < 8) score = Math.min(score, 1);
+  return { score, label: ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Muy buena'][score] };
+}
+
+/** «hace un momento», «hace 5 min», «hace 2 h» o la fecha. */
+function timeAgo(ms, now = Date.now()) {
+  const s = Math.max(0, (now - ms) / 1000);
+  if (s < 60) return 'hace un momento';
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
+  return new Date(ms).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
+class AccountUI {
+  /**
+   * `account`: la de cuenta.js (o null si este sitio no tiene cuentas).
+   * `onSynced()`: el perfil ha cambiado con lo de la cuenta (repintar).
+   */
+  constructor(account, { profile, onSynced = () => {} } = {}) {
+    this.account = account;
+    this.profile = profile;
+    this.onSynced = onSynced;
+    this.available = false;
+    this.mode = 'entrar';
+    this.busy = false;
+    if (!$('dialogo-cuenta')) return;
+    $('btn-cuenta').addEventListener('click', () => this.open('entrar'));
+    $('tcu-crear').addEventListener('click', () => this.open('crear'));
+    $('tcu-entrar').addEventListener('click', () => this.open('entrar'));
+    $('tcu-cerrar').addEventListener('click', () => this._dismissCard());
+    for (const tab of document.querySelectorAll('.cu-pestanas [role="tab"]')) tab.addEventListener('click', () => this.setMode(tab.dataset.modo));
+    $('cu-ver').addEventListener('click', () => {
+      const input = $('cu-password');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      $('cu-ver').setAttribute('aria-pressed', show ? 'true' : 'false');
+      $('cu-ver').setAttribute('aria-label', show ? 'Ocultar la contraseña' : 'Mostrar la contraseña');
+    });
+    $('cu-password').addEventListener('input', () => this._strength());
+    // Al corregir un campo, su error desaparece
+    for (const id of ['cu-email', 'cu-password', 'cu-nombre']) {
+      $(id).addEventListener('input', () => {
+        $(id).classList.remove('mal');
+        if ($('cu-error').classList.contains('visible')) this._error('');
+      });
+    }
+    $('cu-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.submit();
+    });
+  }
+
+  /** ¿Hay cuentas aquí? (lo dice main.js tras preguntar al servidor) */
+  setAvailable(on) {
+    this.available = !!(on && this.account);
+    this.render();
+  }
+
+  open(mode = 'entrar') {
+    if (!this.available) return;
+    $('cu-form').reset();
+    $('cu-password').type = 'password';
+    $('cu-ver').setAttribute('aria-pressed', 'false');
+    for (const id of ['cu-email', 'cu-password', 'cu-nombre']) $(id).classList.remove('mal');
+    $('cu-form').hidden = false;
+    $('cu-hecho').hidden = true;
+    document.querySelector('.cu-pestanas').hidden = false;
+    this.setMode(mode, { animate: false });
+    if (mode === 'crear' && this.profile && this.profile.nombre) $('cu-nombre').value = this.profile.nombre.slice(0, 18);
+    abrirDialogo($('dialogo-cuenta'), { foco: mode === 'crear' && !$('cu-nombre').value ? '#cu-nombre' : '#cu-email' });
+  }
+
+  setMode(mode, { animate = true } = {}) {
+    const box = $('dialogo-cuenta');
+    const body = $('cu-cuerpo');
+    const before = body.offsetHeight;
+    this.mode = mode === 'crear' ? 'crear' : 'entrar';
+    box.dataset.modo = this.mode;
+    for (const tab of document.querySelectorAll('.cu-pestanas [role="tab"]')) tab.setAttribute('aria-selected', tab.dataset.modo === this.mode ? 'true' : 'false');
+    for (const el of box.querySelectorAll('[data-solo]')) el.hidden = el.dataset.solo !== this.mode;
+    $('cu-password').setAttribute('autocomplete', this.mode === 'crear' ? 'new-password' : 'current-password');
+    box.querySelector('.cu-enviar-txt').textContent = this.mode === 'crear' ? 'Crear cuenta' : 'Entrar';
+    this._error('');
+    this._strength();
+    // La caja cambia de alto con suavidad (Crear cuenta tiene un campo más)
+    if (animate && !sinMovimiento() && body.animate) {
+      const after = body.offsetHeight;
+      if (before && after && before !== after) body.animate([{ height: `${before}px` }, { height: `${after}px` }], { duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' });
+    }
+  }
+
+  async submit() {
+    if (this.busy || !this.account) return;
+    const email = $('cu-email').value.trim();
+    const password = $('cu-password').value;
+    const name = $('cu-nombre').value.trim();
+    if (!EMAIL_RE.test(email)) return this._error('Escribe un correo válido.', 'cu-email');
+    if (this.mode === 'crear' && password.length < 8) return this._error('La contraseña tiene que tener al menos 8 caracteres.', 'cu-password');
+    if (!password) return this._error('Escribe tu contraseña.', 'cu-password');
+    this._busy(true);
+    try {
+      if (this.mode === 'crear') await this.account.register({ email, password, name }, this.profile);
+      else await this.account.signIn({ email, password }, this.profile);
+      this.onSynced();
+      this._done();
+    } catch (err) {
+      const field = { email: 'cu-email', password: 'cu-password' }[err.field] || (err.status === 401 ? 'cu-password' : '');
+      this._error(err.message || 'Algo ha fallado. Inténtalo de nuevo.', field);
+    } finally {
+      this._busy(false);
+    }
+  }
+
+  /** Repinta todo lo de la cuenta (cabecera, tarjeta y perfil). */
+  render(state = this.account ? this.account.state : null) {
+    if (!$('btn-cuenta')) return;
+    const on = this.available && !!state;
+    const signedIn = on && state.signedIn;
+    $('btn-cuenta').hidden = !on || signedIn;
+    $('chip-nube').hidden = !signedIn;
+    if (signedIn) $('chip-nube').title = `Progreso guardado en tu cuenta (${state.email})`;
+    const card = $('tarjeta-cuenta');
+    const showCard = on && !signedIn && !this._dismissed();
+    if (card.hidden === showCard) card.hidden = !showCard;
+    const block = $('perfil-cuenta');
+    block.hidden = !on;
+    if (!on) return;
+    block.classList.toggle('con-sesion', signedIn);
+    block.classList.toggle('sincronizando', !!state.syncing);
+    $('pc-titulo').textContent = signedIn ? state.email : 'Sin cuenta';
+    $('pc-estado').textContent = signedIn
+      ? state.syncing
+        ? 'Sincronizando…'
+        : state.error
+          ? state.error
+          : state.syncedAt
+            ? `Sincronizado ${timeAgo(state.syncedAt)}`
+            : 'Sin sincronizar todavía'
+      : state.error || 'Tu progreso solo está en este dispositivo.';
+    const btns = $('pc-botones');
+    const want = signedIn ? 'sesion' : 'sin';
+    if (btns.dataset.estado !== want) {
+      btns.dataset.estado = want;
+      const mk = (text, cls, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = cls;
+        b.textContent = text;
+        b.addEventListener('click', fn);
+        return b;
+      };
+      btns.replaceChildren(
+        ...(signedIn
+          ? [
+              mk('Sincronizar ahora', 'btn-sec', () => this.account.sync(this.profile).then(() => this.onSynced()).catch(() => {})),
+              mk('Cerrar sesión', 'btn-fantasma', () => this.account.signOut()),
+            ]
+          : [mk('Crear cuenta', 'principal', () => this.open('crear')), mk('Entrar', 'btn-sec', () => this.open('entrar'))]),
+      );
+    }
+  }
+
+  _done() {
+    const fresh = this.mode === 'crear';
+    $('cu-hecho-titulo').textContent = fresh ? '¡Cuenta creada, comandante!' : '¡Bienvenido de vuelta!';
+    $('cu-hecho-texto').textContent = fresh ? 'Tu progreso de este dispositivo ya está en tu cuenta. Entra con ella en cualquier otro y lo tendrás todo.' : 'Tu progreso se ha unido al de tu cuenta.';
+    $('cu-form').hidden = true;
+    document.querySelector('.cu-pestanas').hidden = true;
+    $('cu-hecho').hidden = false;
+    $('cu-hecho').querySelector('button').focus({ preventScroll: true });
+  }
+
+  _busy(on) {
+    this.busy = on;
+    $('cu-enviar').classList.toggle('cargando', on);
+    $('cu-enviar').disabled = on;
+    $('dialogo-cuenta').setAttribute('aria-busy', on ? 'true' : 'false');
+  }
+
+  _error(text, fieldId = '') {
+    const p = $('cu-error');
+    p.textContent = text;
+    p.classList.toggle('visible', !!text);
+    if (!text) return;
+    if (fieldId) {
+      $(fieldId).classList.add('mal');
+      $(fieldId).focus({ preventScroll: true });
+    }
+    // Pequeña sacudida de la caja
+    const box = document.querySelector('.dialogo-cuenta');
+    if (box.animate && !sinMovimiento()) {
+      box.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-7px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(0)' }], { duration: 320, easing: 'ease-out' });
+    }
+  }
+
+  _strength() {
+    const { score, label } = passwordStrength($('cu-password').value);
+    const bar = $('cu-fuerza');
+    bar.style.transform = `scaleX(${$('cu-password').value ? Math.max(0.12, score / 4) : 0})`;
+    bar.dataset.nivel = String(score);
+    $('cu-fuerza-txt').textContent = label;
+  }
+
+  _dismissed() {
+    try {
+      return localStorage.getItem(DISMISS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  _dismissCard() {
+    try {
+      localStorage.setItem(DISMISS_KEY, '1');
+    } catch {
+      /* sin almacenamiento: vuelve a salir la próxima vez */
+    }
+    const card = $('tarjeta-cuenta');
+    const hide = () => {
+      card.hidden = true;
+    };
+    if (card.animate && !sinMovimiento()) {
+      card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-8px) scale(0.98)' }], { duration: 220, easing: 'ease-in' }).finished.then(hide, hide);
+    } else hide();
+  }
+
+  close() {
+    cerrarDialogo($('dialogo-cuenta'));
+  }
+}
+
+return { passwordStrength, timeAgo, AccountUI };
+});
+__define('cuenta', function () {
+// Cuenta de Trinchera en la web: crear cuenta y entrar con correo y
+// contraseña (api/cuentas.php), y el perfil entero guardado en el servidor
+// para jugar desde cualquier dispositivo. Preparada para Google y Apple: la
+// API dirá qué proveedores hay (de momento, ninguno).
+//
+// En el enlace de Claude no hay API: ahí sigue la nube de Claude.
+const { mergeProfiles, saveProfile } = __require('profile');
+const { Ladder, apiIdentity, setApiIdentity } = __require('ladder');
+
+const API = 'api/cuentas.php';
+const KEY = 'trinchera.cuenta';
+
+/** Error de la API con su código HTTP y el campo que falla (si lo dice). */
+class AccountError extends Error {
+  constructor(message, status = 0, body = {}) {
+    super(message);
+    this.status = status;
+    this.field = body.campo || '';
+    this.body = body;
+  }
+}
+
+/**
+ * Sesión y sincronización. `onChange(state)` cada vez que cambia algo
+ * (entrar, salir, sincronizar, error). `fetchFn`, `base` y `storage` se
+ * pueden cambiar en los tests.
+ */
+class Account {
+  constructor({ onChange = () => {}, fetchFn = typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null, base = '', storage = typeof localStorage !== 'undefined' ? localStorage : null } = {}) {
+    this.onChange = onChange;
+    this.fetch = fetchFn;
+    this.url = `${base}${API}`;
+    this.storage = storage;
+    this.syncing = null;
+    this.error = '';
+    this.session = this._load();
+  }
+
+  /** ¿Hay cuentas en este sitio? (la web servida por http(s), fuera de Claude) */
+  static available(loc = typeof location !== 'undefined' ? location : null) {
+    return Ladder.webAvailable(loc);
+  }
+
+  get signedIn() {
+    return !!(this.session && this.session.token);
+  }
+
+  /** Lo que la interfaz necesita saber. */
+  get state() {
+    const s = this.session || {};
+    return { signedIn: this.signedIn, email: s.email || '', name: s.nombre || '', syncedAt: s.sincronizado || 0, syncing: !!this.syncing, error: this.error };
+  }
+
+  _load() {
+    try {
+      const s = JSON.parse(this.storage?.getItem(KEY) || 'null');
+      return s && /^[0-9a-f]{64}$/.test(s.token || '') ? s : null;
+    } catch {
+      return null;
+    }
+  }
+
+  _save() {
+    try {
+      if (this.session) this.storage?.setItem(KEY, JSON.stringify(this.session));
+      else this.storage?.removeItem(KEY);
+    } catch {
+      /* sin almacenamiento: la sesión dura lo que la pestaña */
+    }
+  }
+
+  _emit() {
+    try {
+      this.onChange(this.state);
+    } catch {
+      /* la interfaz no debe romper la cuenta */
+    }
+  }
+
+  async _post(accion, data = {}) {
+    if (!this.fetch) throw new AccountError('Sin conexión.');
+    let res;
+    try {
+      res = await this.fetch(this.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion, ...data }), cache: 'no-store' });
+    } catch {
+      throw new AccountError('No hay conexión con el servidor. Inténtalo de nuevo.');
+    }
+    let body = {};
+    try {
+      body = await res.json();
+    } catch {
+      /* respuesta vacía o no JSON */
+    }
+    if (!res.ok) {
+      const msg = res.status === 404 ? 'Este servidor no tiene cuentas.' : body.error || 'Algo ha fallado. Inténtalo de nuevo.';
+      throw new AccountError(msg, res.status, body);
+    }
+    return body;
+  }
+
+  async _start(accion, data, profile) {
+    const body = await this._post(accion, data);
+    this.session = { token: body.token, email: body.cuenta.email, nombre: body.cuenta.nombre, version: 0, sincronizado: 0 };
+    this.error = '';
+    this._save();
+    this._emit();
+    // Lo que había en este dispositivo se une a lo de la cuenta
+    if (profile) await this.sync(profile).catch(() => {});
+    return this.state;
+  }
+
+  /** Crea la cuenta (y entra). */
+  register({ email, password, name }, profile) {
+    return this._start('registro', { email, password, nombre: name || '' }, profile);
+  }
+
+  /** Entra con correo y contraseña. */
+  signIn({ email, password }, profile) {
+    return this._start('entrar', { email, password }, profile);
+  }
+
+  /** Cierra la sesión (el progreso se queda también en este dispositivo). */
+  async signOut() {
+    const token = this.session?.token;
+    this.session = null;
+    this.error = '';
+    this._save();
+    this._emit();
+    if (token) await this._post('salir', { token }).catch(() => {});
+  }
+
+  /** ¿Responde la API de cuentas en este servidor? (en uno estático, sin PHP, no) */
+  async probe() {
+    try {
+      const body = await this._post('proveedores');
+      this.providerList = Array.isArray(body.proveedores) ? body.proveedores : [];
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Proveedores externos activos (Google, Apple…) según el servidor. */
+  async providers() {
+    try {
+      const body = await this._post('proveedores');
+      return Array.isArray(body.proveedores) ? body.proveedores : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Une el perfil de la cuenta con el de este dispositivo y guarda el
+   * resultado en los dos. Si otro dispositivo guardó a la vez (409), vuelve a
+   * unir con lo nuevo y a guardar. Cambia `profile` en el sitio.
+   */
+  sync(profile) {
+    if (!this.signedIn) return Promise.resolve(false);
+    if (this.syncing) {
+      // Ya hay una en marcha: otra justo después (con los últimos cambios)
+      this._again = true;
+      return this.syncing;
+    }
+    this.syncing = this._sync(profile).finally(() => {
+      this.syncing = null;
+      if (this._again) {
+        this._again = false;
+        this.sync(profile).catch(() => {});
+      }
+      this._emit();
+    });
+    this._emit();
+    return this.syncing;
+  }
+
+  async _sync(profile) {
+    const token = this.session.token;
+    try {
+      const read = await this._post('perfil_leer', { token });
+      let remote = read.perfil;
+      let version = read.version || 0;
+      if (read.cuenta) Object.assign(this.session, { email: read.cuenta.email, nombre: read.cuenta.nombre });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (remote) {
+          Object.assign(profile, mergeProfiles(profile, remote));
+          // La fila de rangos de la cuenta manda sobre la de este dispositivo
+          if (remote.apiRango) profile.apiRango = remote.apiRango;
+        }
+        this._shareLadderIdentity(profile);
+        saveProfile(profile);
+        try {
+          const saved = await this._post('perfil_guardar', { token, perfil: profile, version });
+          this.session.version = saved.version;
+          this.session.sincronizado = Date.now();
+          this.error = '';
+          this._save();
+          return true;
+        } catch (err) {
+          if (err.status !== 409) throw err;
+          remote = err.body.perfil;
+          version = err.body.version || 0;
+        }
+      }
+      throw new AccountError('El perfil cambia en otro dispositivo: se sincronizará en un momento.');
+    } catch (err) {
+      if (err.status === 401) {
+        // Sesión caducada o cerrada: hay que volver a entrar
+        this.session = null;
+        this._save();
+        this.error = err.message;
+      } else this.error = err.message || 'No se ha podido sincronizar.';
+      throw err;
+    }
+  }
+
+  /**
+   * La fila de la tabla de rangos es la misma en todos tus dispositivos: su
+   * id y secreto viajan en el perfil de la cuenta (que solo lees tú).
+   */
+  _shareLadderIdentity(profile) {
+    const valid = (x) => x && /^[0-9a-f]{32}$/.test(x.id || '') && /^[0-9a-f]{64}$/.test(x.secreto || '');
+    if (valid(profile.apiRango)) {
+      const local = apiIdentity(this.storage);
+      if (!local || local.id !== profile.apiRango.id) setApiIdentity(profile.apiRango, this.storage);
+    } else {
+      const local = apiIdentity(this.storage);
+      if (valid(local)) profile.apiRango = { id: local.id, secreto: local.secreto };
+    }
+  }
+}
+
+return { AccountError, Account };
 });
 __define('diagnostico', function () {
 // Diagnóstico local (auditoría técnica): con ?diag=1 en la dirección, la
@@ -7788,19 +8821,41 @@ class Game {
 
   /** Casillas de la zona inicial (52) que caben en `t`: tierra libre de la misma masa. */
   startFits(t) {
+    return this._startZone(t).length;
+  }
+
+  /**
+   * Casillas de la zona inicial en `t`: tierra libre de la misma masa y unida
+   * a `t` por tierra dentro de la zona (un río la corta: no se empieza en las
+   * dos orillas).
+   */
+  _startZone(t) {
     const map = this.map;
     const cx = map.x(t);
     const cy = map.y(t);
     const body = map.landBody[t];
-    let n = 0;
+    const cand = (this._zoneSet ??= new Set());
+    cand.clear();
     for (const [dx, dy] of START_OFFSETS) {
       const x = cx + dx;
       const y = cy + dy;
       if (!map.inBounds(x, y)) continue;
       const i = map.index(x, y);
-      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) n++;
+      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) cand.add(i);
     }
-    return n;
+    if (!cand.has(t)) return [];
+    const out = [t];
+    cand.delete(t);
+    const nb = (this._zoneNb ??= new Int32Array(4));
+    for (let q = 0; q < out.length; q++) {
+      const c = map.neighbors(out[q], nb);
+      for (let k = 0; k < c; k++) {
+        if (!cand.has(nb[k])) continue;
+        cand.delete(nb[k]);
+        out.push(nb[k]);
+      }
+    }
+    return out;
   }
 
   /**
@@ -7934,21 +8989,12 @@ class Game {
   spawnPlayer(p, tile, minBody = CONFIG.minSpawnBodySize) {
     const map = this.map;
     if (!this.spawnCheck(p, tile, minBody).ok) return false;
-    const body = map.landBody[tile];
     if (p.spawned) this._releaseAll(p);
 
     // Zona inicial (documento, 02.2): el disco lógico de radio 4 desplazado
-    // (−0,5, −0,5) → 52 casillas. Si toca mar, otra masa de tierra o casillas
-    // ya ocupadas, se recorta (nunca se solapan propietarios).
-    const cx = map.x(tile);
-    const cy = map.y(tile);
-    for (const [dx, dy] of START_OFFSETS) {
-      const x = cx + dx;
-      const y = cy + dy;
-      if (!map.inBounds(x, y)) continue;
-      const i = map.index(x, y);
-      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) this.setOwner(i, p.id);
-    }
+    // (−0,5, −0,5) → 52 casillas. Si toca mar, un río, otra masa de tierra o
+    // casillas ya ocupadas, se recorta (nunca se solapan propietarios)
+    for (const i of this._startZone(tile)) this.setOwner(i, p.id);
     p.spawned = true;
     p.spawnTile = tile;
     // Tropas iniciales: humano 25 000, bot 10 000 (naciones, como un humano)
@@ -8486,7 +9532,8 @@ class Game {
       const d = round + (Math.max(Math.abs(vx), Math.abs(vy)) - round) * CONFIG.growSquare;
       let stretch = 1;
       if (atk.focus >= 0 && round > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / round) * CONFIG.growFocusStretch;
-      key = d * stretch + this.rng.float() * CONFIG.growRandom + terr - n * CONFIG.growSmooth;
+      // Las colonias, cada una con su forma (más o menos irregular)
+      key = d * stretch + this.rng.float() * (atk.attacker.growNoise ?? CONFIG.growRandom) + terr - n * CONFIG.growSmooth;
     } else {
       // Contra otro país: el frente entero avanza a la vez (por turnos de
       // llegada), casi sin azar; hacia el clic, ese lado algo antes
@@ -8553,8 +9600,12 @@ class Game {
     const lossMul = Math.max(0.3, 1 + (attacker ? attacker.mods.attackCost : 0));
     if (!target) {
       // Las colonias ocupan tierra libre más rápido y con menos bajas
+      // Las colonias, a su ritmo propio y sin depender de cuántas tropas mandan
+      // (como una nación con un envío normal, × su ritmo de 0,8 a 1,3)
       const colony = attacker && attacker.weak;
-      const time = neutralTimeCost(T.tileCost, troops) / speed / (colony ? MECH.colonyNeutralSpeed : 1);
+      const time = colony
+        ? neutralTimeCost(T.tileCost, Math.max(troops, MECH.colonyRefTroops)) / speed / MECH.colonyNeutralSpeed / (attacker.pace || 1)
+        : neutralTimeCost(T.tileCost, troops) / speed;
       return { time, loss: (T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1), defLoss: 0 };
     }
     const mult = this.defenseMult(target, t);
@@ -8932,6 +9983,7 @@ class Game {
     const map = this.map;
     const owner = this.owner;
     const terrain = map.terrain;
+    const river = map.river;
     const o = owner[start];
     const stamp = this._nextStamp();
     const seen = this._stampArr;
@@ -8967,6 +10019,7 @@ class Game {
       for (let k = 0; k < cnt; k++) {
         const v = nb[k];
         if (terrain[v] === 0) {
+          if (river[v]) continue; // un río cierra la bolsa como una frontera
           ok = false; // tiene costa: no es un cerco
           break;
         }
@@ -9029,9 +10082,10 @@ class Game {
         // En el borde: la bolsa toca el límite del mapa
         if (--room[d] < 0) return this._probeEnd(steps, true);
         const v = cur[d] + dirs[d];
-        if (terrain[v] === 0) return this._probeEnd(steps, true);
+        if (terrain[v] === 0 && !map.river[v]) return this._probeEnd(steps, true);
         const ov = owner[v];
-        if (ov === aid) {
+        // El cerco propio o un río cierran este rayo
+        if (ov === aid || terrain[v] === 0) {
           alive &= ~(1 << d);
           continue;
         }
@@ -9341,7 +10395,7 @@ class Game {
   _waterNextTo(tile) {
     const nb = NB_MISC;
     const c = this.map.neighbors(tile, nb);
-    for (let k = 0; k < c; k++) if (this.map.terrain[nb[k]] === 0) return nb[k];
+    for (let k = 0; k < c; k++) if (this.map.navigable(nb[k])) return nb[k];
     return -1;
   }
 
@@ -9675,7 +10729,7 @@ class Game {
     const nb = NB_MISC;
     const c = map.neighbors(port.tile, nb);
     for (let k = 0; k < c; k++) {
-      if (map.terrain[nb[k]] === 0) return { ok: true, reason: '', water: nb[k], zone: sea >= 0 ? tile : nb[k] };
+      if (map.navigable(nb[k])) return { ok: true, reason: '', water: nb[k], zone: sea >= 0 ? tile : nb[k] };
     }
     return { ok: false, reason: 'Ese puerto no tiene agua al lado' };
   }
@@ -10198,11 +11252,12 @@ class Game {
     for (const t of p.border) {
       if (!map.coastal[t]) continue;
       const c0 = map.neighbors(t, nb0);
-      for (let k = 0; k < c0; k++) if (terrain[nb0[k]] === 0) cg.goal[this._cellOf(nb0[k])] = gs;
+      for (let k = 0; k < c0; k++) if (map.navigable(nb0[k])) cg.goal[this._cellOf(nb0[k])] = gs;
     }
+    // Solo por agua navegable: un río que no llega al mar no se navega
     const starts = [];
     const c1 = map.neighbors(dest, nb0);
-    for (let k = 0; k < c1; k++) if (terrain[nb0[k]] === 0) starts.push(nb0[k]);
+    for (let k = 0; k < c1; k++) if (map.navigable(nb0[k])) starts.push(nb0[k]);
     if (!starts.length) return null;
     if (!this._coarseCorridor(starts, (cell) => cg.goal[cell] === gs, SEARCH.landing / AREA)) return null;
     const W0 = map.width;
@@ -10224,7 +11279,7 @@ class Game {
       let c = map.neighbors(dest, nb);
       for (let k = 0; k < c; k++) {
         const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        if (!map.navigable(n) || seen[n] === stamp) continue;
         seen[n] = stamp;
         parent[n] = -1;
         queue[tail++] = n;
@@ -11023,7 +12078,7 @@ const TABS = [
       ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-      ['ciudad', 'Construir', 'Q ciudad · E puerto · R puesto defensivo · F fábrica · G silo · H antimisiles · T buque · M bomba atómica · J bomba H · K MIRV. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
+      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
       ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
     ],
   },
@@ -11045,7 +12100,8 @@ const TABS = [
       ['tropas', 'Tropas', 'Se regeneran solas, más rápido cerca del 42 % de tu techo y nada al llenarlo: no esperes con la barra llena. Más territorio y ciudades, más techo.'],
       ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
-      ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas.'],
+      ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas. Un río la cierra igual que tu frontera.'],
+      ['mapa', 'Ríos', 'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar se navegan: puedes poner puertos en sus orillas y los barcos pasan por ellos, también para desembarcar en la otra orilla. Pasa el ratón por encima para ver si es navegable.'],
       ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
       ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
       ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas. Si el borde de la pantalla se pone rojo, te atacan.'],
@@ -15007,6 +16063,18 @@ function flagSprite() {
   return flagImage && flagImage.complete && flagImage.naturalWidth ? flagImage : null;
 }
 
+/** Promesa que se cumple cuando la imagen de las banderas está lista (o falla: no bloquea). */
+function loadFlags() {
+  flagSprite();
+  const img = flagImage;
+  if (!img || (img.complete && img.naturalWidth)) return Promise.resolve();
+  if (typeof img.decode === 'function') return img.decode().catch(() => {});
+  return new Promise((resolve) => {
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  });
+}
+
 /** ¿Está ya cargada la imagen con todas las banderas? */
 function flagReady() {
   return !!flagSprite();
@@ -15123,7 +16191,7 @@ function drawPointIcon(ctx, kind, cx, cy, size, { ring = null } = {}) {
   ctx.restore();
 }
 
-return { drawBuildingIcon, drawBuildingReal, drawFrame, drawEmblem, emblemFor, PATTERN_FNS, flagReady, hasFlag, drawFlag, flagCss, installFlagSprite, drawPointIcon };
+return { drawBuildingIcon, drawBuildingReal, drawFrame, drawEmblem, emblemFor, PATTERN_FNS, loadFlags, flagReady, hasFlag, drawFlag, flagCss, installFlagSprite, drawPointIcon };
 });
 __define('identidad', function () {
 // Identidad firmada para las salas clasificatorias: cada navegador tiene un
@@ -16058,6 +17126,18 @@ function apiIdentity(storage = typeof localStorage !== 'undefined' ? localStorag
   }
 }
 
+/** Usa este id y secreto (los de tu cuenta, para tener la misma fila en todos tus dispositivos). */
+function setApiIdentity({ id, secreto }, storage = typeof localStorage !== 'undefined' ? localStorage : null) {
+  if (!/^[0-9a-f]{32}$/.test(id || '') || !/^[0-9a-f]{64}$/.test(secreto || '')) return false;
+  try {
+    storage.setItem(ID_KEY, id);
+    storage.setItem(SECRET_KEY, secreto);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Id público (lo que devuelve la API para marcar tu fila): los 16 primeros del sha-256 del id. */
 async function publicId(id) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id));
@@ -16153,7 +17233,7 @@ class Ladder {
   }
 }
 
-return { rankRow, cleanRankRow, apiIdentity, Ladder };
+return { rankRow, cleanRankRow, apiIdentity, setApiIdentity, Ladder };
 });
 __define('loading', function () {
 // Pantalla de carga: muestra los pasos reales de preparar la partida, una
@@ -16186,6 +17266,9 @@ const TIPS = [
   'Los antimisiles tardan en construirse: no esperes a ver el misil.',
   'Pulsa V para minimizar el panel de abajo y ver más mapa.',
   'Para un puerto basta con hacer clic cerca de tu costa.',
+  'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar, se navegan y admiten puertos en sus orillas.',
+  'Al otro lado de un río solo se llega en barco: necesitas un puerto.',
+  'Los edificios están en tres grupos: Economía, Defensa y Ataque.',
 ];
 
 /** Espera a que el navegador pinte (para que la barra avance de verdad). */
@@ -16227,7 +17310,50 @@ async function withLoading(title, steps, { minMs = 1300 } = {}) {
   return result;
 }
 
-return { TIPS, withLoading };
+/**
+ * Pantalla de arranque (#arranque, en el HTML desde el principio): pasos con
+ * su texto, la barra (con transform: sigue avanzando aunque el paso bloquee
+ * el hilo principal) y el mapa del mundo que se va descubriendo.
+ */
+function bootLoader() {
+  const box = $('arranque');
+  if (!box) return null;
+  const bar = $('arr-progreso');
+  const text = $('arr-paso');
+  const started = performance.now();
+  $('arr-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  return {
+    /** Nuevo paso: la barra va hasta `to` (0-1) en unos `ms` (lo que suele tardar). */
+    step(label, to, ms = 500) {
+      text.textContent = label;
+      text.classList.remove('cambia');
+      void text.offsetWidth;
+      text.classList.add('cambia');
+      bar.style.transitionDuration = `${ms}ms`;
+      bar.style.transform = `scaleX(${Math.max(0.02, Math.min(1, to))})`;
+    },
+    /** Pinta el mapa en su lienzo y lo descubre con el escáner. */
+    map(draw) {
+      try {
+        draw($('arr-lienzo'));
+        box.classList.add('con-mapa');
+      } catch {
+        /* sin vista previa: sigue el radar */
+      }
+    },
+    /** Último paso y salida (un mínimo para que no sea un parpadeo). */
+    async done(minMs = 1500) {
+      this.step('¡A las trincheras!', 1, 300);
+      await wait(Math.max(260, minMs - (performance.now() - started)));
+      box.classList.add('saliendo');
+      document.body.classList.remove('arrancando');
+      await wait(560);
+      box.hidden = true;
+    },
+  };
+}
+
+return { TIPS, withLoading, bootLoader };
 });
 __define('main', function () {
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
@@ -16241,12 +17367,15 @@ const { Input } = __require('input');
 const { UI } = __require('ui');
 const { Home } = __require('home');
 const { hexToRgb } = __require('colors');
-const { installFlagSprite } = __require('icons');
+const { installFlagSprite, loadFlags } = __require('icons');
 const { hashString } = __require('rng');
 const { fmtTroops, formatNumber, formatPercent, formatTime } = __require('format');
 
 const { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } = __require('profile');
-const { withLoading } = __require('loading');
+const { bootLoader, withLoading } = __require('loading');
+const { paintMapPreview, paintTerrain } = __require('terreno');
+const { Account } = __require('cuenta');
+const { AccountUI } = __require('cuenta-ui');
 const { Tutorial } = __require('tutorial');
 const { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } = __require('cloud');
 const { connectTransport } = __require('net');
@@ -16866,12 +17995,39 @@ async function beginOnlineGame(sala, payload, hostPeer) {
 
 let cloudTimer = null;
 function scheduleCloudSync(delay = 2500) {
+  scheduleAccountSync(delay);
   clearTimeout(cloudTimer);
   cloudTimer = setTimeout(() => {
     if (!cloud) return;
     pushProfile(cloud, profile);
     pushLeaderboard(cloud, profile);
   }, delay);
+}
+
+// Cuenta (solo en la web, con la API de cuentas): el perfil entero en el servidor
+const account = Account.available() ? new Account({ onChange: (st) => accountUI?.render(st) }) : null;
+const accountUI = new AccountUI(account, { profile, onSynced: afterAccountSync });
+state.account = account; // para pruebas automáticas
+/** El perfil cambió con lo de la cuenta: repinta el inicio y aplica los ajustes. */
+function afterAccountSync() {
+  try {
+    applySettings();
+    home.renderChip();
+    if (state.demo) home.renderAll();
+  } catch (err) {
+    reportError(err, 'cuenta');
+  }
+}
+let accountTimer = null;
+function scheduleAccountSync(delay = 4000) {
+  if (!account || !account.signedIn) return;
+  clearTimeout(accountTimer);
+  accountTimer = setTimeout(() => {
+    account
+      .sync(profile)
+      .then(afterAccountSync)
+      .catch(() => {});
+  }, Math.max(delay, 1500));
 }
 
 function gameResult() {
@@ -16984,6 +18140,7 @@ function startRanked() {
 /** Recompensa de la temporada anterior (al cambiar de temporada). */
 function grantSeasonReward(reward) {
   profile.monedas = (profile.monedas || 0) + reward.coins;
+  profile.stats.monedasGanadas = (profile.stats.monedasGanadas || 0) + reward.coins;
   saveProfile(profile);
   home.flash?.(`Nueva temporada. Por tu ${reward.league.name} de la anterior: +🪙 ${reward.coins}`, true);
 }
@@ -17026,7 +18183,7 @@ function settlePendingRanked() {
   r.pendiente = null;
   saveProfile(profile);
   pushRankRow();
-  setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 1200);
+  whenBooted(() => setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 500));
 }
 
 /** Cambio de rango en el resumen de la partida: insignia, liga, barra de PL y el motivo. */
@@ -17180,6 +18337,7 @@ const home = new Home(profile, {
   onProfileChange(identity) {
     saveProfile(profile);
     if (identity) scheduleCloudSync();
+    else scheduleAccountSync(); // la cuenta guarda todo el perfil (también los ajustes)
     applySettings();
   },
   onQuickPlay: startGame,
@@ -17901,20 +19059,84 @@ setErrorNotifier(() => {
 });
 installGlobalHandlers();
 
-// El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
+// Arranque: la pantalla de carga (ya en el HTML) cubre todo mientras se
+// preparan las fuentes, las banderas, el mapa del mundo, su terreno, la
+// cuenta, el menú y la partida de fondo; después entra el menú. Lo que salía
+// al abrir (un reto, una clasificatoria a medias…) espera a que acabe.
 state.demo = true;
-// La cabecera (tu ficha, nivel y monedas) y el saludo, ya desde el primer
-// fotograma: antes salían vacíos hasta que se cargaba la partida de fondo
-home.renderChip();
-home.renderHero();
-// Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
-settlePendingRanked();
-requestAnimationFrame(() => setTimeout(() => {
-  // El resto de apartados (perfil, aspecto, progreso, clasificación…), justo
-  // después del primer pintado: antes quedaban vacíos hasta volver de una partida
-  home.renderAll();
-  if (!state.game) startDemo({ background: true });
-}, 30));
+state.booted = false;
+const afterBoot = [];
+/** Ejecuta `fn` cuando haya terminado la pantalla de arranque (o ya). */
+function whenBooted(fn) {
+  if (state.booted) fn();
+  else afterBoot.push(fn);
+}
+async function boot() {
+  const loader = bootLoader();
+  const paint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  const atMost = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
+  try {
+    loader?.step('Preparando el cuartel…', 0.1, 400);
+    await atMost(document.fonts?.ready, 1200);
+    loader?.step('Izando las banderas…', 0.2, 400);
+    await atMost(loadFlags(), 2000);
+    loader?.step('Cartografiando el mundo…', 0.42, 900);
+    await paint();
+    const { map } = loadRealMap('mundo');
+    loader?.map((canvas) => {
+      const data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river, lat: map.lat };
+      paintMapPreview(canvas, data, [0, 0, map.width, Math.min(map.height, Math.round((map.width * canvas.height) / canvas.width))]);
+    });
+    loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300);
+    await paint();
+    await paint();
+    paintTerrain(map); // queda guardado: la partida de fondo lo reutiliza
+    loader?.step('Sincronizando tu perfil…', 0.74, 500);
+    await paint();
+    await atMost(syncAtBoot(), 2500);
+    loader?.step('Abriendo el cuartel general…', 0.84, 500);
+    await paint();
+    home.renderChip();
+    home.renderHero();
+    // Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
+    settlePendingRanked();
+    home.renderAll();
+    loader?.step('Desplegando la partida de fondo…', 0.96, 700);
+    await paint();
+    if (!state.game) startDemo({ background: true });
+    await paint();
+  } catch (err) {
+    reportError(err, 'arranque');
+    // Que el menú salga igualmente
+    try {
+      home.renderAll();
+      if (!state.game) startDemo({ background: true });
+    } catch (err2) {
+      reportError(err2, 'arranque (menú)');
+    }
+  } finally {
+    await loader?.done();
+    state.booted = true;
+    const inicio = document.getElementById('inicio');
+    inicio.classList.add('entrada');
+    setTimeout(() => inicio.classList.remove('entrada'), 1500);
+    for (const fn of afterBoot.splice(0)) {
+      try {
+        fn();
+      } catch (err) {
+        reportError(err, 'tras el arranque');
+      }
+    }
+  }
+}
+/** Al arrancar: ¿hay cuentas en este servidor? Y, con sesión, trae el perfil guardado. */
+async function syncAtBoot() {
+  if (!account) return;
+  const ok = await account.probe();
+  accountUI.setAvailable(ok);
+  if (ok && account.signedIn) await account.sync(profile).catch(() => {});
+}
+boot();
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
@@ -17932,7 +19154,7 @@ const startParams = new URLSearchParams(location.search);
       /* sin history: no pasa nada */
     }
   }
-  if (reto) setTimeout(() => offerChallenge(reto), 900);
+  if (reto) whenBooted(() => setTimeout(() => offerChallenge(reto), 400));
 }
 const transportOpts = (() => {
   const b = Number(startParams.get('b'));
@@ -17992,7 +19214,8 @@ getCloud().then(async (c) => {
   // Tabla de rangos: en Claude, su base de datos; en la web, la API PHP; si no, local
   ladder.start(c, profile.rango.temporada);
   if (!c) {
-    home.setCloudNote('Tu perfil se guarda en este navegador.');
+    // En la web, el bloque «Cuenta» dice si además está en tu cuenta
+    home.setCloudNote(account ? '' : 'Tu perfil se guarda en este navegador.');
     home.setGlobal({ available: false });
     return;
   }
@@ -18031,18 +19254,25 @@ const MIN_ISLAND = 40 * AREA; // islas más pequeñas se hunden (jugabilidad)
 const MAX_LAKE = 15 * AREA; // lagos más pequeños se rellenan
 
 class GameMap {
-  constructor(width, height, terrain, shade) {
+  constructor(width, height, terrain, shade, river = null) {
     this.width = width;
     this.height = height;
     this.size = width * height;
     this.terrain = terrain; // Uint8Array, valores de TERRAIN
     this.shade = shade; // Uint8Array 0..255: altura relativa (tierra) o profundidad (agua)
-    this.river = new Uint8Array(width * height); // 0 = sin río, 1 = río, 2 = río grande
+    // 0 = sin río, 1 = río, 2 = río grande. Los ríos son agua (fronteras que no
+    // se cruzan por tierra); esto solo dice cómo dibujarlos
+    this.river = river || new Uint8Array(width * height);
     this._computeDerived();
   }
 
   isLand(i) {
     return this.terrain[i] !== WATER;
+  }
+
+  /** Agua por la que navegan los barcos: un mar o lago, o un río que llega a uno. */
+  navigable(i) {
+    return this.terrain[i] === WATER && this.waterOpen[this.waterBody[i]] === 1;
   }
 
   x(i) {
@@ -18074,46 +19304,60 @@ class GameMap {
   }
 
   _computeDerived() {
-    const { size, terrain } = this;
-    const nb = new Int32Array(4);
-    const coastal = new Uint8Array(size);
-    const landList = [];
-    const coastList = [];
-    for (let i = 0; i < size; i++) {
-      if (terrain[i] === WATER) continue;
-      landList.push(i);
-      const c = this.neighbors(i, nb);
-      for (let k = 0; k < c; k++) {
-        if (terrain[nb[k]] === WATER) {
-          coastal[i] = 1;
-          break;
-        }
-      }
-      if (coastal[i]) coastList.push(i);
-    }
-    this.landCount = landList.length;
-    this.landTiles = Int32Array.from(landList);
-    this.coastal = coastal;
-    this.coastTiles = Int32Array.from(coastList);
-
-    const land = labelComponents(this, true);
+    const { size, terrain, river, width: w } = this;
+    // Una sola cola para las dos búsquedas (en el mundo son 18 MB)
+    const queue = new Int32Array(size);
+    const land = labelComponents(this, true, queue);
     this.landBody = land.labels;
     this.landBodySizes = land.sizes;
-    const water = labelComponents(this, false);
-    this.waterBody = water.labels;
+    const water = labelComponents(this, false, queue);
+    const wl = water.labels;
+    this.waterBody = wl;
     this.waterBodySizes = water.sizes;
+    // Masas de agua navegables: las que tienen mar o lago (no solo río). Un río
+    // que no llega a ninguno es solo frontera: ni puertos ni barcos
+    const open = new Uint8Array(water.sizes.length);
+    let landCount = 0;
+    for (let i = 0; i < size; i++) {
+      if (terrain[i] !== WATER) landCount++;
+      else if (!river[i]) open[wl[i]] = 1;
+    }
+    this.waterOpen = open;
+    // Costa = tierra junto a agua navegable (puertos, desembarcos, comercio)
+    const nav = (n) => terrain[n] === WATER && open[wl[n]] === 1;
+    const coastal = new Uint8Array(size);
+    const landTiles = new Int32Array(landCount);
+    let li = 0;
+    let coastCount = 0;
+    for (let i = 0; i < size; i++) {
+      if (terrain[i] === WATER) continue;
+      landTiles[li++] = i;
+      const x = i % w;
+      if ((x > 0 && nav(i - 1)) || (x < w - 1 && nav(i + 1)) || (i >= w && nav(i - w)) || (i < size - w && nav(i + w))) {
+        coastal[i] = 1;
+        coastCount++;
+      }
+    }
+    const coastTiles = new Int32Array(coastCount);
+    for (let k = 0, c = 0; k < landCount; k++) if (coastal[landTiles[k]]) coastTiles[c++] = landTiles[k];
+    this.landCount = landCount;
+    this.landTiles = landTiles;
+    this.coastal = coastal;
+    this.coastTiles = coastTiles;
   }
 }
 
-/** Etiqueta componentes conexas (4-vecindad) de tierra o de agua. */
-function labelComponents(map, wantLand) {
-  const { size, terrain } = map;
+/** Etiqueta componentes conexas (4-vecindad) de tierra o de agua (vecinas en línea: es de lo más lento al cargar un mapa). */
+function labelComponents(map, wantLand, queue = new Int32Array(map.size)) {
+  const { size, terrain, width: w } = map;
   const labels = new Int32Array(size).fill(-1);
   const sizes = [];
-  const queue = new Int32Array(size);
-  const nb = new Int32Array(4);
+  const want = wantLand ? 1 : 0;
+  // 1 = del tipo buscado (tierra o agua)
+  const kind = new Uint8Array(size);
+  for (let i = 0; i < size; i++) kind[i] = (terrain[i] !== WATER ? 1 : 0) === want ? 1 : 0;
   for (let s = 0; s < size; s++) {
-    if (labels[s] !== -1 || (terrain[s] !== WATER) !== wantLand) continue;
+    if (labels[s] !== -1 || !kind[s]) continue;
     const id = sizes.length;
     let head = 0;
     let tail = 0;
@@ -18121,13 +19365,26 @@ function labelComponents(map, wantLand) {
     labels[s] = id;
     while (head < tail) {
       const t = queue[head++];
-      const c = map.neighbors(t, nb);
-      for (let k = 0; k < c; k++) {
-        const n = nb[k];
-        if (labels[n] === -1 && (terrain[n] !== WATER) === wantLand) {
-          labels[n] = id;
-          queue[tail++] = n;
-        }
+      const x = t % w;
+      let n = t - 1;
+      if (x > 0 && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
+      }
+      n = t + 1;
+      if (x < w - 1 && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
+      }
+      n = t - w;
+      if (n >= 0 && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
+      }
+      n = t + w;
+      if (n < size && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
       }
     }
     sizes.push(tail);
@@ -18219,7 +19476,193 @@ function generateMap(width, height, seed) {
   map.relief = { w: rw, h: rh, step, data };
   map.tileKm = 7; // relieve algo más suave que en los mapas reales
   traceRivers(map, elev, rng);
+  riversToWater(width, height, terrain, map.river, shade);
+  map._computeDerived();
   return map;
+}
+
+/** Hueco máximo (casillas por tierra) que se abre para unir un tramo de río al agua o a otro río. */
+const RIVER_LINK = 24;
+/** La tierra que los ríos dejan aislada y mide menos que esto pasa a ser río. */
+const RIVER_SLIVER = 12;
+
+/**
+ * Los ríos pasan a ser agua: fronteras que no se cruzan por tierra y, si
+ * llegan al mar (o a un lago), vías por las que navegan los barcos.
+ *  1. Cada tramo suelto (no toca agua) se une por el camino más corto por
+ *     tierra, de como mucho RIVER_LINK casillas, al agua o a otro tramo. Cada
+ *     unión junta dos grupos distintos, así que no se cierran anillos que
+ *     dejen tierra encerrada. Los datos traen los ríos troceados (al cruzar
+ *     lagos que el mapa ya no tiene, deltas…) y así vuelven a ser continuos.
+ *  2. Las casillas de río pasan a ser agua (`river` sigue diciendo cómo dibujarlas).
+ *  3. La tierra que queda aislada junto a un río y mide menos de
+ *     RIVER_SLIVER casillas pasa a ser río (sin islotes imposibles).
+ * Todo determinista (mismo orden de recorrido en todos los equipos).
+ * Devuelve cuántos tramos se quedaron sin salida (solo frontera).
+ */
+function riversToWater(w, h, terrain, river, shade) {
+  const size = w * h;
+  const tmp = { width: w, height: h, size, terrain, neighbors: GameMap.prototype.neighbors };
+  const nb = new Int32Array(4);
+  const lab = new Int32Array(size).fill(-1);
+  const seen = new Uint8Array(size);
+  // Solo se recorren las casillas de río (no todo el mapa en cada vuelta)
+  const list = [];
+  for (let i = 0; i < size; i++) if (river[i]) list.push(i);
+  let stranded = 0;
+  // Tramos que no encontraron salida, por su primera casilla y tamaño: si no
+  // han cambiado, no se vuelven a buscar en la vuelta siguiente
+  const dry = new Map();
+  for (let round = 0; round < 16; round++) {
+    // Tramos (4 vecinas) y si tocan agua
+    for (const t of list) lab[t] = -1;
+    const comps = [];
+    for (const s of list) {
+      if (lab[s] >= 0) continue;
+      const id = comps.length;
+      const tiles = [s];
+      lab[s] = id;
+      let touch = false;
+      for (let q = 0; q < tiles.length; q++) {
+        const c = tmp.neighbors(tiles[q], nb);
+        for (let k = 0; k < c; k++) {
+          const n = nb[k];
+          if (river[n]) {
+            if (lab[n] < 0) {
+              lab[n] = id;
+              tiles.push(n);
+            }
+          } else if (terrain[n] === WATER) touch = true;
+        }
+      }
+      comps.push({ tiles, touch });
+    }
+    // Grupos ya unidos en esta vuelta (para no unir dos veces lo mismo)
+    const group = comps.map((_, i) => i);
+    const find = (i) => {
+      while (group[i] !== i) i = group[i] = group[group[i]];
+      return i;
+    };
+    const wet = comps.map((c) => c.touch);
+    let linked = 0;
+    stranded = 0;
+    for (let id = 0; id < comps.length; id++) {
+      if (wet[find(id)]) continue;
+      const me = find(id);
+      const tiles = comps[id].tiles;
+      if (dry.get(tiles[0]) === tiles.length) {
+        stranded++;
+        continue;
+      }
+      // Búsqueda en anchura por tierra sin río desde todo el tramo. En `seen`
+      // va de qué lado se llegó (1 desde la derecha, 2 izquierda, 3 abajo,
+      // 4 arriba) para rehacer el camino sin otra tabla del tamaño del mapa
+      const visited = [];
+      let frontier = tiles;
+      let hit = -1;
+      let hitTarget = -1;
+      for (let d = 0; d < RIVER_LINK && hit < 0 && frontier.length; d++) {
+        const next = [];
+        for (const t of frontier) {
+          const c = tmp.neighbors(t, nb);
+          for (let k = 0; k < c; k++) {
+            const n = nb[k];
+            if (river[n]) {
+              if (d > 0 && find(lab[n]) !== me) {
+                hit = t;
+                hitTarget = find(lab[n]);
+                break;
+              }
+              continue;
+            }
+            if (terrain[n] === WATER) {
+              if (d > 0) {
+                hit = t;
+                hitTarget = -1;
+                break;
+              }
+              continue;
+            }
+            if (seen[n]) continue;
+            seen[n] = t === n + 1 ? 1 : t === n - 1 ? 2 : t === n + w ? 3 : 4;
+            visited.push(n);
+            next.push(n);
+          }
+          if (hit >= 0) break;
+        }
+        frontier = next;
+      }
+      const path = [];
+      if (hit >= 0) {
+        for (let t = hit; !river[t]; ) {
+          path.push(t);
+          const dir = seen[t];
+          t = dir === 1 ? t + 1 : dir === 2 ? t - 1 : dir === 3 ? t + w : t - w;
+        }
+      }
+      for (const t of visited) seen[t] = 0;
+      if (hit < 0) {
+        dry.set(tiles[0], tiles.length);
+        stranded++;
+        continue;
+      }
+      for (const t of path) {
+        river[t] = 1;
+        lab[t] = me; // el camino nuevo es ya de este grupo
+        list.push(t);
+      }
+      if (hitTarget >= 0) {
+        group[me] = hitTarget;
+        if (wet[me]) wet[hitTarget] = true;
+      } else wet[me] = true;
+      linked++;
+    }
+    if (!linked) break;
+  }
+  // Los ríos pasan a ser agua
+  for (const i of list) {
+    terrain[i] = WATER;
+    shade[i] = 0;
+  }
+  // Islotes que dejan los ríos → río: desde cada orilla se rellena la tierra
+  // hasta RIVER_SLIVER casillas; si se acaba antes, es un islote
+  // (seen: 1 = ya mirada, forma parte de una tierra grande)
+  const region = [];
+  const nb2 = new Int32Array(4);
+  for (const r of list) {
+    const c0 = tmp.neighbors(r, nb);
+    for (let k0 = 0; k0 < c0; k0++) {
+      const s = nb[k0];
+      if (terrain[s] === WATER || seen[s]) continue;
+      region.length = 0;
+      region.push(s);
+      seen[s] = 1;
+      let big = false;
+      for (let q = 0; q < region.length && !big; q++) {
+        const c = tmp.neighbors(region[q], nb2);
+        for (let k = 0; k < c; k++) {
+          const n = nb2[k];
+          if (terrain[n] === WATER) continue;
+          if (seen[n]) {
+            // Tocar tierra ya mirada (grande) o la propia
+            if (!region.includes(n)) big = true;
+            continue;
+          }
+          seen[n] = 1;
+          region.push(n);
+          if (region.length >= RIVER_SLIVER) big = true;
+        }
+      }
+      if (!big) {
+        for (const t of region) {
+          terrain[t] = WATER;
+          shade[t] = 0;
+          river[t] = 1;
+        }
+      }
+    }
+  }
+  return stranded;
 }
 
 /**
@@ -18426,8 +19869,11 @@ function loadRealMap(id) {
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   carveStraits(data, terrain);
-  const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
-  markRivers(w, h, terrain, RIVERS[id] || [], map.river);
+  const shade = realShade(id, w, h, terrain);
+  // Ríos: se marcan sobre la tierra y pasan a ser agua antes de calcular costas y masas
+  const river = markRivers(w, h, terrain, [...(RIVERS[id] || []), ...mouthLines(data)]);
+  riversToWater(w, h, terrain, river, shade);
+  const map = new GameMap(w, h, terrain, shade, river);
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
   map.relief = data.relief ? decodeRelief(data.relief) : null;
   // Kilómetros por casilla (a media latitud): para la fuerza del sombreado del relieve
@@ -18436,9 +19882,35 @@ function loadRealMap(id) {
     map.tileKm = ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w;
   }
   map.rowWeight = data.lat ? rowWeights(data.lat, h) : null;
-  const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' }));
+  // Un punto real que ahora cae en un río (Burundi, Bangladés…) pasa a la tierra más cercana
+  const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile: map.isLand(tile) ? tile : nearestLand(map, tile), area, iso: iso || '' }));
   lastReal = { id, map, countries };
   return { map, countries: countries.map((c) => ({ ...c })) };
+}
+
+/** Casilla de tierra más cercana a `tile` (búsqueda en anchura determinista; prefiere la tierra más grande en un empate). */
+function nearestLand(map, tile) {
+  const nb = new Int32Array(4);
+  const seen = new Set([tile]);
+  let frontier = [tile];
+  while (frontier.length) {
+    let best = -1;
+    for (const t of frontier) {
+      if (map.isLand(t) && (best < 0 || map.landBodySizes[map.landBody[t]] > map.landBodySizes[map.landBody[best]])) best = t;
+    }
+    if (best >= 0) return best;
+    const next = [];
+    for (const t of frontier) {
+      const c = map.neighbors(t, nb);
+      for (let k = 0; k < c; k++) {
+        if (seen.has(nb[k])) continue;
+        seen.add(nb[k]);
+        next.push(nb[k]);
+      }
+    }
+    frontier = next;
+  }
+  return tile;
 }
 
 /**
@@ -18461,6 +19933,54 @@ const STRAITS = [
     [25.9, 39.95],
   ],
 ];
+
+/**
+ * Desembocaduras que los datos no traen (el río acaba unas casillas tierra
+ * adentro) y que la unión automática al agua más cercana resolvería mal: el
+ * Nilo llegaba al golfo de Suez y el Rin se unía al Danubio (una barrera de
+ * mar a mar que no existe). Líneas [lon, lat] que empiezan sobre los últimos
+ * vértices del río (para que se toquen seguro) y acaban en el mar; se pintan
+ * como río grande.
+ */
+const MOUTHS = [
+  // Nilo: de El Cairo al Mediterráneo por el brazo de Rosetta
+  [
+    [31.26, 29.18],
+    [31.26, 30.06],
+    [30.95, 30.55],
+    [30.6, 31.1],
+    [30.38, 31.45],
+    [30.3, 31.75],
+  ],
+  // Rin: por el Waal hasta el mar del Norte (Hoek van Holland)
+  [
+    [6.18, 51.81],
+    [5.1, 51.81],
+    [4.45, 51.9],
+    [4.05, 51.98],
+    [3.75, 52.02],
+  ],
+];
+
+/** Las desembocaduras de MOUTHS que caben en el mapa, como polilíneas de río en casillas. */
+function mouthLines(data) {
+  if (!data.lon || !data.lat) return [];
+  const { w, h } = data;
+  const [lon0, lon1] = data.lon;
+  const [lat0, lat1] = data.lat;
+  const top = millerY(lat1);
+  const span = top - millerY(lat0);
+  const out = [];
+  for (const line of MOUTHS) {
+    if (!line.every(([lon, lat]) => lon >= lon0 && lon <= lon1 && lat >= lat0 && lat <= lat1)) continue;
+    const pts = [2];
+    for (const [lon, lat] of line) {
+      pts.push(Math.min(w - 1, Math.floor(((lon - lon0) / (lon1 - lon0)) * w)), Math.min(h - 1, Math.floor(((top - millerY(lat)) / span) * h)));
+    }
+    out.push(pts);
+  }
+  return out;
+}
 
 /** Miller (como herramientas/mapas.js): la y del mapa crece hacia el sur. */
 const millerY = (lat) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((lat * Math.PI) / 180)));
@@ -18583,7 +20103,7 @@ function realShade(id, w, h, terrain) {
   return shade;
 }
 
-return { GameMap, generateMap, markRivers, loadRealMap, decodeRelief };
+return { GameMap, generateMap, riversToWater, markRivers, loadRealMap, decodeRelief };
 });
 __define('mapas-reales', function () {
 // GENERADO por herramientas/mapas.js — no editar a mano.
@@ -18615,10 +20135,12 @@ __define('mecanicas', function () {
  * tropas = más rápido (también contra países), colonias rápidas y baratas en
  * tierra libre, crecimiento algo más cuadrado y sonda del cerco. doc-1.3:
  * desembarcos solo con puerto, barcos un 40 % más lentos, rutas por los
- * estrechos (Ormuz, Bósforo) y mejor reparto inicial. En multijugador,
+ * estrechos (Ormuz, Bósforo) y mejor reparto inicial. doc-1.4: los ríos son
+ * agua (fronteras; los que llegan al mar se navegan) y colonias ágiles y
+ * distintas (ritmo propio, sin depender de su población). En multijugador,
  * versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.3';
+const MECH_VERSION = 'doc-1.4';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -18630,7 +20152,8 @@ const MECH_VERSION = 'doc-1.3';
  *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
- *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3. Sin puntos estratégicos (ni bonos ni botín de
+ *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
+ *   clasico-5, con las de doc-1.4. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -18640,8 +20163,8 @@ const MECH_VERSION = 'doc-1.3';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-4', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-3', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-5', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-4', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -18700,8 +20223,12 @@ const MECH = {
   // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
   neutralTimeFloor: 1.25,
   // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
-  colonyNeutralLoss: 0.5,
-  colonyNeutralSpeed: 2,
+  // (doc-1.4: bajas ×0,38, antes ×0,5)
+  colonyNeutralLoss: 0.38,
+  colonyNeutralSpeed: 1,
+  // PROPUESTA (doc-1.4): su velocidad en tierra libre no depende de cuánto
+  // mandan: como una nación con este envío (y su ritmo propio, ver bot.js)
+  colonyRefTroops: 6600,
   // Guerra entre países (sección 05.2)
   pvp: {
     lossBase: 0.463,
@@ -21772,6 +23299,11 @@ for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'e
 }
 const itemKey = (item) => `${item.cat}:${item.id}`;
 
+/** Precio en monedas de cada objeto de la tienda, por su clave. */
+const PRICE_BY_KEY = new Map(
+  [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
+);
+
 /** Mejores puntos de la clasificatoria (esta temporada o las anteriores). */
 function rankBest(p) {
   const r = p.rango;
@@ -21936,6 +23468,7 @@ function buyItem(profile, item) {
   if (!item || !item.unlock || !item.unlock.price || isUnlocked(profile, item)) return false;
   if ((profile.monedas || 0) < item.unlock.price) return false;
   profile.monedas -= item.unlock.price;
+  profile.stats.monedasGastadas = (profile.stats.monedasGastadas || 0) + item.unlock.price;
   profile.comprados[itemKey(item)] = Date.now();
   saveProfile(profile);
   return true;
@@ -22001,6 +23534,7 @@ function defaultProfile() {
       retosSemanales: 0,
       clasificatorias: 0, // partidas clasificatorias jugadas (todas las temporadas)
       monedasGanadas: 0,
+      monedasGastadas: 0, // en la tienda (las monedas son ganadas − gastadas)
     },
     logros: {}, // id → fecha (ms)
     monedas: 0, // se ganan con logros, retos diarios y partidas; se gastan en la tienda
@@ -22041,6 +23575,21 @@ function normalizeProfile(p) {
   const d = defaultProfile();
   if (!p || typeof p !== 'object') return d;
   const pick = (list, v, dflt) => (list.some((x) => x.id === v) ? v : dflt);
+  const out = normalizeFields(p, d, pick);
+  // Monedas: ganadas − gastadas (así dos dispositivos se unen sin perder ni
+  // duplicar). Perfiles de antes: lo gastado sale de lo comprado y lo ganado
+  // se ajusta para que cuadre con las monedas que tenían
+  const st = out.stats;
+  if (!Number.isFinite(p.stats && p.stats.monedasGastadas)) {
+    st.monedasGastadas = Object.keys(out.comprados).reduce((sum, k) => sum + (PRICE_BY_KEY.get(k) || 0), 0);
+    st.monedasGanadas = out.monedas + st.monedasGastadas;
+  }
+  st.monedasGanadas = Math.max(0, Math.floor(Number(st.monedasGanadas) || 0));
+  st.monedasGastadas = Math.max(0, Math.floor(Number(st.monedasGastadas) || 0));
+  return out;
+}
+
+function normalizeFields(p, d, pick) {
   return {
     ...d,
     ...p,
@@ -22111,6 +23660,8 @@ function mergeProfiles(a, b) {
   const rb = b.rango;
   out.rango = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb);
   out.comprados = { ...older.comprados, ...newer.comprados };
+  // Monedas: lo ganado menos lo gastado (los dos, máximos de cada copia)
+  out.monedas = Math.max(0, out.stats.monedasGanadas - out.stats.monedasGastadas);
   const seen = new Set();
   out.historial = [...a.historial, ...b.historial]
     .sort((x, y) => y.fecha - x.fecha)
@@ -24432,30 +25983,13 @@ class Renderer {
       }
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
-      // Insignia circular: grande para reconocerla, sin tapar demasiado mapa
+      // Casco grande para reconocerlo, sin aro ni zona de patrulla alrededor
+      // (la zona solo se ve al colocarlo, en la vista previa)
       const r = clamp(z * RES * 1.6, 11, 21);
       const len = r * 2;
       if (!this._onScreen(sx, sy, len * 2)) continue;
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
-      // Zona de patrulla de tus buques: círculo discontinuo y, si va hacia allí, la línea
-      if (p === game.human && ws.patrol >= 0) {
-        const [px, py] = camera.worldToScreen((ws.patrol % W) + 0.5, Math.floor(ws.patrol / W) + 0.5);
-        ctx.setLineDash([6, 6]);
-        ctx.beginPath();
-        ctx.arc(px, py, CONFIG.warshipPatrol * z, 0, Math.PI * 2);
-        ctx.lineWidth = 1.2;
-        ctx.strokeStyle = 'rgba(160, 210, 255, 0.35)';
-        ctx.stroke();
-        if (Math.hypot(px - sx, py - sy) > CONFIG.warshipPatrol * z) {
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(px, py);
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-          ctx.stroke();
-        }
-        ctx.setLineDash([]);
-      }
       drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
@@ -25219,11 +26753,12 @@ class Renderer {
       const dx = Math.cos(f.ang);
       const dy = Math.sin(f.ang);
       const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : prgb(atk.attacker);
-      const s = incoming || mine ? 8 : 5.5;
-      const lw = incoming || mine ? 3.2 : 2.4;
+      // Flechas discretas: marcan el sentido sin tapar lo que se ataca
+      const s = incoming || mine ? 6 : 4.2;
+      const lw = incoming || mine ? 2.4 : 1.8;
       for (let k = 0; k < 3; k++) {
         const u = (k + phase) / 3;
-        const off = 14 + u * 44;
+        const off = 10 + u * 33;
         const a = Math.sin(Math.PI * u) * (incoming || mine ? 0.95 : 0.7);
         const cx = sx + dx * off;
         const cy = sy + dy * off;
@@ -25242,33 +26777,40 @@ class Renderer {
   }
 
   /**
-   * Marcador con las tropas en el frente de cada ataque entre el humano y otra
-   * nación: rojo si le atacan, verde si ataca él.
+   * Marcador con las tropas de cada ataque entre el humano y otra nación:
+   * rojo si le atacan, verde si ataca él. Pequeño y algo translúcido, y del
+   * lado del atacante (detrás del frente), para que se vea lo que se ataca.
    */
   _drawAttackBadges() {
     const { ctx, game, camera } = this;
     const human = game.human;
     if (!human || !game.attacks.length || this.options.badges === false) return;
+    const fs = COARSE ? 9 : 10;
+    const h = fs + 5;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.font = `700 ${fs}px system-ui, sans-serif`;
     for (const atk of game.attacks) {
       if (atk.done || atk.troops < 1 || !atk.targetId) continue;
       const incoming = atk.targetId === human.id;
       if (!incoming && atk.attacker !== human) continue;
       const f = this._front(atk);
       if (!f) continue;
-      const [x, y] = camera.worldToScreen(f.x, f.y);
+      let [x, y] = camera.worldToScreen(f.x, f.y);
+      if (f.ang !== null) {
+        x -= Math.cos(f.ang) * (h + 4);
+        y -= Math.sin(f.ang) * (h + 4);
+      }
       if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
       const text = `${incoming ? '🛡' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
       // Ancho por escalones: no «baila» cada vez que cambia una cifra
-      const w = Math.max(64, Math.ceil((ctx.measureText(text).width + 14) / 10) * 10);
+      const w = Math.max(40, Math.ceil((ctx.measureText(text).width + 10) / 8) * 8);
       ctx.beginPath();
-      ctx.roundRect(x - w / 2, y - 10, w, 20, 10);
-      ctx.fillStyle = incoming ? 'rgba(190, 40, 40, 0.92)' : 'rgba(24, 140, 78, 0.92)';
+      ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+      ctx.fillStyle = incoming ? 'rgba(170, 36, 36, 0.78)' : 'rgba(20, 120, 68, 0.78)';
       ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = incoming ? '#ffb3b3' : '#a8f5c6';
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = incoming ? 'rgba(255, 179, 179, 0.85)' : 'rgba(168, 245, 198, 0.85)';
       ctx.stroke();
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y + 0.5);
@@ -26706,9 +28248,12 @@ function paintTerrainNow(map) {
 
   // ---- Qué vecinos son de otro tipo (agua/tierra), para playas y espuma
   //  bits: 1 O, 2 E, 4 N, 8 S, 16 NO, 32 NE, 64 SO, 128 SE
+  // Los ríos son agua en la partida, pero se dibujan sobre la tierra: no
+  // cuentan como mar para la costa ni para el color del mar
+  const river = map.river && map.river.some((v) => v) ? map.river : null;
   const edge = new Uint8Array(size);
   const isW = new Uint8Array(size);
-  for (let i = 0; i < size; i++) isW[i] = terrain[i] === WATER ? 1 : 0;
+  for (let i = 0; i < size; i++) isW[i] = terrain[i] === WATER && !(river && river[i]) ? 1 : 0;
   for (let y = 0; y < H; y++) {
     const up = y > 0;
     const down = y < H - 1;
@@ -26744,7 +28289,6 @@ function paintTerrainNow(map) {
   };
 
   // ---- Tierra a alta resolución
-  const river = map.river && map.river.some((v) => v) ? map.river : null;
   const LW = W * S;
   const LH = H * S;
   const land = makeCanvas(LW, LH);
@@ -26762,8 +28306,8 @@ function paintTerrainNow(map) {
       const i = cy * W + cx;
       const o = py * LW + pxl;
       const m = edge[i];
-      if (terrain[i] === WATER) continue; // el mar va en su propia capa
       const rv = river ? river[i] : 0;
+      if (terrain[i] === WATER && !rv) continue; // el mar va en su propia capa
       if (rv) {
         // Río: azul algo más claro que el mar (los grandes, un poco más hondos),
         // con la orilla un pelín más oscura y algo de grano
@@ -26800,7 +28344,7 @@ function paintTerrainNow(map) {
   let head = 0;
   let tail = 0;
   for (let i = 0; i < size; i++) {
-    if (terrain[i] !== WATER) {
+    if (!isW[i]) {
       dist[i] = 0;
       queue[tail++] = i;
     }
@@ -26903,12 +28447,7 @@ function paintMapPreview(canvas, data, crop = null) {
       const i = Math.min(h - 1, ty | 0) * w + Math.min(w - 1, tx | 0);
       const o = (py * W + px) * 4;
       d[o + 3] = 255;
-      if (terrain[i] === WATER) {
-        d[o] = SEA[0];
-        d[o + 1] = SEA[1];
-        d[o + 2] = SEA[2];
-        continue;
-      }
+      // Río (agua en la partida, pero dibujado sobre la tierra)
       if (data.river && data.river[i]) {
         const c = data.river[i] === 2 ? RIVER_BIG : RIVER;
         d[o] = c[0];
@@ -26916,9 +28455,16 @@ function paintMapPreview(canvas, data, crop = null) {
         d[o + 2] = c[2];
         continue;
       }
+      if (terrain[i] === WATER) {
+        d[o] = SEA[0];
+        d[o + 1] = SEA[1];
+        d[o + 2] = SEA[2];
+        continue;
+      }
       const e = elev(tx, ty);
-      // Costa: contorno oscuro
-      const coast = terrain[Math.min(h - 1, (ty + sy) | 0) * w + Math.min(w - 1, tx | 0)] === WATER || terrain[Math.min(h - 1, ty | 0) * w + Math.min(w - 1, (tx + sx) | 0)] === WATER;
+      // Costa: contorno oscuro (junto al mar, no junto a un río)
+      const sea = (k) => terrain[k] === WATER && !(data.river && data.river[k]);
+      const coast = sea(Math.min(h - 1, (ty + sy) | 0) * w + Math.min(w - 1, tx | 0)) || sea(Math.min(h - 1, ty | 0) * w + Math.min(w - 1, (tx + sx) | 0));
       if (coast) {
         d[o] = COAST[0];
         d[o + 1] = COAST[1];
@@ -27050,6 +28596,9 @@ const { AREA } = __require('config');
 
 const $ = (id) => document.getElementById(id);
 
+/** Abre un grupo de la barra de edificios (en el móvil están plegados en una bandeja). */
+const openGroup = (id) => $('construir')?.dispatchEvent(new CustomEvent('abrir-grupo', { detail: id }));
+
 /**
  * Pasos: `text`, `check(s)` (¿cumplido?), `enter(s)` (al empezar el paso),
  * `highlight` (selector CSS) e `info` (solo se avanza con «Siguiente»).
@@ -27078,10 +28627,11 @@ const STEPS = [
     check: (s) => Math.abs(s.ratio - 0.2) > 0.04,
   },
   {
-    text: 'Construye una ciudad: pulsa Q (o el botón Ciudad) y haz clic dentro de tu territorio. Te damos el oro.',
-    highlight: '#construir [data-kind="city"]',
+    text: 'Construye una ciudad: pulsa Q (o Economía → Ciudad) y haz clic dentro de tu territorio. Te damos el oro.',
+    highlight: '#hud [data-kind="city"]',
     enter: (s) => {
       s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'city'));
+      openGroup('economia');
     },
     check: (s) => s.human.buildings.city >= 1,
   },
@@ -27094,10 +28644,11 @@ const STEPS = [
     check: (s) => s.human.allies.size > 0 || s.game.requests.some((r) => r.from === s.human.id),
   },
   {
-    text: 'Construye un puerto en tu costa con la tecla E. Sus mercantes irán a puertos de otros países y os darán oro a los dos al llegar. Si no tienes costa, salta este paso.',
-    highlight: '#construir [data-kind="port"]',
+    text: 'Construye un puerto en tu costa (o en la orilla de un río que llegue al mar) con la tecla E, o Economía → Puerto. Sus mercantes irán a puertos de otros países y os darán oro a los dos al llegar. Si no tienes costa, salta este paso.',
+    highlight: '#hud [data-kind="port"]',
     enter: (s) => {
       s.human.gold = Math.max(s.human.gold, s.game.buildCost(s.human, 'port'));
+      openGroup('economia');
     },
     check: (s) => s.human.buildings.port >= 1,
   },
@@ -27179,7 +28730,7 @@ return { Tutorial };
 __define('ui', function () {
 // Interfaz HTML de la partida: panel del jugador, clasificación, diplomacia,
 // eventos, tooltip y pantalla de fin. (El inicio está en home.js.)
-const { BUILDINGS, BUILDING_KINDS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } = __require('config');
+const { BUILDINGS, BUILD_GROUPS, CONFIG, EMOJIS, RES, TERRAIN_NAMES, TICK_MS } = __require('config');
 const { rgbToCss } = __require('colors');
 const { fmtTroops, fmtTroopsCount, formatCount, formatNumber, formatPercent, formatShare, formatTime, hudSnapshot } = __require('format');
 const { drawBuildingReal, flagCss, hasFlag } = __require('icons');
@@ -27420,37 +28971,98 @@ class UI {
       this._removeRequest(kind ? `${kind}:${from}` : from);
     });
 
+    // Edificios en tres grupos (Economía, Defensa y Ataque). En el ordenador
+    // se ven todos, con el título de su grupo; en el móvil, solo los tres
+    // grupos y al tocar uno sube una bandeja con sus edificios
     this._buildButtons = new Map();
     this._buildIcons = new Map();
-    for (const kind of BUILDING_KINDS) {
-      const def = BUILDINGS[kind];
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.dataset.kind = kind;
-      btn.title = def.unit
-        ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
-        : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
-      const icon = document.createElement('canvas');
-      icon.width = 48;
-      icon.height = 48;
-      drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
-      this._buildIcons.set(kind, icon);
-      // Sin nombre (ocupa menos): el nombre sale al pasar el ratón
-      btn.setAttribute('aria-label', def.name);
-      const text = document.createElement('span');
-      text.className = 'b-texto';
-      text.innerHTML = '<span class="b-coste"></span>';
-      const count = document.createElement('span');
-      count.className = 'b-num';
-      // La tecla, arriba a la izquierda
-      const key = document.createElement('span');
-      key.className = 'b-tecla';
-      key.textContent = def.key.slice(3);
-      btn.append(key, icon, text, count);
-      btn.addEventListener('click', () => this.handlers.onBuildMode?.(kind));
-      $('construir').append(btn);
-      this._buildButtons.set(kind, btn);
+    this._groups = [];
+    const bar = $('construir');
+    bar.classList.add('agrupado');
+    for (const group of BUILD_GROUPS) {
+      const box = document.createElement('div');
+      box.className = 'grupo-obras';
+      box.dataset.grupo = group.id;
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'g-tab';
+      tab.setAttribute('aria-expanded', 'false');
+      tab.title = group.name;
+      const gIcon = document.createElement('canvas');
+      gIcon.width = 40;
+      gIcon.height = 40;
+      gIcon.className = 'g-icono';
+      drawBuildingReal(gIcon.getContext('2d'), group.icon, 20, 20, 36);
+      const gName = document.createElement('span');
+      gName.className = 'g-nombre';
+      gName.textContent = group.name;
+      const dot = document.createElement('span');
+      dot.className = 'g-punto';
+      dot.setAttribute('aria-hidden', 'true');
+      tab.append(gIcon, gName, dot);
+      tab.addEventListener('click', () => this.openGroup(this._openGroup === group.id ? null : group.id));
+      const list = document.createElement('div');
+      list.className = 'g-items';
+      list.setAttribute('role', 'group');
+      list.setAttribute('aria-label', group.name);
+      for (const kind of group.kinds) {
+        const def = BUILDINGS[kind];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'obra';
+        btn.dataset.kind = kind;
+        btn.title = def.unit
+          ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
+          : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
+        const icon = document.createElement('canvas');
+        icon.width = 48;
+        icon.height = 48;
+        drawBuildingReal(icon.getContext('2d'), kind, 24, 24, 44);
+        this._buildIcons.set(kind, icon);
+        // Sin nombre en el ordenador (ocupa menos): sale al pasar el ratón; en
+        // la bandeja del móvil sí se lee
+        btn.setAttribute('aria-label', def.name);
+        const name = document.createElement('span');
+        name.className = 'b-nombre';
+        name.textContent = def.name;
+        const text = document.createElement('span');
+        text.className = 'b-texto';
+        text.innerHTML = '<span class="b-coste"></span>';
+        const count = document.createElement('span');
+        count.className = 'b-num';
+        // La tecla, arriba a la izquierda
+        const key = document.createElement('span');
+        key.className = 'b-tecla';
+        key.textContent = def.key.slice(3);
+        btn.append(key, icon, name, text, count);
+        btn.addEventListener('click', () => {
+          this.handlers.onBuildMode?.(kind);
+          this.openGroup(null);
+        });
+        list.append(btn);
+        this._buildButtons.set(kind, btn);
+      }
+      box.append(tab, list);
+      bar.append(box);
+      this._groups.push({ group, box, tab, list, icon: gIcon, shown: group.icon });
     }
+    // Bandeja del móvil: flota encima del panel (que recorta lo que sobresale)
+    const tray = document.createElement('div');
+    tray.id = 'bandeja-obras';
+    tray.className = 'bandeja-obras';
+    tray.hidden = true;
+    $('hud').append(tray);
+    this._tray = tray;
+    // El tutorial abre un grupo para enseñar uno de sus edificios
+    bar.addEventListener('abrir-grupo', (e) => this.openGroup(e.detail || null));
+    // La bandeja se cierra al tocar fuera o con Escape
+    document.addEventListener('pointerdown', (e) => {
+      if (this._openGroup && !bar.contains(e.target) && !tray.contains(e.target)) this.openGroup(null);
+    });
+    window.addEventListener('resize', () => this.openGroup(null));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this._openGroup) this.openGroup(null);
+    });
 
     // Clasificación, combates y avisos: cabecera que pliega el panel (se recuerda)
     this._unread = 0;
@@ -27507,6 +29119,7 @@ class UI {
     const wide = window.matchMedia?.('(min-width: 1100px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
     const layout = () => {
       const desk = !!wide?.matches;
+      if (desk) this.openGroup(null);
       $('hud').classList.toggle('escritorio', desk);
       $('barra-obras').hidden = !desk;
       if (desk && obras.parentElement !== $('barra-obras')) $('barra-obras').append(obras);
@@ -28204,6 +29817,23 @@ class UI {
       btn.classList.toggle('activo', buildMode === kind);
       btn.disabled = !playing || !human.alive;
     }
+    // Grupos: un punto si hay algo que puedas pagar; el del edificio elegido,
+    // resaltado y con su icono
+    for (const g of this._groups) {
+      const btns = g.group.kinds.map((k) => this._buildButtons.get(k));
+      const visible = btns.filter((b) => !b.hidden);
+      g.box.hidden = !visible.length;
+      g.tab.classList.toggle('listo', playing && visible.some((b) => !b.classList.contains('caro')));
+      const active = g.group.kinds.includes(buildMode) ? buildMode : null;
+      g.tab.classList.toggle('activo', !!active);
+      const want = active || g.group.icon;
+      if (g.shown !== want) {
+        g.shown = want;
+        const ctx = g.icon.getContext('2d');
+        ctx.clearRect(0, 0, 40, 40);
+        drawBuildingReal(ctx, want, 20, 20, 36);
+      }
+    }
 
     this._updateAttacks(game, human);
     this._updateTopBar(game, human);
@@ -28220,6 +29850,54 @@ class UI {
       const roi = buildMode && this._roi(game, human)[buildMode];
       if (roi) this._hint(roi, 'info');
     }
+  }
+
+  /**
+   * Abre la bandeja de un grupo de edificios (en el móvil) o la cierra con
+   * null. En el ordenador los grupos se ven siempre y esto no cambia nada.
+   */
+  openGroup(id) {
+    id = id || null;
+    // En el ordenador los grupos se ven enteros: no hay bandeja
+    if ($('hud').classList.contains('escritorio')) id = null;
+    if (id === this._openGroup) return;
+    this._openGroup = id;
+    const bar = $('construir');
+    const tray = this._tray;
+    bar.classList.toggle('con-bandeja', !!id);
+    for (const g of this._groups) {
+      const open = g.group.id === id;
+      g.box.classList.toggle('abierto', open);
+      g.tab.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    clearTimeout(this._trayTimer);
+    if (!id) {
+      // Se desvanece y sus botones vuelven a su grupo
+      tray.classList.remove('abierto');
+      const back = () => {
+        for (const g of this._groups) if (g.list.parentElement !== g.box) g.box.append(g.list);
+        tray.hidden = true;
+      };
+      if (tray.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) back();
+      else this._trayTimer = setTimeout(back, 220);
+      return;
+    }
+    const g = this._groups.find((x) => x.group.id === id);
+    for (const o of this._groups) if (o !== g && o.list.parentElement !== o.box) o.box.append(o.list);
+    tray.dataset.grupo = id;
+    tray.replaceChildren(g.list);
+    // Encima del panel, con su mismo ancho
+    const r = $('panel-jugador').getBoundingClientRect();
+    tray.style.left = `${Math.round(r.left)}px`;
+    tray.style.width = `${Math.round(r.width)}px`;
+    tray.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`;
+    const wasHidden = tray.hidden;
+    tray.hidden = false;
+    if (wasHidden) {
+      tray.classList.remove('abierto');
+      void tray.offsetWidth; // que la transición arranque desde cerrada
+    }
+    tray.classList.add('abierto');
   }
 
   // ---------------------------------------------------- órdenes y desarrollo
@@ -28926,7 +30604,8 @@ class UI {
       return;
     }
     const map = game.map;
-    if (!map.isLand(tile)) {
+    // En el mar no hay nada que contar; en un río, si se navega o es solo frontera
+    if (!map.isLand(tile) && !map.river[tile]) {
       tip.hidden = true;
       this._tipTile = -1;
       return;
@@ -28962,10 +30641,15 @@ class UI {
     tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   }
 
-  /** Texto del tooltip de una casilla de tierra. */
+  /** Texto del tooltip de una casilla de tierra (o de un río). */
   _tipHtml(game, tile) {
     const map = game.map;
-    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
+    if (!map.isLand(tile)) {
+      return map.navigable(tile)
+        ? '<b>Río</b> <span class="suave">· navegable: puertos en sus orillas y barcos</span>'
+        : '<b>Río</b> <span class="suave">· frontera: no se cruza por tierra</span>';
+    }
+    const terrain = TERRAIN_NAMES[map.terrain[tile]];
     const o = game.owner[tile];
     if (o) {
       const p = game.players[o];
