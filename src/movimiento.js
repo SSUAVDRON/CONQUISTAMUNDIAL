@@ -195,6 +195,7 @@ export function abrirDialogo(el, o = {}) {
   }
   el.setAttribute('aria-modal', 'true');
   if (abiertos.length === 1) document.addEventListener('keydown', teclaDialogo, true);
+  if (ya < 0) document.dispatchEvent(new CustomEvent('dialogo', { detail: 'abrir' }));
   mostrar(el, { y: 0, scale: 1, ms: o.ms ?? 200 });
   const card = o.tarjeta === false ? null : el.querySelector(o.tarjeta || '.tarjeta, .dialogo-caja');
   if (card && card.animate && !sinMovimiento()) {
@@ -221,6 +222,7 @@ export function cerrarDialogo(el, motivo = 'cerrar') {
   const [d] = abiertos.splice(i, 1);
   if (!abiertos.length) document.removeEventListener('keydown', teclaDialogo, true);
   ocultar(el, { y: 0, scale: 1, ms: 150 });
+  document.dispatchEvent(new CustomEvent('dialogo', { detail: 'cerrar' }));
   const back = d.prev;
   if (back && back.isConnected && back.offsetParent !== null && typeof back.focus === 'function') back.focus({ preventScroll: true });
   d.o.alCerrar?.(motivo);

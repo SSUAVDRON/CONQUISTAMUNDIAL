@@ -1518,6 +1518,7 @@ export class Home {
       return;
     }
     equip();
+    this.h.sound?.('equipar');
     this._profileChanged();
     this.renderAchievements();
   }
@@ -2632,6 +2633,7 @@ export class Home {
       const txt = String(Math.max(1, Math.ceil(left / 1000)));
       if (num.textContent !== txt) {
         num.textContent = txt;
+        this.h.sound?.('cuenta');
         // Cada cifra entra girando
         if (!sinMovimiento()) num.animate?.([{ transform: 'perspective(400px) rotateX(-90deg)', opacity: 0 }, { transform: 'perspective(400px) rotateX(12deg)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: 'ease-out' });
       }

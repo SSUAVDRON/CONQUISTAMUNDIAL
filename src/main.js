@@ -390,10 +390,30 @@ const tutorial = new Tutorial({
 // Sonido: arranca con el primer gesto (los navegadores no dejan sonar antes)
 const sound = new Sound();
 for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => sound.unlock(), true);
-// Un clic suave en cualquier botón del interfaz
+// Sonidos del interfaz: pestañas (pergamino), modos de juego (tambor y laúd)
+// y madera en cualquier otro botón
 document.addEventListener('click', (e) => {
-  if (e.target instanceof Element && e.target.closest('button')) sound.play('click', 0.6, 40);
+  const el = e.target instanceof Element ? e.target.closest('button') : null;
+  if (!el || el.disabled) return;
+  if (el.matches('[role="tab"], .sub-pestanas button')) sound.play('pagina', 0.8, 60);
+  else if (el.matches('.modo')) sound.play('elegir', 0.8, 120);
+  else sound.play('click', 0.6, 40);
 });
+// Al pasar el ratón por los elementos principales del menú, un roce muy suave
+let hovered = null;
+document.addEventListener('pointerover', (e) => {
+  if (e.pointerType !== 'mouse' || !(e.target instanceof Element)) return;
+  const el = e.target.closest('.modo, [role="tab"], button.principal, .sub-pestanas button');
+  if (el === hovered) return;
+  hovered = el;
+  if (el && !el.disabled) sound.play('hover', 1, 50);
+});
+// Interruptores de ajustes: pestillo que se abre o se cierra
+document.addEventListener('change', (e) => {
+  if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') sound.play(e.target.checked ? 'interruptorOn' : 'interruptorOff', 0.9, 40);
+});
+// Diálogos que se despliegan y se recogen
+document.addEventListener('dialogo', (e) => sound.play(e.detail === 'abrir' ? 'abrir' : 'cerrar', 0.8, 80));
 
 /** Botón de la barra superior (y tecla N): silencia o activa todo el sonido. */
 function toggleMute() {
@@ -717,6 +737,13 @@ function gameResult() {
 }
 
 /** Anota la partida en el perfil (una vez). Devuelve el progreso para mostrarlo. */
+/** Al ver el resultado: fanfarria si has subido de nivel, o campana si hay logros nuevos. */
+function endFanfare(progress, ms) {
+  if (!progress) return;
+  const name = progress.levelUp ? 'nivel' : progress.achievements?.length ? 'logro' : null;
+  if (name) setTimeout(() => sound.play(name, 1, 0), ms);
+}
+
 function finishGame() {
   const { game, human } = state;
   if (state.recorded || state.demo || !game || !human) return null;
@@ -963,6 +990,7 @@ function checkEnd() {
     setTimeout(() => {
       if (state.game === game) ui.showEnd(title, text, progress, extra);
     }, 1500);
+    endFanfare(progress, 2600);
   } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
     state.defeatShown = true;
     const progress = finishGame();
@@ -970,6 +998,7 @@ function checkEnd() {
     setTimeout(() => {
       if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(extra.stats.seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress, extra);
     }, 1200);
+    endFanfare(progress, 4200);
   }
 }
 
@@ -1031,7 +1060,9 @@ const home = new Home(profile, {
   onReady() {
     const sala = state.sala;
     if (!sala || sala.isHost) return;
-    sala.setReady(!sala.myReadyValid());
+    const ready = !sala.myReadyValid();
+    sala.setReady(ready);
+    if (ready) sound.play('listo', 0.9, 300);
     home.renderLobby(sala, transport.kind);
   },
   onRoomInfo(info) {
