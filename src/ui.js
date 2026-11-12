@@ -1755,6 +1755,14 @@ export class UI {
           mark.style.background = rgbToCss(p.color);
         }
         li.querySelector('.nom-txt').textContent = p.name;
+        // Jugadores de verdad: su nivel junto al nombre
+        if (p.isHuman && p.level) {
+          const lv = document.createElement('span');
+          lv.className = 'lb-nivel';
+          lv.title = `Nivel ${p.level}`;
+          lv.textContent = `Nv ${p.level}`;
+          li.querySelector('.nom').insertBefore(lv, li.querySelector('.marcas'));
+        }
         this._lbRows.set(p.id, li);
       }
       const rank = alive.indexOf(p) + 1;

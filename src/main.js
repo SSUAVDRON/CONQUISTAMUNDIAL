@@ -37,7 +37,8 @@ import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
 import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js';
 import { challengeBeaten, challengeLink, parseChallenge } from './reto.js';
-import { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf } from './rangos.js';
+import { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } from './rangos.js';
+import { presentMatch } from './presentacion.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -153,6 +154,9 @@ function myIdentity() {
     pattern: profile.patron,
     level: levelInfo(profile.xp).level,
     title: titleName(profile),
+    frame: profile.marco || 'ninguno',
+    banner: profile.estandarte || 'noche',
+    nameColor: profile.colorNombre || '',
   };
 }
 
@@ -210,6 +214,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
     p.pattern = h.pattern;
     // Bandera de un país elegida como emblema: también junto a su nombre y en la clasificación
     p.flag = (h.emblem && h.emblem.flag) || '';
+    // Nivel del jugador (se ve junto a su nombre en la clasificación de la partida)
+    p.level = Math.max(...members.map((i) => Number(humans[i].level) || 0));
     return p;
   });
   const myGroup = localIndex >= 0 ? groups.findIndex((g) => g.includes(localIndex)) : -1;
@@ -265,6 +271,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
  * tapar la ficha de una invitación o la sala que estén a la vista.
  */
 function startDemo({ background = false } = {}) {
+  state.holdSim = false;
   if (!background) {
     leaveOnline();
     // Fuera de la partida: se vuelve a la página desde la que se empezó (Competitivo, Crear partida…)
@@ -316,6 +323,9 @@ function enterGame(game) {
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
+  // La simulación arranca ahora (ni durante la carga ni durante la presentación)
+  state.holdSim = false;
+  state.acc = 0;
   // La partida tiene su entrada en el historial: el botón atrás abre su menú en vez de sacarte
   home.pushLayer('partida');
   // Resumen de partida: graba cómo va (sin tocar la simulación)
@@ -362,6 +372,7 @@ async function startGame(opts) {
   tutorial.stop();
   const seed = Number.isFinite(opts.seedNum) ? opts.seedNum >>> 0 : opts.seed ? hashString(opts.seed) : randomSeed();
   state.lastSeed = opts.tutorial ? null : seed;
+  state.holdSim = true;
   try {
     const game = await withLoading(opts.title || mapLabel(opts.mapSize), [
       { label: 'Levantando el relieve…', run: () => loadMap(opts.mapSize, seed) },
@@ -372,11 +383,46 @@ async function startGame(opts) {
       },
       { label: 'Cavando trincheras…', run: (game) => game },
     ]);
+    // Antes de empezar: tu tarjeta frente a la IA y las naciones en juego (el tutorial va directo)
+    if (!opts.tutorial) await presentMatch(soloPresentation(game, opts));
+    if (state.game !== game) return;
     enterGame(game);
     if (opts.tutorial) tutorial.start(tutorialState());
   } finally {
     state.loading = false;
   }
+}
+
+const DIFF_NAMES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+
+/** Tu tarjeta para la presentación (con tu rango si es clasificatoria). */
+function myCard(ranked) {
+  const r = profile.rango;
+  return { ...myIdentity(), nameColor: nameColorOf(profile), me: true, rank: ranked ? { points: r.puntos, placing: inPlacement(r) } : null };
+}
+
+/** Las naciones de la partida (sin humanos ni colonias), con su bandera si es un mapa real. */
+function nationsOf(game) {
+  return game.players.filter((p) => p && !p.isHuman && !p.weak).map((p) => ({ name: p.name, color: `rgb(${p.color.join(',')})`, flag: p.flag || '' }));
+}
+
+/** Presentación de una partida contra la IA (o clasificatoria contra la IA). */
+function soloPresentation(game, opts) {
+  const nations = nationsOf(game);
+  const dif = DIFF_NAMES[opts.difficulty] || 'Normal';
+  const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
+  const colonies = game.players.filter((p) => p && p.weak).length;
+  const ranked = !!opts.ranked;
+  return {
+    kicker: ranked ? `Clasificatoria · ${seasonName(profile.rango.temporada)}` : opts.challenge ? 'Reto' : 'Partida contra la IA',
+    title: opts.title && !ranked ? opts.title : mapLabel(opts.mapSize),
+    details: `${nations.length} naciones · ${colonies} colonias · perfil ${prof} · IA ${dif}`,
+    players: [myCard(ranked)],
+    ai: { name: 'La IA', title: `Ejércitos de ${nations.length} naciones`, note: `Dificultad ${dif}`, color: '#b5402f', emblem: { shape: 'escudo', symbol: 'espadas', bg: '#3a1418', fg: '#f2b33d', flag: '' }, frame: ranked ? 'oro' : 'bronce', banner: 'volcan' },
+    nations,
+    ranked,
+    sound,
+  };
 }
 
 function tutorialState() {
@@ -604,17 +650,23 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   state.rankedVoid = false;
   state.rankOut = null;
   state.lastOpts = null;
+  // Rango de cada uno (sala clasificatoria): el que anuncian firmado para esta sala
+  const rankPoints = new Map();
+  let ranksReady = Promise.resolve();
   if (state.ranked) {
     profile.rango.pendiente = { tipo: 'sala', inicio: Date.now() };
     saveProfile(profile);
     // MMR de los demás: el que anuncian firmado para esta sala (si no cuadra, 1000)
     const claims = sala.rankClaims();
     state.rankedMmr = new Map();
-    Promise.all(payload.players.map(async (p) => {
+    ranksReady = Promise.all(payload.players.map(async (p) => {
       const v = await verifiedRank(sala.code, claims.get(p.peer)).catch(() => null);
       state.rankedMmr.set(p.peer, v ? v.mmr : 1000);
+      if (v) rankPoints.set(p.peer, v.puntos);
     }));
   }
+  // La simulación espera a la sincronización (si no, cada uno avanzaría por su cuenta)
+  state.holdSim = true;
   const game = await withLoading(
     `${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
@@ -637,6 +689,30 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     { minMs: 500 }, // online no hay que hacer esperar al resto
   );
   if (state.sala !== sala) return;
+  // Presentación: los participantes de la sala (y su rango en la clasificatoria) y las naciones.
+  // Dura lo mismo para todos; el anfitrión espera además a que todos hayan cargado.
+  await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]);
+  {
+    const nations = nationsOf(game);
+    const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
+    const ranked = !!state.ranked;
+    await presentMatch({
+      kicker: ranked ? `Sala clasificatoria · ${seasonName(profile.rango.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
+      title: mapLabel(payload.settings.mapSize),
+      details: `${payload.players.length} jugadores · ${nations.length} naciones de la IA · perfil ${prof}`,
+      players: payload.players.map((p) => ({
+        ...p,
+        nameColor: nameColorOf({ colorNombre: p.nameColor, color: p.color }),
+        me: p.peer === myPeer,
+        rank: ranked ? (p.peer === myPeer ? { points: profile.rango.puntos, placing: inPlacement(profile.rango) } : rankPoints.has(p.peer) ? { points: rankPoints.get(p.peer), placing: false } : { points: 0, placing: true }) : null,
+      })),
+      nations,
+      ranked,
+      skippable: false,
+      sound,
+    });
+  }
+  if (state.sala !== sala || state.game !== game) return;
   // Los humanos se añaden primero: el jugador i tiene id i + 1 (en cooperativo,
   // cada pareja comparte el id de su nación)
   const groups = coopGroups(payload.players.length, game.rules.coop);
@@ -1598,7 +1674,7 @@ function frame(now) {
     if (game && game.phase !== 'ended') {
       if (state.net) {
         state.net.update();
-      } else if (state.speed > 0) {
+      } else if (state.speed > 0 && !state.holdSim) {
         state.acc += dt * state.speed;
         let steps = 0;
         while (state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {

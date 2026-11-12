@@ -74,6 +74,21 @@ consejo.
 - **Clasificación** (Rangos, Global, Tus récords e Historial) es ahora una página
   a la que se llega desde Competitivo.
 
+**Presentación de la partida.** Antes de empezar (no en el tutorial), unos
+segundos a pantalla completa con **los participantes** en tarjetas de
+estandarte: su emblema con el **marco** que llevan, nombre (con su color),
+título, **nivel** y, en la clasificatoria, **su rango** (insignia, liga y PL; «En
+colocación» si aún no tiene). Contra la IA, tu tarjeta junto a la de la IA (sus
+naciones y la dificultad). Debajo, **las naciones en juego** con sus banderas, y
+una cuenta atrás con redoble, cuernos y un tambor en los tres últimos
+segundos. Las tarjetas se adaptan a cuántos son: grandes hasta 4, medianas hasta
+8 y, con más, fichas compactas en rejilla (emblema, nombre, nivel y rango). Contra
+la IA se puede saltar («Empezar ya», Intro o Escape); en una sala dura lo mismo
+para todos y el anfitrión espera además a que todos hayan cargado. La partida
+**no avanza** ni durante la carga ni durante la presentación (antes, en una sala,
+cada uno podía adelantar unos turnos por su cuenta antes de sincronizarse). En
+partida, la clasificación muestra el nivel de cada jugador junto a su nombre.
+
 **Cuenta** (en la web, con `api/cuentas.php`): «Entrar» en la cabecera abre
 un diálogo con las pestañas Entrar y Crear cuenta (correo y contraseña de 8
 caracteres como mínimo). La cuenta guarda **todo el perfil** (nivel, logros,
@@ -515,6 +530,7 @@ CONQUISTAMUNDIAL/
 │   ├── musica.js       Música medieval y bélica (laúd, cuerno, flauta, coro, zanfona y tambores) e instrumentos sintetizados
 │   ├── sonido.js       Efectos del menú y de la batalla, ambiente de los frentes y cambio de música según la partida
 │   ├── loading.js      Pantalla de carga
+│   ├── presentacion.js Presentación de la partida: participantes (marco, nivel, rango) y naciones en juego
 │   ├── tutorial.js     Tutorial guiado
 │   ├── banderas.js     GENERADO: sprite de banderas (herramientas/banderas.cjs)
 │   ├── profile.js      Perfil, niveles, logros, retos diarios, monedas y tienda

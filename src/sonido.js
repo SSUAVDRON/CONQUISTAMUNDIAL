@@ -340,11 +340,20 @@ function atWar(game, human) {
 }
 
 /** Segundos que la música se aparta para estos efectos. */
-const DUCK = { conquer: 2.2, victory: 4.5, defeat: 4, start: 2, nivel: 2.5, alliance: 1.2, betray: 1.4, apertura: 3.2 };
+const DUCK = { conquer: 2.2, victory: 4.5, defeat: 4, start: 2, nivel: 2.5, alliance: 1.2, betray: 1.4, apertura: 3.2, presentacion: 2 };
 
 /** Recetas de efectos: (sonido, momento, volumen). */
 const SFX = {
   // ---- apertura
+  // Presentación de la partida: redoble que crece, golpe y acorde de cuernos
+  presentacion: (s, t, v) => {
+    for (let i = 0; i < 12; i++) s.ins.drum(s.sfxBus, t + i * 0.06, 'caja', (0.1 + i * 0.035) * v);
+    s.ins.drum(s.sfxBus, t + 0.74, 'grande', 0.75 * v);
+    s.ins.drum(s.sfxBus, t + 0.74, 'gong', 0.35 * v);
+    s.ins.horn(s.sfxBus, t + 0.76, midi('D4'), 1.2, 0.12 * v, { rev: 0.5 });
+    s.ins.horn(s.sfxBus, t + 0.76, midi('A4'), 1.2, 0.1 * v, { rev: 0.5 });
+    s.ins.choir(s.sfxBus, t + 0.76, [midi('D3'), midi('A3')], 1.8, 0.12 * v, { attack: 0.25 });
+  },
   // Mientras carga: un amanecer en las trincheras (coro grave que crece, un
   // tambor lejano y una llamada de cuerno suave que se pierde a lo lejos)
   carga: (s, t, v) => {

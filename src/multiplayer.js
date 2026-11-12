@@ -217,6 +217,10 @@ function cleanPlayer(raw) {
     pattern: word(p.pattern, 'liso'),
     level: Number.isFinite(p.level) ? Math.max(1, Math.min(999, Math.floor(p.level))) : 1,
     title: String(p.title || '').slice(0, 24),
+    // Aspecto para la presentación de la partida: marco del emblema, estandarte y color del nombre
+    frame: word(p.frame, 'ninguno'),
+    banner: word(p.banner, 'noche'),
+    nameColor: typeof p.nameColor === 'string' && /^[a-z]{2,12}$/.test(p.nameColor) ? p.nameColor : '',
   };
 }
 
@@ -519,7 +523,8 @@ export class Sala {
       // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
       ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
-      players: players.map(({ peer, name, color, emblem, pattern }) => ({ peer, name, color, emblem, pattern })),
+      // Lo que se ve de cada uno en la partida y en la presentación (nivel, título, marco, estandarte…)
+      players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor })),
     };
     this.payload = payload;
     this.room.emit('start', payload);
