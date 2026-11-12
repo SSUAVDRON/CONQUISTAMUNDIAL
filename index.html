@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="bc258d4 2026-11-12 18:01 UTC">
+<meta name="trinchera-build" content="4a4ecb8 2026-11-12 19:01 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -5719,7 +5719,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "bc258d4 2026-11-12 18:01 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "4a4ecb8 2026-11-12 19:01 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -7146,7 +7146,111 @@ function shadeRgb([r, g, b], f) {
   return [Math.round(r + (255 - r) * t), Math.round(g + (255 - g) * t), Math.round(b + (255 - b) * t)];
 }
 
-return { hslToRgb, botColor, hexToRgb, rgbToCss, rgbToHsl, vividRgb, mutedRgb, shadeRgb };
+// ---------------------------------------------------------------- naciones
+
+/** [L, a, b] (CIELAB, D65) de un color [r, g, b]: para medir cuánto se parecen dos colores a la vista. */
+function rgbToLab([r, g, b]) {
+  const lin = (c) => {
+    c /= 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const R = lin(r);
+  const G = lin(g);
+  const B = lin(b);
+  const f = (t) => (t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116);
+  const x = f((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047);
+  const y = f(R * 0.2126 + G * 0.7152 + B * 0.0722);
+  const z = f((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+
+/** Diferencia de color (ΔE de 1976): por debajo de ~10 cuesta distinguirlos en un mapa. */
+function deltaE(a, b) {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+/**
+ * Relleno con el que se pinta el territorio de una nación (render.js): el
+ * mismo tono algo apagado. Aquí para comparar los colores tal como se ven.
+ */
+function territoryRgb(rgb) {
+  return mutedRgb(rgb, 0.46, 0.5, 0.72);
+}
+
+/**
+ * Paleta de las naciones: 24 tonos repartidos en el círculo cromático, cada
+ * uno con tres luces (oscuro, medio y claro): 72 colores bien distintos.
+ */
+const NATION_PALETTE = (() => {
+  const out = [];
+  for (const [s, l] of [[0.62, 0.5], [0.55, 0.62], [0.5, 0.72]]) {
+    for (let h = 0; h < 360; h += 15) out.push(hslToRgb(h + (l > 0.6 ? 7 : 0), s, l));
+  }
+  return out;
+})();
+
+/**
+ * Colores de las naciones según quién tienen al lado: cada una elige de la
+ * paleta el que más se distingue (tal como se pinta) de sus vecinas ya
+ * coloreadas, de los jugadores (`fixed`, que no se mueven de su color) y,
+ * a igualdad, el menos repetido. Sin azar: el mismo resultado en todos los
+ * navegadores de una partida en línea.
+ *   nations: [{ id, x, y }] · fixed: [[r, g, b]] · radius: distancia (en
+ *   casillas) a la que dos naciones cuentan como vecinas.
+ * Devuelve Map id → [r, g, b].
+ */
+function assignNationColors(nations, fixed, radius) {
+  const labs = NATION_PALETTE.map((c) => rgbToLab(territoryRgb(c)));
+  const fixedLabs = fixed.map((c) => rgbToLab(territoryRgb(c)));
+  const n = nations.length;
+  const r2 = radius * radius;
+  const near = nations.map(() => []);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const d2 = (nations[i].x - nations[j].x) ** 2 + (nations[i].y - nations[j].y) ** 2;
+      if (d2 < r2) {
+        const closeness = 1 - Math.sqrt(d2) / radius; // 1 pegadas, 0 en el límite
+        near[i].push([j, closeness]);
+        near[j].push([i, closeness]);
+      }
+    }
+  }
+  // Primero las que más vecinas tienen (las difíciles), luego por id
+  const order = nations.map((_, i) => i).sort((a, b) => near[b].length - near[a].length || nations[a].id - nations[b].id);
+  const chosen = new Array(n).fill(-1);
+  const uses = new Array(NATION_PALETTE.length).fill(0);
+  const out = new Map();
+  for (const i of order) {
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let c = 0; c < labs.length; c++) {
+      // La vecina más parecida manda (las más cercanas pesan más)
+      let worst = 999;
+      for (const [j, closeness] of near[i]) {
+        if (chosen[j] < 0) continue;
+        const v = deltaE(labs[c], labs[chosen[j]]) - 18 * closeness;
+        if (v < worst) worst = v;
+      }
+      // Los jugadores: que ninguna nación se confunda con ellos
+      for (const fl of fixedLabs) {
+        const v = deltaE(labs[c], fl) - 12;
+        if (v < worst) worst = v;
+      }
+      // A igualdad, el color menos usado y, entre esos, uno que dependa de la nación
+      const score = Math.min(worst, 60) - uses[c] * 3 - ((c * 7 + nations[i].id * 13) % 17) * 0.01;
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    chosen[i] = best;
+    uses[best]++;
+    out.set(nations[i].id, NATION_PALETTE[best]);
+  }
+  return out;
+}
+
+return { hslToRgb, botColor, hexToRgb, rgbToCss, rgbToHsl, vividRgb, mutedRgb, shadeRgb, rgbToLab, deltaE, territoryRgb, NATION_PALETTE, assignNationColors };
 });
 __define('config', function () {
 // Parámetros de equilibrio del juego. Todo lo "ajustable" vive aquí para poder
@@ -9514,7 +9618,7 @@ const { Player } = __require('player');
 const { Attack } = __require('attack');
 const { BotBrain, ColonyBrain } = __require('bot');
 const { generateColonyNames, generateNames } = __require('names');
-const { botColor } = __require('colors');
+const { assignNationColors, botColor } = __require('colors');
 const { POI, POI_TYPES, placePoints } = __require('estrategia');
 const { SPECS, TECHS, addMods, emptyMods, techAvailable } = __require('tecnologias');
 const { MECH, bigEmpireBonus, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
@@ -9554,6 +9658,12 @@ const ANNEX_PROBE_AT = MECH.annexProbeAt;
 const DIRTY_MAX = 2_000_000;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+/** Tonos de las colonias: apagados (tierra, piedra, pizarra) y variados. */
+const COLONY_TONES = [
+  [150, 128, 104], [128, 132, 140], [146, 134, 116], [120, 128, 112], [150, 120, 120], [118, 116, 138],
+  [104, 130, 128], [140, 142, 108], [164, 142, 118], [112, 104, 96], [134, 112, 134], [100, 116, 140],
+];
 
 class Game {
   constructor({ map, seed = 1, rules = null }) {
@@ -9692,8 +9802,10 @@ class Game {
     const existing = this.players.filter(Boolean).map((p) => p.name);
     const names = generateColonyNames(this.rng, count, existing);
     for (const name of names) {
-      // Tonos apagados (tierra, piedra): se distinguen de las naciones
-      const base = this.rng.pick([[150, 128, 104], [128, 132, 140], [146, 134, 116], [120, 128, 112], [150, 120, 120], [118, 116, 138]]);
+      // Tonos apagados (tierra, piedra): se distinguen de las naciones. Doce,
+      // para que dos colonias vecinas no salgan casi siempre iguales (la misma
+      // tirada de `rng` que con seis: no cambia la partida)
+      const base = this.rng.pick(COLONY_TONES);
       const v = this.rng.int(-14, 14);
       const p = this.addPlayer(name, base.map((c) => Math.max(0, Math.min(255, c + v))), false);
       p.weak = true;
@@ -9729,7 +9841,30 @@ class Game {
       const t = this.findSpawnTile({ colony: !!p.weak });
       if (t >= 0) this.spawnPlayer(p, t);
     }
+    this._colorNations();
     this._emit('Elige dónde empezar haciendo clic en el mapa', 'info');
+  }
+
+  /**
+   * Ya en su sitio, cada nación de la IA toma el color que más se distingue
+   * de sus vecinas y de los jugadores (antes iban por orden de llegada y dos
+   * vecinas podían salir casi iguales). Solo es dibujo: no gasta `rng` ni
+   * cambia la simulación, y sale igual en todos los navegadores.
+   */
+  _colorNations() {
+    const map = this.map;
+    const nations = [];
+    for (const b of this.bots) {
+      const p = b.player;
+      if (p.weak || p.spawnTile < 0) continue;
+      nations.push({ id: p.id, x: map.x(p.spawnTile), y: map.y(p.spawnTile) });
+    }
+    if (!nations.length) return;
+    const fixed = this.players.filter((p) => p && p.isHuman).map((p) => p.color);
+    // Vecinas: a menos de unas 2,5 veces la separación media entre naciones
+    const radius = 2.5 * Math.sqrt(map.landCount / nations.length);
+    const colors = assignNationColors(nations, fixed, radius);
+    for (const [id, c] of colors) this.players[id].color = c;
   }
 
   /** Casillas de la zona inicial (52) que caben en `t`: tierra libre de la misma masa. */
@@ -13305,6 +13440,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Mapa', title: 'Colores y banderas', text: 'Cada país se distingue de sus vecinos, los barcos llevan su bandera y los territorios sueltos de una nación, también.', art: 2 },
   { tag: 'Mapas', title: 'Seis regiones nuevas', text: 'Mediterráneo, Oriente Medio, Centroamérica y el Caribe, Sudeste Asiático, Extremo Oriente y Asia del Sur: más detalle por país y partidas más cortas.', art: 2 },
   { tag: 'Menús', title: 'Menú más fluido', text: 'Pestañas y páginas cambian sin tirones y el menú gasta mucho menos mientras lo miras, también en el móvil.', art: 0 },
   { tag: 'Mapa', title: 'Cámara fluida', text: 'El zoom y el desplazamiento se deslizan con suavidad, con inercia al soltar, y la cámara vuela hasta cada frente.', art: 2 },
@@ -27347,7 +27483,7 @@ __define('render', function () {
 //   edificios → barcos → partículas → misiles → viñeta → nombres y marcadores.
 // Barcos y misiles se interpolan entre ticks para que se muevan con suavidad.
 const { BUILDINGS, CONFIG, RES, TICK_MS } = __require('config');
-const { mutedRgb, rgbToCss, shadeRgb, vividRgb } = __require('colors');
+const { rgbToCss, shadeRgb, territoryRgb, vividRgb } = __require('colors');
 const { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } = __require('format');
 const { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } = __require('icons');
 const { forgetTerrain, paintTerrain } = __require('terreno');
@@ -27355,7 +27491,7 @@ const { MECH } = __require('mecanicas');
 const { Fx, drawMissileSprite, resetFxSprites } = __require('fx');
 const { drawCargo, drawTransport, drawWarship } = __require('barcos');
 
-const FILL_ALPHA = 128; // territorio semitransparente: se ve el terreno debajo
+const FILL_ALPHA = 142; // territorio semitransparente: se ve el terreno debajo (algo menos que antes: colores más nítidos)
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
 const FLASH_DRAW_MAX = 3000; // destellos dibujados como mucho por fotograma (los más recientes)
@@ -27545,6 +27681,7 @@ class Renderer {
     this.distField = null;
     this.labels = [];
     this.labelById = new Map();
+    this.exclaves = []; // trozos sueltos de cada nación (con su bandera)
     this.lastLabelTime = -Infinity;
     this.highlightTile = -1;
     this.options = { badges: true, emojis: true, pointer: true, animations: true };
@@ -27617,9 +27754,12 @@ class Renderer {
     this.distField = null;
     this._sprites?.clear();
     this._labelSprites?.clear();
+    this._ensigns?.clear();
     this._digitFonts?.clear();
     this.labels = [];
     this.labelById.clear();
+    this.exclaves = [];
+    this._exComp = this._exQueue = null;
     this.onRestored = null;
     this.disposed = true;
   }
@@ -27655,6 +27795,7 @@ class Renderer {
     this._youKey = null;
     this._sprites?.clear();
     this._labelSprites?.clear();
+    this._ensigns?.clear();
     this._digitFonts?.clear();
     resetFxSprites();
     this.restores++;
@@ -27681,9 +27822,10 @@ class Renderer {
     const human = this.game.human;
     for (const p of this.game.players) {
       if (!p) continue;
-      // Relleno: el color de la nación en un tono pálido y semitransparente
-      // (se ve el terreno debajo). Frontera fina y opaca en el mismo tono, más oscuro
-      const pale = mutedRgb(p.color, 0.34, 0.64, 0.74);
+      // Relleno: el color de la nación algo apagado y semitransparente (se ve
+      // el terreno debajo). Frontera fina y opaca en el mismo tono, más oscuro
+      // y algo más vivo (antes, gris: dos vecinas parecidas se confundían)
+      const pale = territoryRgb(p.color);
       const [r, g, b] = pale;
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
@@ -27696,7 +27838,7 @@ class Renderer {
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para ti y verde para tus aliados; las demás, su tono
       // pálido más oscuro
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : shadeRgb(pale, 0.58);
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(pale, 0.12, 0.6, 0.16, 0.46);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
       // Tu nación, resaltada: por dentro de la frontera blanca, otra media
       // casilla en tu color vivo
@@ -28255,7 +28397,7 @@ class Renderer {
    * tamaño de letra. Todo de una vez (ver _labelStage para el reparto).
    */
   _updateLabels() {
-    for (let k = 0; k < 3; k++) this._labelStage(k);
+    for (let k = 0; k < 4; k++) this._labelStage(k);
   }
 
   /**
@@ -28279,6 +28421,10 @@ class Renderer {
     }
     const own = this._lbOwner;
     const d = this.distField;
+    if (stage === 3) {
+      this._findExclaves(W, H, F);
+      return;
+    }
     if (stage === 0) {
       this._eliminations();
       const half = F >> 1;
@@ -28375,6 +28521,82 @@ class Renderer {
   }
 
   /**
+   * Trozos sueltos de cada nación (un enclave, una isla, lo que queda al otro
+   * lado de un río): llevan su bandera para saber de quién son. Sobre la
+   * rejilla de los nombres (ya con la distancia a la frontera), tomando una
+   * celda de cada 2×2: así es un recorrido rápido, en su propio fotograma.
+   * El trozo principal (donde va el nombre) no cuenta.
+   */
+  _findExclaves(W, H, F) {
+    const out = [];
+    this.exclaves = out;
+    if (this.game.phase === 'spawn') return;
+    const own = this._lbOwner;
+    const d = this.distField;
+    const W2 = Math.ceil(W / 2);
+    const H2 = Math.ceil(H / 2);
+    const n2 = W2 * H2;
+    if (!this._exComp || this._exComp.length !== n2) {
+      this._exComp = new Int32Array(n2);
+      this._exQueue = new Int32Array(n2);
+    }
+    const comp = this._exComp.fill(-1);
+    const queue = this._exQueue;
+    const players = this.game.players;
+    // Por dueño, sus trozos: [celda con más distancia a la frontera, esa distancia, tamaño]
+    const pieces = new Map();
+    let id = 0;
+    for (let c = 0; c < n2; c++) {
+      if (comp[c] >= 0) continue;
+      const cx = c % W2;
+      const cy = (c / W2) | 0;
+      const o = own[cy * 2 * W + cx * 2];
+      if (!o) continue;
+      const p = players[o];
+      if (!p || !p.alive || p.weak) {
+        comp[c] = -2;
+        continue;
+      }
+      let head = 0;
+      let tail = 0;
+      queue[tail++] = c;
+      comp[c] = id;
+      let bestD = 0;
+      let bestCell = -1;
+      let size = 0;
+      while (head < tail) {
+        const k = queue[head++];
+        size++;
+        const kx = k % W2;
+        const ky = (k / W2) | 0;
+        const fine = ky * 2 * W + kx * 2;
+        if (d[fine] > bestD) {
+          bestD = d[fine];
+          bestCell = fine;
+        }
+        if (kx > 0 && comp[k - 1] < 0 && own[fine - 2] === o) (comp[k - 1] = id), (queue[tail++] = k - 1);
+        if (kx < W2 - 1 && comp[k + 1] < 0 && own[fine + 2] === o) (comp[k + 1] = id), (queue[tail++] = k + 1);
+        if (ky > 0 && comp[k - W2] < 0 && own[fine - 2 * W] === o) (comp[k - W2] = id), (queue[tail++] = k - W2);
+        if (ky < H2 - 1 && comp[k + W2] < 0 && own[fine + 2 * W] === o) (comp[k + W2] = id), (queue[tail++] = k + W2);
+      }
+      id++;
+      let list = pieces.get(o);
+      if (!list) pieces.set(o, (list = []));
+      list.push([bestCell, bestD, size]);
+    }
+    for (const [o, list] of pieces) {
+      if (list.length < 2) continue;
+      // El más grande lleva el nombre; los demás (como mucho 8, los mayores), su bandera
+      list.sort((a, b) => b[2] - a[2]);
+      for (let i = 1; i < list.length && i <= 8; i++) {
+        const [cell, bd, size] = list[i];
+        if (size < 3 || bd < 2 || cell < 0) continue;
+        out.push({ player: players[o], x: (cell % W) * F + F / 2, y: Math.floor(cell / W) * F + F / 2, r: bd * F });
+      }
+    }
+  }
+
+  /**
    * `overlay`: { buildMode, hoverTile, ping } para la vista previa de
    * construcción y el aviso de la cámara.
    */
@@ -28438,7 +28660,7 @@ class Renderer {
       this.lastLabelTime = now;
     } else if (this._lbStep) {
       this._labelStage(this._lbStep);
-      this._lbStep = (this._lbStep + 1) % 3;
+      this._lbStep = (this._lbStep + 1) % 4;
     } else if (now - this.lastLabelTime > (this.lite ? 2 : 1) * LABEL_INTERVAL_MS) {
       // La primera vez, todo de golpe (para que los nombres salgan ya)
       if (!this.labels.length) this._updateLabels();
@@ -28872,6 +29094,62 @@ class Renderer {
     ctx.fill();
   }
 
+  /**
+   * Enseña de una nación ya dibujada (en caché por nación y tamaño): la
+   * bandera de su país o, si no tiene (naciones inventadas, colonias,
+   * jugadores sin bandera), un paño de su color con su emblema. Con `pole`,
+   * en un mástil (los barcos): así se sabe de quién es cada barco.
+   * Devuelve el lienzo con { w, h, ax, ay }: tamaño en px de pantalla y el
+   * punto de anclaje (pie del mástil, o el centro sin mástil).
+   */
+  _ensign(p, h, pole) {
+    const cache = (this._ensigns ??= new Map());
+    const flag = flagReady() && hasFlag(p.flag);
+    const key = `${p.id}|${h}|${pole ? 1 : 0}|${flag ? 1 : 0}|${this.dpr}`;
+    let c = cache.get(key);
+    if (c) return c;
+    if (cache.size > 600) cache.clear();
+    const fw = Math.round((h * 4) / 3);
+    const poleH = pole ? Math.round(h * 0.9) : 0;
+    const pad = 1;
+    const w = fw + pad * 2 + (pole ? 1.5 : 0);
+    const H = h + pad * 2 + poleH;
+    c = document.createElement('canvas');
+    c.width = Math.ceil(w * this.dpr);
+    c.height = Math.ceil(H * this.dpr);
+    const g = c.getContext('2d');
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const fx = pad + (pole ? 1.5 : 0);
+    const fy = pad;
+    if (pole) {
+      // Mástil oscuro con un borde claro (se ve sobre el mar y sobre tierra)
+      g.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      g.fillRect(0.5, fy, 2, h + poleH);
+      g.fillStyle = '#1b222c';
+      g.fillRect(1, fy, 1.2, h + poleH);
+    }
+    if (!flag || !drawFlag(g, p.flag, fx + fw / 2, fy + h / 2, h)) {
+      g.fillStyle = rgbToCss(p.color);
+      g.fillRect(fx, fy, fw, h);
+      if (h >= 8) drawEmblem(g, emblemFor(p), fx + fw / 2, fy + h / 2, h * 0.92);
+      g.lineWidth = 1;
+      g.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+      g.strokeRect(fx, fy, fw, h);
+    }
+    c.w = w;
+    c.h = H;
+    c.ax = pole ? 1.6 : w / 2;
+    c.ay = pole ? H : H / 2;
+    cache.set(key, c);
+    return c;
+  }
+
+  /** Bandera en su mástil sobre un barco: el pie del mástil en (x, y). */
+  _shipEnsign(p, x, y, h) {
+    const e = this._ensign(p, h, true);
+    this.ctx.drawImage(e, Math.round(x - e.ax), Math.round(y - e.ay), e.w, e.h);
+  }
+
   // ----------------------------------------------------------------- barcos
 
   /** Punto (con decimales) de una unidad que sigue un camino de casillas. */
@@ -28925,6 +29203,8 @@ class Renderer {
       const moving = clamp((s.speed / RES) * 3, 0, 1);
       const len = clamp(z * RES * 2.6, 6, 30);
       drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
+      // Su bandera, en cuanto el barco se ve lo bastante grande
+      if (len >= 11) this._shipEnsign(p, sx, sy - len * 0.12, Math.round(clamp(len * 0.42, 7, 12)));
       this._maybeWake(s, len, 5);
     }
     for (const [id, st] of this._merch) if (st.gen !== gen) this._merch.delete(id);
@@ -28952,18 +29232,24 @@ class Renderer {
       drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
       this._maybeWake(s, len, 8);
       if (z * RES >= 4 || mine) {
+        // Etiqueta con la bandera del dueño y sus tropas
         const text = fmtTroops(b.troops);
         ctx.font = '700 11px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const tw = ctx.measureText(text).width + 10;
+        const flag = this._ensign(p, 10, false);
+        const fw = flag.w + 3;
+        const tw = ctx.measureText(text).width + 10 + fw;
         const ty = sy - len * 0.55 - 10;
         ctx.beginPath();
         ctx.roundRect(sx - tw / 2, ty - 8, tw, 16, 8);
         ctx.fillStyle = human && b.targetId === human.id ? 'rgba(190, 40, 40, 0.92)' : b.owner === human?.id ? 'rgba(24, 140, 78, 0.92)' : 'rgba(10, 16, 28, 0.85)';
         ctx.fill();
+        ctx.drawImage(flag, Math.round(sx - tw / 2 + 5), Math.round(ty - flag.h / 2), flag.w, flag.h);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(text, sx, ty + 0.5);
+        ctx.fillText(text, sx + fw / 2, ty + 0.5);
+      } else if (len >= 10) {
+        this._shipEnsign(p, sx, sy - len * 0.1, Math.round(clamp(len * 0.4, 6, 11)));
       }
     }
     for (const [id, st] of this._boats) {
@@ -29094,6 +29380,8 @@ class Renderer {
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
       drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
+      // Su bandera en el mástil (de quién es, de un vistazo)
+      this._shipEnsign(p, sx, sy - r * 0.2, Math.round(clamp(r * 0.78, 10, 15)));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
       this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
@@ -29558,6 +29846,25 @@ class Renderer {
       if (L.alpha < 1) ctx.globalAlpha = 1;
     }
     for (const L of order) if (!L.shown && !L.fading) L.alpha = 0;
+    // Trozos sueltos de cada nación: su bandera, si se ven y hay sitio
+    for (const X of this.exclaves) {
+      if (!X.player.alive) continue;
+      const [sx, sy] = camera.worldToScreen(X.x, X.y);
+      if (sx < -20 || sy < -20 || sx > camera.viewW + 20 || sy > camera.viewH + 20) continue;
+      const rp = X.r * camera.zoom;
+      if (rp < 5) continue;
+      const h = Math.round(clamp(rp * 0.7, 9, 16));
+      const e = this._ensign(X.player, h, false);
+      const x0 = sx - e.w / 2;
+      const y0 = sy - e.h / 2;
+      const x1 = x0 + e.w;
+      const y1 = y0 + e.h;
+      let hit = false;
+      for (let i = 0; i < boxes.length && !hit; i += 4) hit = x0 < boxes[i + 2] && x1 > boxes[i] && y0 < boxes[i + 3] && y1 > boxes[i + 1];
+      if (hit) continue;
+      boxes.push(x0, y0, x1, y1);
+      ctx.drawImage(e, Math.round(x0), Math.round(y0), e.w, e.h);
+    }
   }
 
   /**
