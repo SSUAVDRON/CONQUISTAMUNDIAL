@@ -167,7 +167,7 @@ export function bootLoader() {
      * se aleja, una línea dorada cruza la pantalla y las puertas se abren;
      * `onOpen()` justo cuando empiezan a abrirse (para que entre el menú).
      */
-    async done({ minMs = 1800, onOpen = () => {} } = {}) {
+    async done({ minMs = 1800, onOpen = () => {}, tap = null } = {}) {
       this.step('¡A las trincheras!', 1, 300);
       for (const li of marks) {
         li.classList.remove('activo');
@@ -178,6 +178,15 @@ export function bootLoader() {
       // descubrirse y a que caigan sus banderas
       const now = performance.now();
       await wait(Math.max(450, minMs - (now - started), this.mapAt ? 1700 - (now - this.mapAt) : 0));
+      // El navegador aún no deja sonar: «Toca para entrar» (ese toque abre las
+      // puertas con su fanfarria). `tap()` se resuelve con el gesto.
+      if (tap) {
+        const touch = !!window.matchMedia?.('(pointer: coarse)').matches;
+        text.textContent = touch ? 'Toca para entrar' : 'Pulsa en cualquier sitio para entrar';
+        box.classList.add('esperando');
+        await tap();
+        box.classList.remove('esperando');
+      }
       const still = document.body.classList.contains('sin-animaciones') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       document.body.classList.remove('arrancando');
       if (still) {

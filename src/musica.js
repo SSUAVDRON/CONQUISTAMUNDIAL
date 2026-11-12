@@ -266,6 +266,45 @@ export class Instrumentos {
     }
   }
 
+  /**
+   * Cuerno suave (sin el metal áspero del cuerno de guerra): triángulo y su
+   * octava grave, filtro cerrado y entrada lenta. Para avisos que se repiten.
+   */
+  softHorn(dest, t, m, dur, vol, { rev = 0.4 } = {}) {
+    const ctx = this.ctx;
+    const f = mtof(m);
+    const end = t + dur;
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.Q.value = 0.7;
+    lpf.frequency.setValueAtTime(f * 1.5, t);
+    lpf.frequency.linearRampToValueAtTime(f * 3, t + 0.12);
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.09);
+    g.gain.setTargetAtTime(vol * 0.8, t + 0.12, 0.2);
+    g.gain.setTargetAtTime(0, end - 0.06, 0.1);
+    lpf.connect(g);
+    g.connect(dest);
+    this._send(g, rev);
+    const nodes = [];
+    for (const [type, mul, lvl] of [['triangle', 1, 1], ['sine', 0.5, 0.6], ['sine', 2, 0.12]]) {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f * mul * 0.99, t);
+      o.frequency.exponentialRampToValueAtTime(f * mul, t + 0.08);
+      const og = ctx.createGain();
+      og.gain.value = lvl;
+      o.connect(og).connect(lpf);
+      nodes.push(o);
+    }
+    for (const o of nodes) {
+      o.start(t);
+      o.stop(end + 0.5);
+    }
+  }
+
   /** Flauta de madera con algo de soplo. */
   flute(dest, t, m, dur, vol, { rev = 0.45 } = {}) {
     const ctx = this.ctx;

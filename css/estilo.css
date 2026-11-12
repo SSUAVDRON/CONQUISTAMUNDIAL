@@ -4396,3 +4396,9 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
   #inicio.en-pagina .ini-pestanas { display: none; }
   #inicio.en-pagina .ini-marco { padding-bottom: 16px; }
 }
+
+/* Pantalla de carga esperando un toque (el navegador aún no deja sonar) */
+.arranque.esperando { cursor: pointer; }
+.arranque.esperando .arr-paso { color: var(--oro-claro); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; animation: arrToca 1.7s ease-in-out infinite; }
+@keyframes arrToca { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .arranque.esperando .arr-paso { animation: none; } }

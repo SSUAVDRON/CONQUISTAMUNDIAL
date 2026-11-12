@@ -1784,6 +1784,16 @@ function whenBooted(fn) {
 }
 async function boot() {
   const loader = bootLoader();
+  // Sonido: la música espera al menú; si el navegador ya deja sonar (o hay un
+  // toque durante la carga), suena el tono de carga
+  let atGate = false;
+  sound.hold(true);
+  sound.onUnlock = () => {
+    if (!state.booted && !atGate) sound.play('carga', 0.9, 0);
+  };
+  sound.prime().then((ok) => {
+    if (ok && !state.booted && !atGate) sound.play('carga', 0.9, 0);
+  });
   const paint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const atMost = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
   try {
@@ -1834,12 +1844,34 @@ async function boot() {
   } finally {
     // El menú entra (escalonado) justo cuando se abren las puertas
     const inicio = document.getElementById('inicio');
+    // Si todavía no puede sonar, el último paso espera un toque (no en pruebas automáticas)
+    const a = profile.ajustes;
+    const wantsSound = !a.silencio && (a.musica !== false || a.efectos !== false);
+    const needTap = wantsSound && !sound.canPlay() && !navigator.webdriver;
     await loader?.done({
+      tap: needTap
+        ? () =>
+            new Promise((resolve) => {
+              atGate = true;
+              const go = async () => {
+                window.removeEventListener('pointerdown', go, true);
+                window.removeEventListener('keydown', go, true);
+                await atMost(sound.unlock(), 700);
+                resolve();
+              };
+              window.addEventListener('pointerdown', go, true);
+              window.addEventListener('keydown', go, true);
+            })
+        : null,
       onOpen: () => {
         inicio.classList.add('entrada');
         setTimeout(() => inicio.classList.remove('entrada'), 1700);
+        // Se abren las puertas: fanfarria y empieza la música del menú
+        sound.hold(false);
+        sound.play('apertura', 1, 0);
       },
     });
+    if (!loader) sound.hold(false);
     if (!loader) inicio.classList.add('entrada');
     state.booted = true;
     for (const fn of afterBoot.splice(0)) {
