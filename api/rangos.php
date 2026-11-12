@@ -30,9 +30,7 @@
 
 declare(strict_types=1);
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/comun.php';
 
 const MAX_FILAS = 100;
 // Una escritura cada 8 s por jugador (en pruebas, TRINCHERA_ESPERA_ID)
@@ -42,81 +40,9 @@ const MAX_PUNTOS = 5000;
 const COLOCACION_MAX = 2300;      // puntos con los que se puede salir de la colocación
 const PL_MAX_PARTIDA = 60;        // lo más que se mueve el rango en una partida
 
-function responder(int $codigo, array $cuerpo): void {
-    http_response_code($codigo);
-    echo json_encode($cuerpo, JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-function configuracion(): array {
-    $dsn = getenv('TRINCHERA_DSN');
-    if ($dsn) {
-        return ['dsn' => $dsn, 'user' => null, 'pass' => null, 'sal' => getenv('TRINCHERA_SAL') ?: 'pruebas'];
-    }
-    foreach ([dirname(__DIR__, 2) . '/trinchera-config.php', dirname(__DIR__, 3) . '/trinchera-config.php'] as $ruta) {
-        if (is_file($ruta)) {
-            $c = require $ruta;
-            if (is_array($c) && !empty($c['dsn'])) return $c + ['user' => null, 'pass' => null, 'sal' => ''];
-        }
-    }
-    // Sin configuración: SQLite fuera de public_html
-    $sqlite = ruta_sqlite();
-    if ($sqlite && in_array('sqlite', PDO::getAvailableDrivers(), true)) {
-        return ['dsn' => 'sqlite:' . $sqlite, 'user' => null, 'pass' => null, 'sal' => sal_local(dirname($sqlite)), 'sqlite' => true];
-    }
-    responder(503, ['error' => 'La tabla de rangos no está configurada en este servidor.']);
-}
-
-/**
- * Dónde guardar la SQLite: en la carpeta que contiene public_html (fuera de
- * la web). Cada despliegue en una subcarpeta (p. ej. …/prueba/) tiene la suya.
- * null si no se encuentra public_html o no se puede escribir allí.
- */
-function ruta_sqlite(): ?string {
-    $dir = __DIR__;
-    $sub = [];
-    while ($dir !== dirname($dir)) {
-        if (basename($dir) === 'public_html') {
-            $fuera = dirname($dir);
-            if (!is_writable($fuera)) return null;
-            array_shift($sub); // la carpeta «api»
-            $sufijo = $sub ? '-' . preg_replace('/[^a-z0-9]+/', '-', strtolower(implode('-', array_reverse($sub)))) : '';
-            return $fuera . '/trinchera-rangos' . $sufijo . '.sqlite';
-        }
-        $sub[] = basename($dir);
-        $dir = dirname($dir);
-    }
-    return null;
-}
-
-/** Sal para los hashes (secretos e IP): se crea una vez, junto a la base de datos. */
-function sal_local(string $dir): string {
-    $ruta = $dir . '/trinchera-rangos.sal';
-    $sal = is_file($ruta) ? trim((string) file_get_contents($ruta)) : '';
-    if (strlen($sal) < 32) {
-        $sal = bin2hex(random_bytes(32));
-        @file_put_contents($ruta, $sal, LOCK_EX);
-        @chmod($ruta, 0600);
-    }
-    return $sal;
-}
-
-function conectar(array $c): PDO {
-    try {
-        $pdo = new PDO($c['dsn'], $c['user'], $c['pass'], [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
-    } catch (Throwable $e) {
-        responder(503, ['error' => 'No se puede abrir la base de datos.']);
-    }
-    $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
-    if (!$mysql) {
-        // SQLite: varios lectores a la vez y espera corta si otro escribe
-        $pdo->exec('PRAGMA journal_mode = WAL');
-        $pdo->exec('PRAGMA busy_timeout = 3000');
-    }
+/** Tabla de rangos (se crea la primera vez). */
+function preparar_rangos(PDO $pdo): void {
+    $mysql = es_mysql($pdo);
     $pdo->exec('CREATE TABLE IF NOT EXISTS rangos (
         id VARCHAR(32) PRIMARY KEY,
         secreto CHAR(64) NOT NULL,
@@ -132,22 +58,10 @@ function conectar(array $c): PDO {
         actualizado BIGINT NOT NULL' . ($mysql ? ', INDEX idx_tabla (temporada, colocado, puntos)' : '') . '
     )' . ($mysql ? ' DEFAULT CHARSET=utf8mb4' : ''));
     if (!$mysql) $pdo->exec('CREATE INDEX IF NOT EXISTS idx_tabla ON rangos (temporada, colocado, puntos)');
-    $pdo->exec('CREATE TABLE IF NOT EXISTS rangos_limite (
-        clave VARCHAR(80) PRIMARY KEY,
-        ventana BIGINT NOT NULL,
-        n INT NOT NULL
-    )');
-    return $pdo;
 }
 
 function temporada_valida($t): bool {
     return is_string($t) && preg_match('/^\d{4}-[1-6]$/', $t) === 1;
-}
-
-function texto($v, int $max): string {
-    $s = is_string($v) ? $v : '';
-    $s = preg_replace('/[\x00-\x1F\x7F<>]/u', '', $s) ?? '';
-    return mb_substr(trim($s), 0, $max);
 }
 
 function color($v): string {
@@ -171,40 +85,9 @@ function entero($v, int $min, int $max): int {
     return is_numeric($v) ? max($min, min($max, (int) $v)) : $min;
 }
 
-/** ¿Han pasado `segundos` desde la última escritura de `clave`? (y la anota) */
-function tras_espera(PDO $pdo, string $clave, int $segundos): bool {
-    $ahora = time();
-    $st = $pdo->prepare('SELECT ventana FROM rangos_limite WHERE clave = ?');
-    $st->execute([$clave]);
-    $fila = $st->fetch();
-    if ($fila && $ahora - (int) $fila['ventana'] < $segundos) return false;
-    if ($fila) $pdo->prepare('UPDATE rangos_limite SET ventana = ?, n = 1 WHERE clave = ?')->execute([$ahora, $clave]);
-    else $pdo->prepare('INSERT INTO rangos_limite (clave, ventana, n) VALUES (?, ?, 1)')->execute([$clave, $ahora]);
-    return true;
-}
-
-/** Cuenta una escritura en la ventana de `clave`; false si se pasa del límite. */
-function dentro_del_limite(PDO $pdo, string $clave, int $segundos, int $maximo): bool {
-    $ahora = time();
-    $ventana = intdiv($ahora, $segundos);
-    $st = $pdo->prepare('SELECT ventana, n FROM rangos_limite WHERE clave = ?');
-    $st->execute([$clave]);
-    $fila = $st->fetch();
-    if (!$fila) {
-        $pdo->prepare('INSERT INTO rangos_limite (clave, ventana, n) VALUES (?, ?, 1)')->execute([$clave, $ventana]);
-        return true;
-    }
-    if ((int) $fila['ventana'] !== $ventana) {
-        $pdo->prepare('UPDATE rangos_limite SET ventana = ?, n = 1 WHERE clave = ?')->execute([$ventana, $clave]);
-        return true;
-    }
-    if ((int) $fila['n'] >= $maximo) return false;
-    $pdo->prepare('UPDATE rangos_limite SET n = n + 1 WHERE clave = ?')->execute([$clave]);
-    return true;
-}
-
 $c = configuracion();
 $pdo = conectar($c);
+preparar_rangos($pdo);
 $metodo = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($metodo === 'GET') {
@@ -227,8 +110,7 @@ if ($metodo === 'GET') {
 
 if ($metodo !== 'POST') responder(405, ['error' => 'Método no permitido.']);
 
-$cuerpo = json_decode((string) file_get_contents('php://input', false, null, 0, 8192), true);
-if (!is_array($cuerpo)) responder(400, ['error' => 'Cuerpo no válido.']);
+$cuerpo = leer_json(8192);
 $id = $cuerpo['id'] ?? '';
 $secreto = $cuerpo['secreto'] ?? '';
 $fila = $cuerpo['fila'] ?? null;
@@ -236,9 +118,9 @@ if (!is_string($id) || !preg_match('/^[0-9a-f]{32}$/', $id)) responder(400, ['er
 if (!is_string($secreto) || !preg_match('/^[0-9a-f]{64}$/', $secreto)) responder(400, ['error' => 'Secreto no válido.']);
 if (!is_array($fila) || !temporada_valida($fila['temporada'] ?? null)) responder(400, ['error' => 'Fila no válida.']);
 
-$ip = hash('sha256', ($c['sal'] ?? '') . ($_SERVER['REMOTE_ADDR'] ?? ''));
+$ip = ip_hash($c);
 if (!tras_espera($pdo, 'id:' . $id, ESCRITURA_ID_SEG)) responder(429, ['error' => 'Demasiado seguido: inténtalo en unos segundos.']);
-if (!dentro_del_limite($pdo, 'ip:' . substr($ip, 0, 40), 3600, ESCRITURAS_IP_HORA)) responder(429, ['error' => 'Demasiadas escrituras desde esta conexión.']);
+if (!dentro_del_limite($pdo, 'ip:' . $ip, 3600, ESCRITURAS_IP_HORA)) responder(429, ['error' => 'Demasiadas escrituras desde esta conexión.']);
 
 $hash = hash('sha256', ($c['sal'] ?? '') . $secreto);
 $nueva = [
