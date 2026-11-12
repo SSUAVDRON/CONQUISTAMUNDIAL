@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="371dfdb 2026-11-12 17:09 UTC">
+<meta name="trinchera-build" content="d8eb04f 2026-11-12 17:19 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4600,6 +4600,32 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 /* Nivel de los jugadores en la clasificación de la partida */
 .lb-nivel { flex: none; margin-left: 5px; padding: 0 5px; border-radius: 999px; border: 1px solid rgba(242, 179, 61, 0.4); background: rgba(242, 179, 61, 0.14); color: var(--oro-claro, #ffe2a1); font-size: 9.5px; font-weight: 800; line-height: 1.5; white-space: nowrap; }
 
+/* ---------- Emparejamiento: «Buscando partida…» ---------- */
+.cp-buscando { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(var(--liga, 244, 196, 78), 0.1); border: 1px solid rgba(var(--liga, 244, 196, 78), 0.4); }
+.cp-buscando[hidden] { display: none; }
+.cp-radar { position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle, rgba(var(--liga, 244, 196, 78), 0.35), rgba(var(--liga, 244, 196, 78), 0.05) 70%); box-shadow: inset 0 0 0 1px rgba(var(--liga, 244, 196, 78), 0.45); overflow: hidden; }
+.cp-radar::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(var(--liga, 244, 196, 78), 0.75), transparent 28%); animation: cpGira 1.6s linear infinite; }
+.cp-radar i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 1px solid rgba(var(--liga, 244, 196, 78), 0.6); transform: scale(0.2); opacity: 0; animation: cpOnda 2.4s ease-out infinite; }
+.cp-radar i:nth-child(2) { animation-delay: 0.8s; }
+.cp-radar i:nth-child(3) { animation-delay: 1.6s; }
+@keyframes cpOnda { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(1.1); opacity: 0; } }
+.cp-busca-textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cp-busca-textos strong { font-size: 15px; color: var(--texto-1); }
+.cp-busca-textos b { margin-left: 4px; color: rgb(var(--liga, 244, 196, 78)); font-variant-numeric: tabular-nums; }
+.cp-busca-textos small { color: var(--texto-2); font-size: 12px; }
+.busqueda-pill { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40; display: flex; align-items: stretch; transform: translateX(-50%); border-radius: 999px; background: linear-gradient(180deg, rgba(30, 22, 52, 0.97), rgba(14, 10, 26, 0.97)); border: 1px solid rgba(170, 120, 255, 0.55); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(170, 120, 255, 0.25); animation: bpEntra 0.35s var(--ease-out) both; }
+.busqueda-pill[hidden] { display: none; }
+.busqueda-pill button { border: 0; background: none; box-shadow: none; color: var(--texto-1); }
+.bp-ir { display: inline-flex; align-items: center; gap: 8px; padding: 10px 6px 10px 16px; font-weight: 700; font-size: 14px; }
+.bp-ir b { color: #d9c2ff; font-variant-numeric: tabular-nums; }
+.bp-punto { width: 9px; height: 9px; border-radius: 50%; background: #b98cff; box-shadow: 0 0 0 0 rgba(185, 140, 255, 0.7); animation: bpLatido 1.4s ease-out infinite; }
+.bp-cancelar { padding: 10px 14px 10px 10px; color: var(--texto-2) !important; font-size: 14px; }
+.bp-cancelar:hover { color: var(--texto-1) !important; }
+@keyframes bpEntra { from { opacity: 0; transform: translate(-50%, 14px); } }
+@keyframes bpLatido { 0% { box-shadow: 0 0 0 0 rgba(185, 140, 255, 0.7); } 100% { box-shadow: 0 0 0 10px rgba(185, 140, 255, 0); } }
+@media (max-width: 720px) { .busqueda-pill { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+@media (prefers-reduced-motion: reduce) { .cp-radar::before, .cp-radar i, .bp-punto, .busqueda-pill { animation: none; } }
+
 </style>
 </head>
 <body>
@@ -4679,6 +4705,12 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
   </div>
 
   <canvas id="lienzo"></canvas>
+
+  <!-- Buscando partida (cola de la clasificatoria en línea): sigue mientras navegas por el menú -->
+  <div id="busqueda-pill" class="busqueda-pill" hidden>
+    <button type="button" class="bp-ir" id="bp-ir"><span class="bp-punto" aria-hidden="true"></span><span>Buscando partida</span><b id="bp-tiempo">0:00</b></button>
+    <button type="button" class="bp-cancelar" id="bp-cancelar" aria-label="Cancelar la búsqueda">✕</button>
+  </div>
 
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">
@@ -4853,6 +4885,10 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
             <h2>Buscar partida</h2>
             <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
             <p id="cp-cola-nota" class="cp-cola-nota"></p>
+            <div class="cp-buscando" id="cp-buscando" hidden>
+              <span class="cp-radar" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="cp-busca-textos"><strong>Buscando partida <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
+            </div>
             <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
             <small id="cp-cola-extra" class="cp-cola-extra"></small>
           </div>
@@ -5670,7 +5706,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "371dfdb 2026-11-12 17:09 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "d8eb04f 2026-11-12 17:19 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -7956,6 +7992,180 @@ class Diagnostico {
 }
 
 return { Diagnostico };
+});
+__define('emparejamiento', function () {
+// Emparejamiento automático de la clasificatoria en línea («Buscar partida»).
+//
+// Quien busca partida se anuncia en el vestíbulo (el canal donde se ven las
+// salas públicas) con su presencia `cola`: su MMR, desde cuándo espera y la
+// versión del juego. Todos ven la misma lista y la misma regla:
+//   - manda el que más lleva esperando (si ya lleva unos segundos, para que
+//     haya dado tiempo a ver a los demás);
+//   - elige a los que tienen un MMR parecido al suyo (el margen se abre con la
+//     espera) y, si son bastantes o ya ha esperado lo suyo, crea una sala
+//     clasificatoria y les avisa en su presencia (`sala: { code, para }`);
+//   - los avisados entran solos, se marcan listos y la cuenta atrás empieza
+//     sola en cuanto están todos (o al cabo de un rato, con los que haya).
+// Es público y sin servidor propio, así que todo se valida al recibirlo.
+const { MAX_HUMANS, MIN_HUMANS } = __require('multiplayer');
+
+/** Grupo ideal (si hay tantos, se empieza ya). */
+const MATCH_TARGET = 4;
+/** Con al menos MIN_HUMANS, se empieza si el que manda lleva esto esperando. */
+const MATCH_WAIT_MS = 12000;
+/** El que manda no forma grupo hasta llevar esto en la cola (ver a los demás). */
+const LEADER_SETTLE_MS = 3000;
+/** Tiempo para que los avisados entren en la sala. */
+const INVITE_MS = 15000;
+
+/** Margen de MMR según lo que lleva esperando (se abre poco a poco). */
+function mmrWindow(waitMs) {
+  return Math.min(1500, 200 + (Math.max(0, waitMs) / 1000) * 25);
+}
+
+/** Entrada de la cola limpia (o null si no vale). */
+function cleanQueueEntry(peer, raw, version) {
+  if (!raw || typeof raw !== 'object' || typeof peer !== 'string') return null;
+  const mmr = Number(raw.mmr);
+  const since = Number(raw.desde);
+  if (!Number.isFinite(mmr) || mmr < 0 || mmr > 4000 || !Number.isFinite(since)) return null;
+  if (version && raw.v !== version) return null;
+  const s = raw.sala && typeof raw.sala === 'object' ? raw.sala : null;
+  const sala =
+    s && typeof s.code === 'string' && /^[a-z0-9]{5}$/.test(s.code) && Array.isArray(s.para)
+      ? { code: s.code, para: s.para.filter((x) => typeof x === 'string').slice(0, MAX_HUMANS), hasta: Number(s.hasta) || 0 }
+      : null;
+  return { peer, mmr, since, sala };
+}
+
+/**
+ * Qué hacer ahora (función pura, la misma en todos los navegadores).
+ * entries: [{ peer, mmr, since, sala }] (incluida la mía) · me: mi par · now.
+ * Devuelve:
+ *   { action: 'join', code, leader }  → me han avisado: entrar en esa sala;
+ *   { action: 'host', members }       → mando yo: crear sala para `members` (sin mí);
+ *   { action: 'wait', leader, window, ahead } → seguir esperando.
+ */
+function planMatch(entries, me, now) {
+  const mine = entries.find((e) => e.peer === me);
+  if (!mine) return { action: 'wait', leader: null, window: 0, ahead: 0 };
+  // ¿Me ha avisado alguien? (si varios, el que más lleva esperando)
+  const invites = entries.filter((e) => e.peer !== me && e.sala && e.sala.para.includes(me) && (!e.sala.hasta || e.sala.hasta > now)).sort(byAge);
+  if (invites.length) return { action: 'join', code: invites[0].sala.code, leader: invites[0].peer };
+  // Los que siguen buscando (sin sala propia ni avisados por otro)
+  const taken = new Set();
+  for (const e of entries) if (e.sala) for (const p of e.sala.para) taken.add(p);
+  const free = entries.filter((e) => !e.sala && !taken.has(e.peer)).sort(byAge);
+  const leader = free[0];
+  const ahead = free.findIndex((e) => e.peer === me);
+  if (!leader || leader.peer !== me) {
+    return { action: 'wait', leader: leader ? leader.peer : null, window: mmrWindow(now - mine.since), ahead };
+  }
+  const waited = now - mine.since;
+  const win = mmrWindow(waited);
+  if (waited < LEADER_SETTLE_MS) return { action: 'wait', leader: me, window: win, ahead: 0 };
+  const near = free
+    .filter((e) => e.peer !== me && Math.abs(e.mmr - mine.mmr) <= Math.max(win, mmrWindow(now - e.since)))
+    .sort((a, b) => Math.abs(a.mmr - mine.mmr) - Math.abs(b.mmr - mine.mmr) || byAge(a, b))
+    .slice(0, MAX_HUMANS - 1);
+  const size = near.length + 1;
+  if (size >= MATCH_TARGET || (size >= MIN_HUMANS && waited >= MATCH_WAIT_MS)) return { action: 'host', members: near.map((e) => e.peer), window: win };
+  return { action: 'wait', leader: me, window: win, ahead: 0 };
+}
+
+function byAge(a, b) {
+  return a.since - b.since || (a.peer < b.peer ? -1 : 1);
+}
+
+/**
+ * La cola en marcha: se anuncia en el vestíbulo y, cada medio segundo, mira
+ * qué toca (planMatch). Llamadas: onHost(code, members) al crear la sala que
+ * se ha formado · onJoin(code) al ser avisado · onUpdate(info) para la
+ * pantalla («Buscando partida…»).
+ */
+class Matchmaker {
+  constructor(transport, { version, mmr, newCode, onHost, onJoin, onUpdate }) {
+    this.t = transport;
+    this.version = version;
+    this.mmr = mmr;
+    this.newCode = newCode;
+    this.onHost = onHost;
+    this.onJoin = onJoin;
+    this.onUpdate = onUpdate;
+    this.since = Date.now();
+    this.active = false;
+    this.done = false;
+  }
+
+  /** Mi par en el vestíbulo. */
+  _me() {
+    const me = this.t.lobby.peers().find((p) => p.sameTab);
+    return me ? me.peer : null;
+  }
+
+  start() {
+    this.active = true;
+    this.since = Date.now();
+    this._announce(null);
+    this._timer = setInterval(() => this.tick(), 500);
+    this.tick();
+  }
+
+  _announce(sala) {
+    this.t.lobby.presence({ cola: { v: this.version, mmr: Math.round(this.mmr), desde: this.since, sala } });
+  }
+
+  /** Quien está en la cola ahora (yo incluido). */
+  entries() {
+    const out = [];
+    for (const p of this.t.lobby.peers()) {
+      if (p.stale && !p.sameTab) continue;
+      const e = cleanQueueEntry(p.peer, p.presence && p.presence.cola, this.version);
+      if (e) out.push(e);
+    }
+    return out;
+  }
+
+  tick() {
+    if (!this.active || this.done) return;
+    const me = this._me();
+    if (!me) return;
+    const entries = this.entries();
+    const now = Date.now();
+    const plan = planMatch(entries, me, now);
+    const mine = entries.find((e) => e.peer === me);
+    const others = entries.filter((e) => e.peer !== me && !e.sala).length;
+    this.onUpdate?.({ waited: now - this.since, window: plan.window || mmrWindow(now - this.since), inQueue: others + 1, leader: plan.leader === me });
+    if (plan.action === 'join') {
+      this.done = true;
+      this.stop();
+      this.onJoin?.(plan.code);
+    } else if (plan.action === 'host' && mine && !mine.sala) {
+      this.done = true;
+      const code = this.newCode();
+      // Aviso a los elegidos (sigo en la cola con la sala hasta que entren)
+      this._announce({ code, para: plan.members, hasta: now + INVITE_MS });
+      clearInterval(this._timer);
+      this.onHost?.(code, plan.members);
+      // El aviso se quita solo al cabo de un rato (ya están en la sala o no vendrán)
+      this._clearTimer = setTimeout(() => this.stop(), INVITE_MS + 2000);
+    }
+  }
+
+  /** Sale de la cola (y deja de anunciarse). */
+  stop() {
+    this.active = false;
+    clearInterval(this._timer);
+    clearTimeout(this._clearTimer);
+    try {
+      this.t.lobby.presence({ cola: null });
+    } catch {
+      /* sin conexión */
+    }
+  }
+}
+
+return { MATCH_TARGET, MATCH_WAIT_MS, LEADER_SETTLE_MS, INVITE_MS, mmrWindow, cleanQueueEntry, planMatch, Matchmaker };
 });
 __define('errores', function () {
 // Fallos en el navegador: que ninguno pare la partida y que quede constancia
@@ -13034,7 +13244,7 @@ const { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, roda
 const { abrirGuia } = __require('guia');
 const { errorReport } = __require('errores');
 const { drawChart, drawSparkline } = __require('resumen');
-const { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName, seasonReward } = __require('rangos');
+const { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, pointsFromMmr, rankOf, rankText, seasonEnd, seasonName, seasonReward } = __require('rangos');
 const { ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly, achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText } = __require('profile');
 
 /** Colores rápidos para el territorio y el emblema. */
@@ -13687,6 +13897,9 @@ class Home {
       this.renderQueue();
     });
     $('cp-buscar').addEventListener('click', () => this._findMatch());
+    this.search = null;
+    $('bp-ir').addEventListener('click', () => this.go('competitivo'));
+    $('bp-cancelar').addEventListener('click', () => this.h.onFindMatch?.());
     $('btn-repetir').addEventListener('click', () => this._replay());
     $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
     $('novedades-todas').addEventListener('click', () => this._allNews());
@@ -14406,6 +14619,7 @@ class Home {
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
     if (view === 'competitivo') this.renderCompetitive();
+    if (this.search) this.setSearch(this.search);
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
     else this.cover?.stop();
@@ -14568,11 +14782,24 @@ class Home {
       $('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
       btn.disabled = false;
       btn.textContent = 'Buscar partida';
+      btn.classList.add('principal', 'btn-brillo');
+      btn.classList.remove('secundario');
+      $('cp-buscando').hidden = true;
       return;
     }
     const net = this.netKind;
-    const open = this._rankedRooms();
+    const searching = !!this.search;
+    $('cp-buscando').hidden = !searching;
+    btn.classList.toggle('secundario', searching);
+    btn.classList.toggle('principal', !searching);
+    btn.classList.toggle('btn-brillo', !searching);
     $('cp-cola-nota').textContent = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores.`;
+    if (searching) {
+      btn.disabled = false;
+      btn.textContent = 'Cancelar búsqueda';
+      $('cp-cola-extra').textContent = 'Te emparejamos con jugadores de rango parecido; cuanto más esperas, más se abre el margen. Puedes moverte por el menú mientras tanto.';
+      return;
+    }
     if (!net || net === 'none') {
       btn.disabled = true;
       $('cp-cola-extra').textContent = 'Sin conexión con el servidor de salas.';
@@ -14581,27 +14808,45 @@ class Home {
       $('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
     } else {
       btn.disabled = false;
-      $('cp-cola-extra').textContent = open.length
-        ? `${open.length} sala${open.length === 1 ? '' : 's'} clasificatoria${open.length === 1 ? '' : 's'} esperando jugadores: entrarás en la más llena.`
-        : 'No hay salas clasificatorias abiertas: se creará una pública para que entren otros.';
+      $('cp-cola-extra').textContent = 'Entrarás en la cola: te juntamos con jugadores de rango parecido y la partida empieza sola.';
     }
     btn.textContent = 'Buscar partida';
   }
 
-  /** Salas clasificatorias públicas con sitio y de esta versión, la más llena primero. */
-  _rankedRooms() {
-    return this.rooms.filter((x) => x.clasificatoria && !x.otraVersion && (x.jugadores || 1) < (x.plazas || 8)).sort((a, b) => (b.jugadores || 1) - (a.jugadores || 1));
-  }
-
-  /** «Buscar partida»: contra la IA, al momento; en línea, a la sala clasificatoria más llena (o se crea una). */
+  /** «Buscar partida»: contra la IA, al momento; en línea, la cola de emparejamiento. */
   _findMatch() {
     if (this.queue === 'ia') {
       this.h.onRanked?.('ia');
       return;
     }
-    const open = this._rankedRooms();
-    if (open.length) this.h.onJoinRoom?.(open[0].code);
-    else this.h.onRanked?.('sala');
+    // En línea: la cola de emparejamiento (o cancelarla si ya se está buscando)
+    this.h.onFindMatch?.();
+  }
+
+  /**
+   * Estado de la búsqueda en línea: info = { waited, window, inQueue } o null
+   * (sin buscar); `estado` 'encontrada' cuando ya se ha formado la partida.
+   */
+  setSearch(info, estado = '') {
+    this.search = info;
+    const fmt = (ms) => {
+      const s = Math.floor(ms / 1000);
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    };
+    const pill = $('busqueda-pill');
+    if (info) {
+      const r = this.profile.rango;
+      const lo = rankOf(pointsFromMmr(r.mmr - info.window)).label;
+      const hi = rankOf(pointsFromMmr(r.mmr + info.window)).label;
+      $('cp-busca-tiempo').textContent = fmt(info.waited);
+      $('cp-busca-info').textContent = `${lo === hi ? `Rivales de ${lo}` : `Rivales entre ${lo} y ${hi}`} · ${info.inQueue} en cola`;
+      $('bp-tiempo').textContent = fmt(info.waited);
+    }
+    // El aviso flotante, solo por el menú y fuera de la página Competitivo
+    const show = !!info && this.menuVisible() && this.view !== 'competitivo';
+    if (pill.hidden === show) pill.hidden = !show;
+    if (estado === 'encontrada') this._flash('¡Partida encontrada! Entrando en la sala…', true);
+    if (this.view === 'competitivo') this.renderQueue();
   }
 
   /** Escalera de las nueve ligas: las superadas iluminadas, la tuya destacada y la mejor de la temporada marcada. */
@@ -18648,8 +18893,9 @@ const { Grabador, compactCurve, placement } = __require('resumen');
 const { Ladder } = __require('ladder');
 const { claimText, getIdentity, signClaim, verifiedRank } = __require('identidad');
 const { challengeBeaten, challengeLink, parseChallenge } = __require('reto');
-const { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } = __require('rangos');
+const { RANKED_AI, RANKED_ROOM, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } = __require('rangos');
 const { presentMatch } = __require('presentacion');
+const { INVITE_MS, Matchmaker } = __require('emparejamiento');
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -18979,6 +19225,8 @@ async function startGame(opts) {
   state.ranked = opts.ranked || null;
   state.rankedDone = false;
   state.rankOut = null;
+  if (state.mm) stopMatchmaking();
+  state.match = null;
   leaveOnline();
   tutorial.stop();
   const seed = Number.isFinite(opts.seedNum) ? opts.seedNum >>> 0 : opts.seed ? hashString(opts.seed) : randomSeed();
@@ -19143,6 +19391,83 @@ function defaultRoomSettings() {
   };
 }
 
+// ------------------------------------------------------- emparejamiento
+
+/** «Buscar partida» en línea: entra en la cola (o sale, si ya estaba). */
+function toggleMatchmaking() {
+  if (state.mm) {
+    stopMatchmaking();
+    return;
+  }
+  if (!transport) {
+    home.flash?.('Sin conexión con el servidor de salas.');
+    return;
+  }
+  const r = profile.rango;
+  const reward = ensureSeason(r);
+  if (reward) grantSeasonReward(reward);
+  state.mm = new Matchmaker(transport, {
+    version: RULES_FINGERPRINT,
+    mmr: r.mmr,
+    newCode: newRoomCode,
+    onUpdate: (info) => home.setSearch(info),
+    onHost: (code, members) => {
+      state.mm = null;
+      state.match = { code, host: true, expect: members, deadline: Date.now() + INVITE_MS };
+      home.setSearch(null, 'encontrada');
+      sound.play('listo', 0.9, 0);
+      openSala(code, true, {
+        settings: { bots: RANKED_ROOM.bots, mapSize: RANKED_ROOM.mapSize, difficulty: RANKED_ROOM.difficulty, rules: { ...DEFAULT_RULES, profile: RANKED_ROOM.profile }, clasificatoria: true },
+        info: { nombre: 'Clasificatoria', visibilidad: 'enlace', plazas: Math.max(2, Math.min(8, members.length + 1)) },
+      }).catch(() => {
+        state.match = null;
+        home.flash?.('No se ha podido crear la sala. Vuelve a buscar partida.');
+      });
+    },
+    onJoin: (code) => {
+      state.mm = null;
+      state.match = { code, host: false };
+      home.setSearch(null, 'encontrada');
+      sound.play('listo', 0.9, 0);
+      openSala(code, false, { auto: true });
+    },
+  });
+  state.mm.start();
+}
+
+function stopMatchmaking() {
+  state.mm?.stop();
+  state.mm = null;
+  home.setSearch(null);
+}
+
+/**
+ * Sala formada por el emparejamiento: los invitados se marcan listos solos y
+ * el anfitrión empieza en cuanto están todos (o, pasado el plazo, con los que
+ * haya; si no ha venido nadie, vuelve a la cola).
+ */
+function autoMatch(sala) {
+  const m = state.match;
+  if (!m || m.code !== sala.code || sala.started || sala.countdown) return;
+  if (!m.host) {
+    if (!sala.observer && !sala.myReadyValid()) sala.setReady(true);
+    return;
+  }
+  const st = sala.status();
+  const others = st.players.filter((p) => !p.isMe);
+  const allHere = m.expect.every((peer) => others.some((p) => p.peer === peer && p.ready));
+  const late = Date.now() > m.deadline;
+  if (st.canStart && (allHere || (late && st.total >= 2))) sala.beginCountdown();
+  else if (late && st.total < 2) {
+    // No ha venido nadie: fuera de la sala y otra vez a la cola
+    state.match = null;
+    leaveOnline();
+    home.show();
+    home.go('competitivo', { replace: true });
+    toggleMatchmaking();
+  }
+}
+
 /**
  * Abre una sala. Anfitrión: con la configuración y los datos del formulario
  * «Crear sala» (si falla, lanza el error para que el formulario lo muestre).
@@ -19151,6 +19476,10 @@ function defaultRoomSettings() {
  */
 async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
   if (!transport) throw new Error('Sin conexión para el multijugador.');
+  if (state.match?.code !== code) {
+    state.match = null;
+    if (state.mm) stopMatchmaking();
+  }
   leaveOnline();
   const sala = new Sala(transport, { code, isHost, me: { ...myIdentity(), name: roomName(profile.nombre, RECRUIT_TAG) }, settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
@@ -19175,7 +19504,18 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
       home.renderEntry(sala, entry);
     } else home.renderLobby(sala, kind, status);
   };
-  sala.onChange = () => render();
+  sala.onChange = () => {
+    render();
+    autoMatch(sala);
+  };
+  // Sala del emparejamiento: comprobar también con el reloj (plazo para que lleguen)
+  if (state.match?.code === code) {
+    clearInterval(state.matchTimer);
+    state.matchTimer = setInterval(() => {
+      if (state.sala !== sala || sala.started || state.match?.code !== code) clearInterval(state.matchTimer);
+      else autoMatch(sala);
+    }, 1000);
+  }
   sala.onStart = (payload, hostPeer) => {
     home.hideCountdown();
     beginOnlineGame(sala, payload, hostPeer);
@@ -19248,6 +19588,9 @@ function copyText(text, ok, fail) {
 
 async function beginOnlineGame(sala, payload, hostPeer) {
   if (state.sala !== sala) return;
+  // La sala del emparejamiento ya ha empezado
+  state.match = null;
+  clearInterval(state.matchTimer);
   const myPeer = sala.myPeer();
   const index = payload.players.findIndex((p) => p.peer === myPeer);
   if (index < 0) {
@@ -19710,6 +20053,10 @@ const home = new Home(profile, {
   },
   onSettings: applySettings,
   sound: (name) => sound.play(name, 0.9, 0),
+  /** «Buscar partida» en línea (cola de emparejamiento): entrar o cancelar. */
+  onFindMatch() {
+    toggleMatchmaking();
+  },
   /** «Jugar clasificatoria» (contra la IA) o «Sala clasificatoria» (multijugador). */
   onRanked(kind) {
     if (kind === 'sala') home.showCreate({ ranked: true });
@@ -19780,6 +20127,7 @@ const home = new Home(profile, {
     copyText(link, () => home.showCopy(true), () => home.showCopy(false, link));
   },
   onLeaveRoom() {
+    state.match = null;
     leaveOnline();
     if (state.pendingEntry) {
       // La invitación ya se ha usado: fuera de la dirección (una recarga no vuelve a ella)
