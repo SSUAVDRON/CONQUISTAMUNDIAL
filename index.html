@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="7990e6b 2026-11-12 16:38 UTC">
+<meta name="trinchera-build" content="371dfdb 2026-11-12 17:09 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4412,6 +4412,194 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 @keyframes arrToca { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.97); } }
 @media (prefers-reduced-motion: reduce) { .arranque.esperando .arr-paso { animation: none; } }
 
+/* =====================================================================
+   Presentación de la partida (presentacion.js): los participantes en
+   tarjetas de estandarte, «VS» si son dos, su nivel y, en la
+   clasificatoria, su rango; debajo, las naciones en juego.
+   ===================================================================== */
+.presentacion {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: calc(22px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden auto;
+  color: var(--texto-1);
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 40%, rgba(242, 179, 61, 0.16), transparent 70%),
+    var(--fondo-mundo, none) center / cover no-repeat,
+    linear-gradient(180deg, #070b16, #0b1222 60%, #070a12);
+  animation: prEntra 0.35s var(--ease-out) both;
+}
+.presentacion.clasificatoria {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 40%, rgba(170, 110, 255, 0.2), transparent 70%),
+    var(--fondo-mundo, none) center / cover no-repeat,
+    linear-gradient(180deg, #0c0818, #120d26 60%, #08060f);
+}
+.presentacion.saliendo { animation: prSale 0.32s ease-in both; }
+.pr-luz {
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+  background: repeating-conic-gradient(rgba(255, 220, 150, 0.05) 0deg 5deg, transparent 5deg 16deg);
+  -webkit-mask: radial-gradient(circle, #000 0, transparent 45%);
+  mask: radial-gradient(circle, #000 0, transparent 45%);
+  animation: cpGira 80s linear infinite;
+}
+.presentacion > :not(.pr-luz) { position: relative; }
+.pr-cab { text-align: center; animation: prBaja 0.6s var(--ease-out) both; }
+.pr-antetitulo { color: var(--oro); font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+.presentacion.clasificatoria .pr-antetitulo { color: #cfb2ff; }
+.pr-titulo {
+  margin: 6px 0 4px;
+  font-family: var(--serif);
+  font-size: clamp(30px, 5vw, 52px);
+  font-weight: 800;
+  line-height: 1.05;
+  background: linear-gradient(180deg, #fff6d8, #f2b33d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 18px rgba(242, 179, 61, 0.25));
+}
+.pr-detalles { margin: 0; color: var(--texto-2); font-size: 14px; }
+.pr-jugadores {
+  --w: 200px;
+  --paso: 0.14s;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, var(--w));
+  justify-content: center;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+  max-width: 1240px;
+  perspective: 900px;
+}
+.pr-jugadores.tam-media { --w: 150px; --paso: 0.08s; gap: 12px; }
+.pr-jugadores.tam-compacta { --w: 252px; --paso: 0.035s; gap: 8px; max-height: 42vh; overflow-y: auto; padding: 4px; scrollbar-width: thin; }
+.pr-carta {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 26px 12px 42px;
+  text-align: center;
+  overflow: hidden;
+  clip-path: polygon(0 0, 100% 0, 100% 87%, 50% 100%, 0 87%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  animation: prCarta 0.75s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  animation-delay: calc(0.25s + var(--i) * var(--paso, 0.14s));
+}
+.pr-carta::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.6)); }
+.pr-carta::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-18deg);
+  animation: prBrillo 1s ease-out both;
+  animation-delay: calc(0.85s + var(--i) * var(--paso, 0.14s));
+}
+.pr-carta > * { position: relative; z-index: 1; }
+.pr-carta.yo { box-shadow: inset 0 0 0 2px var(--oro), inset 0 0 26px rgba(242, 179, 61, 0.35); }
+.pr-carta.ia { box-shadow: inset 0 0 0 2px rgba(255, 120, 100, 0.6), inset 0 0 26px rgba(255, 90, 60, 0.3); }
+.pr-nota { margin-top: 4px; padding: 3px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #ffb9ad; font-size: 12px; font-weight: 700; }
+.tam-compacta .pr-nota { margin: 0; font-size: 10px; padding: 2px 7px; }
+.pr-emblema { display: grid; place-items: center; }
+.pr-emblema canvas { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)); }
+.pr-datos { display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: 100%; min-width: 0; }
+.pr-nombre { max-width: 100%; font-family: var(--serif); font-size: 20px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); }
+.pr-titulo-j { min-height: 1.2em; color: rgba(255, 255, 255, 0.82); font-size: 12px; }
+.pr-nivel { display: inline-flex; align-items: baseline; gap: 6px; margin-top: 4px; padding: 3px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(242, 179, 61, 0.55); }
+.pr-nivel small { color: var(--texto-2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.pr-nivel b { color: var(--oro-claro); font-size: 15px; }
+.pr-rango { --liga: 196, 170, 120; display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 12px 4px 4px; border-radius: 12px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(var(--liga), 0.55); box-shadow: 0 0 14px rgba(var(--liga), 0.28); }
+.pr-rango > span { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+.pr-rango b { color: rgb(var(--liga)); font-size: 13px; }
+.pr-rango small { color: var(--texto-2); font-size: 11px; }
+.pr-tu { position: absolute; top: 7px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 1px 9px; border-radius: 999px; background: var(--oro); color: #1b1405; font-size: 10px; font-weight: 900; letter-spacing: 0.08em; }
+.pr-naciones { width: min(1100px, 100%); text-align: center; animation: prBaja 0.6s var(--ease-out) both 0.5s; }
+.pr-naciones h2 { margin: 0 0 10px; font-family: var(--serif); font-size: 15px; letter-spacing: 0.06em; color: var(--oro-claro); }
+.pr-naciones h2 span { margin-left: 6px; padding: 1px 9px; border-radius: 999px; background: rgba(242, 179, 61, 0.16); color: var(--oro); font-family: system-ui, sans-serif; font-size: 12px; }
+.pr-banderas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-height: 28vh; overflow: hidden; -webkit-mask: linear-gradient(180deg, #000 78%, transparent); mask: linear-gradient(180deg, #000 78%, transparent); }
+.pr-banderas li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); color: var(--texto-2); font-size: 12px; animation: prChip 0.4s ease-out both; animation-delay: calc(0.75s + var(--i) * 18ms); }
+.pr-banderas .bandera { flex: none; border-radius: 2px; }
+.pr-punto { flex: none; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4); }
+.pr-banderas .pr-mas { font-weight: 800; color: var(--oro); }
+.pr-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 18px; width: min(560px, 100%); animation: prBaja 0.6s var(--ease-out) both 0.6s; }
+.pr-barra { flex: 1 1 100%; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.pr-barra span { display: block; height: 100%; background: linear-gradient(90deg, var(--oro-osc), var(--oro-claro)); box-shadow: 0 0 10px rgba(242, 179, 61, 0.6); transform-origin: left; animation: prBarra linear both; }
+.pr-cuenta { color: var(--texto-2); font-weight: 700; }
+.pr-cuenta b { display: inline-block; min-width: 1.2ch; color: var(--oro-claro); font-size: 19px; }
+.pr-saltar { padding: 10px 22px; }
+/* Medianas (5-8 participantes) */
+.tam-media .pr-carta { padding: 22px 8px 36px; }
+.tam-media .pr-nombre { font-size: 16px; }
+.tam-media .pr-nivel b { font-size: 13px; }
+/* Compactas (9 o más): fichas en rejilla, con el emblema a un lado */
+.tam-compacta .pr-carta { flex-direction: row; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 12px; clip-path: none; text-align: left; }
+.tam-compacta .pr-carta::before { background: linear-gradient(90deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55)); }
+.tam-compacta .pr-datos { flex: 1; align-items: flex-start; }
+.tam-compacta .pr-nombre { font-size: 15px; }
+.tam-compacta .pr-titulo-j { font-size: 11px; }
+.tam-compacta .pr-nivel { flex-direction: column; align-items: center; gap: 0; margin: 0; padding: 2px 6px; border-radius: 8px; flex: none; }
+.tam-compacta .pr-nivel small { font-size: 8px; }
+.tam-compacta .pr-nivel b { font-size: 13px; }
+.tam-compacta .pr-rango { flex: none; margin: 0; padding: 2px; border-radius: 8px; }
+.tam-compacta .pr-rango > span { display: none; }
+.tam-compacta .pr-tu { top: 3px; left: 4px; transform: none; font-size: 8px; padding: 0 5px; }
+@keyframes prEntra { from { opacity: 0; } }
+@keyframes prSale { to { opacity: 0; transform: scale(1.03); } }
+@keyframes prBaja { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes prCarta { from { opacity: 0; transform: translateY(46px) rotateX(38deg) scale(0.9); } }
+@keyframes prBrillo { from { left: -60%; } to { left: 130%; } }
+@keyframes prChip { from { opacity: 0; transform: translateY(6px) scale(0.9); } }
+@keyframes prBarra { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (max-width: 720px) {
+  .presentacion { justify-content: flex-start; gap: 14px; padding-top: calc(18px + env(safe-area-inset-top, 0px)); }
+  .pr-titulo { font-size: 30px; }
+  .pr-detalles { font-size: 12.5px; }
+  .pr-jugadores { --w: min(44vw, 180px); gap: 10px; }
+  .pr-jugadores.tam-media { --w: min(28vw, 112px); gap: 8px; }
+  .pr-jugadores.tam-compacta { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 40vh; }
+  .pr-carta { padding: 22px 8px 34px; }
+  .tam-grande .pr-nombre { font-size: 17px; }
+  .tam-grande .pr-emblema canvas { width: 76px !important; height: 76px !important; }
+  .tam-media .pr-emblema canvas { width: 54px !important; height: 54px !important; }
+  .tam-media .pr-carta { padding: 18px 6px 30px; }
+  .tam-media .pr-nombre { font-size: 13px; }
+  .tam-media .pr-titulo-j { display: none; }
+  .tam-media .pr-rango { flex-direction: column; gap: 0; padding: 4px 6px; }
+  .tam-media .pr-rango > span { align-items: center; text-align: center; }
+  .tam-media .pr-rango b { font-size: 11px; }
+  .tam-media .pr-rango small { display: none; }
+  .tam-compacta .pr-emblema canvas { width: 36px !important; height: 36px !important; }
+  .tam-compacta .pr-carta { padding: 6px 8px 6px 6px; gap: 6px; }
+  .tam-compacta .pr-nombre { font-size: 13px; }
+  .tam-compacta .pr-nivel small { display: none; }
+  .tam-compacta .pr-rango canvas { width: 24px !important; height: 24px !important; }
+  .pr-banderas { max-height: 22vh; }
+  .pr-banderas li { font-size: 11px; padding: 3px 8px 3px 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presentacion, .pr-carta, .pr-carta::after, .pr-banderas li, .pr-cab, .pr-naciones, .pr-pie, .pr-luz { animation: none !important; }
+  .pr-barra span { animation-name: prBarra !important; }
+}
+
+/* Nivel de los jugadores en la clasificación de la partida */
+.lb-nivel { flex: none; margin-left: 5px; padding: 0 5px; border-radius: 999px; border: 1px solid rgba(242, 179, 61, 0.4); background: rgba(242, 179, 61, 0.14); color: var(--oro-claro, #ffe2a1); font-size: 9.5px; font-weight: 800; line-height: 1.5; white-space: nowrap; }
+
 </style>
 </head>
 <body>
@@ -5482,7 +5670,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "7990e6b 2026-11-12 16:38 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "371dfdb 2026-11-12 17:09 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -18460,7 +18648,8 @@ const { Grabador, compactCurve, placement } = __require('resumen');
 const { Ladder } = __require('ladder');
 const { claimText, getIdentity, signClaim, verifiedRank } = __require('identidad');
 const { challengeBeaten, challengeLink, parseChallenge } = __require('reto');
-const { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf } = __require('rangos');
+const { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } = __require('rangos');
+const { presentMatch } = __require('presentacion');
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -18576,6 +18765,9 @@ function myIdentity() {
     pattern: profile.patron,
     level: levelInfo(profile.xp).level,
     title: titleName(profile),
+    frame: profile.marco || 'ninguno',
+    banner: profile.estandarte || 'noche',
+    nameColor: profile.colorNombre || '',
   };
 }
 
@@ -18633,6 +18825,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
     p.pattern = h.pattern;
     // Bandera de un país elegida como emblema: también junto a su nombre y en la clasificación
     p.flag = (h.emblem && h.emblem.flag) || '';
+    // Nivel del jugador (se ve junto a su nombre en la clasificación de la partida)
+    p.level = Math.max(...members.map((i) => Number(humans[i].level) || 0));
     return p;
   });
   const myGroup = localIndex >= 0 ? groups.findIndex((g) => g.includes(localIndex)) : -1;
@@ -18688,6 +18882,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
  * tapar la ficha de una invitación o la sala que estén a la vista.
  */
 function startDemo({ background = false } = {}) {
+  state.holdSim = false;
   if (!background) {
     leaveOnline();
     // Fuera de la partida: se vuelve a la página desde la que se empezó (Competitivo, Crear partida…)
@@ -18739,6 +18934,9 @@ function enterGame(game) {
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
+  // La simulación arranca ahora (ni durante la carga ni durante la presentación)
+  state.holdSim = false;
+  state.acc = 0;
   // La partida tiene su entrada en el historial: el botón atrás abre su menú en vez de sacarte
   home.pushLayer('partida');
   // Resumen de partida: graba cómo va (sin tocar la simulación)
@@ -18785,6 +18983,7 @@ async function startGame(opts) {
   tutorial.stop();
   const seed = Number.isFinite(opts.seedNum) ? opts.seedNum >>> 0 : opts.seed ? hashString(opts.seed) : randomSeed();
   state.lastSeed = opts.tutorial ? null : seed;
+  state.holdSim = true;
   try {
     const game = await withLoading(opts.title || mapLabel(opts.mapSize), [
       { label: 'Levantando el relieve…', run: () => loadMap(opts.mapSize, seed) },
@@ -18795,11 +18994,46 @@ async function startGame(opts) {
       },
       { label: 'Cavando trincheras…', run: (game) => game },
     ]);
+    // Antes de empezar: tu tarjeta frente a la IA y las naciones en juego (el tutorial va directo)
+    if (!opts.tutorial) await presentMatch(soloPresentation(game, opts));
+    if (state.game !== game) return;
     enterGame(game);
     if (opts.tutorial) tutorial.start(tutorialState());
   } finally {
     state.loading = false;
   }
+}
+
+const DIFF_NAMES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+
+/** Tu tarjeta para la presentación (con tu rango si es clasificatoria). */
+function myCard(ranked) {
+  const r = profile.rango;
+  return { ...myIdentity(), nameColor: nameColorOf(profile), me: true, rank: ranked ? { points: r.puntos, placing: inPlacement(r) } : null };
+}
+
+/** Las naciones de la partida (sin humanos ni colonias), con su bandera si es un mapa real. */
+function nationsOf(game) {
+  return game.players.filter((p) => p && !p.isHuman && !p.weak).map((p) => ({ name: p.name, color: `rgb(${p.color.join(',')})`, flag: p.flag || '' }));
+}
+
+/** Presentación de una partida contra la IA (o clasificatoria contra la IA). */
+function soloPresentation(game, opts) {
+  const nations = nationsOf(game);
+  const dif = DIFF_NAMES[opts.difficulty] || 'Normal';
+  const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
+  const colonies = game.players.filter((p) => p && p.weak).length;
+  const ranked = !!opts.ranked;
+  return {
+    kicker: ranked ? `Clasificatoria · ${seasonName(profile.rango.temporada)}` : opts.challenge ? 'Reto' : 'Partida contra la IA',
+    title: opts.title && !ranked ? opts.title : mapLabel(opts.mapSize),
+    details: `${nations.length} naciones · ${colonies} colonias · perfil ${prof} · IA ${dif}`,
+    players: [myCard(ranked)],
+    ai: { name: 'La IA', title: `Ejércitos de ${nations.length} naciones`, note: `Dificultad ${dif}`, color: '#b5402f', emblem: { shape: 'escudo', symbol: 'espadas', bg: '#3a1418', fg: '#f2b33d', flag: '' }, frame: ranked ? 'oro' : 'bronce', banner: 'volcan' },
+    nations,
+    ranked,
+    sound,
+  };
 }
 
 function tutorialState() {
@@ -19027,17 +19261,23 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   state.rankedVoid = false;
   state.rankOut = null;
   state.lastOpts = null;
+  // Rango de cada uno (sala clasificatoria): el que anuncian firmado para esta sala
+  const rankPoints = new Map();
+  let ranksReady = Promise.resolve();
   if (state.ranked) {
     profile.rango.pendiente = { tipo: 'sala', inicio: Date.now() };
     saveProfile(profile);
     // MMR de los demás: el que anuncian firmado para esta sala (si no cuadra, 1000)
     const claims = sala.rankClaims();
     state.rankedMmr = new Map();
-    Promise.all(payload.players.map(async (p) => {
+    ranksReady = Promise.all(payload.players.map(async (p) => {
       const v = await verifiedRank(sala.code, claims.get(p.peer)).catch(() => null);
       state.rankedMmr.set(p.peer, v ? v.mmr : 1000);
+      if (v) rankPoints.set(p.peer, v.puntos);
     }));
   }
+  // La simulación espera a la sincronización (si no, cada uno avanzaría por su cuenta)
+  state.holdSim = true;
   const game = await withLoading(
     `${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
@@ -19060,6 +19300,30 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     { minMs: 500 }, // online no hay que hacer esperar al resto
   );
   if (state.sala !== sala) return;
+  // Presentación: los participantes de la sala (y su rango en la clasificatoria) y las naciones.
+  // Dura lo mismo para todos; el anfitrión espera además a que todos hayan cargado.
+  await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]);
+  {
+    const nations = nationsOf(game);
+    const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
+    const ranked = !!state.ranked;
+    await presentMatch({
+      kicker: ranked ? `Sala clasificatoria · ${seasonName(profile.rango.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
+      title: mapLabel(payload.settings.mapSize),
+      details: `${payload.players.length} jugadores · ${nations.length} naciones de la IA · perfil ${prof}`,
+      players: payload.players.map((p) => ({
+        ...p,
+        nameColor: nameColorOf({ colorNombre: p.nameColor, color: p.color }),
+        me: p.peer === myPeer,
+        rank: ranked ? (p.peer === myPeer ? { points: profile.rango.puntos, placing: inPlacement(profile.rango) } : rankPoints.has(p.peer) ? { points: rankPoints.get(p.peer), placing: false } : { points: 0, placing: true }) : null,
+      })),
+      nations,
+      ranked,
+      skippable: false,
+      sound,
+    });
+  }
+  if (state.sala !== sala || state.game !== game) return;
   // Los humanos se añaden primero: el jugador i tiene id i + 1 (en cooperativo,
   // cada pareja comparte el id de su nación)
   const groups = coopGroups(payload.players.length, game.rules.coop);
@@ -20021,7 +20285,7 @@ function frame(now) {
     if (game && game.phase !== 'ended') {
       if (state.net) {
         state.net.update();
-      } else if (state.speed > 0) {
+      } else if (state.speed > 0 && !state.holdSim) {
         state.acc += dt * state.speed;
         let steps = 0;
         while (state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
@@ -22779,6 +23043,10 @@ function cleanPlayer(raw) {
     pattern: word(p.pattern, 'liso'),
     level: Number.isFinite(p.level) ? Math.max(1, Math.min(999, Math.floor(p.level))) : 1,
     title: String(p.title || '').slice(0, 24),
+    // Aspecto para la presentación de la partida: marco del emblema, estandarte y color del nombre
+    frame: word(p.frame, 'ninguno'),
+    banner: word(p.banner, 'noche'),
+    nameColor: typeof p.nameColor === 'string' && /^[a-z]{2,12}$/.test(p.nameColor) ? p.nameColor : '',
   };
 }
 
@@ -23081,7 +23349,8 @@ class Sala {
       // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
       ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
-      players: players.map(({ peer, name, color, emblem, pattern }) => ({ peer, name, color, emblem, pattern })),
+      // Lo que se ve de cada uno en la partida y en la presentación (nivel, título, marco, estandarte…)
+      players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor })),
     };
     this.payload = payload;
     this.room.emit('start', payload);
@@ -25250,6 +25519,155 @@ class CoverArt {
 }
 
 return { CoverArt };
+});
+__define('presentacion', function () {
+// Presentación de la partida: unos segundos antes de empezar, a pantalla
+// completa, los participantes en tarjetas (su estandarte, su emblema con el
+// marco que llevan, nombre, título y nivel; en la clasificatoria, también su
+// rango) y las naciones que van a jugar, con sus banderas. Las tarjetas se
+// adaptan a cuántos sean: grandes hasta 4, medianas hasta 8 y, con más,
+// fichas compactas en rejilla. Contra la IA, su tarjeta va junto a la tuya.
+// La partida no avanza mientras se ve (ver main.js: state.holdSim).
+const { drawEmblem, drawFrame, flagCss, hasFlag } = __require('icons');
+const { drawBadge, rankOf } = __require('rangos');
+const { sinMovimiento } = __require('movimiento');
+
+function el(tag, attrs = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'text') e.textContent = v;
+    else if (k === 'style') e.style.cssText = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children) if (c != null && c !== false) e.append(c);
+  return e;
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const DPR = () => Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+
+/** Lienzo con un emblema y su marco. */
+function emblemCanvas(emblem, frame, px) {
+  const c = document.createElement('canvas');
+  const k = DPR();
+  c.width = c.height = Math.round(px * k);
+  c.style.width = c.style.height = `${px}px`;
+  c.setAttribute('aria-hidden', 'true');
+  const ctx = c.getContext('2d');
+  const framed = frame && frame !== 'ninguno';
+  drawEmblem(ctx, emblem, c.width / 2, c.height / 2, c.width * (framed ? 0.64 : 0.8));
+  if (framed) drawFrame(ctx, frame, c.width / 2, c.height / 2, c.width * 0.64);
+  return c;
+}
+
+/** Lienzo con la insignia de un rango (puntos; `placing`: aún en colocación). */
+function badgeCanvas(points, placing, px) {
+  const c = document.createElement('canvas');
+  const k = DPR();
+  c.width = c.height = Math.round(px * k);
+  c.style.width = c.style.height = `${px}px`;
+  c.setAttribute('aria-hidden', 'true');
+  const r = rankOf(points);
+  drawBadge(c.getContext('2d'), c.width / 2, c.height * 0.54, c.height * 0.74, placing ? null : r.league, placing ? 0 : r.div);
+  return c;
+}
+
+/** Tamaño de las tarjetas según cuántos participantes hay. */
+function sizeFor(n) {
+  return n <= 4 ? 'grande' : n <= 8 ? 'media' : 'compacta';
+}
+const EMBLEM_PX = { grande: 104, media: 74, compacta: 46 };
+const BADGE_PX = { grande: 50, media: 40, compacta: 30 };
+
+/** Tarjeta de un participante. */
+function card(p, i, size) {
+  const rank = p.rank;
+  const rk = rank ? rankOf(rank.points || 0) : null;
+  return el(
+    'article',
+    { class: `pr-carta est-${p.banner || 'noche'}${p.me ? ' yo' : ''}${p.ai ? ' ia' : ''}`, style: `--i: ${i}; --color: ${p.color || '#888'}` },
+    p.me ? el('span', { class: 'pr-tu', text: 'TÚ' }) : null,
+    el('span', { class: 'pr-emblema' }, emblemCanvas(p.emblem, p.frame, EMBLEM_PX[size])),
+    el('span', { class: 'pr-datos' },
+      el('strong', { class: 'pr-nombre', text: p.name, style: p.nameColor ? `color: ${p.nameColor}` : '' }),
+      el('span', { class: 'pr-titulo-j', text: p.title || 'Recluta' })),
+    p.level ? el('span', { class: 'pr-nivel', title: `Nivel ${p.level}` }, el('small', { text: 'Nivel' }), el('b', { text: String(p.level) })) : null,
+    p.note ? el('span', { class: 'pr-nota', text: p.note }) : null,
+    rank
+      ? el('span', { class: 'pr-rango', title: rank.placing ? 'Sin clasificar' : `${rk.label} · ${rk.pl} PL`, style: rank.placing ? '' : `--liga: ${rk.league.color.join(', ')}` },
+          badgeCanvas(rank.points || 0, rank.placing, BADGE_PX[size]),
+          el('span', {}, el('b', { text: rank.placing ? 'Colocación' : rk.label }), el('small', { text: rank.placing ? 'Sin liga aún' : `${rk.pl} PL` })))
+      : null,
+  );
+}
+
+/**
+ * Muestra la presentación y se resuelve al acabar (o al saltarla).
+ * opts: { kicker, title, details, players: [...], ai: tarjeta de la IA (o null),
+ *         nations: [{ name, color, flag }], nationTotal, ranked, ms, skippable, sound }
+ */
+async function presentMatch(opts) {
+  const { kicker = '', title = '', details = '', players = [], ai = null, nations = [], nationTotal = nations.length, ranked = false, ms = 6500, skippable = true, sound = null } = opts;
+  const still = sinMovimiento();
+  // Tú primero; el resto, en el orden de la sala; la tarjeta de la IA (contra la IA), al final
+  const ordered = [...players.filter((p) => p.me), ...players.filter((p) => !p.me), ...(ai ? [{ ...ai, ai: true }] : [])];
+  const size = sizeFor(ordered.length);
+  const row = el('div', { class: `pr-jugadores tam-${size}`, style: `--n: ${players.length}` }, ...ordered.map((p, i) => card(p, i, size)));
+  const shown = nations.slice(0, 64);
+  const chips = el('ul', { class: 'pr-banderas' },
+    ...shown.map((n, i) =>
+      el('li', { style: `--i: ${i}` },
+        n.flag && hasFlag(n.flag) ? el('i', { class: 'bandera', style: flagCss(n.flag, 20) }) : el('i', { class: 'pr-punto', style: `background: ${n.color}` }),
+        el('span', { text: n.name }))),
+    nationTotal > shown.length ? el('li', { class: 'pr-mas', style: `--i: ${shown.length}`, text: `+${nationTotal - shown.length}` }) : null);
+  const count = el('b', { text: String(Math.ceil(ms / 1000)) });
+  const bar = el('span');
+  const skip = skippable ? el('button', { type: 'button', class: 'principal pr-saltar', text: 'Empezar ya' }) : null;
+  const box = el('div', { class: `presentacion${ranked ? ' clasificatoria' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': `Presentación: ${title}` },
+    el('div', { class: 'pr-luz', 'aria-hidden': 'true' }),
+    el('header', { class: 'pr-cab' }, el('small', { class: 'pr-antetitulo', text: kicker }), el('h1', { class: 'pr-titulo', text: title }), details ? el('p', { class: 'pr-detalles', text: details }) : null),
+    row,
+    nations.length ? el('section', { class: 'pr-naciones' }, el('h2', {}, 'Naciones en juego ', el('span', { text: String(nationTotal) })), chips) : null,
+    el('footer', { class: 'pr-pie' }, el('div', { class: 'pr-barra', 'aria-hidden': 'true' }, bar), el('span', { class: 'pr-cuenta' }, 'La batalla empieza en ', count), skip));
+  document.body.append(box);
+  bar.style.animationDuration = `${ms}ms`;
+  sound?.play('presentacion', 0.9, 0);
+
+  let done;
+  const finished = new Promise((r) => (done = r));
+  const end = () => done();
+  skip?.addEventListener('click', end);
+  const onKey = (e) => {
+    if (skippable && (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape')) {
+      e.preventDefault();
+      end();
+    }
+  };
+  window.addEventListener('keydown', onKey, true);
+  skip?.focus({ preventScroll: true });
+  // Cuenta atrás (con un tambor en los tres últimos segundos)
+  const t0 = performance.now();
+  let last = Math.ceil(ms / 1000);
+  const timer = setInterval(() => {
+    const left = Math.max(0, ms - (performance.now() - t0));
+    const s = Math.ceil(left / 1000);
+    if (s !== last) {
+      last = s;
+      count.textContent = String(Math.max(1, s));
+      if (s >= 1 && s <= 3) sound?.play('cuenta', 0.8, 0);
+    }
+    if (left <= 0) end();
+  }, 100);
+  await finished;
+  clearInterval(timer);
+  window.removeEventListener('keydown', onKey, true);
+  box.classList.add('saliendo');
+  await wait(still ? 0 : 320);
+  box.remove();
+}
+
+return { presentMatch };
 });
 __define('profile', function () {
 // Perfil del jugador: identidad (nombre, color, emblema, patrón, título),
@@ -29930,11 +30348,20 @@ function atWar(game, human) {
 }
 
 /** Segundos que la música se aparta para estos efectos. */
-const DUCK = { conquer: 2.2, victory: 4.5, defeat: 4, start: 2, nivel: 2.5, alliance: 1.2, betray: 1.4, apertura: 3.2 };
+const DUCK = { conquer: 2.2, victory: 4.5, defeat: 4, start: 2, nivel: 2.5, alliance: 1.2, betray: 1.4, apertura: 3.2, presentacion: 2 };
 
 /** Recetas de efectos: (sonido, momento, volumen). */
 const SFX = {
   // ---- apertura
+  // Presentación de la partida: redoble que crece, golpe y acorde de cuernos
+  presentacion: (s, t, v) => {
+    for (let i = 0; i < 12; i++) s.ins.drum(s.sfxBus, t + i * 0.06, 'caja', (0.1 + i * 0.035) * v);
+    s.ins.drum(s.sfxBus, t + 0.74, 'grande', 0.75 * v);
+    s.ins.drum(s.sfxBus, t + 0.74, 'gong', 0.35 * v);
+    s.ins.horn(s.sfxBus, t + 0.76, midi('D4'), 1.2, 0.12 * v, { rev: 0.5 });
+    s.ins.horn(s.sfxBus, t + 0.76, midi('A4'), 1.2, 0.1 * v, { rev: 0.5 });
+    s.ins.choir(s.sfxBus, t + 0.76, [midi('D3'), midi('A3')], 1.8, 0.12 * v, { attack: 0.25 });
+  },
   // Mientras carga: un amanecer en las trincheras (coro grave que crece, un
   // tambor lejano y una llamada de cuerno suave que se pierde a lo lejos)
   carga: (s, t, v) => {
@@ -32756,6 +33183,14 @@ class UI {
           mark.style.background = rgbToCss(p.color);
         }
         li.querySelector('.nom-txt').textContent = p.name;
+        // Jugadores de verdad: su nivel junto al nombre
+        if (p.isHuman && p.level) {
+          const lv = document.createElement('span');
+          lv.className = 'lb-nivel';
+          lv.title = `Nivel ${p.level}`;
+          lv.textContent = `Nv ${p.level}`;
+          li.querySelector('.nom').insertBefore(lv, li.querySelector('.marcas'));
+        }
         this._lbRows.set(p.id, li);
       }
       const rank = alive.indexOf(p) + 1;
