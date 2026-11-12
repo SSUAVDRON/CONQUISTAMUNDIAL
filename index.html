@@ -28,13 +28,13 @@
       "./src/guia.js": "./src/guia.js?v=2ce651e6a0",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
       "./src/home.js": "./src/home.js?v=98c7641f30",
-      "./src/icons.js": "./src/icons.js?v=d51a108086",
+      "./src/icons.js": "./src/icons.js?v=f9f7cb7823",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=370e36db66",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=c9c00ff77d",
-      "./src/loading.js": "./src/loading.js?v=60190a41c1",
-      "./src/main.js": "./src/main.js?v=296926a7af",
+      "./src/loading.js": "./src/loading.js?v=fc4c6cfb10",
+      "./src/main.js": "./src/main.js?v=dcc2d64bb9",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=eebaf66b1d",
       "./src/mecanicas.js": "./src/mecanicas.js?v=f6e2acf7ed",
@@ -64,11 +64,9 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=9021ac1924">
+  <link rel="stylesheet" href="css/estilo.css?v=1d3bc5e7d3">
 </head>
-<body>
-  <canvas id="lienzo"></canvas>
-
+<body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
@@ -78,6 +76,33 @@
       </linearGradient>
     </defs>
   </svg>
+
+  <!-- Arranque: se ve desde el primer pintado, mientras se prepara todo (main.js) -->
+  <div id="arranque" class="arranque" role="status" aria-live="polite">
+    <div class="arr-fondo" aria-hidden="true"><span class="arr-rejilla"></span><span class="arr-halo"></span></div>
+    <div class="arr-centro">
+      <div class="logo logo-grande arr-logo" role="img" aria-label="Trinchera">
+        <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
+          <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
+          <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-texto">TRINCHERA</span>
+      </div>
+      <div class="arr-mapa" aria-hidden="true">
+        <canvas id="arr-lienzo" width="480" height="230"></canvas>
+        <span class="arr-velo"><span class="arr-escaner"></span></span>
+        <span class="arr-radar"></span>
+      </div>
+      <div class="arr-barra" aria-hidden="true"><span id="arr-progreso"></span></div>
+      <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
+      <p id="arr-consejo" class="arr-consejo"></p>
+    </div>
+  </div>
+
+  <canvas id="lienzo"></canvas>
 
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">

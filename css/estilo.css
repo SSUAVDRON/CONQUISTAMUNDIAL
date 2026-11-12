@@ -3747,3 +3747,104 @@ body.sin-animaciones .despliegue { animation: none; }
 @media (max-width: 720px) {
   #aviso { z-index: 30; width: max-content; max-width: calc(100vw - 24px); padding: 8px 14px; border-radius: 14px; font-size: 13px; line-height: 1.3; }
 }
+
+/* ---------- Arranque: antes del menú, mientras se prepara todo ---------- */
+.arranque {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%);
+  color: var(--texto-1);
+  overflow: hidden;
+  transition: opacity 0.55s ease, visibility 0s linear 0.55s;
+}
+.arranque[hidden] { display: none; }
+.arranque.saliendo { opacity: 0; visibility: hidden; pointer-events: none; }
+.arranque.saliendo .arr-centro { transform: scale(1.05) translateY(-8px); transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.arr-fondo { position: absolute; inset: 0; pointer-events: none; }
+/* Rejilla de mapa de campaña que deriva despacio */
+.arr-rejilla {
+  position: absolute;
+  inset: -48px;
+  background-image: linear-gradient(rgba(242, 179, 61, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(242, 179, 61, 0.055) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 15%, transparent 70%);
+  animation: arrDeriva 16s linear infinite;
+}
+@keyframes arrDeriva { to { transform: translate(48px, 48px); } }
+.arr-halo { position: absolute; left: 50%; top: 40%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; background: radial-gradient(circle, rgba(242, 179, 61, 0.13), transparent 62%); animation: arrLatido 3.4s ease-in-out infinite; }
+@keyframes arrLatido { 50% { transform: scale(1.08); opacity: 0.7; } }
+.arr-centro { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px, 100%); text-align: center; }
+.arr-logo { gap: 10px; animation: arrEntra 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.arr-logo .logo-marca { width: 92px; height: 92px; filter: drop-shadow(0 8px 22px rgba(242, 179, 61, 0.25)); }
+.arr-logo .logo-texto { font-size: clamp(38px, 9vw, 60px); }
+/* El mundo que se va cartografiando: radar mientras carga y, con el mapa ya
+   leído, un velo que se retira con una línea de escáner dorada */
+.arr-mapa {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 480 / 230;
+  border-radius: 16px;
+  overflow: hidden;
+  background: repeating-radial-gradient(circle at 50% 50%, transparent 0 38px, rgba(242, 179, 61, 0.07) 39px 40px), #0c1930;
+  border: 1px solid rgba(242, 179, 61, 0.24);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 46px rgba(242, 179, 61, 0.08);
+  animation: arrEntra 0.7s 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.arr-mapa canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.25s; }
+.arranque.con-mapa .arr-mapa canvas { opacity: 1; }
+.arr-velo { position: absolute; inset: 0; background: #0c1930; }
+.arranque.con-mapa .arr-velo { transform: translateX(101%); transition: transform 1.7s cubic-bezier(0.45, 0.05, 0.25, 1); }
+.arr-escaner { position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #ffd36b; box-shadow: 0 0 14px 4px rgba(242, 179, 61, 0.55), 0 0 44px 12px rgba(242, 179, 61, 0.16); opacity: 0; }
+.arranque.con-mapa .arr-escaner { opacity: 1; }
+.arr-radar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 140%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(242, 179, 61, 0.22), rgba(242, 179, 61, 0) 16%);
+  transform: translate(-50%, -50%);
+  animation: arrGira 2.4s linear infinite;
+  transition: opacity 0.9s;
+}
+.arranque.con-mapa .arr-radar { opacity: 0; }
+@keyframes arrGira { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* Barra: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
+.arr-barra { position: relative; width: 100%; height: 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); animation: arrEntra 0.7s 0.2s both; }
+.arr-barra span { display: block; height: 100%; transform-origin: left center; transform: scaleX(0.02); background: linear-gradient(90deg, #d99a2b, #ffd36b); box-shadow: 0 0 12px rgba(242, 179, 61, 0.6); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); }
+.arr-barra::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: translateX(-100%); animation: arrBrillo 1.6s ease-in-out infinite; }
+@keyframes arrBrillo { to { transform: translateX(340%); } }
+.arr-paso { margin: 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
+.arr-paso.cambia { animation: arrTexto 0.35s ease-out; }
+@keyframes arrTexto { from { opacity: 0; transform: translateY(5px); } }
+.arr-consejo { margin: 4px 0 0; padding: 10px 14px; max-width: 440px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 13.5px; line-height: 1.45; color: var(--texto-1); animation: arrEntra 0.7s 0.3s both; }
+.arr-consejo:empty { visibility: hidden; }
+.arr-consejo::before { content: "Consejo · "; color: var(--oro-400); font-weight: 700; }
+@keyframes arrEntra { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+@media (max-height: 560px) {
+  .arr-centro { gap: 10px; }
+  .arr-mapa { width: min(100%, 360px); }
+  .arr-logo .logo-marca { width: 64px; height: 64px; }
+  .arr-consejo { display: none; }
+}
+
+/* El menú entra cuando se va el arranque: cabecera desde arriba y el contenido escalonado */
+#inicio.entrada .ini-barra { animation: iniBaja 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+#inicio.entrada .vista:not([hidden]) > * { animation: iniSube 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(2) { animation-delay: 0.08s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(3) { animation-delay: 0.16s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(4) { animation-delay: 0.24s; }
+#inicio.entrada .vista:not([hidden]) > :nth-child(n+5) { animation-delay: 0.3s; }
+@keyframes iniBaja { from { opacity: 0; transform: translateY(-18px); } }
+@keyframes iniSube { from { opacity: 0; transform: translateY(20px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .arranque, .arranque *, .arranque *::before, .arranque *::after, #inicio.entrada * { animation: none !important; transition: none !important; }
+}
+body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { animation: none !important; }

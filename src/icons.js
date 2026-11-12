@@ -1121,6 +1121,18 @@ function flagSprite() {
   return flagImage && flagImage.complete && flagImage.naturalWidth ? flagImage : null;
 }
 
+/** Promesa que se cumple cuando la imagen de las banderas está lista (o falla: no bloquea). */
+export function loadFlags() {
+  flagSprite();
+  const img = flagImage;
+  if (!img || (img.complete && img.naturalWidth)) return Promise.resolve();
+  if (typeof img.decode === 'function') return img.decode().catch(() => {});
+  return new Promise((resolve) => {
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  });
+}
+
 /** ¿Está ya cargada la imagen con todas las banderas? */
 export function flagReady() {
   return !!flagSprite();

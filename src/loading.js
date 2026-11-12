@@ -28,6 +28,9 @@ export const TIPS = [
   'Los antimisiles tardan en construirse: no esperes a ver el misil.',
   'Pulsa V para minimizar el panel de abajo y ver más mapa.',
   'Para un puerto basta con hacer clic cerca de tu costa.',
+  'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar, se navegan y admiten puertos en sus orillas.',
+  'Al otro lado de un río solo se llega en barco: necesitas un puerto.',
+  'Los edificios están en tres grupos: Economía, Defensa y Ataque.',
 ];
 
 /** Espera a que el navegador pinte (para que la barra avance de verdad). */
@@ -67,4 +70,47 @@ export async function withLoading(title, steps, { minMs = 1300 } = {}) {
     }, 350);
   }
   return result;
+}
+
+/**
+ * Pantalla de arranque (#arranque, en el HTML desde el principio): pasos con
+ * su texto, la barra (con transform: sigue avanzando aunque el paso bloquee
+ * el hilo principal) y el mapa del mundo que se va descubriendo.
+ */
+export function bootLoader() {
+  const box = $('arranque');
+  if (!box) return null;
+  const bar = $('arr-progreso');
+  const text = $('arr-paso');
+  const started = performance.now();
+  $('arr-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  return {
+    /** Nuevo paso: la barra va hasta `to` (0-1) en unos `ms` (lo que suele tardar). */
+    step(label, to, ms = 500) {
+      text.textContent = label;
+      text.classList.remove('cambia');
+      void text.offsetWidth;
+      text.classList.add('cambia');
+      bar.style.transitionDuration = `${ms}ms`;
+      bar.style.transform = `scaleX(${Math.max(0.02, Math.min(1, to))})`;
+    },
+    /** Pinta el mapa en su lienzo y lo descubre con el escáner. */
+    map(draw) {
+      try {
+        draw($('arr-lienzo'));
+        box.classList.add('con-mapa');
+      } catch {
+        /* sin vista previa: sigue el radar */
+      }
+    },
+    /** Último paso y salida (un mínimo para que no sea un parpadeo). */
+    async done(minMs = 1500) {
+      this.step('¡A las trincheras!', 1, 300);
+      await wait(Math.max(260, minMs - (performance.now() - started)));
+      box.classList.add('saliendo');
+      document.body.classList.remove('arrancando');
+      await wait(560);
+      box.hidden = true;
+    },
+  };
 }

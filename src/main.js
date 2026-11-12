@@ -9,12 +9,13 @@ import { Input } from './input.js';
 import { UI } from './ui.js';
 import { Home } from './home.js';
 import { hexToRgb } from './colors.js';
-import { installFlagSprite } from './icons.js';
+import { installFlagSprite, loadFlags } from './icons.js';
 import { hashString } from './rng.js';
 import { fmtTroops, formatNumber, formatPercent, formatTime } from './format.js';
 
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
-import { withLoading } from './loading.js';
+import { bootLoader, withLoading } from './loading.js';
+import { paintMapPreview, paintTerrain } from './terreno.js';
 import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
@@ -794,7 +795,7 @@ function settlePendingRanked() {
   r.pendiente = null;
   saveProfile(profile);
   pushRankRow();
-  setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 1200);
+  whenBooted(() => setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 500));
 }
 
 /** Cambio de rango en el resumen de la partida: insignia, liga, barra de PL y el motivo. */
@@ -1669,20 +1670,79 @@ setErrorNotifier(() => {
 });
 installGlobalHandlers();
 
-// El menú se pinta enseguida; el mapa de fondo (grande) se prepara justo después
+// Arranque: la pantalla de carga (ya en el HTML) cubre todo mientras se
+// preparan las fuentes, las banderas, el mapa del mundo, su terreno, la
+// cuenta, el menú y la partida de fondo; después entra el menú. Lo que salía
+// al abrir (un reto, una clasificatoria a medias…) espera a que acabe.
 state.demo = true;
-// La cabecera (tu ficha, nivel y monedas) y el saludo, ya desde el primer
-// fotograma: antes salían vacíos hasta que se cargaba la partida de fondo
-home.renderChip();
-home.renderHero();
-// Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
-settlePendingRanked();
-requestAnimationFrame(() => setTimeout(() => {
-  // El resto de apartados (perfil, aspecto, progreso, clasificación…), justo
-  // después del primer pintado: antes quedaban vacíos hasta volver de una partida
-  home.renderAll();
-  if (!state.game) startDemo({ background: true });
-}, 30));
+state.booted = false;
+const afterBoot = [];
+/** Ejecuta `fn` cuando haya terminado la pantalla de arranque (o ya). */
+function whenBooted(fn) {
+  if (state.booted) fn();
+  else afterBoot.push(fn);
+}
+async function boot() {
+  const loader = bootLoader();
+  const paint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  const atMost = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
+  try {
+    loader?.step('Preparando el cuartel…', 0.1, 400);
+    await atMost(document.fonts?.ready, 1200);
+    loader?.step('Izando las banderas…', 0.2, 400);
+    await atMost(loadFlags(), 2000);
+    loader?.step('Cartografiando el mundo…', 0.42, 900);
+    await paint();
+    const { map } = loadRealMap('mundo');
+    loader?.map((canvas) => {
+      const data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river, lat: map.lat };
+      paintMapPreview(canvas, data, [0, 0, map.width, Math.min(map.height, Math.round((map.width * canvas.height) / canvas.width))]);
+    });
+    loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300);
+    await paint();
+    await paint();
+    paintTerrain(map); // queda guardado: la partida de fondo lo reutiliza
+    loader?.step('Sincronizando tu perfil…', 0.74, 500);
+    await paint();
+    await atMost(syncAtBoot(), 2500);
+    loader?.step('Abriendo el cuartel general…', 0.84, 500);
+    await paint();
+    home.renderChip();
+    home.renderHero();
+    // Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
+    settlePendingRanked();
+    home.renderAll();
+    loader?.step('Desplegando la partida de fondo…', 0.96, 700);
+    await paint();
+    if (!state.game) startDemo({ background: true });
+    await paint();
+  } catch (err) {
+    reportError(err, 'arranque');
+    // Que el menú salga igualmente
+    try {
+      home.renderAll();
+      if (!state.game) startDemo({ background: true });
+    } catch (err2) {
+      reportError(err2, 'arranque (menú)');
+    }
+  } finally {
+    await loader?.done();
+    state.booted = true;
+    const inicio = document.getElementById('inicio');
+    inicio.classList.add('entrada');
+    setTimeout(() => inicio.classList.remove('entrada'), 1500);
+    for (const fn of afterBoot.splice(0)) {
+      try {
+        fn();
+      } catch (err) {
+        reportError(err, 'tras el arranque');
+      }
+    }
+  }
+}
+/** Al arrancar, con la cuenta: trae el perfil guardado (ver cuentas). */
+async function syncAtBoot() {}
+boot();
 requestAnimationFrame(frame);
 
 // Multijugador: room de Claude o, fuera de Claude, pestañas de este navegador
@@ -1700,7 +1760,7 @@ const startParams = new URLSearchParams(location.search);
       /* sin history: no pasa nada */
     }
   }
-  if (reto) setTimeout(() => offerChallenge(reto), 900);
+  if (reto) whenBooted(() => setTimeout(() => offerChallenge(reto), 400));
 }
 const transportOpts = (() => {
   const b = Number(startParams.get('b'));
