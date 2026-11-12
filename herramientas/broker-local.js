@@ -39,6 +39,7 @@ export function startBroker(port = 1884) {
     socket.on('close', drop);
     socket.on('error', drop);
     socket.on('data', (data) => {
+      if (c.frozen) return; // conexión «zombi»: abierta, pero ya no pasa nada
       c.wsBuf = Buffer.concat([c.wsBuf, data]);
       for (;;) {
         const f = readFrame(c.wsBuf);
@@ -63,7 +64,7 @@ export function startBroker(port = 1884) {
   function deliver(topic, payload, retain) {
     const bytes = publishPacket(topic, payload, retain);
     for (const c of clients) {
-      if (!c.alive) continue;
+      if (!c.alive || c.frozen) continue;
       for (const f of c.subs) {
         if (topicMatches(f, topic)) {
           sendFrame(c.socket, bytes, 2);
@@ -135,6 +136,10 @@ export function startBroker(port = 1884) {
         port: p,
         url: `ws://localhost:${p}/mqtt`,
         clients,
+        /** Pruebas: deja «colgadas» las conexiones abiertas ahora (ni responden ni reciben); las nuevas van bien. */
+        freeze: () => {
+          for (const c of clients) c.frozen = true;
+        },
         close: () =>
           new Promise((r) => {
             for (const c of clients) c.socket.destroy();

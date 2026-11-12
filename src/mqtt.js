@@ -110,12 +110,18 @@ export function parsePackets(buf) {
 }
 
 /**
- * Cliente con reconexión: si se corta, vuelve a conectar (1, 2, 4… hasta 10 s)
+ * Cliente con reconexión: si se corta, vuelve a conectar (0,5, 1, 2… hasta 5 s)
  * y se vuelve a suscribir. Mientras está desconectado, publicar no hace nada
  * (QoS 0): las salas repiten lo importante (presencia cada 1,5 s).
+ *
+ * Conexiones «zombis» (el móvil cambia de wifi a datos, se suspende la
+ * pestaña…): el WebSocket puede seguir abierto sin que llegue nada. Un
+ * vigilante reconecta si pasa el 70 % de `keepAlive` sin recibir ni un byte (el
+ * latido trae respuesta cada 3 s), y al volver a la pestaña o
+ * recuperar la red se comprueba en el momento con un PINGREQ.
  */
 export class MqttClient {
-  constructor(url, { clientId, keepAlive = 20, WebSocketImpl = globalThis.WebSocket } = {}) {
+  constructor(url, { clientId, keepAlive = 10, WebSocketImpl = globalThis.WebSocket } = {}) {
     this.url = url;
     this.clientId = clientId || `trinchera-${Math.random().toString(36).slice(2, 12)}`;
     this.keepAlive = keepAlive;
@@ -130,6 +136,10 @@ export class MqttClient {
     this.nextId = 1;
     this.retry = 0;
     this._ping = null;
+    this._timer = null; // reconexión programada
+    this._probe = null; // comprobación tras volver a la pestaña
+    this.lastRx = 0;
+    this._wake = null;
   }
 
   /** Primera conexión: se resuelve con CONNACK o falla (timeout, error o rechazo). */
@@ -162,8 +172,19 @@ export class MqttClient {
     }
     this.ws = ws;
     ws.binaryType = 'arraybuffer';
+    // Al reconectar no hay tiempo límite de connect(): si no llega el CONNACK, otro intento
+    clearTimeout(this._hung);
+    if (!onFirst) {
+      this._hung = setTimeout(() => {
+        if (this.ws === ws && !this.isConnected && !this.closed) {
+          this._drop();
+          this._schedule();
+        }
+      }, Math.max(4000, this.keepAlive * 800));
+    }
     ws.onopen = () => ws.send(connectPacket({ clientId: this.clientId, keepAlive: this.keepAlive }));
     ws.onmessage = (e) => {
+      this.lastRx = Date.now();
       const chunk = new Uint8Array(e.data instanceof ArrayBuffer ? e.data : e.data.buffer || e.data);
       const all = this.buf.length ? concat([this.buf, chunk]) : chunk;
       const { packets, rest } = parsePackets(all);
@@ -192,9 +213,15 @@ export class MqttClient {
       }
       this.isConnected = true;
       this.retry = 0;
+      clearTimeout(this._hung);
       if (this.filters.size) this._send(subscribePacket(this._id(), [...this.filters]));
       clearInterval(this._ping);
-      this._ping = setInterval(() => this._send(PINGREQ), Math.max(5, this.keepAlive * 0.6) * 1000);
+      // Latido cada 3 s; si pasan 7 s sin recibir nada (dos latidos sin respuesta), está muerta
+      this._ping = setInterval(() => {
+        if (Date.now() - this.lastRx > this.keepAlive * 700) this._reconnect();
+        else this._send(PINGREQ);
+      }, Math.max(1, this.keepAlive * 0.3) * 1000);
+      this._bindWake();
       onFirst?.();
       this._emitState(true);
     } else if (p.type === 'publish') {
@@ -202,18 +229,66 @@ export class MqttClient {
     }
   }
 
-  _schedule() {
+  _schedule(wait = Math.min(5000, 500 * 2 ** this.retry++) * (0.8 + Math.random() * 0.4)) {
     if (this.closed) return;
-    const wait = Math.min(10000, 1000 * 2 ** this.retry++);
-    setTimeout(() => {
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => {
+      this._timer = null;
       if (!this.closed && !this.isConnected) this._open(null);
     }, wait);
+  }
+
+  /** Cierra la conexión actual (muerta o sospechosa) y vuelve a conectar enseguida. */
+  _reconnect() {
+    if (this.closed) return;
+    const was = this.isConnected;
+    this._drop();
+    if (was) this._emitState(false);
+    this.retry = 0;
+    this._schedule(0);
+  }
+
+  /**
+   * Comprobación inmediata (al volver a la pestaña o recuperar la red): si
+   * está conectado, un PINGREQ que debe tener respuesta en 3 s; si no, se
+   * reconecta ya, sin esperar al siguiente intento programado.
+   */
+  check() {
+    if (this.closed) return;
+    if (!this.isConnected) {
+      if (!this.ws) this._schedule(0);
+      return;
+    }
+    const sent = Date.now();
+    this._send(PINGREQ);
+    clearTimeout(this._probe);
+    this._probe = setTimeout(() => {
+      this._probe = null;
+      if (this.isConnected && this.lastRx < sent) this._reconnect();
+    }, 3000);
+  }
+
+  _bindWake() {
+    if (this._wake || typeof window === 'undefined' || !window.addEventListener) return;
+    const onVisible = () => {
+      if (typeof document === 'undefined' || !document.hidden) this.check();
+    };
+    const onOnline = () => this.check();
+    window.addEventListener('online', onOnline);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible);
+    this._wake = () => {
+      window.removeEventListener('online', onOnline);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible);
+    };
   }
 
   _drop() {
     this.isConnected = false;
     clearInterval(this._ping);
     this._ping = null;
+    clearTimeout(this._probe);
+    this._probe = null;
+    clearTimeout(this._hung);
     this.buf = new Uint8Array(0);
     if (this.ws) {
       this.ws.onopen = this.ws.onmessage = this.ws.onerror = this.ws.onclose = null;
@@ -275,6 +350,9 @@ export class MqttClient {
     if (this.closed) return;
     this.closed = true;
     this._send(DISCONNECT);
+    clearTimeout(this._timer);
+    this._wake?.();
+    this._wake = null;
     this._drop();
   }
 }

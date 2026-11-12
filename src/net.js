@@ -64,17 +64,62 @@ export async function connectTransport({ prefer = null, brokerUrl = null, peerId
       }
     }
     const order = Number.isInteger(prefer) && BROKERS[prefer] ? [prefer, ...BROKERS.keys()].filter((v, i, a) => a.indexOf(v) === i) : [...BROKERS.keys()];
-    for (const i of order) {
-      try {
-        const client = await new MqttClient(BROKERS[i], { clientId: `trinchera-${tabPeerId()}-${Math.random().toString(36).slice(2, 6)}` }).connect(5000);
-        return new MqttTransport(client, i, null, pid);
-      } catch {
-        /* siguiente servidor */
-      }
-    }
+    const won = await firstByPreference(order.map((i) => () => new MqttClient(BROKERS[i], { clientId: `trinchera-${tabPeerId()}-${Math.random().toString(36).slice(2, 6)}` }).connect(5000)));
+    if (won) return new MqttTransport(won.value, order[won.index], null, pid);
   }
   if (typeof BroadcastChannel !== 'undefined') return new LocalTransport(pid);
   return null;
+}
+
+/**
+ * Lanza todos los intentos a la vez y se queda con el primero de la lista que
+ * funcione: el n.º 2 solo gana si el n.º 1 ya ha fallado (todos los jugadores
+ * deben acabar en el mismo servidor para verse). Así, si el preferido no
+ * responde, no hay que esperar 5 s por cada uno, uno detrás de otro. Los que
+ * conectan y no se usan se cierran. Devuelve { value, index } o null.
+ */
+export function firstByPreference(starts) {
+  return new Promise((resolve) => {
+    const n = starts.length;
+    const state = new Array(n).fill('wait');
+    const values = new Array(n);
+    let done = false;
+    const settle = () => {
+      if (done) return;
+      for (let k = 0; k < n; k++) {
+        if (state[k] === 'wait') return; // uno preferido aún puede llegar
+        if (state[k] === 'ok') {
+          done = true;
+          for (let j = 0; j < n; j++) if (j !== k && state[j] === 'ok') values[j]?.close?.();
+          resolve({ value: values[k], index: k });
+          return;
+        }
+      }
+      done = true;
+      resolve(null);
+    };
+    starts.forEach((start, k) => {
+      let p;
+      try {
+        p = Promise.resolve(start());
+      } catch (err) {
+        p = Promise.reject(err);
+      }
+      p.then(
+        (v) => {
+          values[k] = v;
+          state[k] = 'ok';
+          if (done) v?.close?.(); // llegó tarde: ya se eligió otro
+          settle();
+        },
+        () => {
+          state[k] = 'fail';
+          settle();
+        },
+      );
+    });
+    if (!n) resolve(null);
+  });
 }
 
 /** Etiqueta de esta pestaña dentro de un canal (o null si aún no se sabe). */
@@ -229,9 +274,14 @@ export class PeerChannel {
       this._send({ t: 'p', presence: this.mine });
       this._expire();
     }, HEARTBEAT_MS);
-    // Al volver la conexión, se anuncia de nuevo (los demás responden con la suya)
+    // Al volver la conexión, se anuncia de nuevo (los demás responden con la suya).
+    // Si el corte era nuestro, los demás no se han ido: se les da margen para
+    // volver a dar señales antes de quitarlos de la lista.
     this._unConn = bus.onConnection((on) => {
-      if (on && this.open) this._send({ t: 'hola', presence: this.mine });
+      if (!on || !this.open) return;
+      const grace = Date.now() - STALE_MS - 1;
+      for (const info of this.others.values()) info.lastSeen = Math.max(info.lastSeen, grace);
+      this._send({ t: 'hola', presence: this.mine });
     });
     this._onHide = () => this.leave();
     if (hasWindow) window.addEventListener('pagehide', this._onHide);
@@ -267,6 +317,8 @@ export class PeerChannel {
   }
 
   _expire() {
+    // Sin conexión no sabemos nada de los demás: no se les da por ido
+    if (!this.bus.connected()) return;
     const now = Date.now();
     const left = [];
     const stale = [];

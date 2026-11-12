@@ -63,7 +63,16 @@ const TURN_TICKS = 2; // ticks por mensaje del anfitrión (≈5 mensajes/s)
 const MAX_MSG_BYTES = 3500; // por debajo del límite de 4 KiB
 const HASH_EVERY = 100; // ticks entre comprobaciones de sincronía
 const RESEND_AFTER_MS = 700;
+const GAP_RESEND_MS = 300; // falta un turno pero ya llegan los siguientes: se pide enseguida
+const RESEND_MAX_TURNS = 200; // por petición (los turnos vacíos ocupan ~10 bytes)
 const INTENT_RETRY_MS = 1500;
+// Reproducción suave del invitado: los turnos llegan de dos en dos (y con los
+// vaivenes de la red); se juegan de uno en uno cada 100 ms con un pequeño
+// colchón, y si se acumulan muchos (pestaña en segundo plano, corte) se
+// recuperan de golpe.
+const CATCHUP_TURNS = 10;
+const SMOOTH_BUFFER = 2;
+export const OFFLINE_NOTE = 'Sin conexión: reconectando…';
 const LOAD_WAIT_MS = 20000; // el anfitrión espera como mucho esto a que carguen todos
 
 /**
@@ -609,7 +618,7 @@ export class NetSync {
    * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
    * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, now = () => performance.now() }) {
     this.room = room;
     this.game = game;
     this.isHost = isHost;
@@ -624,6 +633,9 @@ export class NetSync {
     this.hostGone = false;
     this.onHostLeft = null;
     this.myPeer = myPeer;
+    /** true en el juego: el invitado reproduce los turnos a ritmo constante (ver CATCHUP_TURNS). */
+    this.smooth = smooth;
+    this.now = now;
 
     if (isHost) {
       this.queue = []; // acciones para el próximo tick
@@ -632,7 +644,7 @@ export class NetSync {
       this.batch = [];
       this.hashes = new Map();
       this.acc = 0;
-      this.last = performance.now();
+      this.last = now();
       this.lastResend = new Map();
       this.unsubs.push(room.on('intent', (m) => this._onIntent(m)));
       this.unsubs.push(room.on('resend', (m) => this._onResend(m)));
@@ -640,7 +652,7 @@ export class NetSync {
       // Antes del primer turno, espera a que todos hayan cargado el mapa (si
       // no, quien carga despacio pierde parte del despliegue)
       this.waiting = new Set([...peerToPlayer.keys()].filter((peer) => peer !== hostPeer && peer !== myPeer));
-      this.waitStart = performance.now();
+      this.waitStart = now();
       this.unsubs.push(room.on('cargado', (m) => this.waiting.delete(m.peer)));
       this.unsubs.push(room.onPeers((c) => {
         for (const p of c.left) this.waiting.delete(p.peer);
@@ -651,8 +663,10 @@ export class NetSync {
     } else {
       this.turns = new Map();
       this.outbox = new Map(); // uid → { intent, sentAt }
-      this.lastAdvance = performance.now();
+      this.lastAdvance = now();
       this.lastResendAsk = -Infinity;
+      this.playLast = now();
+      this.playAcc = TICK_MS; // el primer turno se juega en cuanto llega
       this.unsubs.push(room.on('turn', (m) => this._onTurn(m)));
       // Hashes del anfitrión, para que el invitado sepa si se ha desincronizado
       this.myHashes = new Map();
@@ -687,7 +701,7 @@ export class NetSync {
     if (this.isHost) {
       this.queue.push({ ...clean, playerId: this.myPlayerId, u });
     } else {
-      this.outbox.set(u, { intent: clean, sentAt: performance.now() });
+      this.outbox.set(u, { intent: clean, sentAt: this.now() });
       this.room.emit('intent', { u, i: clean }).catch(() => {});
     }
   }
@@ -707,12 +721,12 @@ export class NetSync {
   _onResend(m) {
     const from = m.data && m.data.from;
     if (!Number.isInteger(from)) return;
-    const now = performance.now();
-    if (now - (this.lastResend.get(m.peer) ?? -Infinity) < 400) return;
+    const now = this.now();
+    if (now - (this.lastResend.get(m.peer) ?? -Infinity) < 250) return;
     this.lastResend.set(m.peer, now);
     let turns = [];
     let bytes = 20;
-    for (let t = from; t <= this.game.ticks && t < from + 60; t++) {
+    for (let t = Math.max(from, this.game.ticks - 2999); t <= this.game.ticks && t < from + RESEND_MAX_TURNS; t++) {
       const entry = [t, this.history.get(t) || []];
       const size = JSON.stringify(entry).length;
       if (bytes + size > MAX_MSG_BYTES) break;
@@ -806,10 +820,30 @@ export class NetSync {
 
   // ---- bucle
 
+  /** ¿Se ha cortado nuestra conexión con el servidor? (el canal se reconecta solo) */
+  _offline() {
+    return typeof this.room.connected === 'function' && !this.room.connected();
+  }
+
+  /** Turnos seguidos listos para jugar a partir del siguiente tick. */
+  _ready(max = 64) {
+    let n = 0;
+    while (n < max && this.turns.has(this.game.ticks + 1 + n)) n++;
+    return n;
+  }
+
+  _playNext() {
+    const t = this.game.ticks + 1;
+    const intents = this.turns.get(t);
+    this.turns.delete(t);
+    this._guestStep(intents);
+  }
+
   /** Llamar en cada frame: avanza la simulación al ritmo que toque. */
   update() {
     if (this.game.phase === 'ended' || this.hostGone) return;
-    const now = performance.now();
+    const now = this.now();
+    const offline = this._offline();
     if (this.isHost) {
       if (this.waiting.size && now - this.waitStart < LOAD_WAIT_MS) {
         this.last = now;
@@ -821,6 +855,9 @@ export class NetSync {
         this.waiting.clear();
         this.status = '';
       }
+      // Sin conexión, el anfitrión sigue (los invitados piden lo que se pierda al volver)
+      if (offline) this.status = OFFLINE_NOTE;
+      else if (this.status === OFFLINE_NOTE) this.status = '';
       this.acc += Math.min(1000, now - this.last);
       this.last = now;
       let steps = 0;
@@ -832,13 +869,31 @@ export class NetSync {
       return;
     }
     let steps = 0;
-    while (this.turns.has(this.game.ticks + 1) && steps < 60) {
-      const t = this.game.ticks + 1;
-      const intents = this.turns.get(t);
-      this.turns.delete(t);
-      this._guestStep(intents);
-      steps++;
+    const ready = this._ready();
+    if (!this.smooth || ready > CATCHUP_TURNS) {
+      // Sin suavizado, o muy por detrás: todo lo que haya (hasta 60 por llamada),
+      // dejando el colchón para no quedarse sin turnos al momento siguiente
+      const keep = this.smooth ? SMOOTH_BUFFER : 0;
+      while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1)) {
+        this._playNext();
+        steps++;
+      }
+      this.playAcc = 0;
+    } else {
+      const dt = Math.min(250, Math.max(0, now - this.playLast));
+      if (!ready) this.playAcc = Math.min(TICK_MS, this.playAcc + dt); // el próximo, en cuanto llegue
+      else {
+        this.playAcc += dt;
+        // A ritmo normal, y algo más deprisa si se acumulan (hasta volver al colchón)
+        const every = ready <= SMOOTH_BUFFER ? TICK_MS : ready <= 5 ? TICK_MS * 0.9 : TICK_MS * 0.75;
+        while (this.playAcc >= every && steps < ready) {
+          this._playNext();
+          this.playAcc -= every;
+          steps++;
+        }
+      }
     }
+    this.playLast = now;
     if (steps) {
       this.lastAdvance = now;
       this.status = this.desynced
@@ -846,10 +901,18 @@ export class NetSync {
         : this.hostBackground
           ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
           : '';
-    } else if (now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
+    }
+    // Falta el siguiente turno pero ya llegan otros posteriores: se ha perdido
+    // un mensaje, se pide enseguida. Si no llega nada, se pide pasado un rato.
+    const gap = this.turns.size > 0 && !this.turns.has(this.game.ticks + 1);
+    if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !steps && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
       this.lastResendAsk = now;
       this.room.emit('resend', { from: this.game.ticks + 1 }).catch(() => {});
-      if (now - this.lastAdvance > 4000) this.status = 'Esperando al anfitrión…';
+    }
+    if (!steps) {
+      if (offline) this.status = OFFLINE_NOTE;
+      else if (now - this.lastAdvance > 4000) this.status = 'Esperando al anfitrión…';
+      else if (this.status === OFFLINE_NOTE) this.status = '';
     }
     for (const [u, entry] of this.outbox) {
       if (now - entry.sentAt > INTENT_RETRY_MS) {
