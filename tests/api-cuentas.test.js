@@ -107,6 +107,18 @@ test('perfil con versiones: leer, guardar y conflicto si otro dispositivo guard�
   assert.equal(grande.status, 413);
 });
 
+
+
+test('borrar la cuenta (con la contraseña): se van la sesión, el perfil y el correo queda libre', { skip }, async () => {
+  const email = correo();
+  const { token } = (await call('registro', { email, password: 'trinchera123' })).body;
+  await call('perfil_guardar', { token, perfil: { xp: 1 }, version: 0 });
+  assert.equal((await call('borrar_cuenta', { token, password: 'otra-cosa' })).status, 401);
+  assert.equal((await call('borrar_cuenta', { token, password: 'trinchera123' })).status, 200);
+  assert.equal((await call('yo', { token })).status, 401);
+  assert.equal((await call('entrar', { email, password: 'trinchera123' })).status, 401);
+});
+
 test('límite de cuentas nuevas desde una misma conexión', { skip }, async () => {
   let last = 0;
   for (let i = 0; i < 12; i++) last = (await call('registro', { email: correo(), password: 'trinchera123' })).status;

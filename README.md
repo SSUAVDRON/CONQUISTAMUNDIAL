@@ -313,7 +313,9 @@ las sesiones caducan a los 180 días sin uso; límites de 10 cuentas nuevas por
 hora y conexión, y de intentos de entrar por conexión y por correo; perfiles de
 64 KB como mucho; mismo mensaje si el correo no existe o la contraseña no es.
 El token va en el cuerpo JSON (Hostinger quita la cabecera `Authorization`).
-Recuperar la contraseña por correo llegará más adelante. Para comprobarla:
+Cada cuenta se puede borrar con `borrar_cuenta` (token y contraseña: se va
+todo lo suyo). Recuperar la contraseña por correo llegará más adelante. Para
+comprobarla:
 `curl -X POST -d '{"accion":"proveedores"}' https://tu-web/api/cuentas.php`
 debe responder `{"proveedores":[]}`.
 

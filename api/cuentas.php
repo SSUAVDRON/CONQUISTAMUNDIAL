@@ -13,6 +13,7 @@
 //   perfil_guardar { token, perfil, version }       → { ok, version }
 //                  409 { perfil, version } si otro dispositivo guardó antes
 //   proveedores    {}                               → { proveedores: [] }
+//   borrar_cuenta  { token, password }              → { ok }  (todo lo de la cuenta)
 //
 // Seguridad: contraseñas con password_hash (bcrypt) y de 8 caracteres como
 // mínimo; el token de sesión es aleatorio (32 bytes) y se guarda solo su
@@ -215,6 +216,22 @@ switch ($accion) {
         }
         $pdo->commit();
         responder(200, ['ok' => true, 'version' => $actual + 1]);
+    }
+
+    case 'borrar_cuenta': {
+        // Borra la cuenta y todo lo suyo; pide otra vez la contraseña
+        $cuenta = cuenta_de($pdo, $c, $cuerpo['token'] ?? null);
+        $password = contrasena($cuerpo['password'] ?? null, false);
+        if (!dentro_del_limite($pdo, 'ent:' . $ip, 3600, ENTRADAS_IP_HORA)) responder(429, ['error' => 'Demasiados intentos desde esta conexión. Prueba más tarde.']);
+        $st = $pdo->prepare('SELECT hash FROM cuentas WHERE id = ?');
+        $st->execute([$cuenta['id']]);
+        $f = $st->fetch();
+        if (!$f || !password_verify($password, $f['hash'])) responder(401, ['error' => 'La contraseña no es correcta.', 'campo' => 'password']);
+        $pdo->beginTransaction();
+        foreach (['perfiles', 'sesiones', 'cuenta_proveedores'] as $tabla) $pdo->prepare("DELETE FROM $tabla WHERE cuenta_id = ?")->execute([$cuenta['id']]);
+        $pdo->prepare('DELETE FROM cuentas WHERE id = ?')->execute([$cuenta['id']]);
+        $pdo->commit();
+        responder(200, ['ok' => true]);
     }
 
     default:
