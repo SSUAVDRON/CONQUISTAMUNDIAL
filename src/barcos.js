@@ -148,47 +148,42 @@ export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving =
     }
     ctx.restore();
   }
-  // Sombra
-  ctx.fillStyle = 'rgba(0, 10, 25, 0.4)';
-  ctx.beginPath();
-  ctx.ellipse(r * 0.08, r * 0.16, r * 1.05, r * 1.05, 0, 0, Math.PI * 2);
+  // Sin círculo alrededor: el casco, más grande, con la cubierta del color
+  // de su dueño y el contorno blanco si es tuyo
+  const L = r * 1.9;
+  const W = r * 0.56;
+  const hull = () => {
+    ctx.beginPath();
+    ctx.moveTo(L * 0.5, 0);
+    ctx.quadraticCurveTo(L * 0.3, -W * 0.5, L * 0.15, -W * 0.5);
+    ctx.lineTo(-L * 0.44, -W * 0.5);
+    ctx.lineTo(-L * 0.5, -W * 0.3);
+    ctx.lineTo(-L * 0.5, W * 0.3);
+    ctx.lineTo(-L * 0.44, W * 0.5);
+    ctx.lineTo(L * 0.15, W * 0.5);
+    ctx.quadraticCurveTo(L * 0.3, W * 0.5, L * 0.5, 0);
+    ctx.closePath();
+  };
+  // Sombra con la forma del casco (desplazada en pantalla, no con el rumbo)
+  ctx.save();
+  ctx.translate(r * 0.08, r * 0.14);
+  ctx.rotate(ang);
+  hull();
+  ctx.fillStyle = 'rgba(0, 10, 25, 0.38)';
   ctx.fill();
-  // Anillo del dueño
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.lineWidth = Math.max(1.5, r * 0.1);
-  ctx.strokeStyle = mine ? '#ffffff' : 'rgba(0, 0, 0, 0.75)';
-  ctx.stroke();
-  // Fondo
-  const inner = r * 0.78;
-  const bg = ctx.createRadialGradient(-inner * 0.3, -inner * 0.3, inner * 0.1, 0, 0, inner);
-  bg.addColorStop(0, '#24344a');
-  bg.addColorStop(1, '#0c1420');
-  ctx.beginPath();
-  ctx.arc(0, 0, inner, 0, Math.PI * 2);
-  ctx.fillStyle = bg;
-  ctx.fill();
+  ctx.restore();
   // Silueta del buque, girada con su rumbo
   ctx.save();
   ctx.rotate(ang);
-  const L = inner * 1.62;
-  const W = inner * 0.5;
-  ctx.beginPath();
-  ctx.moveTo(L * 0.5, 0);
-  ctx.quadraticCurveTo(L * 0.3, -W * 0.5, L * 0.15, -W * 0.5);
-  ctx.lineTo(-L * 0.44, -W * 0.5);
-  ctx.lineTo(-L * 0.5, -W * 0.3);
-  ctx.lineTo(-L * 0.5, W * 0.3);
-  ctx.lineTo(-L * 0.44, W * 0.5);
-  ctx.lineTo(L * 0.15, W * 0.5);
-  ctx.quadraticCurveTo(L * 0.3, W * 0.5, L * 0.5, 0);
-  ctx.closePath();
+  hull();
   ctx.fillStyle = '#c9d2da';
   ctx.fill();
-  ctx.fillStyle = '#8796a3';
-  ctx.fillRect(-L * 0.36, -W * 0.22, L * 0.62, W * 0.44);
+  ctx.lineWidth = Math.max(1.2, r * 0.09);
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = mine ? '#ffffff' : 'rgba(10, 16, 24, 0.7)';
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.fillRect(-L * 0.36, -W * 0.24, L * 0.62, W * 0.48);
   ctx.fillStyle = '#eef2f5';
   ctx.fillRect(-L * 0.1, -W * 0.3, L * 0.2, W * 0.6);
   const turret = (tx) => {

@@ -926,7 +926,8 @@ export class Game {
       const d = round + (Math.max(Math.abs(vx), Math.abs(vy)) - round) * CONFIG.growSquare;
       let stretch = 1;
       if (atk.focus >= 0 && round > 0) stretch = 1 + (1 - (vx * atk.dx + vy * atk.dy) / round) * CONFIG.growFocusStretch;
-      key = d * stretch + this.rng.float() * CONFIG.growRandom + terr - n * CONFIG.growSmooth;
+      // Las colonias, cada una con su forma (más o menos irregular)
+      key = d * stretch + this.rng.float() * (atk.attacker.growNoise ?? CONFIG.growRandom) + terr - n * CONFIG.growSmooth;
     } else {
       // Contra otro país: el frente entero avanza a la vez (por turnos de
       // llegada), casi sin azar; hacia el clic, ese lado algo antes
@@ -993,8 +994,12 @@ export class Game {
     const lossMul = Math.max(0.3, 1 + (attacker ? attacker.mods.attackCost : 0));
     if (!target) {
       // Las colonias ocupan tierra libre más rápido y con menos bajas
+      // Las colonias, a su ritmo propio y sin depender de cuántas tropas mandan
+      // (como una nación con un envío normal, × su ritmo de 0,8 a 1,3)
       const colony = attacker && attacker.weak;
-      const time = neutralTimeCost(T.tileCost, troops) / speed / (colony ? MECH.colonyNeutralSpeed : 1);
+      const time = colony
+        ? neutralTimeCost(T.tileCost, Math.max(troops, MECH.colonyRefTroops)) / speed / MECH.colonyNeutralSpeed / (attacker.pace || 1)
+        : neutralTimeCost(T.tileCost, troops) / speed;
       return { time, loss: (T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1), defLoss: 0 };
     }
     const mult = this.defenseMult(target, t);

@@ -66,7 +66,7 @@ test('tierra libre: un ejército grande gana más casillas por turno que uno de 
   assert.ok(big > mid * 1.6, `${mid} casillas con 6.600 frente a ${big} con 40.000 en 2,5 s`);
 });
 
-test('tierra libre al doble de bajas; las colonias pagan la mitad y van el doble de rápido', () => {
+test('tierra libre al doble de bajas; las colonias pagan menos y su ritmo no depende de su población', () => {
   const { map, game, a } = solo(5);
   const colony = game.addPlayer('Colonia', [0, 200, 0], false);
   colony.weak = true;
@@ -74,11 +74,37 @@ test('tierra libre al doble de bajas; las colonias pagan la mitad y van el doble
   const nation = game.conquestCost(plain, null, 5000, 10, a);
   const col = game.conquestCost(plain, null, 5000, 10, colony);
   assert.equal(nation.loss, 32);
-  assert.equal(col.loss, 16);
-  assert.ok(near(col.time, nation.time / 2));
+  assert.ok(near(col.loss, 32 * MECH.colonyNeutralLoss));
+  // Con pocas tropas, la colonia avanza como una nación con un envío normal
+  const poor = game.conquestCost(plain, null, 800, 10, colony);
+  const ref = game.conquestCost(plain, null, MECH.colonyRefTroops, 10, a);
+  assert.ok(near(poor.time, ref.time / MECH.colonyNeutralSpeed));
+  assert.ok(near(col.time, ref.time / MECH.colonyNeutralSpeed));
+  assert.ok(col.time < nation.time);
+  // Cada colonia lleva su ritmo propio
+  colony.pace = 1.25;
+  assert.ok(near(game.conquestCost(plain, null, 800, 10, colony).time, poor.time / 1.25));
   // La estimación del aviso usa las mismas bajas
   assert.equal(game.estimateAttack(a, 0, 3200).tiles, 100);
-  assert.equal(game.estimateAttack(colony, 0, 3200).tiles, 200);
+  assert.equal(game.estimateAttack(colony, 0, 3200).tiles, Math.floor(3200 / (32 * MECH.colonyNeutralLoss)));
+});
+
+test('cada colonia es algo distinta (ritmo y forma), sin gastar el azar de la partida', async () => {
+  const { ColonyBrain } = await import('../src/bot.js');
+  const { game } = solo(7);
+  const twin = solo(7).game;
+  const paces = new Set();
+  for (let i = 0; i < 6; i++) {
+    const c = game.addPlayer(`C${i}`, [0, 120, 0], false);
+    c.weak = true;
+    new ColonyBrain(game, c);
+    assert.ok(c.pace >= 0.8 && c.pace <= 1.3, `ritmo ${c.pace}`);
+    assert.ok(c.growNoise > 0);
+    paces.add(c.pace.toFixed(3));
+  }
+  assert.ok(paces.size >= 5, 'ritmos distintos');
+  // El azar de la partida sigue igual que en una gemela sin colonias nuevas
+  assert.equal(game.rng.float(), twin.rng.float());
 });
 
 test('contra países: más de 1,22× las tropas del defensor sigue acelerando, hasta ×3', () => {

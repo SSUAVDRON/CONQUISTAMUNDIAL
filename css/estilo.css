@@ -1424,7 +1424,8 @@ body.con-tutorial #eventos { top: auto; }
 #frentes.frentes { gap: 6px; }
 #combates .frente { padding: 6px 9px 7px; gap: 2px; border-radius: 10px; border-left-width: 3px; overflow: hidden; }
 #combates .f-lado { font-size: 11px; gap: 5px; }
-#combates .f-a, #combates .f-d { font-size: 15px; display: inline-block; }
+#combates .f-a, #combates .f-d { font-size: 13px; display: inline-block; }
+@media (max-width: 720px) { #combates .f-a, #combates .f-d { font-size: 12px; } }
 #combates .f-vs { font-size: 9.5px; padding: 1px 6px; }
 #combates .f-leyenda { font-size: 8.5px; margin-top: -2px; }
 #combates .f-barra { height: 4px; }

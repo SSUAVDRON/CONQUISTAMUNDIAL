@@ -101,8 +101,11 @@ export const MECH = {
   // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
   neutralTimeFloor: 1.25,
   // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
-  colonyNeutralLoss: 0.5,
-  colonyNeutralSpeed: 2,
+  colonyNeutralLoss: 0.38,
+  colonyNeutralSpeed: 1,
+  // PROPUESTA (doc-1.4): su velocidad en tierra libre no depende de cuánto
+  // mandan: como una nación con este envío (y su ritmo propio, ver bot.js)
+  colonyRefTroops: 6600,
   // Guerra entre países (sección 05.2)
   pvp: {
     lossBase: 0.463,

@@ -1717,30 +1717,13 @@ export class Renderer {
       }
       const sx = (s.x - camera.x) * z;
       const sy = (s.y - camera.y) * z;
-      // Insignia circular: grande para reconocerla, sin tapar demasiado mapa
+      // Casco grande para reconocerlo, sin aro ni zona de patrulla alrededor
+      // (la zona solo se ve al colocarlo, en la vista previa)
       const r = clamp(z * RES * 1.6, 11, 21);
       const len = r * 2;
       if (!this._onScreen(sx, sy, len * 2)) continue;
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
-      // Zona de patrulla de tus buques: círculo discontinuo y, si va hacia allí, la línea
-      if (p === game.human && ws.patrol >= 0) {
-        const [px, py] = camera.worldToScreen((ws.patrol % W) + 0.5, Math.floor(ws.patrol / W) + 0.5);
-        ctx.setLineDash([6, 6]);
-        ctx.beginPath();
-        ctx.arc(px, py, CONFIG.warshipPatrol * z, 0, Math.PI * 2);
-        ctx.lineWidth = 1.2;
-        ctx.strokeStyle = 'rgba(160, 210, 255, 0.35)';
-        ctx.stroke();
-        if (Math.hypot(px - sx, py - sy) > CONFIG.warshipPatrol * z) {
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(px, py);
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-          ctx.stroke();
-        }
-        ctx.setLineDash([]);
-      }
       drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
       this._maybeWake(s, len, 10);
       // Barra de vida, siempre a la vista
@@ -2504,11 +2487,12 @@ export class Renderer {
       const dx = Math.cos(f.ang);
       const dy = Math.sin(f.ang);
       const rgb = incoming ? '255, 90, 90' : mine ? '80, 230, 140' : prgb(atk.attacker);
-      const s = incoming || mine ? 8 : 5.5;
-      const lw = incoming || mine ? 3.2 : 2.4;
+      // Flechas discretas: marcan el sentido sin tapar lo que se ataca
+      const s = incoming || mine ? 6 : 4.2;
+      const lw = incoming || mine ? 2.4 : 1.8;
       for (let k = 0; k < 3; k++) {
         const u = (k + phase) / 3;
-        const off = 14 + u * 44;
+        const off = 10 + u * 33;
         const a = Math.sin(Math.PI * u) * (incoming || mine ? 0.95 : 0.7);
         const cx = sx + dx * off;
         const cy = sy + dy * off;
@@ -2527,33 +2511,40 @@ export class Renderer {
   }
 
   /**
-   * Marcador con las tropas en el frente de cada ataque entre el humano y otra
-   * nación: rojo si le atacan, verde si ataca él.
+   * Marcador con las tropas de cada ataque entre el humano y otra nación:
+   * rojo si le atacan, verde si ataca él. Pequeño y algo translúcido, y del
+   * lado del atacante (detrás del frente), para que se vea lo que se ataca.
    */
   _drawAttackBadges() {
     const { ctx, game, camera } = this;
     const human = game.human;
     if (!human || !game.attacks.length || this.options.badges === false) return;
+    const fs = COARSE ? 9 : 10;
+    const h = fs + 5;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.font = `700 ${fs}px system-ui, sans-serif`;
     for (const atk of game.attacks) {
       if (atk.done || atk.troops < 1 || !atk.targetId) continue;
       const incoming = atk.targetId === human.id;
       if (!incoming && atk.attacker !== human) continue;
       const f = this._front(atk);
       if (!f) continue;
-      const [x, y] = camera.worldToScreen(f.x, f.y);
+      let [x, y] = camera.worldToScreen(f.x, f.y);
+      if (f.ang !== null) {
+        x -= Math.cos(f.ang) * (h + 4);
+        y -= Math.sin(f.ang) * (h + 4);
+      }
       if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
       const text = `${incoming ? '🛡' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
       // Ancho por escalones: no «baila» cada vez que cambia una cifra
-      const w = Math.max(64, Math.ceil((ctx.measureText(text).width + 14) / 10) * 10);
+      const w = Math.max(40, Math.ceil((ctx.measureText(text).width + 10) / 8) * 8);
       ctx.beginPath();
-      ctx.roundRect(x - w / 2, y - 10, w, 20, 10);
-      ctx.fillStyle = incoming ? 'rgba(190, 40, 40, 0.92)' : 'rgba(24, 140, 78, 0.92)';
+      ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+      ctx.fillStyle = incoming ? 'rgba(170, 36, 36, 0.78)' : 'rgba(20, 120, 68, 0.78)';
       ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = incoming ? '#ffb3b3' : '#a8f5c6';
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = incoming ? 'rgba(255, 179, 179, 0.85)' : 'rgba(168, 245, 198, 0.85)';
       ctx.stroke();
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y + 0.5);

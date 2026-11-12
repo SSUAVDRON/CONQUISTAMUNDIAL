@@ -634,24 +634,44 @@ export class BotBrain {
 }
 
 /**
+ * Rasgo propio de una colonia (0-1), igual en todos los equipos y sin gastar
+ * el azar de la partida (así no cambia nada más de lo que pasa).
+ */
+function colonyTrait(game, id, k) {
+  let h = (Math.imul(game.seed ^ 0x9e3779b9, 31) ^ Math.imul(id + 1, 2654435761) ^ Math.imul(k + 1, 40503)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/**
  * Cerebro de una colonia: solo se expande por tierra libre. No ataca a las
  * naciones, no construye y no firma alianzas: es una presa fácil con oro.
+ * Se expande casi como una nación y sin esperar a llenar su población; cada
+ * una a su manera (cuánto manda, cada cuánto piensa, su ritmo y su forma).
  */
 export class ColonyBrain {
   constructor(game, player) {
     this.game = game;
     this.player = player;
     this.nextThink = 0;
-    this.thinkScale = 1.6;
     this.grudges = new Set();
+    const t = (k) => colonyTrait(game, player.id, k);
+    this.sendShare = 0.3 + t(0) * 0.15; // 30-45 % de sus tropas
+    this.thinkScale = 0.75 + t(1) * 0.5; // como una nación (0,85), con variación
+    player.pace = 0.8 + t(2) * 0.5; // ritmo propio en tierra libre (0,8-1,3)
+    player.growNoise = CONFIG.growRandom * (0.6 + t(3) * 2.4); // de pareja a irregular
   }
 
   think() {
     const g = this.game;
     const p = this.player;
-    // Lo barato primero: solo se mira la frontera si de verdad puede expandirse
-    if (!p.attacks.has(0) && p.population() > p.maxTroops() * 0.3 && g.hasWildNeighbor(p)) {
-      g.launchAttack(p, 0, Math.floor(p.troops * 0.2));
+    // Manda tropas en cuanto no tiene expansión o la que tiene se queda sin
+    // tropas (antes esperaba a tener el 30 % de su máximo y a que acabara la anterior)
+    const atk = p.attacks.get(0);
+    const starving = atk && atk.troops < Math.max(600, p.maxTroops() * 0.03);
+    if ((!atk || starving) && p.troops > 500 && g.hasWildNeighbor(p)) {
+      g.launchAttack(p, 0, Math.floor(p.troops * this.sendShare));
     }
   }
 
