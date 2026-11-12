@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="4a4ecb8 2026-11-12 19:01 UTC">
+<meta name="trinchera-build" content="1535daf 2026-11-12 20:45 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -509,16 +509,18 @@ button:disabled, button.principal:disabled { opacity: 0.55; cursor: default; fil
   left: 0;
   top: 0;
   will-change: transform;
+  transform-origin: 0 0; /* escala según el zoom (ui.js) desde su esquina */
   pointer-events: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgba(8, 12, 20, 0.92);
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: rgba(8, 12, 20, 0.9);
   border: 1px solid var(--panel-borde);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.3;
   white-space: nowrap;
   z-index: 10;
 }
-#tooltip b { font-size: 13px; }
+#tooltip b { font-size: 12px; }
 #tooltip .suave { color: var(--texto-suave); }
 
 /* ---------- Móvil ---------- */
@@ -2064,8 +2066,8 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #panel-jugador .cifras { grid-template-columns: 1.6fr 1fr 0.95fr 0.95fr; }
 
 /* Tooltip: punto estratégico cercano y estimación del ataque */
-#tooltip .tip-punto { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 260px; }
-#tooltip .tip-estim { margin-top: 4px; color: #ffd98a; font-size: 12px; }
+#tooltip .tip-punto { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 240px; white-space: normal; }
+#tooltip .tip-estim { margin-top: 2px; color: #ffd98a; font-size: 11px; }
 
 /* ===================================================== Mejoras estratégicas */
 /* Botón de desarrollo en la barra superior, con un punto si puedes investigar */
@@ -2811,7 +2813,7 @@ body.sin-animaciones .novedad { transition: none; }
 .frente.retirada .f-leyenda span:first-child { color: #ffe3a1; }
 
 /* Tooltip: las descripciones largas se ajustan a la caja (la primera línea, nombre y tropas, sin cortes) */
-#tooltip { white-space: normal; max-width: min(320px, calc(100vw - 16px)); line-height: 1.35; }
+#tooltip { white-space: normal; max-width: min(260px, calc(100vw - 16px)); line-height: 1.3; }
 #tooltip > b:first-child { white-space: nowrap; }
 #tooltip .tip-punto { max-width: none; }
 
@@ -5719,7 +5721,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "4a4ecb8 2026-11-12 19:01 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "1535daf 2026-11-12 20:45 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -6028,7 +6030,52 @@ function drawCargo(ctx, x, y, ang, len, color, mine, moving = 1, seed = 0) {
   ctx.restore();
 }
 
-return { drawTransport, drawWarship, drawCargo };
+/**
+ * Pesquero (doc-1.6): casco de madera con una franja del color del dueño y
+ * un mástil; faenando (`fishing`), quieto y con la red echada alrededor.
+ */
+function drawFishing(ctx, x, y, ang, len, color, mine, moving = 1, fishing = false, t = 0) {
+  if (len < 7) return tiny(ctx, x, y, ang, Math.max(5, len), color, mine);
+  const w = len * 0.42;
+  if (fishing) {
+    // La red: un círculo de puntos que gira despacio
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(t / 2400);
+    ctx.setLineDash([2, 3]);
+    ctx.lineWidth = Math.max(1, len * 0.07);
+    ctx.strokeStyle = 'rgba(235, 240, 245, 0.75)';
+    ctx.beginPath();
+    ctx.arc(0, 0, len * 0.95, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  if (!fishing) wakeLines(ctx, len, w, moving);
+  shadow(ctx, len, w);
+  hullPath(ctx, len, w, 0.42, 0.7);
+  ctx.fillStyle = '#8a5a32';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, len * 0.06);
+  ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
+  ctx.stroke();
+  // Franja del dueño y la cabina
+  ctx.fillStyle = color;
+  ctx.fillRect(-len * 0.3, -w * 0.22, len * 0.42, w * 0.44);
+  ctx.fillStyle = '#efe6d4';
+  ctx.fillRect(-len * 0.4, -w * 0.28, len * 0.16, w * 0.56);
+  // Mástil
+  ctx.fillStyle = '#3b2a1c';
+  ctx.beginPath();
+  ctx.arc(len * 0.18, 0, Math.max(1, len * 0.07), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+return { drawTransport, drawWarship, drawCargo, drawFishing };
 });
 __define('bot', function () {
 // IA de las naciones controladas por el ordenador. Cada bot tiene una
@@ -6036,6 +6083,9 @@ __define('bot', function () {
 // piensa cada pocos ticks.
 const { AREA, CONFIG, RES } = __require('config');
 const { TECHS, TECH_IDS, techAvailable } = __require('tecnologias');
+
+/** Turnos que puede tener el resumen de vecinos con el que decide un bot (ver Game.neighborSummary). */
+const BOT_SUMMARY_AGE = 10;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -6072,7 +6122,7 @@ class BotBrain {
     const p = this.player;
     const r = g.rng;
     const max = p.maxTroops();
-    const summary = g.neighborSummary(p);
+    const summary = g.neighborSummary(p, BOT_SUMMARY_AGE);
     const { wild, coastal } = summary;
     // Ni los aliados, ni quien tiene un pacto o la paz con ella, ni (durante
     // la tregua) las otras naciones cuentan como objetivos: si no, elegía uno
@@ -6203,7 +6253,7 @@ class BotBrain {
     if (this.grudges.has(from.id) || g.isTraitor(from)) return false;
     let score = 0.25 + this.diplomacy * 0.4 - this.aggression * 0.3;
     if (from.troops > p.troops * 1.2) score += 0.35;
-    if (g.neighborSummary(p).counts.has(from.id) && from.troops < p.troops * 0.6) score -= 0.5;
+    if (g.neighborSummary(p, BOT_SUMMARY_AGE).counts.has(from.id) && from.troops < p.troops * 0.6) score -= 0.5;
     const leader = g.leader();
     if (from === leader && from.tiles / g.map.landCount > 0.3) score -= 0.5;
     return g.rng.float() < clamp(score, 0.05, 0.9);
@@ -6350,6 +6400,9 @@ class BotBrain {
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
     else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
+    // Su capital (doc-1.6): industria y población, alternando; y pueblos baratos
+    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = p.capital.ind <= p.capital.pop ? 'capInd' : 'capPop';
+    else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
     else if (enemySilos && p.buildings.sam < 1 + Math.floor(p.tiles / (6000 * AREA)) && p.buildings.city >= 1 && g.rng.chance(0.4)) want = 'sam';
@@ -6358,6 +6411,10 @@ class BotBrain {
     else if (p.tiles > 2000 * AREA && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
     else if (p.active.port > 0 && p.buildings.warship < p.active.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
+    if (want === 'capInd' || want === 'capPop') {
+      if (p.gold < g.buildCost(p, want)) return false;
+      return g.build(p, want, -1);
+    }
     if (want === 'warship') {
       if (p.gold < g.buildCost(p, want)) return false;
       const port = g.buildings.find((b) => b.owner === p.id && b.kind === 'port' && b.level > 0);
@@ -6427,7 +6484,7 @@ class BotBrain {
     for (let i = 0; i < 150; i++) {
       const t = pool[r.int(0, pool.length - 1)];
       if (g.owner[t] !== p.id) continue;
-      if (kind === 'city' && p.border.has(t)) continue;
+      if ((kind === 'city' || kind === 'village') && p.border.has(t)) continue;
       if (g.canBuild(p, kind, t).ok) return t;
     }
     return -1;
@@ -6486,7 +6543,7 @@ class BotBrain {
       const other = g.players[r.int(1, g.players.length - 1)];
       if (other.alive && !other.weak) candidates.add(other.id);
     }
-    const leaderNeighbors = leader ? g.neighborSummary(leader).counts : new Map();
+    const leaderNeighbors = leader ? g.neighborSummary(leader, BOT_SUMMARY_AGE).counts : new Map();
     for (const id of candidates) {
       const other = g.players[id];
       if (other === p || !g.canPropose(p, other).ok) continue;
@@ -6512,13 +6569,13 @@ class BotBrain {
     if (p.allies.size >= CONFIG.maxAllies || this.grudges.has(from.id) || g.isTraitor(from)) return false;
     const leader = g.leader();
     const share = leader ? leader.tiles / g.map.landCount : 0;
-    const neighbors = g.neighborSummary(p).counts;
+    const neighbors = g.neighborSummary(p, BOT_SUMMARY_AGE).counts;
     let score = 0.2 + this.diplomacy * 0.5 - from.betrayals * 0.25;
     if (from === leader && share > 0.3) score -= 0.5;
     if (neighbors.has(from.id) && from.troops > p.troops * 1.5) score += 0.3; // mejor tenerlo de amigo
     if (from.attacks.has(p.id) && from.troops > p.troops) score += 0.2; // pedir la paz si va perdiendo
     if (leader && leader !== from && leader !== p) {
-      const ln = g.neighborSummary(leader).counts;
+      const ln = g.neighborSummary(leader, BOT_SUMMARY_AGE).counts;
       if (ln.has(p.id) && ln.has(from.id)) score += 0.3;
     }
     return g.rng.float() < Math.min(0.95, Math.max(0.05, score));
@@ -7178,13 +7235,14 @@ function territoryRgb(rgb) {
 }
 
 /**
- * Paleta de las naciones: 24 tonos repartidos en el círculo cromático, cada
- * uno con tres luces (oscuro, medio y claro): 72 colores bien distintos.
+ * Paleta de las naciones: 36 tonos repartidos en el círculo cromático, cada
+ * uno con tres luces (oscuro, medio y claro): 108 colores. Con 90 naciones
+ * casi no se repite ninguno.
  */
 const NATION_PALETTE = (() => {
   const out = [];
-  for (const [s, l] of [[0.62, 0.5], [0.55, 0.62], [0.5, 0.72]]) {
-    for (let h = 0; h < 360; h += 15) out.push(hslToRgb(h + (l > 0.6 ? 7 : 0), s, l));
+  for (const [s, l, off] of [[0.62, 0.5, 0], [0.55, 0.62, 3.3], [0.5, 0.72, 6.6]]) {
+    for (let h = 0; h < 360; h += 10) out.push(hslToRgb(h + off, s, l));
   }
   return out;
 })();
@@ -7236,8 +7294,9 @@ function assignNationColors(nations, fixed, radius) {
         const v = deltaE(labs[c], fl) - 12;
         if (v < worst) worst = v;
       }
-      // A igualdad, el color menos usado y, entre esos, uno que dependa de la nación
-      const score = Math.min(worst, 60) - uses[c] * 3 - ((c * 7 + nations[i].id * 13) % 17) * 0.01;
+      // Pasado un ΔE de 40 ya se distinguen bien: entonces manda no repetir
+      // (y, a igualdad, uno que dependa de la nación)
+      const score = Math.min(worst, 40) - uses[c] * 12 - ((c * 7 + nations[i].id * 13) % 17) * 0.01;
       if (score > bestScore) {
         bestScore = score;
         best = c;
@@ -7333,6 +7392,8 @@ const CONFIG = {
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   fortRadius: 12 * RES,
+  capitalWallRadius: 7 * RES, // murallas de la capital (casillas; mecánica en MECH.capital)
+  capitalClearance: 3, // casillas libres alrededor de la capital (se construye junto a ella)
   fortDefenseMult: 3, // efecto de defensa (× tiempo y bajas del atacante) dentro del radio del puesto
   // Niveles y obras (el precio de un nivel es el del siguiente edificio de su tipo: mecanicas.js)
   maxLevel: 5,
@@ -7416,6 +7477,8 @@ const DEFAULT_RULES = {
   coopRoles: false, // con roles: uno el mando militar y otro la economía y la diplomacia
   economy: 'fixed', // 'fixed': oro pasivo fijo (OpenFront moderno) | 'workers': tropas + trabajadores (variante FrontWars)
   profile: 'clasico', // perfil de reglas (src/mecanicas.js, PROFILES): 'clasico' | 'trinchera'
+  capitals: true, // doc-1.6: cada nación nace con su capital amurallada
+  taxes: true, // doc-1.6: el territorio produce oro
 };
 /** Perfiles de reglas (ver PROFILES en src/mecanicas.js). Sin perfil = 'trinchera' (valor histórico). */
 const PROFILE_IDS = ['clasico', 'trinchera'];
@@ -7473,6 +7536,8 @@ function cleanRules(raw) {
     coopRoles: r.coop === true && r.coopRoles === true,
     economy: ECONOMY_MODES.includes(r.economy) ? r.economy : 'fixed',
     profile: PROFILE_IDS.includes(r.profile) ? r.profile : 'trinchera',
+    capitals: r.capitals !== false,
+    taxes: r.taxes !== false,
   };
 }
 
@@ -7484,6 +7549,12 @@ const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '⚔️'
  */
 const BUILDINGS = {
   city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+25.000 de techo de tropas por nivel' },
+  village: { name: 'Pueblo', fem: false, base: 40000, build: 30, key: 'KeyB', desc: 'Pequeño y barato: +300 de oro/s y +6.000 de techo de tropas por nivel' },
+  // La capital: una por nación, nace con ella (no se construye). Sus mejoras
+  // se compran desde la barra y se aplican al momento, sin elegir sitio
+  capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada: defensa ×4 alrededor y las bombas no destruyen lo que hay dentro' },
+  capInd: { name: 'Industria de la capital', short: 'Industria', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'ind', desc: '+25 % de oro pasivo (territorio, base y pueblos) por nivel' },
+  capPop: { name: 'Población de la capital', short: 'Población', fem: true, base: 150000, build: 0, key: 'KeyX', unit: 'capital', track: 'pop', desc: '+10 % de techo de tropas y +8 % de crecimiento por nivel' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
   fort: { name: 'Puesto defensivo', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },
@@ -7496,14 +7567,15 @@ const BUILDINGS = {
   mirv: { name: 'MIRV', fem: false, base: 25000000, build: 0, key: 'KeyK', unit: 'missile', fixed: true, desc: 'Se divide en muchas cabezas que caen por todo el país enemigo' },
 };
 /** Edificios de verdad (no unidades). */
-const STRUCTURE_KINDS = ['city', 'port', 'fort', 'factory', 'silo', 'sam'];
-const BUILDING_KINDS = Object.keys(BUILDINGS);
+const STRUCTURE_KINDS = ['city', 'village', 'capital', 'port', 'fort', 'factory', 'silo', 'sam'];
+/** Lo que se puede pedir desde la barra (la capital no: nace con la nación). */
+const BUILDING_KINDS = Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].unique);
 /**
  * Grupos de la barra de construcción (los mismos que el Arsenal del inicio).
  * `icon`: el edificio que la representa en su botón.
  */
 const BUILD_GROUPS = [
-  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['city', 'port', 'factory'] },
+  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['capInd', 'capPop', 'village', 'city', 'port', 'factory'] },
   { id: 'defensa', name: 'Defensa', icon: 'fort', kinds: ['fort', 'sam', 'warship'] },
   { id: 'ataque', name: 'Ataque', icon: 'missile', kinds: ['silo', 'missile', 'hbomb', 'mirv'] },
 ];
@@ -9620,8 +9692,9 @@ const { BotBrain, ColonyBrain } = __require('bot');
 const { generateColonyNames, generateNames } = __require('names');
 const { assignNationColors, botColor } = __require('colors');
 const { POI, POI_TYPES, placePoints } = __require('estrategia');
+const { LUGARES, LUGAR_CFG, pickLugar } = __require('lugares');
 const { SPECS, TECHS, addMods, emptyMods, techAvailable } = __require('tecnologias');
-const { MECH, bigEmpireBonus, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
+const { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -9634,7 +9707,8 @@ const NB_SCAN = new Int32Array(4);
 /** Casillas que puede explorar como mucho cada búsqueda por el mar. */
 const SEARCH = {
   trade: 15000 * AREA, // el comercio es regional
-  fish: 5000 * AREA, // los pesqueros faenan cerca
+  fish: 5000 * AREA, // los buques persiguen pesqueros cerca
+  fishing: 1500 * AREA, // ruta de un pesquero a su caladero (está a menos de 20 casillas del documento)
   warship: 40000 * AREA,
   landing: 75000 * AREA, // alcance de un desembarco, como antes de subir la resolución
 };
@@ -9695,6 +9769,16 @@ class Game {
     this.trains = []; // { id, rail, pos, dir }
     this._nextTrainId = 1;
     this.buildings = []; // { id, kind, tile, owner }
+    /** Capitales en pie (también están en `buildings`) y las que hay que trasladar al final del turno. */
+    this.capitals = [];
+    this._capitalMoves = [];
+    /** Lugares de interés (doc-1.6): { id, kind, tile, x, y } y los que tienen que reaparecer (turnos). */
+    this.lugares = [];
+    this.lugarAt = new Map();
+    this._lugarRespawns = [];
+    this._nextLugarId = 1;
+    /** Jugadores con algún bono temporal en marcha (para quitárselo a tiempo). */
+    this._buffed = new Set();
     this.buildingAt = new Map(); // casilla → edificio
     this._nextBuildingId = 1;
     this.brains = new Map(); // id de jugador → BotBrain
@@ -9762,6 +9846,7 @@ class Game {
     const p = new Player(id, name, color, isHuman);
     p.troopMult = this.rules.troopMult;
     p.goldMult = this.rules.goldMult;
+    p.taxes = this.rules.taxes; // doc-1.6: el territorio produce oro
     p.economy = this.rules.economy;
     p.paceRegen = this.profile.paceRegen;
     this.players.push(p);
@@ -10101,6 +10186,16 @@ class Game {
     m.gold += POI.capitalGold * capitals;
     m.growth += POI.capitalGrowth * capitals;
     if (p.capitalTile >= 0 && this.owner[p.capitalTile] !== p.id) m.growth += POI.capitalLostGrowth;
+    // Lugares de interés: mejoras para siempre y bonos que aún duran (doc-1.6)
+    if (p.permMods) addMods(m, p.permMods);
+    for (const b of p.buffs) if (b.until > this.ticks) addMods(m, LUGARES[b.kind].buff);
+    // Mejoras de la capital (doc-1.6)
+    const cap = p.capital;
+    if (cap && this.buildingAt.get(cap.tile) === cap) {
+      m.gold += MECH.capital.indGold * cap.ind;
+      m.cap += MECH.capital.popCap * cap.pop;
+      m.growth += MECH.capital.popGrowth * cap.pop;
+    }
     p.passes = passes;
     p.mods = m;
   }
@@ -10150,6 +10245,321 @@ class Game {
       this.pointAt.set(t, pt);
     }
     for (let i = 1; i < this.players.length; i++) this._refreshMods(this.players[i]);
+  }
+
+  // ------------------------------------------------------------- capital
+
+  /**
+   * Al empezar la partida, cada nación (también los jugadores; no las
+   * colonias) funda su capital donde se desplegó (doc-1.6).
+   */
+  _foundCapitals() {
+    if (!this.rules.capitals) return;
+    for (let i = 1; i < this.players.length; i++) {
+      const p = this.players[i];
+      if (!p.alive || p.weak || p.spawnTile < 0 || p.capital) continue;
+      if (this.buildingAt.has(p.spawnTile)) continue;
+      this._newCapital(p, p.spawnTile, 0, 0);
+    }
+  }
+
+  _newCapital(p, tile, ind, pop) {
+    const b = { id: this._nextBuildingId++, kind: 'capital', tile, owner: p.id, level: 1, target: 0, ind, pop, work: null };
+    this.buildings.push(b);
+    this.buildingAt.set(tile, b);
+    this.capitals.push(b);
+    p.capital = b;
+    this._recount(p);
+    this._refreshMods(p);
+    return b;
+  }
+
+  /** Defensa de las murallas de la capital de `p` en la casilla `t` (1 = fuera). */
+  wallMultiplier(p, t) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    const map = this.map;
+    const dx = map.x(cap.tile) - map.x(t);
+    const dy = map.y(cap.tile) - map.y(t);
+    const R = CONFIG.capitalWallRadius;
+    if (dx * dx + dy * dy > R * R) return 1;
+    return MECH.capital.wallMult + MECH.capital.wallMultPerLevel * (cap.ind + cap.pop);
+  }
+
+  /** Precio del siguiente nivel de una mejora de la capital ('ind' o 'pop'). */
+  capitalCost(p, track) {
+    const lvl = p.capital ? p.capital[track] || 0 : 0;
+    return Math.round(capitalPrice(lvl) * this.rules.priceMult);
+  }
+
+  _canUpgradeCapital(p, track) {
+    const b = p.capital;
+    if (!b || this.buildingAt.get(b.tile) !== b) return { ok: false, reason: 'No tienes capital' };
+    if (b.work) return { ok: false, reason: 'Tu capital ya tiene una obra en marcha' };
+    if ((b[track] || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Esa mejora de la capital ya está al máximo' };
+    const cost = this.capitalCost(p, track);
+    if (p.gold < cost) return { ok: false, reason: `Te falta oro: la mejora cuesta ${formatNumber(cost)}` };
+    return { ok: true, reason: '', cost, capital: b };
+  }
+
+  _startCapitalWork(p, track) {
+    const b = p.capital;
+    const cost = this.capitalCost(p, track);
+    p.gold -= cost;
+    p.spent.buildings += cost;
+    p.stats.built++;
+    const C = MECH.capital;
+    const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b[track] || 0)) * (1 - p.mods.buildSpeed)));
+    b.work = { track, end: this.ticks + time, time };
+    if (p === this.human) this._emit(`🏰 Obras en la capital: ${track === 'ind' ? 'industria' : 'población'} a nivel ${(b[track] || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
+    return true;
+  }
+
+  _finishCapitalWork(b) {
+    const track = b.work.track;
+    b.work = null;
+    b[track] = (b[track] || 0) + 1;
+    const p = this.players[b.owner];
+    if (!p) return;
+    this._refreshMods(p);
+    p.stats.finished = (p.stats.finished || 0) + 1;
+    p.stats.lastFinished = track === 'ind' ? 'factory' : 'city';
+    if (p === this.human) {
+      const C = MECH.capital;
+      const text = track === 'ind' ? `+${Math.round(C.indGold * b.ind * 100)} % de oro pasivo` : `+${Math.round(C.popCap * b.pop * 100)} % de techo de tropas y +${Math.round(C.popGrowth * b.pop * 100)} % de crecimiento`;
+      this._emit(`🏰 Capital: ${track === 'ind' ? 'industria' : 'población'} a nivel ${b[track]} (${text})`, 'good');
+    }
+  }
+
+  /** Obra en marcha de la capital, de 0 a 1 (o null). */
+  capitalProgress(b) {
+    if (!b || !b.work) return null;
+    return Math.max(0, Math.min(1, 1 - (b.work.end - this.ticks) / Math.max(1, b.work.time)));
+  }
+
+  /**
+   * La casilla de una capital cambia de dueño: la capital cae. Quien la toma
+   * se lleva botín (una parte del oro del dueño y una recompensa); la nación
+   * que la pierde la refunda al final del turno con la mitad de sus mejoras.
+   */
+  _capitalFalls(b, oldId, newId) {
+    this.buildings = this.buildings.filter((x) => x !== b);
+    this.buildingAt.delete(b.tile);
+    this.capitals = this.capitals.filter((x) => x !== b);
+    const victim = oldId ? this.players[oldId] : null;
+    const winner = newId ? this.players[newId] : null;
+    if (victim && victim.capital === b) victim.capital = null;
+    if (victim) {
+      this._recount(victim);
+      this._refreshMods(victim);
+      this._capitalMoves.push({ id: victim.id, from: b.tile, ind: b.ind, pop: b.pop });
+    }
+    const map = this.map;
+    this.effects.push({ kind: 'capitalFall', x: map.x(b.tile) + 0.5, y: map.y(b.tile) + 0.5, owner: newId, tick: this.ticks });
+    if (!winner || !victim) return;
+    const share = Math.floor(victim.gold * MECH.capital.lootShare);
+    victim.gold -= share;
+    const loot = share + Math.round(MECH.capital.lootBase * winner.goldMult);
+    winner.gold += loot;
+    winner.income.loot += loot;
+    winner.stats.capitals = (winner.stats.capitals || 0) + 1;
+    if (winner === this.human) this._emit(`🏰 Has tomado la capital de ${victim.name}: +${formatNumber(loot)} de oro`, 'good', { sfx: 'conquerColony' });
+    else if (victim === this.human) this._emit(`🏰 ${winner.name} ha tomado tu capital y se lleva ${formatNumber(share)} de oro: la corte se traslada`, 'danger', { sfx: 'fall' });
+  }
+
+  /** Refunda las capitales caídas (al final del turno, con la mitad de sus mejoras). */
+  _relocateCapitals() {
+    const moves = this._capitalMoves;
+    this._capitalMoves = [];
+    const C = MECH.capital;
+    for (const mv of moves) {
+      const p = this.players[mv.id];
+      if (!p || !p.alive || p.tiles <= 0 || p.capital) continue;
+      const t = this._capitalSite(p, mv.from);
+      if (t < 0) continue;
+      // Si hay un edificio propio allí (su mejor ciudad), la capital lo absorbe
+      const old = this.buildingAt.get(t);
+      if (old) {
+        this.buildings = this.buildings.filter((x) => x !== old);
+        this.buildingAt.delete(t);
+      }
+      const b = this._newCapital(p, t, Math.floor(mv.ind * C.keepShare), Math.floor(mv.pop * C.keepShare));
+      if (p === this.human) this._emit(`🏰 Nueva capital: industria ${b.ind} y población ${b.pop} (la mitad de las mejoras)`, 'info', { tile: t });
+    }
+  }
+
+  /**
+   * Dónde refundar la capital: su ciudad de más nivel (o su pueblo); si no
+   * tiene, la casilla propia libre más cercana al centro de su territorio.
+   */
+  _capitalSite(p, from) {
+    let best = null;
+    for (const b of this.buildings) {
+      if (b.owner !== p.id || (b.kind !== 'city' && b.kind !== 'village') || !b.level) continue;
+      const score = (b.kind === 'city' ? 100 : 0) + b.level;
+      if (!best || score > best.score || (score === best.score && b.id < best.b.id)) best = { b, score };
+    }
+    if (best) return best.b.tile;
+    const map = this.map;
+    const owner = this.owner;
+    const W = map.width;
+    const H = map.height;
+    // Centro de su territorio (muestreado: una casilla de cada 4 × 4)
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (let y = 0; y < H; y += 4) {
+      for (let x = 0; x < W; x += 4) {
+        if (owner[y * W + x] !== p.id) continue;
+        sx += x;
+        sy += y;
+        n++;
+      }
+    }
+    const cx = n ? Math.round(sx / n) : map.x(from);
+    const cy = n ? Math.round(sy / n) : map.y(from);
+    // La casilla propia libre más cercana a ese centro, en anillos que crecen
+    // (antes, dos pasadas por el mapa entero: un tirón al caer cada capital)
+    const ok = (x, y) => {
+      if (x < 0 || y < 0 || x >= W || y >= H) return false;
+      const t = y * W + x;
+      return owner[t] === p.id && !this.buildingNear(t, CONFIG.capitalClearance);
+    };
+    // Como mucho 60 casillas alrededor del centro; si no (territorio muy
+    // repartido), la casilla de su frontera más cercana a él
+    for (let r = 0; r <= 60; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (ok(cx + dx, cy - r)) return (cy - r) * W + cx + dx;
+        if (ok(cx + dx, cy + r)) return (cy + r) * W + cx + dx;
+      }
+      for (let dy = -r + 1; dy < r; dy++) {
+        if (ok(cx - r, cy + dy)) return (cy + dy) * W + cx - r;
+        if (ok(cx + r, cy + dy)) return (cy + dy) * W + cx + r;
+      }
+    }
+    // (de la más cercana a la más lejana; mirar los edificios solo de esas)
+    const cand = [];
+    for (const t of p.border) {
+      const dx = map.x(t) - cx;
+      const dy = map.y(t) - cy;
+      cand.push([dx * dx + dy * dy, t]);
+    }
+    cand.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    for (const [, t] of cand) if (!this.buildingNear(t, CONFIG.capitalClearance)) return t;
+    return cand.length ? cand[0][1] : -1;
+  }
+
+  // ------------------------------------------------- lugares de interés
+
+  /** Al empezar: unos cuantos lugares repartidos por la tierra libre. */
+  _placeLugares() {
+    const C = LUGAR_CFG;
+    const n = Math.max(C.min, Math.min(C.max, Math.round(this.map.landCount / C.landPer)));
+    for (let i = 0; i < n; i++) this._spawnLugar();
+  }
+
+  /**
+   * Un lugar nuevo en tierra libre, lejos de las salidas y de los demás
+   * lugares (con el azar de la partida). Si no queda sitio, nada.
+   */
+  _spawnLugar() {
+    const map = this.map;
+    const C = LUGAR_CFG;
+    const sep = C.spacing * RES;
+    const land = map.landTiles;
+    // Primero en tierra libre; si ya casi no queda, dentro de algún país
+    // (lo gana quien se la quite a su dueño: un objetivo por el que pelear)
+    for (let k = 0; k < 60; k++) {
+      const t = land[this.rng.int(0, land.length - 1)];
+      if ((k < 40 && this.owner[t]) || this.buildingAt.has(t) || this.pointAt.has(t) || this.wallMultiplier(this.players[this.owner[t]], t) > 1) continue;
+      const x = map.x(t);
+      const y = map.y(t);
+      const near = (tt) => {
+        const dx = map.x(tt) - x;
+        const dy = map.y(tt) - y;
+        return dx * dx + dy * dy < sep * sep;
+      };
+      if (this.lugares.some((l) => near(l.tile))) continue;
+      if (this.players.some((p) => p && p.alive && p.spawnTile >= 0 && near(p.spawnTile))) continue;
+      const kind = pickLugar(this.rng);
+      const lg = { id: this._nextLugarId++, kind, tile: t, x, y, born: this.ticks };
+      this.lugares.push(lg);
+      this.lugarAt.set(t, lg);
+      return lg;
+    }
+    return null;
+  }
+
+  /** Apunta que tiene que aparecer un lugar en el turno `at` (lista ordenada). */
+  _queueLugar(at) {
+    let i = this._lugarRespawns.length;
+    while (i > 0 && this._lugarRespawns[i - 1] > at) i--;
+    this._lugarRespawns.splice(i, 0, at);
+  }
+
+  /** Alguien conquista la casilla de un lugar: se lleva el premio (las colonias no). */
+  _claimLugar(lg, newId) {
+    const p = this.players[newId];
+    if (!p || p.weak) return;
+    this.lugares = this.lugares.filter((l) => l !== lg);
+    this.lugarAt.delete(lg.tile);
+    // Otro aparecerá dentro de un rato (lista ordenada por turno)
+    this._queueLugar(this.ticks + this.rng.int(LUGAR_CFG.respawnMin, LUGAR_CFG.respawnMax));
+    const def = LUGARES[lg.kind];
+    let detail = def.desc;
+    if (def.instant === 'gold') {
+      const gold = Math.round(LUGAR_CFG.goldBase * p.goldMult + LUGAR_CFG.goldIncomeTicks * p.goldPerTick());
+      p.gold += gold;
+      p.income.conquest += gold;
+      detail = `+${formatNumber(gold)} de oro`;
+    } else if (def.instant === 'troops') {
+      const before = p.troops;
+      p.troops = Math.min(Math.max(p.troops, p.maxTroops()), p.troops * (1 + LUGAR_CFG.troopShare));
+      detail = `+${fmtTroops(p.troops - before)} tropas`;
+    } else if (def.buff) {
+      p.buffs.push({ kind: lg.kind, until: this.ticks + def.ticks });
+      this._buffed.add(p.id);
+      this._refreshMods(p);
+    } else if (def.perm) {
+      p.permMods ??= {};
+      for (const [k, v] of Object.entries(def.perm)) p.permMods[k] = (p.permMods[k] || 0) + v;
+      this._refreshMods(p);
+    }
+    p.stats.lugares = (p.stats.lugares || 0) + 1;
+    this.effects.push({ kind: 'lugar', x: lg.x + 0.5, y: lg.y + 0.5, lugar: lg.kind, owner: p.id, tick: this.ticks });
+    if (p === this.human) this._emit(`${def.icon} ${def.name}: ${detail}`, 'good', { sfx: 'logro' });
+  }
+
+  /** Quita los bonos temporales que han caducado. */
+  _expireBuffs() {
+    for (const id of this._buffed) {
+      const p = this.players[id];
+      if (!p) {
+        this._buffed.delete(id);
+        continue;
+      }
+      if (!p.buffs.some((b) => b.until <= this.ticks)) continue;
+      p.buffs = p.buffs.filter((b) => b.until > this.ticks);
+      if (!p.buffs.length) this._buffed.delete(id);
+      this._refreshMods(p);
+    }
+  }
+
+  /** Lugar de interés a menos de `r` casillas de `t` (el más cercano), o null. */
+  lugarNear(t, r = 3 * RES) {
+    const map = this.map;
+    const x = map.x(t);
+    const y = map.y(t);
+    let best = null;
+    let bd = r * r;
+    for (const l of this.lugares) {
+      const d = (l.x - x) * (l.x - x) + (l.y - y) * (l.y - y);
+      if (d <= bd) {
+        bd = d;
+        best = l;
+      }
+    }
+    return best;
   }
 
   /** Precio de la próxima tecnología de `p` (cada una encarece la siguiente). */
@@ -10248,6 +10658,10 @@ class Game {
     if (building) this._transferBuilding(building, oldId, newId);
     const point = this.pointAt.get(t);
     if (point) this._pointChanged(point, oldId, newId);
+    if (newId && this.lugarAt.size) {
+      const lg = this.lugarAt.get(t);
+      if (lg) this._claimLugar(lg, newId);
+    }
     // Casillas para repintar (solo dibujo). Con tope: con la pestaña oculta
     // nadie las recoge (sala multijugador en segundo plano) y crecían sin fin;
     // pasado el tope, el dibujo lo repinta todo al volver
@@ -10320,12 +10734,29 @@ class Game {
    * Se guarda mientras no cambie ninguna casilla (varios bots preguntan por el
    * mismo líder en el mismo turno); el resultado es idéntico al de recalcularlo.
    */
-  neighborSummary(p) {
+  neighborSummary(p, maxAge = 0) {
     const v = this.ownerVersion;
     const hit = p._nbSummary;
-    if (hit && hit.version === v && hit.tick === this.ticks) return hit.value;
+    // `maxAge` (los bots): vale un resumen de hace unos turnos. Con decenas de
+    // naciones en guerra el dueño de alguna casilla cambia en cada turno y la
+    // caché estricta casi nunca servía (era una séptima parte de la simulación)
+    if (hit && ((hit.version === v && hit.tick === this.ticks) || (maxAge > 0 && this.ticks - hit.tick <= maxAge))) return hit.value;
     const value = this._neighborSummary(p);
     p._nbSummary = { version: v, tick: this.ticks, value };
+    return value;
+  }
+
+  /**
+   * Lo mismo para la interfaz, con su propia caché: lo que mira la pantalla
+   * (en momentos distintos en cada navegador) no debe cambiar lo que deciden
+   * los bots, o una partida en línea se desincronizaría.
+   */
+  neighborSummaryView(p) {
+    const v = this.ownerVersion;
+    const hit = p._nbView;
+    if (hit && hit.version === v && hit.tick === this.ticks) return hit.value;
+    const value = this._neighborSummary(p);
+    p._nbView = { version: v, tick: this.ticks, value };
     return value;
   }
 
@@ -10668,11 +11099,12 @@ class Game {
 
   /** Multiplicador defensivo si `t` está en el radio de una fortaleza del defensor. */
   fortMultiplier(defender, t) {
-    if (!defender.forts.size) return 1;
+    // Murallas de la capital (doc-1.6)
+    let best = this.wallMultiplier(defender, t);
+    if (!defender.forts.size) return best;
     const map = this.map;
     const x = map.x(t);
     const y = map.y(t);
-    let best = 1;
     for (const f of defender.forts) {
       const lvl = this.buildingAt.get(f)?.level || 1;
       const r = this.fortRadius(lvl) * (1 + defender.mods.fortRadius);
@@ -11238,6 +11670,8 @@ class Game {
    * H 5M; MIRV 25M. `n` cuenta también los niveles subidos con mejoras.
    */
   buildCost(p, kind) {
+    const def = BUILDINGS[kind];
+    if (def && def.unit === 'capital') return this.capitalCost(p, def.track);
     const n = p.owned;
     n.warship = 0;
     for (const ws of this.warships) if (ws.owner === p.id && !ws.dead) n.warship++;
@@ -11277,6 +11711,8 @@ class Game {
     const def = BUILDINGS[kind];
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
     if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
+    if (def.unique) return { ok: false, reason: `${def.name}: no se construye` };
+    if (def.unit === 'capital') return this._canUpgradeCapital(p, def.track);
     if (def.unit === 'ship') return this._canBuildWarship(p, tile);
     if (def.unit === 'missile') return this._canLaunchMissile(p, tile, kind);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
@@ -11335,6 +11771,7 @@ class Game {
     const check = this.canBuild(p, kind, tile);
     if (!check.ok) return false;
     const def = BUILDINGS[kind];
+    if (def.unit === 'capital') return this._startCapitalWork(p, def.track);
     if (check.upgrade) return this._startUpgrade(p, check.upgrade);
     const price = this.buildCost(p, kind);
     p.gold -= price;
@@ -11375,6 +11812,7 @@ class Game {
 
   /** Termina las obras cuyo plazo ha vencido. */
   _updateSites() {
+    for (const c of this.capitals) if (c.work && this.ticks >= c.work.end) this._finishCapitalWork(c);
     if (!this.sites.length) return;
     let changed = false;
     for (const b of this.sites) {
@@ -11389,6 +11827,8 @@ class Game {
       changed = true;
       const p = this.players[b.owner];
       this._recount(p);
+      p.stats.finished = (p.stats.finished || 0) + 1;
+      p.stats.lastFinished = b.kind;
       if (p === this.human) {
         const def = BUILDINGS[b.kind];
         this._emit(upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`, 'good');
@@ -11419,21 +11859,28 @@ class Game {
     }
   }
 
-  /** Primer edificio a menos de `dist` casillas de `tile` (o null). */
+  /**
+   * Primer edificio a menos de `dist` casillas de `tile` (o null). La
+   * capital solo aparta lo justo (CONFIG.capitalClearance): alrededor de ella
+   * es donde se construye.
+   */
   buildingNear(tile, dist) {
     const map = this.map;
     const x = map.x(tile);
     const y = map.y(tile);
+    const capD = Math.min(dist, CONFIG.capitalClearance);
     for (const b of this.buildings) {
       const dx = map.x(b.tile) - x;
       const dy = map.y(b.tile) - y;
-      if (dx * dx + dy * dy < dist * dist) return b;
+      const d = b.kind === 'capital' ? capD : dist;
+      if (dx * dx + dy * dy < d * d) return b;
     }
     return null;
   }
 
   /** Los edificios cambian de manos con su casilla; sin dueño, se destruyen. */
   _transferBuilding(b, oldId, newId, built = false) {
+    if (b.kind === 'capital') return this._capitalFalls(b, oldId, newId);
     const def = BUILDINGS[b.kind];
     const name = def.name;
     const some = `${def.fem ? 'una' : 'un'} ${name.toLowerCase()}`; // "una ciudad", "un puerto"
@@ -11447,7 +11894,7 @@ class Game {
     if (oldId) {
       const op = this.players[oldId];
       this._recount(op);
-      if (op === this.human) this._emit(`Has perdido ${some} a manos de ${this.players[newId].name}`, 'danger');
+      if (op === this.human) this._buildingNews('lost', b, this.players[newId].name);
     }
     const np = this.players[newId];
     this._recount(np);
@@ -11455,8 +11902,40 @@ class Game {
     if (np.buildings.factory > np.stats.maxFactories) np.stats.maxFactories = np.buildings.factory;
     if (np === this.human) {
       if (built) this._emit(`Obras: ${name.toLowerCase()} lista en ${Math.round(b.buildTime / 10)} s`, 'info');
-      else this._emit(`Has capturado ${some}${b.level > 1 ? ` de nivel ${b.level}` : ''}`, 'good', { sfx: 'capture' });
+      else this._buildingNews('got', b);
     }
+  }
+
+  /**
+   * Edificios tuyos capturados o perdidos: se juntan y se avisa una vez por
+   * turno (con un solo sonido). Al conquistar un país entero caían decenas a
+   * la vez y cada uno sonaba y avisaba por su cuenta.
+   */
+  _buildingNews(kind, b, by = '') {
+    const n = (this._bNews ??= { got: [], lost: [], by: new Set() });
+    n[kind].push(b);
+    if (by) n.by.add(by);
+  }
+
+  _flushBuildingNews() {
+    const n = this._bNews;
+    if (!n || (!n.got.length && !n.lost.length)) return;
+    const describe = (list) => {
+      if (list.length === 1) {
+        const b = list[0];
+        const def = BUILDINGS[b.kind];
+        return `${def.fem ? 'una' : 'un'} ${def.name.toLowerCase()}${b.level > 1 ? ` de nivel ${b.level}` : ''}`;
+      }
+      return `${list.length} edificios`;
+    };
+    if (n.got.length) this._emit(`Has capturado ${describe(n.got)}`, 'good', { sfx: 'capture', count: n.got.length });
+    if (n.lost.length) {
+      const who = [...n.by];
+      this._emit(`Has perdido ${describe(n.lost)} a manos de ${who.length === 1 ? who[0] : `${who.length} naciones`}`, 'danger');
+    }
+    n.got.length = 0;
+    n.lost.length = 0;
+    n.by.clear();
   }
 
   // ------------------------------------------------------- economía naval
@@ -11498,7 +11977,9 @@ class Game {
           continue;
         }
         const owner = this.players[b.owner];
-        const options = ports.filter((o) => o.owner !== b.owner && map.waterBody[o.water] === map.waterBody[b.water] && !this.atWar(owner, this.players[o.owner]));
+        let options = ports.filter((o) => o.owner !== b.owner && map.waterBody[o.water] === map.waterBody[b.water] && !this.atWar(owner, this.players[o.owner]));
+        // doc-1.6: sin puertos de otros a mano, a uno propio del mismo mar
+        if (!options.length) options = ports.filter((o) => o !== b && o.owner === b.owner && map.waterBody[o.water] === map.waterBody[b.water]);
         if (!options.length) {
           b.rejections = (b.rejections || 0) + 1;
           continue;
@@ -11517,6 +11998,7 @@ class Game {
         this._spawnMerchant(b, 'trade', dest, path.length - 1, path);
         afloat++;
       }
+      this._launchFishing(ports);
     }
     for (const m of this.merchants) {
       const owner = this.players[m.owner];
@@ -11535,12 +12017,14 @@ class Game {
         m.path = null;
       }
       if (m.kind === 'trade') this._arriveTrade(m);
+      else if (m.kind === 'fish') this._fishStep(m);
     }
     if (this.merchants.some((m) => m.done)) this.merchants = this.merchants.filter((m) => !m.done);
   }
 
   _spawnMerchant(port, kind, dest, value, path = null) {
     this.merchants.push({
+      out: kind === 'fish' ? path : null,
       id: this._nextMerchantId++,
       owner: port.owner,
       kind,
@@ -11564,7 +12048,8 @@ class Game {
     // La fórmula cuenta la distancia en casillas del documento (mundo de
     // 2000×1000): con más resolución, la misma ruta tiene más casillas
     const d = m.value / DOC_LEN;
-    const earned = tradeGold(d, owner.goldMult) * (1 + owner.mods.trade);
+    const own = dest.owner === m.owner;
+    const earned = tradeGold(d, owner.goldMult) * (1 + owner.mods.trade) * (own ? MECH.trade.ownPortShare : 1);
     owner.gold += earned;
     owner.income.trade += earned;
     const partner = this.players[dest.owner];
@@ -11575,6 +12060,93 @@ class Game {
       if (partner === this.human) this._emit(`⚓ Un mercante de ${owner.name} llega a tu puerto: +${formatNumber(share)} de oro`, 'good', { sfx: 'coin' });
     }
     if (owner === this.human) this._emit(`⚓ Tu mercante llega a su destino: +${formatNumber(earned)} de oro`, 'good', { sfx: 'coin' });
+  }
+
+  // ---------------------------------------------------------------- pesca
+
+  /**
+   * Pesqueros (doc-1.6): cada puerto consulta cada fishing.checkEvery turnos
+   * (repartidos) si le falta alguno faenando (tantos como su nivel, hasta 3)
+   * y lo manda a un caladero cercano del mismo mar. Como mucho una ruta nueva
+   * por turno (las búsquedas por el mar cuestan).
+   */
+  _launchFishing(ports) {
+    const F = MECH.fishing;
+    const every = F.checkEvery;
+    const phase = this.ticks % every;
+    const map = this.map;
+    let budget = 1;
+    let afloat = null;
+    for (const b of ports) {
+      if (budget <= 0) break;
+      if (b.id % every !== phase) continue;
+      // Pesqueros de cada puerto faenando ahora (se cuentan aquí: así un
+      // pesquero hundido, capturado o de un dueño eliminado no deja la cuenta mal)
+      if (!afloat) {
+        afloat = new Map();
+        for (const m of this.merchants) if (m.kind === 'fish' && !m.done) afloat.set(m.port, (afloat.get(m.port) || 0) + 1);
+      }
+      const want = Math.min(F.maxPerPort, b.level);
+      if ((afloat.get(b.id) || 0) >= want) continue;
+      // Caladeros del puerto: hasta 4, elegidos la primera vez (agua del mismo
+      // mar, ni muy cerca ni muy lejos, con el azar de la partida). Sus rutas
+      // se guardan: antes cada salida buscaba un camino nuevo por el mar
+      if (!b.spots) {
+        b.spots = [];
+        const R = Math.round(F.maxDist * DOC_LEN);
+        const min = F.minDist * DOC_LEN;
+        const x0 = map.x(b.water);
+        const y0 = map.y(b.water);
+        for (let k = 0; k < 24 && b.spots.length < 4; k++) {
+          const x = x0 + this.rng.int(-R, R);
+          const y = y0 + this.rng.int(-R, R);
+          if (!map.inBounds(x, y)) continue;
+          const t = map.index(x, y);
+          const d2 = (x - x0) * (x - x0) + (y - y0) * (y - y0);
+          if (d2 < min * min || d2 > R * R || !map.navigable(t) || map.waterBody[t] !== map.waterBody[b.water]) continue;
+          b.spots.push(t);
+        }
+      }
+      if (!b.spots.length) continue;
+      const spot = b.spots[this.rng.int(0, b.spots.length - 1)];
+      if (!this._pathCache.has(`${b.water},${spot},${SEARCH.fishing}`)) budget--;
+      const path = this._waterPath(b.water, spot, SEARCH.fishing);
+      if (!path || path.length < 3) continue;
+      this._spawnMerchant(b, 'fish', null, path.length - 1, path);
+      const m = this.merchants[this.merchants.length - 1];
+      m.phase = 'out';
+      m.level = b.level;
+      afloat.set(b.id, (afloat.get(b.id) || 0) + 1);
+    }
+  }
+
+  /** Un pesquero al final de su tramo: se pone a pescar, vuelve o cobra al llegar. */
+  _fishStep(m) {
+    const F = MECH.fishing;
+    if (m.phase === 'out') {
+      m.phase = 'fishing';
+      m.until = this.ticks + F.fishTicks;
+      return;
+    }
+    if (m.phase === 'fishing') {
+      if (this.ticks < m.until) return;
+      // De vuelta por el mismo camino
+      m.phase = 'back';
+      m.path = m.out.slice().reverse();
+      m.pos = 0;
+      m.progress = 0;
+      return;
+    }
+    // De vuelta en puerto: cobra su dueño (el de ahora: puede haber sido capturado)
+    m.done = true;
+    const owner = this.players[m.owner];
+    if (!owner || !owner.alive) return;
+    const earned = Math.round((F.base + F.perTile * (m.value / DOC_LEN)) * (1 + F.levelBonus * Math.max(0, (m.level || 1) - 1)) * owner.goldMult * (1 + owner.mods.trade));
+    owner.gold += earned;
+    owner.income.fishing += earned;
+    owner.stats.fishGold = (owner.stats.fishGold || 0) + earned;
+    const map = this.map;
+    this.effects.push({ kind: 'fish', x: map.x(m.tile) + 0.5, y: map.y(m.tile) + 0.5, gold: earned, owner: m.owner, tick: this.ticks });
   }
 
   /** Un buque se queda con un barco automático enemigo: ahora produce para su nuevo dueño. */
@@ -11712,6 +12284,7 @@ class Game {
     const cy = map.y(m.to);
     const before = new Map(); // id → { tiles, troops } antes del impacto
     const lost = new Map();
+    let walled = 0;
     for (let dy = -R; dy <= R; dy++) {
       for (let dx = -R; dx <= R; dx++) {
         if (dx * dx + dy * dy > R * R) continue;
@@ -11723,6 +12296,12 @@ class Game {
         if (!o || !this._isEnemy(m.owner, o)) continue;
         if (!before.has(o)) before.set(o, { tiles: this.players[o].tiles, troops: this.players[o].troops });
         lost.set(o, (lost.get(o) || 0) + 1);
+        // Dentro de las murallas de su capital: mueren tropas, pero la casilla
+        // y lo que hay en ella aguantan (doc-1.6)
+        if (this.wallMultiplier(this.players[o], t) > 1) {
+          walled++;
+          continue;
+        }
         this.setOwner(t, 0); // los edificios de esas casillas se destruyen
       }
     }
@@ -11754,8 +12333,8 @@ class Game {
     this.effects.push({ kind: 'boom', x: cx + 0.5, y: cy + 0.5, r: R, tick: this.ticks });
 
     const attacker = this.players[m.owner];
-    const total = [...lost.values()].reduce((a, b) => a + b, 0);
-    if (attacker === this.human) this._emit(`💥 Impacto: ${total} casillas enemigas arrasadas`, 'good');
+    const total = [...lost.values()].reduce((a, b) => a + b, 0) - walled;
+    if (attacker === this.human) this._emit(`💥 Impacto: ${total} casillas enemigas arrasadas${walled ? ` (las murallas de una capital aguantan ${walled})` : ''}`, 'good');
     const mine = this.human ? lost.get(this.human.id) : 0;
     if (mine) this._emit(`💥 Un misil de ${attacker.name} ha arrasado ${mine} casillas tuyas`, 'danger');
   }
@@ -12500,8 +13079,10 @@ class Game {
       const p = this.players[i];
       if (!p.alive) continue;
       const gb = p.goldBreakdown();
-      p.gold += gb.base + gb.workers + gb.bonus;
+      p.gold += gb.base + gb.tax + gb.villages + gb.workers + gb.bonus;
       p.income.base += gb.base;
+      p.income.tax += gb.tax;
+      p.income.villages += gb.villages;
       p.income.workers += gb.workers;
       p.income.bonus += gb.bonus;
       this._growPopulation(p);
@@ -12539,7 +13120,15 @@ class Game {
     }
 
     this._checkEliminations();
+    if (this._capitalMoves.length) this._relocateCapitals();
+    if (this._buffed.size) this._expireBuffs();
+    if (this._lugarRespawns.length && this._lugarRespawns[0] <= this.ticks) {
+      this._lugarRespawns.shift();
+      // Sin sitio ahora: se vuelve a probar dentro de 30 s
+      if (!this._spawnLugar()) this._queueLugar(this.ticks + 300);
+    }
     this._checkVictory();
+    this._flushBuildingNews();
     if (this.trace) this.trace.onTick(this);
   }
 
@@ -12552,7 +13141,9 @@ class Game {
       else p.alive = false;
     }
     this.phase = 'playing';
+    this._foundCapitals();
     this._placeCapitals();
+    this._placeLugares();
     for (const bot of this.bots) bot.nextThink = this.ticks + this.rng.int(1, CONFIG.botThinkMax);
     this._emit('¡Comienza la conquista!', 'good', { sfx: 'start' });
   }
@@ -13197,7 +13788,7 @@ const TABS = [
       ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
+      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z industria y X población de tu capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
       ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
     ],
   },
@@ -13205,9 +13796,11 @@ const TABS = [
     id: 'economia',
     name: 'Economía',
     items: [
-      ['moneda', 'Oro', 'Ganas 100 de oro por turno (1000 por segundo) pase lo que pase. Además: mercantes, trenes, regalos de aliados y todo el oro de quien elimines.'],
+      ['moneda', 'Oro', 'Ganas 100 de oro por turno pase lo que pase y, además, tu territorio produce: cuanto más grande, más (medio mundo da unas diez veces el oro base). Suman también pueblos, pesqueros, mercantes, trenes, regalos de aliados y el botín de quien elimines.'],
+      ['corona', 'Tu capital', 'Naces con tu capital amurallada: cerca de ella conquistarte cuesta cuatro veces más y las bombas no arrasan lo que hay dentro. Mejórala desde la barra, sin elegir sitio: Industria (Z) +25 % de oro por nivel y Población (X) +10 % de techo de tropas y +8 % de crecimiento. Si cae, quien la toma se lleva botín y la refundas con la mitad de las mejoras.'],
       ['tropas', 'Trabajadores', 'Con la regla «Economía con trabajadores», el deslizador «Reparto» divide tu población entre soldados (atacan y defienden) y trabajadores (dan oro).'],
-      ['ciudad', 'Edificios', 'Ciudades: +25 000 de techo de tropas por nivel. Puertos: mercantes que os pagan a los dos al llegar. Fábricas: vías y trenes que dan oro en cada estación. Las obras tardan unos segundos.'],
+      ['ciudad', 'Edificios', 'Pueblos (B): baratos, +300 de oro/s y +6 000 de techo por nivel. Ciudades: +25 000 de techo de tropas por nivel. Puertos: pesqueros que vuelven con oro (tantos como su nivel) y mercantes a puertos de otros países que os pagan a los dos. Fábricas: vías y trenes que dan oro en cada estación. Las obras tardan unos segundos.'],
+      ['bandera', 'Lugares de interés', 'Los discos dorados del mapa (tesoros, mercenarios, graneros, forjas, ruinas y fortalezas) dan un premio a quien los conquiste: oro o tropas al momento, un bono de unos segundos o una pequeña mejora para siempre. Luego aparece otro en otro sitio.'],
       ['engranaje', 'Precios', 'Cada compra encarece la siguiente de su familia; subir de nivel cuesta lo mismo que uno nuevo. Elige bien qué construyes primero.'],
       ['pergamino', 'Desarrollo (tecla I)', 'Ingresos por fuente y oro por minuto, especialización y, en el perfil Trinchera, 12 tecnologías en tres ramas.'],
     ],
@@ -13223,7 +13816,7 @@ const TABS = [
       ['mapa', 'Ríos', 'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar se navegan: puedes poner puertos en sus orillas y los barcos pasan por ellos, también para desembarcar en la otra orilla. Pasa el ratón por encima para ver si es navegable.'],
       ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
       ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
-      ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas. Si el borde de la pantalla se pone rojo, te atacan.'],
+      ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas; cerca de tu capital, el cuádruple. Las fronteras donde se lucha se ponen rojas (más intenso en tus combates) y, si el borde de la pantalla se pone rojo, te atacan.'],
     ],
   },
   {
@@ -13440,6 +14033,8 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
+  { tag: 'Mapa', title: 'Frentes en rojo', text: 'Las fronteras donde se lucha se ponen rojas, los barcos marcan dónde van a desembarcar y el tooltip es más pequeño y claro.', art: 2 },
   { tag: 'Mapa', title: 'Colores y banderas', text: 'Cada país se distingue de sus vecinos, los barcos llevan su bandera y los territorios sueltos de una nación, también.', art: 2 },
   { tag: 'Mapas', title: 'Seis regiones nuevas', text: 'Mediterráneo, Oriente Medio, Centroamérica y el Caribe, Sudeste Asiático, Extremo Oriente y Asia del Sur: más detalle por país y partidas más cortas.', art: 2 },
   { tag: 'Menús', title: 'Menú más fluido', text: 'Pestañas y páginas cambian sin tirones y el menú gasta mucho menos mientras lo miras, también en el móvil.', art: 0 },
@@ -16912,7 +17507,39 @@ function glyphs() {
   const mirv = new Path2D();
   for (const [x, y] of [[-4.5, 3], [0, -1.5], [4.5, 3]]) mirv.addPath(silo, new DOMMatrix().translate(x, y).rotate(45).scale(0.55));
 
+  // Pueblo: dos casitas con tejado a dos aguas
+  const village = new Path2D();
+  polyTo(village, [-8.4, 7, -8.4, 0.6, -4.6, -3.2, -0.8, 0.6, -0.8, 7]);
+  polyTo(village, [0.6, 7, 0.6, -1.8, 4.6, -6, 8.6, -1.8, 8.6, 7]);
+  village.rect(-5.6, 3, 2, 4);
+  village.rect(3.6, 2.4, 2, 4.6);
+  // Capital: muralla almenada con dos torres y la torre del homenaje con su bandera
+  const capital = new Path2D();
+  polyTo(capital, [-9.4, 8, -9.4, -3.4, -7.6, -3.4, -7.6, -1.8, -5.8, -1.8, -5.8, -3.4, -4, -3.4, -4, 0.4, -2.4, 0.4, -2.4, -5.6, 2.4, -5.6, 2.4, 0.4, 4, 0.4, 4, -3.4, 5.8, -3.4, 5.8, -1.8, 7.6, -1.8, 7.6, -3.4, 9.4, -3.4, 9.4, 8]);
+  capital.moveTo(-1.6, 8);
+  capital.lineTo(-1.6, 4.4);
+  capital.arc(0, 4.4, 1.6, Math.PI, 0);
+  capital.lineTo(1.6, 8);
+  capital.closePath();
+  const capFlag = new Path2D();
+  capFlag.moveTo(0, -5.6);
+  capFlag.lineTo(0, -10.4);
+  polyTo(capFlag, [0, -10.4, 4.2, -9.2, 0, -8]);
+  // Corona pequeña (las mejoras de la capital)
+  const crown = new Path2D();
+  polyTo(crown, [-5, -5.4, -5, -9.6, -2.6, -7.4, 0, -10.4, 2.6, -7.4, 5, -9.6, 5, -5.4]);
+  const capInd = new Path2D();
+  capInd.addPath(factory, new DOMMatrix().translate(0, 2.4).scale(0.8));
+  capInd.addPath(crown);
+  const capPop = new Path2D();
+  capPop.addPath(city, new DOMMatrix().translate(0, 2.4).scale(0.8));
+  capPop.addPath(crown);
+
   GLYPHS = {
+    village: { fill: village, rule: 'evenodd' },
+    capital: { fill: capital, rule: 'evenodd', stroke: capFlag, lw: 1.4 },
+    capInd: { fill: capInd, rule: 'evenodd' },
+    capPop: { fill: capPop, rule: 'evenodd' },
     city: { fill: city, rule: 'evenodd' },
     factory: { fill: factory, rule: 'evenodd' },
     port: { fill: port, rule: 'nonzero', stroke: anchor, lw: 2.2 },
@@ -19106,6 +19733,57 @@ function bootLoader() {
 
 return { TIPS, withLoading, bootLoader };
 });
+__define('lugares', function () {
+// Lugares de interés (doc-1.6): puntos repartidos por la tierra libre del
+// mapa. Quien los conquista se lleva su premio al momento (oro, tropas), un
+// bono durante unos segundos o una pequeña mejora para siempre. Después
+// desaparecen y, al cabo de un rato, aparece otro en otro sitio.
+//
+// Todo pasa en la simulación con el azar de la partida: el mismo resultado en
+// todos los navegadores de una partida en línea.
+
+/**
+ * Tipos. `weight`: lo frecuente que sale. `instant`: premio al momento;
+ * `buff`: modificadores durante `ticks` turnos; `perm`: modificadores para
+ * siempre (los mismos nombres que en tecnologias.js, emptyMods).
+ */
+const LUGARES = {
+  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)' },
+  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)' },
+  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s' },
+  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s' },
+  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre' },
+  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre' },
+};
+const LUGAR_IDS = Object.keys(LUGARES);
+
+/** Parámetros: cuántos hay (uno cada `landPer` casillas de tierra, entre min y max) y cada cuánto reaparecen. */
+const LUGAR_CFG = {
+  landPer: 81000, // casillas de tierra por lugar (con RES 3: unos 16 en el mundo, 10 en el Mediterráneo)
+  min: 6,
+  max: 30,
+  spacing: 25, // separación mínima entre lugares y con las salidas (casillas de la rejilla original, × RES)
+  respawnMin: 600, // reaparecen entre 1 y 2 min después de tomarlos
+  respawnMax: 1200,
+  goldBase: 150000, // tesoro: esto más 30 s de sus ingresos pasivos
+  goldIncomeTicks: 300,
+  troopShare: 0.2,
+};
+
+/** Tipo al azar según su peso (una tirada de `rng`). */
+function pickLugar(rng) {
+  let total = 0;
+  for (const id of LUGAR_IDS) total += LUGARES[id].weight;
+  let r = rng.float() * total;
+  for (const id of LUGAR_IDS) {
+    r -= LUGARES[id].weight;
+    if (r < 0) return id;
+  }
+  return LUGAR_IDS[0];
+}
+
+return { LUGARES, LUGAR_IDS, LUGAR_CFG, pickLugar };
+});
 __define('main', function () {
 // Punto de entrada: inicio, partidas (contra la IA y online), bucle, perfil y
 // nube. La simulación vive en game.js; aquí solo se orquesta.
@@ -20734,6 +21412,13 @@ function humanIntent(intent) {
 function setBuildMode(kind) {
   const { game, human } = state;
   if (state.demo || !human || !human.alive || game.phase !== 'playing') return;
+  // Las mejoras de la capital no se colocan: se piden al momento
+  if (BUILDINGS[kind] && BUILDINGS[kind].unit === 'capital') {
+    state.buildMode = null;
+    humanIntent({ type: 'build', kind });
+    ui.update(game, human, state.ratio, state.buildMode);
+    return;
+  }
   state.buildMode = state.buildMode === kind ? null : kind;
   ui.update(game, human, state.ratio, state.buildMode);
 }
@@ -20804,7 +21489,7 @@ const input = new Input(canvas, camera, {
   onBuildKey: setBuildMode,
   onHover(sx, sy) {
     state.hover = { tile: sx < 0 ? -1 : tileAt(sx, sy), x: sx, y: sy };
-    if (!state.demo && state.game && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, sx, sy);
+    if (!state.demo && state.game && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, sx, sy, camera.zoom);
   },
   onRatio: setRatio,
   onRatioStep: (d) => setRatio(state.ratio + d),
@@ -20930,7 +21615,7 @@ function frame(now) {
     state.lastHud = now;
     try {
       ui.update(state.game, state.human, state.ratio, state.buildMode);
-      if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y);
+      if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y, camera.zoom);
       if (state.net) ui.setNetNote(state.net.status);
       if (tutorial.active) tutorial.update(tutorialState());
     } catch (err) {
@@ -22181,10 +22866,12 @@ __define('mecanicas', function () {
  * estrechos (Ormuz, Bósforo) y mejor reparto inicial. doc-1.4: los ríos son
  * agua (fronteras; los que llegan al mar se navegan) y colonias ágiles y
  * distintas (ritmo propio, sin depender de su población). doc-1.5: cercos
- * comprobados cada 4 turnos por ataque (más fluido). En multijugador,
- * versiones distintas no juegan juntas.
+ * comprobados cada 4 turnos por ataque (más fluido). doc-1.6: economía
+ * productiva (impuestos por territorio), capital amurallada con mejoras de
+ * industria y población, pueblos, pesqueros, comercio más frecuente y
+ * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.5';
+const MECH_VERSION = 'doc-1.6';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -22197,7 +22884,7 @@ const MECH_VERSION = 'doc-1.5';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -22207,8 +22894,8 @@ const MECH_VERSION = 'doc-1.5';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-6', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-5', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-7', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-6', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -22329,13 +23016,67 @@ const MECH = {
     // PROPUESTA (la fórmula exacta de «boost» y «saturación» depende de la versión):
     // probabilidad = 1 / max(1, floor(100 / boost² / (rechazos + 1) / saturación))
     // con boost = nivel del puerto y saturación = max(0,05, 1 − mercantes / 150)
-    probBase: 100,
+    // doc-1.6: los mercantes salen bastante más a menudo (antes probBase 100:
+    // un puerto de nivel 1 lanzaba uno cada ~100 s y casi no se notaban)
+    probBase: 30,
     saturationShips: 150,
     saturationMin: 0.05,
+    ownPortShare: 0.6, // sin puertos de otros a mano, a uno propio (cobra solo el dueño, el 60 %)
   },
+  // Pesqueros (doc-1.6): cada puerto tiene tantos faenando como su nivel (hasta
+  // 3); salen a un caladero cercano, pescan un rato y vuelven con oro:
+  // (base + perTile × casillas de ida) × (1 + 0,25 por nivel por encima del 1)
+  fishing: { checkEvery: 20, maxPerPort: 3, base: 6000, perTile: 300, levelBonus: 0.25, fishTicks: 100, minDist: 6, maxDist: 20 },
   // Comercio ferroviario (sección 04.4, wiki OpenFront Train): oro al llegar a cada estación según la relación
   trainRewards: { self: 10000, neutral: 10000, ally: 35000, enemy: 0 },
+
+  // doc-1.6 (PROPUESTA nuestra): el territorio produce. Oro por turno =
+  // taxK × casillas^taxExp, con las casillas del documento (mundo de
+  // 2000×1000): 1.000 casillas → +44; 20.000 → +232; medio mundo (~300.000)
+  // → +1.030 por turno (10 veces el oro base). Las colonias, la mitad
+  tax: { k: 1, exp: 0.55, colonyShare: 0.5 },
+  // Capital (doc-1.6): cada nación nace con la suya, amurallada. Sus mejoras
+  // (sin ocupar más mapa): Industria +25 % del oro pasivo por nivel y
+  // Población +10 % de techo de tropas y +8 % de crecimiento por nivel. Precio
+  // de cada nivel: 150k × 1,75^nivel. Murallas: defensa ×4 (+0,15 por nivel
+  // de mejora) hasta wallRadius casillas del documento. Si cae, el
+  // conquistador se lleva botín y la capital se traslada con la mitad de sus
+  // niveles. Las bombas no destruyen lo que hay dentro de las murallas
+  capital: {
+    maxLevel: 10,
+    indGold: 0.25,
+    popCap: 0.1,
+    popGrowth: 0.08,
+    priceBase: 150000,
+    priceGrowth: 1.75,
+    buildTicks: 50,
+    buildTicksPerLevel: 10,
+    wallRadius: 7,
+    wallMult: 4,
+    wallMultPerLevel: 0.15,
+    lootBase: 250000,
+    lootShare: 0.2,
+    keepShare: 0.5,
+  },
+  // Pueblos (doc-1.6): pequeños y baratos; +30 de oro por turno y +60k de techo por nivel
+  village: { gold: 30, cap: 60000, step: 40000, priceCap: 400000 },
 };
+
+/**
+ * Oro por turno del territorio (doc-1.6): taxK × casillas^taxExp, con las
+ * casillas en unidades del documento (`docArea` casillas actuales por cada una).
+ */
+function territoryGold(tiles, docArea = 1) {
+  if (tiles <= 0) return 0;
+  return MECH.tax.k * detPow(tiles / docArea, MECH.tax.exp);
+}
+
+/** Precio del siguiente nivel de una mejora de la capital (`level`: el que tiene ahora). */
+function capitalPrice(level) {
+  let v = MECH.capital.priceBase;
+  for (let i = 0; i < level; i++) v *= MECH.capital.priceGrowth;
+  return Math.round(v);
+}
 
 // ------------------------------------------------------- matemáticas deterministas
 
@@ -22516,6 +23257,8 @@ function priceFor(kind, n) {
       return Math.min(P.warship.cap, P.warship.step * ((n.warship || 0) + 1));
     case 'sam':
       return Math.min(P.sam.cap, P.sam.step * ((n.sam || 0) + 1));
+    case 'village':
+      return Math.min(MECH.village.priceCap, MECH.village.step * ((n.village || 0) + 1));
     case 'silo':
       return P.silo;
     case 'missile':
@@ -22529,7 +23272,7 @@ function priceFor(kind, n) {
   }
 }
 
-return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpSpeedRatio, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
+return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, territoryGold, capitalPrice, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpSpeedRatio, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
 });
 __define('minimapa', function () {
 // Minimapa: todo el mapa en pequeño (relieve y territorios), con el recuadro
@@ -23447,7 +24190,7 @@ __define('multiplayer', function () {
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-const { BUILDINGS, CONFIG, MAP_IDS, TICK_MS, cleanRules } = __require('config');
+const { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } = __require('config');
 const { MECH, PROFILES, rulesetId } = __require('mecanicas');
 const { selfPeer } = __require('net');
 
@@ -24038,7 +24781,8 @@ function cleanIntent(raw) {
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
-  if (['city', 'port', 'fort', 'factory', 'silo', 'sam', 'warship', 'missile', 'hbomb', 'mirv'].includes(raw.kind)) out.kind = raw.kind;
+  // Lo que se puede pedir desde la barra (la tabla de edificios; la capital nace con la nación)
+  if (typeof raw.kind === 'string' && BUILDING_KINDS.includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;
@@ -25690,9 +26434,12 @@ return { createNoise2D, fbm, hash2, valueNoise };
 });
 __define('player', function () {
 // Estado de una nación (humana o bot).
-const { CONFIG } = __require('config');
+const { CONFIG, RES } = __require('config');
 const { emptyMods } = __require('tecnologias');
-const { MECH, maxTroopsFor, regenPerTick } = __require('mecanicas');
+const { MECH, maxTroopsFor, regenPerTick, territoryGold } = __require('mecanicas');
+
+/** Casillas actuales por cada casilla del documento (mundo de 2000×1000, RES 2). */
+const DOC_AREA = (RES / 2) * (RES / 2);
 
 /**
  * x^0,75 solo con raíces cuadradas: a diferencia de Math.pow, da el mismo
@@ -25721,6 +26468,8 @@ class Player {
     // Reglas de la partida: multiplicadores de crecimiento de tropas y de oro
     this.troopMult = 1;
     this.goldMult = 1;
+    /** doc-1.6: el territorio produce oro (regla `taxes`). */
+    this.taxes = true;
     /** Resumen de vecinos de la IA guardado (ver Game.neighborSummary). */
     this._nbSummary = null;
     /** Última casilla que perdió (donde sale el botín al ser eliminado). */
@@ -25732,12 +26481,17 @@ class Player {
     this.spec = '';
     this.mods = emptyMods();
     this.capitalTile = -1;
+    /** Su capital (doc-1.6): edificio único con murallas y mejoras de industria y población. */
+    this.capital = null;
+    /** Lugares de interés (doc-1.6): bonos que duran unos segundos ({ kind, until }) y mejoras para siempre. */
+    this.buffs = [];
+    this.permMods = null;
     this.passes = 0; // pasos de montaña que controla
     this.helpAt = -Infinity; // última vez que pidió ayuda a sus aliados
     /** Oro ganado por fuente y gastado, acumulado (el panel calcula el ritmo). */
     // Oro ganado por fuente (TR04): base pasiva, bonos (puntos estratégicos,
     // tecnologías, especialización), trabajadores, comercio, conquistas, botín y regalos
-    this.income = { base: 0, bonus: 0, workers: 0, trade: 0, conquest: 0, loot: 0, gifts: 0 };
+    this.income = { base: 0, tax: 0, villages: 0, bonus: 0, workers: 0, trade: 0, fishing: 0, conquest: 0, loot: 0, gifts: 0 };
     this.spent = { buildings: 0, research: 0 };
     /** Total ingresado cada 10 s (último minuto), para el ritmo de oro y la victoria económica. */
     this.incomeHist = [];
@@ -25762,12 +26516,12 @@ class Player {
     this.boatCount = 0;
     /** Edificios por tipo (se actualiza al construir, capturar o perder). */
     // warship = buques a flote; missile no se usa (el misil no se acumula)
-    this.buildings = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0, missile: 0 };
+    this.buildings = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0, missile: 0 };
     /** Edificios terminados por tipo y suma de sus niveles (los que están en obras no cuentan). */
-    this.active = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
-    this.levels = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
+    this.active = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
+    this.levels = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0 };
     /** Para los precios: niveles que tiene de cada edificio, contando los que están en obras o mejorándose. */
-    this.owned = { city: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0 };
+    this.owned = { city: 0, village: 0, capital: 0, port: 0, fort: 0, factory: 0, silo: 0, sam: 0, warship: 0 };
     /** Fortalezas propias terminadas (casillas), para calcular la defensa. */
     this.forts = new Set();
 
@@ -25803,7 +26557,7 @@ class Player {
    * según la dificultad. No añade tropas: solo fija el límite.
    */
   maxTroops() {
-    return maxTroopsFor(this.tiles, this.levels.city) * this.capMult * (1 + this.mods.cap);
+    return (maxTroopsFor(this.tiles, this.levels.city) + MECH.village.cap * (this.levels.village || 0)) * this.capMult * (1 + this.mods.cap);
   }
 
   /**
@@ -25828,7 +26582,7 @@ class Player {
    */
   goldPerTick() {
     const b = this.goldBreakdown();
-    return b.base + b.workers + b.bonus;
+    return b.base + b.tax + b.villages + b.workers + b.bonus;
   }
 
   /**
@@ -25837,10 +26591,14 @@ class Player {
    * puntos estratégicos, tecnologías y especialización sobre lo anterior).
    */
   goldBreakdown() {
-    if (!this.tiles) return { base: 0, workers: 0, bonus: 0 };
+    if (!this.tiles) return { base: 0, tax: 0, villages: 0, workers: 0, bonus: 0 };
     const base = this.baseGold() * this.goldMult;
+    // doc-1.6: el territorio produce (impuestos) y los pueblos también
+    const tax = this.taxes ? territoryGold(this.tiles, DOC_AREA) * (this.weak ? MECH.tax.colonyShare : 1) * this.goldMult : 0;
+    const villages = MECH.village.gold * (this.levels.village || 0) * this.goldMult;
     const workers = this.economy === 'workers' ? Math.floor(this.workers / MECH.workersPerGold) * this.goldMult : 0;
-    return { base, workers, bonus: (base + workers) * this.mods.gold };
+    // Bonos (industria de la capital, puntos, tecnologías…) sobre todo lo anterior
+    return { base, tax, villages, workers, bonus: (base + tax + villages + workers) * this.mods.gold };
   }
 
   maxBoats() {
@@ -27489,8 +28247,10 @@ const { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, embl
 const { forgetTerrain, paintTerrain } = __require('terreno');
 const { MECH } = __require('mecanicas');
 const { Fx, drawMissileSprite, resetFxSprites } = __require('fx');
-const { drawCargo, drawTransport, drawWarship } = __require('barcos');
+const { drawCargo, drawFishing, drawTransport, drawWarship } = __require('barcos');
+const { LUGARES } = __require('lugares');
 
+const COLONY_ALPHA = 108; // las colonias, más tenues
 const FILL_ALPHA = 142; // territorio semitransparente: se ve el terreno debajo (algo menos que antes: colores más nítidos)
 const LABEL_INTERVAL_MS = 500;
 const FLASH_N = 16384;
@@ -27593,6 +28353,9 @@ function makeCanvas(w, h) {
 
 /** Empaqueta RGBA en un uint32 (little-endian, como ImageData en la práctica). */
 const pack = (r, g, b, a) => ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+// Frente de combate (doc-1.6): rojo intenso si es tuyo, algo más apagado si es de otros
+const HOT_MINE = pack(245, 38, 32, 255);
+const HOT_OTHER = pack(214, 52, 44, 235);
 
 /** Ángulo `a` acercándose a `b` por el camino corto. */
 function turn(a, b, k) {
@@ -27760,6 +28523,8 @@ class Renderer {
     this.labelById.clear();
     this.exclaves = [];
     this._exComp = this._exQueue = null;
+    this.hot = null;
+    this._hotList = null;
     this.onRestored = null;
     this.disposed = true;
   }
@@ -27829,7 +28594,9 @@ class Renderer {
       const [r, g, b] = pale;
       const ally = !!(human && p !== human && human.allies.has(p.id));
       this.allied[p.id] = ally ? 1 : 0;
-      this.fill[p.id] = pack(r, g, b, FILL_ALPHA);
+      // Las colonias, más tenues y con frontera suave: el mapa se lee más
+      // limpio y destacan las naciones
+      this.fill[p.id] = pack(r, g, b, p.weak ? COLONY_ALPHA : FILL_ALPHA);
       this.inner[p.id] = this.fill[p.id]; // sin franja interior: el territorio es plano
       // Patrón del perfil: algunas casillas con un tono más oscuro.
       // Los aliados llevan franjas verdes en diagonal: se reconocen de un vistazo.
@@ -27838,7 +28605,7 @@ class Renderer {
       this.alt[p.id] = pack(ar, ag, ab, ally ? 215 : Math.min(255, FILL_ALPHA + 40));
       // Frontera blanca para ti y verde para tus aliados; las demás, su tono
       // pálido más oscuro
-      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : vividRgb(pale, 0.12, 0.6, 0.16, 0.46);
+      const bc = p === human ? [255, 255, 255] : ally ? [120, 245, 165] : p.weak ? shadeRgb(pale, 0.74) : vividRgb(pale, 0.12, 0.6, 0.16, 0.46);
       this.border[p.id] = pack(bc[0], bc[1], bc[2], 255);
       // Tu nación, resaltada: por dentro de la frontera blanca, otra media
       // casilla en tu color vivo
@@ -27901,6 +28668,12 @@ class Renderer {
     const W = this.game.map.width;
     const x = i % W;
     const y = (i / W) | 0;
+    // En un frente de combate: roja entera (ver _updateHot)
+    const hv = this.hot ? this.hot[i] & 3 : 0;
+    if (hv) {
+      this._setTile(i, hv === 2 ? HOT_MINE : HOT_OTHER);
+      return;
+    }
     if (this._spawnStyle) {
       // Aro de una casilla entera (la que toca a otro por un lado) e interior teñido
       const inner = x > 0 && x < W - 1 && s[i - 1] === o && s[i + 1] === o && s[i - W] === o && s[i + W] === o;
@@ -28649,6 +29422,8 @@ class Renderer {
     if (this._needRestore && !this._lost) this.restoreCanvases();
     if (this._spawnStyle && game.phase !== 'spawn') this._endSpawnStyle();
     this._flushDirty(now);
+    // Cada 3 turnos (0,3 s): el frente avanza despacio y así se repinta menos
+    if (this._hotTick === undefined || game.ticks - this._hotTick >= 3 || game.ticks < this._hotTick) this._updateHot();
     this._updateGlowsAndUpload(now);
     // Nombres: el cálculo se reparte en tres fotogramas seguidos. Si cambias
     // de sitio en el despliegue, el tuyo va con su círculo al momento
@@ -28714,7 +29489,9 @@ class Renderer {
     this.fx.drawDecals(ctx, camera);
     this._drawRails();
     this._drawBuildings(now);
+    this._drawCapitals(now);
     this._drawPoints(now);
+    this._drawLugares(now);
     this._gen++;
     this._trackEffects();
     this._drawMerchants();
@@ -28736,6 +29513,70 @@ class Renderer {
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
     if (overlay.ping) this._drawPing(now, overlay.ping);
+  }
+
+  /**
+   * Frontera roja donde se lucha (doc-1.6): en cada ataque contra un país o
+   * una colonia, las casillas de la línea de frente del que se defiende se
+   * pintan en rojo en la propia capa del territorio (más intenso si el
+   * combate es tuyo). Una vez por turno se repintan solo las que entran o
+   * salen del frente: no cuesta nada en cada fotograma. (Antes se dibujaba
+   * encima en cada fotograma y era lo que más pesaba de la partida.)
+   * `hot`: bits 0-1, lo pintado ahora (1 combate ajeno, 2 tuyo); bits 2-3, lo nuevo.
+   */
+  _updateHot() {
+    const game = this.game;
+    this._hotTick = game.ticks;
+    const owner = game.owner;
+    const W = game.map.width;
+    if (!this.hot) this.hot = new Uint8Array(owner.length);
+    const hot = this.hot;
+    const human = game.human;
+    const old = this._hotList || [];
+    const next = [];
+    if (game.phase === 'playing') {
+      const H = owner.length;
+      const mark = (t, v) => {
+        const nv = hot[t] >> 2;
+        if (nv >= v) return;
+        if (!nv) next.push(t);
+        hot[t] = (hot[t] & 3) | (v << 2);
+      };
+      for (const atk of game.attacks) {
+        if (atk.done || !atk.targetId || !atk.inFrontier.size) continue;
+        const v = human && (atk.attacker === human || atk.targetId === human.id) ? 2 : 1;
+        const a = atk.attacker.id;
+        for (const t of atk.inFrontier) {
+          if (owner[t] !== atk.targetId) continue;
+          mark(t, v);
+          // …y la casilla del atacante de enfrente: la franja queda centrada en la frontera
+          const x = t % W;
+          if (x > 0 && owner[t - 1] === a) mark(t - 1, v);
+          if (x < W - 1 && owner[t + 1] === a) mark(t + 1, v);
+          if (t >= W && owner[t - W] === a) mark(t - W, v);
+          if (t + W < H && owner[t + W] === a) mark(t + W, v);
+        }
+      }
+    }
+    const repaint = (t) => {
+      this._paintTile(t);
+      this._markChunk(t % W, (t / W) | 0);
+    };
+    // Las que salen del frente…
+    for (const t of old) {
+      if (!(hot[t] >> 2) && hot[t] & 3) {
+        hot[t] = 0;
+        repaint(t);
+      }
+    }
+    // …y las que entran o cambian
+    for (const t of next) {
+      const v = hot[t] >> 2;
+      const changed = (hot[t] & 3) !== v;
+      hot[t] = v;
+      if (changed) repaint(t);
+    }
+    this._hotList = next;
   }
 
   // -------------------------------------------------------------- ambiente
@@ -28827,6 +29668,7 @@ class Renderer {
     const map = game.map;
     const size = this._buildingSize();
     for (const b of game.buildings) {
+      if (b.kind === 'capital') continue; // aparte (_drawCapitals), también de lejos
       const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
       if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size) continue;
       const p = game.players[b.owner];
@@ -28847,6 +29689,126 @@ class Renderer {
         if (b.level > 1) this._drawLevel(sx, sy, size, b.level);
       }
     }
+  }
+
+  /**
+   * Capitales (doc-1.6): siempre a la vista, más grandes que un edificio, con
+   * su muralla (un anillo almenado del color del dueño) de cerca. La tuya y
+   * las de tus aliados, también de lejos; las demás, al acercarse un poco.
+   */
+  _drawCapitals(now) {
+    const { ctx, game, camera } = this;
+    if (!game.capitals || !game.capitals.length) return;
+    const map = game.map;
+    const zr = camera.zoom * RES;
+    const human = game.human;
+    const size = clamp(this._buildingSize() * 1.45, 12, 34);
+    const wallR = CONFIG.capitalWallRadius * camera.zoom;
+    for (const b of game.capitals) {
+      const p = game.players[b.owner];
+      if (!p) continue;
+      const mine = p === human;
+      const friend = mine || (human && human.allies.has(p.id));
+      if (zr < 0.6 && !friend) continue;
+      const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+      const m = Math.max(size, wallR) + 4;
+      if (sx < -m || sy < -m || sx > camera.viewW + m || sy > camera.viewH + m) continue;
+      // Muralla: un anillo almenado. La tuya, en cuanto se distingue; las
+      // demás, solo de cerca (con decenas de capitales a la vista recargaban)
+      if (wallR >= (mine ? 14 : 44)) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, wallR, 0, Math.PI * 2);
+        ctx.lineWidth = Math.max(2, Math.min(5, wallR * 0.06));
+        ctx.setLineDash([Math.max(3, wallR * 0.09), Math.max(2, wallR * 0.05)]);
+        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.85 : 0.6})`;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(20, 16, 10, 0.45)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, wallR + ctx.lineWidth * 2.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (mine && this.anim) {
+        const k = 0.5 + 0.5 * Math.sin(now / 520);
+        ctx.fillStyle = `rgba(255, 214, 110, ${0.16 + 0.12 * k})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, size * (0.72 + 0.1 * k), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const spr = this._buildingSprite('capital', p, size);
+      const w = spr.width / this.dpr;
+      ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      const prog = game.capitalProgress ? game.capitalProgress(b) : null;
+      if (prog !== null) this._drawConstruction(sx, sy, size, prog, now);
+      else if (b.ind + b.pop > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.ind + b.pop);
+    }
+  }
+
+  /**
+   * Lugares de interés (doc-1.6): un disco dorado que late con su icono,
+   * siempre a la vista; de cerca, con su nombre.
+   */
+  _drawLugares(now) {
+    const { ctx, game, camera } = this;
+    if (!game.lugares || !game.lugares.length) return;
+    const size = clamp(camera.zoom * RES * 4, 15, 30);
+    const named = camera.zoom * RES >= 2.6;
+    const k = this.anim ? 0.5 + 0.5 * Math.sin(now / 360) : 0.5;
+    for (const l of game.lugares) {
+      const [sx, sy] = camera.worldToScreen(l.x + 0.5, l.y + 0.5);
+      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size * 2) continue;
+      // Halo que late
+      ctx.fillStyle = `rgba(255, 210, 90, ${0.18 + 0.16 * k})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, size * (0.78 + 0.16 * k), 0, Math.PI * 2);
+      ctx.fill();
+      const spr = this._lugarSprite(l.kind, size);
+      const w = spr.width / this.dpr;
+      ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      if (named) {
+        const def = LUGARES[l.kind];
+        ctx.font = '700 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(10, 14, 24, 0.8)';
+        ctx.fillStyle = '#ffe3a1';
+        ctx.strokeText(def.name, sx, sy + size * 0.62);
+        ctx.fillText(def.name, sx, sy + size * 0.62);
+      }
+    }
+  }
+
+  _lugarSprite(kind, size) {
+    const px = Math.max(12, Math.round((size * this.dpr) / 2) * 2);
+    const key = `lugar|${kind}|${px}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil(px * 1.2);
+      c = makeCanvas(S, S);
+      const g = c.getContext('2d');
+      const r = px / 2;
+      const grad = g.createRadialGradient(S / 2, S / 2 - r * 0.3, r * 0.1, S / 2, S / 2, r);
+      grad.addColorStop(0, '#fff2c4');
+      grad.addColorStop(1, '#d9a12e');
+      g.beginPath();
+      g.arc(S / 2, S / 2, r, 0, Math.PI * 2);
+      g.fillStyle = grad;
+      g.fill();
+      g.lineWidth = Math.max(1.5, px * 0.07);
+      g.strokeStyle = '#5b3a0a';
+      g.stroke();
+      g.font = `${Math.round(px * 0.56)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(LUGARES[kind].icon, S / 2, S / 2 + px * 0.03);
+      this._sprites.set(key, c);
+    }
+    return c;
   }
 
   /**
@@ -29063,23 +30025,40 @@ class Renderer {
   }
 
   /** Nivel del edificio (2 o más): el número en una chapa dorada encima del icono. */
+  /**
+   * Insignia de nivel de un edificio: ya dibujada (una por nivel y tamaño) y
+   * pegada. Antes era un círculo con texto en cada fotograma por edificio, y
+   * con cientos a la vista pesaba.
+   */
   _drawLevel(sx, sy, size, level) {
-    const { ctx } = this;
     const r = Math.max(6.5, size * 0.3);
-    const x = sx;
-    const y = sy - size * 0.62 - r * 0.35;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffd34d';
-    ctx.fill();
-    ctx.lineWidth = Math.max(1.5, r * 0.22);
-    ctx.strokeStyle = 'rgba(40, 26, 0, 0.9)';
-    ctx.stroke();
-    ctx.fillStyle = '#2a1a00';
-    ctx.font = `900 ${Math.round(r * 1.35)}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(level), x, y + r * 0.08);
+    const rq = Math.round(r * 2) / 2;
+    const key = `nivel|${level}|${rq}|${this.dpr}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil((rq * 2 + 4) * this.dpr);
+      c = makeCanvas(S, S);
+      const g = c.getContext('2d');
+      g.scale(this.dpr, this.dpr);
+      const m = rq + 2;
+      g.beginPath();
+      g.arc(m, m, rq, 0, Math.PI * 2);
+      g.fillStyle = '#ffd34d';
+      g.fill();
+      g.lineWidth = Math.max(1.5, rq * 0.22);
+      g.strokeStyle = 'rgba(40, 26, 0, 0.9)';
+      g.stroke();
+      g.fillStyle = '#2a1a00';
+      g.font = `900 ${Math.round(rq * 1.35)}px system-ui, sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(String(level), m, m + rq * 0.08);
+      this._sprites.set(key, c);
+    }
+    const w = c.width / this.dpr;
+    this.ctx.drawImage(c, sx - w / 2, sy - size * 0.62 - r * 0.35 - w / 2, w, w);
   }
 
   _hpBar(cx, cy, width, frac) {
@@ -29201,8 +30180,10 @@ class Renderer {
       const color = pcss(p);
       const mine = p === game.human;
       const moving = clamp((s.speed / RES) * 3, 0, 1);
-      const len = clamp(z * RES * 2.6, 6, 30);
-      drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
+      const fish = m.kind === 'fish';
+      const len = clamp(z * RES * (fish ? 1.9 : 2.6), 6, fish ? 22 : 30);
+      if (fish) drawFishing(ctx, sx, sy, s.ang, len, color, mine, moving, m.phase === 'fishing', this._lastNow || 0);
+      else drawCargo(ctx, sx, sy, s.ang, len, color, mine, moving, m.id);
       // Su bandera, en cuanto el barco se ve lo bastante grande
       if (len >= 11) this._shipEnsign(p, sx, sy - len * 0.12, Math.round(clamp(len * 0.42, 7, 12)));
       this._maybeWake(s, len, 5);
@@ -29325,9 +30306,9 @@ class Renderer {
     }
     [x, y] = pt(path[path.length - 1]);
     ctx.lineTo(x, y);
-    ctx.setLineDash([3, 5]);
-    ctx.strokeStyle = `rgba(${color}, 0.45)`;
-    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = `rgba(${color}, ${mine ? 0.8 : 0.55})`;
+    ctx.lineWidth = mine ? 1.8 : 1.3;
     ctx.stroke();
     ctx.setLineDash([]);
     // Origen marcado
@@ -29336,6 +30317,38 @@ class Renderer {
     ctx.arc(x, y, 2.5, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${color}, 0.9)`;
     ctx.fill();
+    // Destino: dónde va a desembarcar (diana que late; roja si viene a por ti)
+    const end = b.dest >= 0 ? b.dest : path[path.length - 1];
+    [x, y] = pt(end);
+    const human = this.game.human;
+    const hostile = human && b.targetId === human.id;
+    this._drawLanding(x, y, hostile ? '255, 80, 70' : color, mine);
+  }
+
+  /** Diana del punto de desembarco de una lancha. */
+  _drawLanding(x, y, rgb, strong) {
+    const { ctx } = this;
+    const k = this.anim ? 0.5 + 0.5 * Math.sin((this._lastNow || 0) / 260) : 0.5;
+    const r = strong ? 7 : 5.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 3 + 3 * k, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${rgb}, ${0.25 + 0.35 * (1 - k)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(10, 14, 24, 0.55)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${rgb}, 0.95)`;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.55, y);
+    ctx.lineTo(x + r * 0.55, y);
+    ctx.moveTo(x, y - r * 0.55);
+    ctx.lineTo(x, y + r * 0.55);
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
   }
 
   /** Buques de guerra: torretas que apuntan, fogonazos, proyectiles y hundimiento. */
@@ -29407,6 +30420,26 @@ class Renderer {
       const visible = this._inView(e.x, e.y, 16);
       const shake = fx.shake;
       const flash = fx.flash;
+      if (e.kind === 'fish') {
+        // Pesca: el oro, solo de los tuyos y si se ve
+        const h = game.human;
+        if (h && visible && e.owner === h.id) fx.label(e.x, e.y - 1.2 * RES, `+${formatNumber(e.gold)}`, '#ffd76a', 11, 1.2);
+        continue;
+      }
+      if (e.kind === 'lugar') {
+        if (!visible) continue;
+        const p = game.players[e.owner];
+        fx.capture(e.x, e.y, p ? pcss(p) : '#ffd76a');
+        fx.label(e.x, e.y - 1.6 * RES, `${LUGARES[e.lugar].icon} ${LUGARES[e.lugar].name}`, '#ffe3a1', 13, 2.2);
+        continue;
+      }
+      if (e.kind === 'capitalFall') {
+        if (!visible) continue;
+        const p = game.players[e.owner];
+        fx.capture(e.x, e.y, p ? pcss(p) : '#ffffff');
+        fx.label(e.x, e.y - 2 * RES, '🏰 ¡Capital tomada!', '#ffffff', 15, 2.6);
+        continue;
+      }
       if (e.kind === 'train') {
         // Oro de un tren: solo si es tuyo o pasa por tu estación, y si se ve
         const h = game.human;
@@ -31063,6 +32096,18 @@ class Sound {
         this.play('defensa', 0.85, 20000);
         return;
       }
+      // Los que llegan en ráfaga (capturas, monedas, conquistas) se espacian y
+      // bajan de volumen cuanto más se repiten: conquistando mucho saturaban
+      if (BURSTY.has(evt.sfx)) {
+        const now = performance.now();
+        const seen = (this._bursts ??= new Map());
+        const list = (seen.get(evt.sfx) || []).filter((t) => now - t < 8000);
+        if (now - (list[list.length - 1] || 0) < 1100) return;
+        list.push(now);
+        seen.set(evt.sfx, list);
+        this.play(evt.sfx, 0.9 / (1 + 0.55 * (list.length - 1)), 0);
+        return;
+      }
       this.play(evt.sfx, 1, evt.sfx === 'fall' ? 3000 : 250);
       return;
     }
@@ -31128,10 +32173,12 @@ class Sound {
       const same = prev && prev.game === game;
       if (same) {
         if (builtNow > prev.built) this.play('build', 0.8, 150);
-        // Edificio terminado (o subido de nivel): el sonido de su tipo
-        for (const k in BUILT_SFX) {
-          const n = (human.active[k] || 0) + (human.levels[k] || 0);
-          if (n > (prev.done[k] || 0)) this.play(BUILT_SFX[k], 0.75, 300);
+        // Obra tuya terminada (nueva o subida de nivel): el sonido de su tipo.
+        // Se cuenta lo que terminan tus obras (stats.finished), no los
+        // edificios activos: al capturar decenas sonaba uno por cada uno
+        if ((human.stats.finished || 0) > prev.finished) {
+          const k = human.stats.lastFinished;
+          if (BUILT_SFX[k]) this.play(BUILT_SFX[k], 0.75, 300);
         }
         if (human.boatCount > prev.boats) this.play('boat', 0.7, 300);
         if (human.spawned && !prev.spawned) this.play('despliegue', 0.9, 500);
@@ -31150,9 +32197,7 @@ class Sound {
         const target = atk.targetId ? game.players[atk.targetId] : null;
         this._cue(!target || target.weak ? 'expandir' : 'ataque', now);
       }
-      const done = {};
-      for (const k in BUILT_SFX) done[k] = (human.active[k] || 0) + (human.levels[k] || 0);
-      this._prev = { game, built: builtNow, done, boats: human.boatCount, tiles: human.tiles, spawned: human.spawned, alive: human.alive };
+      this._prev = { game, built: builtNow, finished: human.stats.finished || 0, boats: human.boatCount, tiles: human.tiles, spawned: human.spawned, alive: human.alive };
       if (game.phase === 'ended' && !this._ended) {
         this._ended = true;
         const won = game.winner === human || !!(game.winningAlliance && game.winningAlliance.includes(human));
@@ -31174,6 +32219,9 @@ class Sound {
     this.play(name, vol, 0);
   }
 }
+
+/** Avisos con sonido que pueden llegar muchos seguidos (se espacian y se atenúan). */
+const BURSTY = new Set(['capture', 'coin', 'coins', 'conquer', 'conquerColony', 'land', 'sink']);
 
 /** ¿Lucha el humano contra una nación (no una colonia), atacando o atacado? */
 function atWar(game, human) {
@@ -32277,6 +33325,7 @@ const { drawBuildingReal, flagCss, hasFlag } = __require('icons');
 const { POI_TYPES } = __require('estrategia');
 const { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } = __require('tecnologias');
 const { MECH, regenPerTick, tradeGold } = __require('mecanicas');
+const { LUGARES } = __require('lugares');
 const { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } = __require('movimiento');
 const { PantallaFin, abrirFin } = __require('fin');
 
@@ -32551,7 +33600,9 @@ class UI {
         btn.type = 'button';
         btn.className = 'obra';
         btn.dataset.kind = kind;
-        btn.title = def.unit
+        btn.title = def.unit === 'capital'
+          ? `${def.name}: ${def.desc}. Se aplica al momento, sin elegir sitio (tecla ${def.key.slice(3)})`
+          : def.unit
           ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
           : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
         const icon = document.createElement('canvas');
@@ -32564,7 +33615,7 @@ class UI {
         btn.setAttribute('aria-label', def.name);
         const name = document.createElement('span');
         name.className = 'b-nombre';
-        name.textContent = def.name;
+        name.textContent = def.short || def.name;
         const text = document.createElement('span');
         text.className = 'b-texto';
         text.innerHTML = '<span class="b-coste"></span>';
@@ -33341,7 +34392,18 @@ class UI {
       // Lo que falta para poder pagarlo, como relleno del botón
       btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
       btn.classList.toggle('en-obras', !!works[kind]);
-      if (BUILDINGS[kind].unit === 'missile') {
+      if (BUILDINGS[kind].unit === 'capital') {
+        // Mejoras de la capital: su nivel y si están en obras
+        const cap = human.capital;
+        const track = BUILDINGS[kind].track;
+        const lvl = cap ? cap[track] || 0 : 0;
+        const working = !!(cap && cap.work && cap.work.track === track);
+        btn.classList.toggle('en-obras', working);
+        btn.querySelector('.b-coste').textContent = lvl >= MECH.capital.maxLevel ? 'Máx.' : formatNumber(cost);
+        // Nivel en estrellas (corto: va en la esquina del botón; la obra ya se marca con su clase)
+        btn.querySelector('.b-num').textContent = cap && lvl ? `★${lvl}` : '';
+        unavailable = unavailable || !cap || !!cap.work || lvl >= MECH.capital.maxLevel;
+      } else if (BUILDINGS[kind].unit === 'missile') {
         // Coste y silos listos
         const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
         const ready = silos.filter((b) => b.readyAt <= game.ticks).length;
@@ -33527,7 +34589,10 @@ class UI {
       const techs = game.profile.techs;
       const rows = [
         ['Oro base (pasivo, cada turno)', inc.base],
-        game.profile.points || techs ? ['Bonos (puntos estratégicos, tecnologías, especialización)', inc.bonus] : null,
+        ['Territorio (cuanto más grande, más)', inc.tax],
+        ['Pueblos', inc.villages],
+        [game.profile.points || techs ? 'Bonos (industria de la capital, puntos, tecnologías…)' : 'Industria de la capital', inc.bonus],
+        ['Pesqueros', inc.fishing],
         h.economy === 'workers' ? ['Trabajadores', inc.workers] : null,
         ['Trenes y mercantes', inc.trade],
         game.profile.points ? ['Puntos estratégicos tomados', inc.conquest] : null,
@@ -33581,7 +34646,7 @@ class UI {
     const now = performance.now();
     if (now - (this._adviceAt || 0) < 1000) return;
     this._adviceAt = now;
-    const last = (this._tipLast ??= {});
+    const last = (this._adviceLast ??= {}); // (no _tipLast: ese es el texto del tooltip)
     const say = (key, text, every) => {
       if (now - (last[key] || -Infinity) < every) return false;
       last[key] = now;
@@ -33594,7 +34659,7 @@ class UI {
     if (this._fullSince && now - this._fullSince > 10000 && say('lleno', 'Tu población está al máximo y ya no crece: amplía territorio, construye ciudades o ataca', 90000)) return;
     const cheapest = Math.min(game.buildCost(h, 'city'), game.buildCost(h, 'fort'));
     if (h.gold > Math.max(600000, cheapest * 2) && !h.research && say('oro', `Tienes ${formatNumber(h.gold)} de oro sin usar: construye o investiga (tecla I)`, 120000)) return;
-    const nbs = game.neighborSummary(h).counts;
+    const nbs = game.neighborSummaryView(h).counts;
     for (const id of nbs.keys()) {
       const t = game.players[id];
       if (!t || t.weak || h.allies.has(id) || game.pactBetween(h.id, id)) continue;
@@ -34126,11 +35191,17 @@ class UI {
 
   /** Línea del tooltip con el punto estratégico cercano y su efecto. */
   _pointTip(game, tile) {
+    // Lugar de interés (doc-1.6): qué da al tomarlo
+    const lg = game.lugarNear ? game.lugarNear(tile) : null;
+    if (lg) {
+      const def = LUGARES[lg.kind];
+      return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave">· ${def.desc}</span></div>`;
+    }
     const pt = game.pointNear(tile);
     if (!pt) return '';
     const o = game.owner[pt.tile];
     const who = o ? ` · de ${escapeHtml(game.players[o].name)}` : ' · sin dueño';
-    return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}<br><span class="suave">${POI_TYPES[pt.kind].desc}</span></div>`;
+    return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}</div>`;
   }
 
   /** Estimación de lo que daría un ataque con la fuerza de ataque actual. */
@@ -34140,12 +35211,15 @@ class UI {
     const troops = this.nextSend(h);
     if (troops < 1) return '';
     const e = game.estimateAttack(h, targetId, troops);
-    const risk = targetId ? ` · riesgo ${e.risk}` : '';
-    return `<div class="tip-estim">Próximo envío ${fmtTroops(troops)}: ~${formatNumber(e.tiles)} casillas${risk}${e.uncertain ? ' (incierto: fortalezas o pasos)' : ''}</div>`;
+    const risk = targetId ? ` · ${e.risk}` : '';
+    return `<div class="tip-estim">⚔ ${fmtTroops(troops)} → ~${formatNumber(e.tiles)} cas.${risk}${e.uncertain ? ' ?' : ''}</div>`;
   }
 
-  updateTooltip(game, tile, sx, sy) {
+  updateTooltip(game, tile, sx, sy, zoom = 1) {
     const tip = $('tooltip');
+    // Tamaño según el zoom: algo más pequeño alejado, algo más grande de cerca
+    const zr = Math.max(0.05, zoom * RES);
+    const k = Math.round(Math.max(0.8, Math.min(1.1, 0.86 + 0.09 * Math.log2(zr))) * 20) / 20;
     if (tile < 0) {
       tip.hidden = true;
       this._tipTile = -1;
@@ -34178,7 +35252,8 @@ class UI {
     // Dentro de la ventana: se mide la caja (solo si cambió el texto) y, si
     // no cabe a la derecha o debajo del ratón, va al otro lado; nunca fuera
     const size = (this._tipSize ??= [tip.offsetWidth, tip.offsetHeight]);
-    const [w, h] = size;
+    const w = size[0] * k;
+    const h = size[1] * k;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     let left = sx + 16 + w > vw - 8 ? sx - 16 - w : sx + 16;
@@ -34186,7 +35261,7 @@ class UI {
     left = Math.max(8, Math.min(vw - w - 8, left));
     top = Math.max(8, Math.min(vh - h - 8, top));
     // Con transform (sin recolocar la página)
-    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+    tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px) scale(${k})`;
   }
 
   /** Texto del tooltip de una casilla de tierra (o de un río). */
@@ -34200,23 +35275,22 @@ class UI {
     const terrain = TERRAIN_NAMES[map.terrain[tile]];
     const o = game.owner[tile];
     if (o) {
+      // Lo justo: quién, tropas y territorio; debajo, solo lo que importa ahí
+      // (edificio, murallas o defensa)
       const p = game.players[o];
       const b = game.buildingNear(tile, 2 * RES);
       const extra = [];
       if (b) {
-        const lvl = b.level ? ` nv. ${b.level}` : '';
-        const work = b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : '';
-        extra.push(`${BUILDINGS[b.kind].name}${lvl}${work}`);
+        if (b.kind === 'capital') extra.push(`🏰 Capital${b.ind + b.pop ? ` · ind. ${b.ind} · pob. ${b.pop}` : ''}`);
+        else extra.push(`${BUILDINGS[b.kind].name}${b.level > 1 ? ` ${b.level}` : ''}${b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : ''}`);
       }
-      if (game.fortMultiplier(p, tile) > 1) extra.push('puesto defensivo cerca');
-      extra.push(terrain);
+      const def = game.fortMultiplier(p, tile);
+      if (def > 1 && !(b && b.kind === 'capital')) extra.push(game.wallMultiplier(p, tile) > 1 ? `murallas ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
       const human = game.human;
-      const tag = p === human ? ' (tú)' : human && human.allies.has(p.id) ? ' · 🤝 aliado' : game.isTraitor(p) ? ' · traidor' : p.weak ? ' · colonia' : '';
-      return `<b>${escapeHtml(p.name)}</b>${tag}<br>
-        ${fmtTroops(p.troops)} tropas · ${formatShare(p.tiles, map.landCount)}<br>
-        <span class="suave">${extra.join(' · ')}</span>${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
+      const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
+      return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
     }
-    return `<b>Tierra libre</b><br><span class="suave">${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
+    return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
   }
 }
 
