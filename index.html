@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="0eeaf58 2026-11-12 22:09 UTC">
+<meta name="trinchera-build" content="7018af6 2026-11-12 22:48 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4817,6 +4817,85 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .pj-bonos { order: 9; flex: 1 1 100%; margin-left: 0; flex-wrap: wrap; }
 .ficha { background: linear-gradient(180deg, #1b243a, #0b0f19); }
 
+/* ---------- Capital en el panel (doc-1.8): emblema, banco y botón Guardar ---------- */
+#panel-jugador .pj-banco { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 9px; margin-top: 8px; padding: 6px 6px 6px 4px; border-radius: 12px; background: linear-gradient(180deg, rgba(242, 179, 61, 0.07), rgba(255, 255, 255, 0.025)); border: 1px solid rgba(242, 179, 61, 0.16); flex-wrap: nowrap; row-gap: 0; }
+#panel-jugador .pj-banco[hidden] { display: none; }
+#panel-jugador.plegado .pj-banco { display: none; }
+.cap-emblema { position: relative; display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 14px; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 0.15s; }
+.cap-emblema:hover { transform: scale(1.06); }
+.cap-emblema:active { transform: scale(0.96); }
+.cap-emblema canvas { width: 56px; height: 56px; margin: -2px; pointer-events: none; }
+.cap-nivel { position: absolute; right: -2px; bottom: -1px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center; font: 800 10.5px/1 system-ui, sans-serif; color: #1b1205; background: linear-gradient(180deg, #ffe08a, #e0a12e); border: 1.5px solid #10151f; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); font-variant-numeric: tabular-nums; }
+.pj-banco[data-tier="0"] .cap-nivel { color: #fff; background: linear-gradient(180deg, #9aa0aa, #5d636d); }
+.pj-banco[data-tier="1"] .cap-nivel { background: linear-gradient(180deg, #f0b47a, #b06b2e); }
+.pj-banco[data-tier="2"] .cap-nivel { background: linear-gradient(180deg, #ffffff, #aab4c4); }
+.pj-banco[data-tier="5"] .cap-nivel { animation: capNivel 1.6s ease-in-out infinite; }
+@keyframes capNivel { 50% { box-shadow: 0 0 12px rgba(255, 215, 90, 0.9); } }
+/* El bloque se dora con el nivel */
+.pj-banco[data-tier="3"], .pj-banco[data-tier="4"] { border-color: rgba(242, 179, 61, 0.38); background: linear-gradient(180deg, rgba(242, 179, 61, 0.13), rgba(255, 255, 255, 0.03)); }
+.pj-banco[data-tier="5"] { border-color: rgba(255, 215, 90, 0.6); background: linear-gradient(180deg, rgba(255, 215, 90, 0.2), rgba(242, 179, 61, 0.05)); box-shadow: 0 0 18px rgba(255, 200, 80, 0.18) inset; }
+.cap-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cap-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+#panel-jugador .pj-banco .banco-etq { font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-suave); cursor: default; }
+.cap-def { font-size: 10.5px; font-weight: 700; color: #9be38f; white-space: nowrap; }
+#panel-jugador .pj-banco .banco-cifra { margin: 0; font-size: 12px; line-height: 1; white-space: nowrap; }
+#panel-jugador .pj-banco .banco-cifra strong { font-size: 17px; font-weight: 800; color: #ffd27a; }
+#panel-jugador .pj-banco .banco-barra { display: block; position: relative; height: 7px; min-width: 0; border-radius: 4px; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); overflow: hidden; }
+#panel-jugador .pj-banco #banco-relleno { background: linear-gradient(90deg, #b8862a, #f2b33d 60%, #ffe39a); box-shadow: 0 0 8px rgba(242, 179, 61, 0.5); }
+#panel-jugador .pj-banco #banco-relleno::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent); transform: translateX(-100%); animation: bancoBrillo 2.6s ease-in-out infinite; }
+@keyframes bancoBrillo { 60%, 100% { transform: translateX(100%); } }
+.cap-botones { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+#panel-jugador .pj-banco .banco-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: auto; margin: 0; padding: 0 10px; border-radius: 9px; font-size: 11.5px; font-weight: 800; flex: none; }
+#panel-jugador .pj-banco #banco-guardar { height: 30px; padding: 0 12px; color: #1b1205; background: linear-gradient(180deg, #ffd87a, #e8a52f); border: 1px solid #ffe3a1; box-shadow: 0 3px 10px rgba(242, 179, 61, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
+#panel-jugador .pj-banco #banco-guardar svg { width: 13px; height: 13px; }
+#panel-jugador .pj-banco #banco-guardar:hover:not(:disabled) { filter: brightness(1.08); }
+#panel-jugador .pj-banco #banco-guardar:disabled { opacity: 0.45; filter: grayscale(0.4); }
+#panel-jugador .pj-banco #banco-sacar { height: 20px; padding: 0 8px; font-size: 10px; font-weight: 700; color: var(--texto-suave); background: none; border: 1px solid rgba(255, 255, 255, 0.12); }
+#panel-jugador .pj-banco #banco-sacar:hover:not(:disabled) { color: var(--texto-1); background: rgba(255, 255, 255, 0.07); }
+/* Columna estrecha del panel (pantallas medianas y móvil en horizontal): más compacto */
+@media (min-width: 721px), (max-height: 500px) and (orientation: landscape) {
+  #hud:not(.escritorio) #panel-jugador .pj-banco { grid-template-columns: auto minmax(0, 1fr); row-gap: 5px; padding: 5px; }
+  #hud:not(.escritorio) #panel-jugador .pj-banco .cap-botones { grid-column: 1 / -1; flex-direction: row; }
+  #hud:not(.escritorio) #panel-jugador .pj-banco .cap-botones .banco-btn { flex: 1 1 0; height: 26px; }
+  #hud:not(.escritorio) .cap-emblema { width: 40px; height: 40px; }
+  #hud:not(.escritorio) .cap-emblema canvas { width: 44px; height: 44px; }
+  #hud:not(.escritorio) .cap-def { display: none; }
+}
+
+/* Ficha de la capital: niveles, premios y botón de mejorar */
+.ficha-precio small.tropas { color: #9fd1ff; }
+.ficha-precio small.falta { color: #ff9f8f; }
+.ficha-pips { display: flex; gap: 3px; margin-top: 9px; }
+.ficha-pips span { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); }
+.ficha-pips span.hecho { background: linear-gradient(90deg, #e0a12e, #ffe08a); box-shadow: 0 0 6px rgba(242, 179, 61, 0.45); }
+.ficha-pips span.siguiente { background: rgba(242, 179, 61, 0.28); animation: pipSig 1.4s ease-in-out infinite; }
+@keyframes pipSig { 50% { background: rgba(242, 179, 61, 0.55); } }
+.ficha-premios { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.ficha-premios li { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border-radius: 8px; font-size: 11.5px; color: #8f9aab; background: rgba(255, 255, 255, 0.025); }
+.ficha-premios .pk-n { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font: 800 10.5px/1 system-ui, sans-serif; color: #c9d0db; background: rgba(255, 255, 255, 0.07); }
+.ficha-premios .pk-t { flex: 1; min-width: 0; }
+.ficha-premios .pk-e { flex: none; width: 14px; height: 14px; display: grid; place-items: center; }
+.ficha-premios .pk-e svg { width: 13px; height: 13px; }
+.ficha-premios li.hecho { color: #cdf3c6; }
+.ficha-premios li.hecho .pk-n { color: #1b1205; background: linear-gradient(180deg, #ffe08a, #e0a12e); }
+.ficha-premios li.hecho .pk-e { color: #5fd38d; }
+.ficha-premios li.siguiente { color: #ffe3a1; background: rgba(242, 179, 61, 0.1); box-shadow: inset 0 0 0 1px rgba(242, 179, 61, 0.35); }
+.ficha-premios li.siguiente .pk-n { color: #ffe3a1; background: rgba(242, 179, 61, 0.22); }
+.ficha-premios li.siguiente .pk-e { color: #f2b33d; }
+.ficha-premios li.futuro .pk-e { color: #6b7587; }
+.ficha-mejorar { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; margin-top: 10px; padding: 8px 10px; border-radius: 11px; border: 1px solid #ffe3a1; background: linear-gradient(180deg, #ffd87a, #e8a52f); color: #1b1205; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(242, 179, 61, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5); transition: filter 0.15s, transform 0.12s; }
+.ficha-mejorar small { font-size: 10.5px; font-weight: 700; opacity: 0.8; }
+.ficha-mejorar:hover:not(:disabled) { filter: brightness(1.07); }
+.ficha-mejorar:active:not(:disabled) { transform: scale(0.98); }
+.ficha-mejorar:disabled { cursor: default; color: #c9d0db; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.12); box-shadow: none; }
+.ficha-cerrar { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: var(--texto-suave); font: 700 15px/1 system-ui, sans-serif; cursor: pointer; }
+.ficha.ficha-hoja { width: 330px; max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.ficha.ficha-hoja .ficha-cab { padding-right: 26px; }
+.ficha { max-height: calc(100vh - 16px); overflow-y: auto; scrollbar-width: thin; }
+#hud.escritorio .ficha.ficha-hoja { pointer-events: auto; }
+.ficha.ficha-hoja .ficha-mejorar { margin-top: 9px; }
+.ficha.ficha-hoja .ficha-pips { margin-top: 10px; }
+
 </style>
 </head>
 <body>
@@ -5607,13 +5686,21 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
         <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
         <input id="reparto" type="range" min="5" max="100" step="5" value="70">
       </label>
-      <!-- Banco de tropas de la capital (doc-1.7) -->
+      <!-- Capital (doc-1.8): su emblema (abre su ficha de niveles y premios), el banco y el botón para guardar -->
       <div class="pj-banco" id="pj-banco" hidden>
-        <span class="banco-etq" title="Banco de tropas de tu capital: guarda soldados a salvo (no atacan ni frenan tu regeneración) y sácalos cuando los necesites. Con tus tropas al tope, la capital sigue reclutando hacia el banco. Lleno, refuerza las murallas"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z" fill="currentColor"/></svg>Banco</span>
-        <span class="banco-barra" aria-hidden="true"><span id="banco-relleno"></span></span>
-        <span class="banco-cifra"><strong id="banco-tropas">0</strong><span class="max"> / <span id="banco-max">0</span></span></span>
-        <button type="button" id="banco-guardar" class="banco-btn" title="Guardar en la capital la fuerza de ataque elegida (tecla X)">Guardar</button>
-        <button type="button" id="banco-sacar" class="banco-btn" title="Sacar todas las tropas del banco (Mayús + X)">Sacar</button>
+        <button type="button" class="cap-emblema" id="cap-emblema" aria-label="Tu capital: niveles, mejoras y premios">
+          <canvas id="cap-icono" width="112" height="112" aria-hidden="true"></canvas>
+          <span class="cap-nivel" id="cap-nivel">0</span>
+        </button>
+        <div class="cap-info">
+          <div class="cap-fila"><span class="banco-etq">Banco</span><span class="cap-def" id="cap-def" title="Defensa dentro de las murallas: cuantas más tropas guardes, más"></span></div>
+          <div class="banco-cifra"><strong id="banco-tropas">0</strong><span class="max"> / <span id="banco-max">0</span></span></div>
+          <span class="banco-barra" aria-hidden="true"><span id="banco-relleno"></span></span>
+        </div>
+        <div class="cap-botones">
+          <button type="button" id="banco-guardar" class="banco-btn" title="Guarda en la capital el 25 % de tus soldados (tecla X): no atacan, no frenan tu regeneración y hacen más fuertes las murallas"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7.2 8 10.7l3.5-3.5M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Guardar</button>
+          <button type="button" id="banco-sacar" class="banco-btn" title="Saca todas las tropas del banco (Mayús + X)">Sacar todo</button>
+        </div>
       </div>
       </div>
       <div class="pj-col pj-obras">
@@ -5906,7 +5993,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "0eeaf58 2026-11-12 22:09 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "7018af6 2026-11-12 22:48 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -6609,7 +6696,8 @@ class BotBrain {
     else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
     // Su capital (doc-1.7: una sola mejora); y pueblos baratos
-    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = 'capUp';
+    // (doc-1.8: también cuesta tropas, así que solo si va sobrada)
+    else if (p.capital && !p.capital.work && p.troops > p.maxTroops() * 0.5 && g.rng.chance(0.35)) want = 'capUp';
     else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
@@ -7201,6 +7289,30 @@ class Camera {
 
 return { Camera };
 });
+__define('capital-tier', function () {
+// Tramos del aspecto de la capital según su nivel (doc-1.8): cuanto más
+// nivel, más dorada y con mejores animaciones (en el mapa y en el panel).
+// Solo aspecto: la simulación no lo usa.
+
+/** Tramos: nombre, colores del metal (claro, medio, oscuro) y su brillo. */
+const CAPITAL_TIERS = [
+  { id: 'piedra', name: 'Piedra', from: 0, metal: ['#c9ccd2', '#8d929c', '#4f545e'], glow: 0, shine: false, sparks: 0, rays: false },
+  { id: 'bronce', name: 'Bronce', from: 1, metal: ['#f0b47a', '#c27b3e', '#6e3f18'], glow: 0.18, shine: false, sparks: 0, rays: false },
+  { id: 'plata', name: 'Plata', from: 3, metal: ['#ffffff', '#c3ccd8', '#6f7a8c'], glow: 0.28, shine: true, sparks: 0, rays: false },
+  { id: 'oro', name: 'Oro', from: 6, metal: ['#fff3b0', '#f2b33d', '#8a5a10'], glow: 0.42, shine: true, sparks: 2, rays: false },
+  { id: 'oro-real', name: 'Oro real', from: 9, metal: ['#fffbe0', '#ffc93c', '#9a6410'], glow: 0.58, shine: true, sparks: 4, rays: false },
+  { id: 'leyenda', name: 'Ciudadela dorada', from: 12, metal: ['#ffffff', '#ffd75a', '#b07a12'], glow: 0.8, shine: true, sparks: 7, rays: true },
+];
+
+/** Índice del tramo de una capital de nivel `level` (0 a 5). */
+function capitalTier(level) {
+  let t = 0;
+  for (let i = 0; i < CAPITAL_TIERS.length; i++) if (level >= CAPITAL_TIERS[i].from) t = i;
+  return t;
+}
+
+return { CAPITAL_TIERS, capitalTier };
+});
 __define('cloud', function () {
 // Nube: perfil sincronizado entre dispositivos y clasificación global.
 // Usa las capacidades `db` y `user` del enlace de Claude. Fuera de Claude (o si
@@ -7605,8 +7717,7 @@ const CONFIG = {
   // Escudo antimisiles propio de la capital (doc-1.7): como una batería, sin construirla
   capitalSamRange: 26 * RES,
   capitalSamHit: 0.8,
-  capitalSamShots: 2, // interceptores por salva (+1 cada capitalSamShotsEvery niveles de la capital)
-  capitalSamShotsEvery: 3,
+  capitalSamShots: 2, // interceptores por salva (+1 en los niveles 3, 6, 9 y 12 de la capital: MECH.capital.perks)
   capitalClearance: 3, // casillas libres alrededor de la capital (se construye junto a ella)
   fortDefenseMult: 3, // efecto de defensa (× tiempo y bajas del atacante) dentro del radio del puesto
   // Niveles y obras (el precio de un nivel es el del siguiente edificio de su tipo: mecanicas.js)
@@ -8778,7 +8889,7 @@ __define('ficha-ui', function () {
 // bono activo. Las cifras salen de fichas.js; aquí solo se pinta y se coloca.
 
 const { BUILD_GROUPS, TICK_MS } = __require('config');
-const { formatNumber } = __require('format');
+const { fmtTroops, formatNumber } = __require('format');
 const { buildingCard } = __require('fichas');
 
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
@@ -8799,6 +8910,8 @@ const ICONS = {
   banco: svg('<path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z"/>', true),
   muralla: svg('<path d="M2 14V6h2.4v2h2.4V6h2.4v2h2.4V6H14v8z"/>', true),
   tienes: svg('<path d="M3 8.5 6.4 12 13 4.5"/>'),
+  estrella: svg('<path d="M8 1.8 9.9 5.9l4.4.5-3.3 3 .9 4.4L8 11.6l-3.9 2.2.9-4.4-3.3-3 4.4-.5z"/>', true),
+  candado: svg('<rect x="3.5" y="7" width="9" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>'),
   falta: svg('<path d="M8 2.2 14.5 13.5h-13zM8 6.5v3.2M8 11.6v.1"/>'),
 };
 
@@ -8814,7 +8927,7 @@ class FichaUI {
    * @param iconFor  kind → url de su icono (los de la barra)
    * @param onCancel al pulsar «Cancelar» en la tarjeta del móvil mientras colocas
    */
-  constructor(host, { iconFor, onCancel }) {
+  constructor(host, { iconFor, onCancel, onUpgrade }) {
     const el = document.createElement('div');
     el.className = 'ficha';
     el.setAttribute('role', 'tooltip');
@@ -8827,7 +8940,11 @@ class FichaUI {
     this._at = 0;
     el.addEventListener('click', (e) => {
       if (e.target.closest('[data-cancelar]')) onCancel?.(this.cur && this.cur.kind);
-      else if (this.cur && this.cur.mode !== 'dock') this.hide();
+      else if (e.target.closest('[data-mejorar]')) {
+        onUpgrade?.();
+        this._at = 0;
+      } else if (e.target.closest('[data-cerrar]')) this.hide();
+      else if (this.cur && (this.cur.mode === 'press' || this.cur.mode === 'bono')) this.hide();
     });
   }
 
@@ -8862,7 +8979,8 @@ class FichaUI {
     const now = performance.now();
     if (!force && now - this._at < 330) return;
     this._at = now;
-    this._render(this._buildingHtml(buildingCard(game, p, cur.kind), p, cur.mode));
+    const check = cur.mode === 'sheet' && cur.kind === 'capUp' ? game.canBuild(p, 'capUp') : null;
+    this._render(this._buildingHtml(buildingCard(game, p, cur.kind), p, cur.mode, check));
   }
 
   _render(html) {
@@ -8873,6 +8991,7 @@ class FichaUI {
       this._html = html;
     }
     el.classList.toggle('ficha-dock', cur.mode === 'dock');
+    el.classList.toggle('ficha-hoja', cur.mode === 'sheet');
     el.dataset.grupo = cur.type === 'obra' ? this._group(cur.kind) : 'bono';
     clearTimeout(this._hideTimer);
     if (el.hidden) {
@@ -8906,6 +9025,8 @@ class FichaUI {
     left = Math.max(8, Math.min(vw - w - 8, left));
     let top = r.top - h - 10;
     if (top < 8) top = Math.min(window.innerHeight - h - 8, r.bottom + 10);
+    // Si no cabe ni encima ni debajo, arriba del todo (con su propio scroll)
+    if (top < 8) top = 8;
     el.style.left = `${Math.round(left)}px`;
     el.style.top = `${Math.round(top)}px`;
     // La flechita apunta al botón
@@ -8913,13 +9034,14 @@ class FichaUI {
     el.classList.toggle('debajo', top > r.top);
   }
 
-  _buildingHtml(c, p, mode) {
+  _buildingHtml(c, p, mode, check = null) {
     const group = this._group(c.kind);
     const icon = this.iconFor ? this.iconFor(c.kind) : '';
     const short = p.gold < c.cost && !c.maxed;
+    const shortT = c.troops && p.troops < c.troops;
     const price = c.maxed
       ? '<b>Máx.</b>'
-      : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>`;
+      : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>${c.troops ? `<small class="${shortT ? 'falta' : 'tropas'}">+ ${fmtTroops(c.troops)} tropas</small>` : ''}`;
     const meta = [c.time ? `${ICONS.reloj}${seconds(c.time)} de obra` : '', c.key ? `<kbd>${esc(c.key)}</kbd>` : ''].filter(Boolean).join('');
     const gives = c.gives
       .map(
@@ -8932,21 +9054,44 @@ class FichaUI {
             .map((r) => `<div class="fn-fila"><span class="fn-l">${esc(r.label)}</span>${r.from ? `<span class="fn-de">${esc(r.from)}</span><i class="fn-a">→</i>` : ''}<b>${esc(r.to)}</b></div>`)
             .join('')}</div></section>`
         : '';
+    // Capital: los 12 niveles como una fila de piezas y sus premios (en la
+    // hoja, todos; si no, los próximos)
+    const pips = c.level != null
+      ? `<div class="ficha-pips" aria-label="Nivel ${c.level} de 12">${Array.from({ length: 12 }, (_, i) => `<span class="${i < c.level ? 'hecho' : i === c.level ? 'siguiente' : ''}"></span>`).join('')}</div>`
+      : '';
+    let perks = '';
+    if (c.perks && mode !== 'dock') {
+      const list = mode === 'sheet' ? c.perks : c.perks.filter((x) => x.state !== 'hecho').slice(0, 3);
+      if (list.length) {
+        perks = `<section class="ficha-sec"><h4>${mode === 'sheet' ? 'Premios por nivel' : 'Próximos premios'}</h4><ul class="ficha-premios">${list
+          .map((x) => `<li class="${x.state}"><span class="pk-n">${x.level}</span><span class="pk-t">${esc(x.text)}</span><i class="pk-e">${x.state === 'hecho' ? ICONS.tienes : x.state === 'siguiente' ? ICONS.estrella : ICONS.candado}</i></li>`)
+          .join('')}</ul></section>`;
+      }
+    }
+    const upgrade = mode === 'sheet' && c.kind === 'capUp' && !c.maxed
+      ? `<button type="button" class="ficha-mejorar" data-mejorar ${check && !check.ok ? 'disabled' : ''}>Mejorar a nivel ${c.level + 1}<small>${check && !check.ok ? esc(check.reason) : `${formatNumber(c.cost)} de oro · ${fmtTroops(c.troops)} tropas · ${seconds(c.time)}`}</small></button>`
+      : '';
+    const sheet = mode === 'sheet' && c.kind === 'capUp';
+    const close = mode === 'sheet' ? '<button type="button" class="ficha-cerrar" data-cerrar aria-label="Cerrar">×</button>' : '';
     const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : ''}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
     const how = c.how ? `<div class="ficha-como">${esc(c.how)}</div>` : '';
     const cancel = mode === 'dock' ? '<button type="button" class="ficha-cancelar" data-cancelar>Cancelar</button>' : '';
     return `
       <div class="ficha-cab">
         <span class="ficha-icono">${icon ? `<img src="${icon}" alt="">` : ''}</span>
-        <span class="ficha-titulos"><small>${esc(GROUP_NAMES[group] || '')} · ${esc(c.tag)}</small><strong>${esc(c.name)}</strong></span>
+        <span class="ficha-titulos"><small>${c.tagFull ? esc(c.tag) : `${esc(GROUP_NAMES[group] || '')} · ${esc(c.tag)}`}</small><strong>${esc(c.name)}</strong></span>
         <span class="ficha-precio${short ? ' caro' : ''}">${price}</span>
       </div>
-      ${meta ? `<div class="ficha-meta">${meta}</div>` : ''}
-      <p class="ficha-resumen">${esc(c.summary)}</p>
-      <section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>
+      ${close}
+      ${pips}
+      ${sheet ? upgrade : ''}
+      ${!sheet && meta ? `<div class="ficha-meta">${meta}</div>` : ''}
+      ${!sheet ? `<p class="ficha-resumen">${esc(c.summary)}</p>` : ''}
+      ${gives && !sheet ? `<section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>` : ''}
       ${next}
+      ${perks}
       ${have}
-      ${how}
+      ${sheet ? (c.maxed ? how : '') : how}
       ${cancel}`;
   }
 
@@ -8975,7 +9120,8 @@ __define('fichas', function () {
 // segundo (10 turnos), igual que el resto del panel.
 
 const { BUILDINGS, CONFIG, RES, TICK_MS, BUILD_GROUPS } = __require('config');
-const { MECH, regenPerTick, tradeGold } = __require('mecanicas');
+const { MECH, bankShare, capitalPerks, regenPerTick, tradeGold } = __require('mecanicas');
+const { CAPITAL_TIERS, capitalTier } = __require('capital-tier');
 const { fmtTroops, formatNumber } = __require('format');
 const { LUGARES } = __require('lugares');
 
@@ -9034,43 +9180,57 @@ function buildingCard(game, p, kind) {
       const C = MECH.capital;
       const cap = p.capital;
       const up = cap ? cap.up || 0 : 0;
-      card.tag = 'Mejora';
-      card.givesTitle = 'Cada nivel te da';
+      const tier = CAPITAL_TIERS[capitalTier(up)];
+      card.tag = `Capital de ${tier.name.toLowerCase()}`;
+      card.tagFull = true;
       card.name = 'Mejorar la capital';
       card.time = cap ? Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * up) * (1 - (p.mods.buildSpeed || 0)))) : 0;
-      card.summary = 'Tu capital da más oro, guarda más tropas en su banco y se defiende mejor. Se mejora al momento, sin elegir sitio.';
+      card.troops = cap && up < C.maxLevel ? game.capitalTroopCost(p) : 0;
+      card.summary = 'La clave de tu nación: más oro, más banco de tropas y murallas más duras. Cada nivel cuesta más oro y más tropas; el 12 es muy difícil.';
       const b = p.goldBreakdown();
       const passive = (b.base + b.tax + b.villages + b.workers) * PER_SEC;
-      const bank = (lvl) => p.maxTroops() * (C.bankBase + C.bankPerLevel * lvl);
-      const wall = (lvl) => C.wallMult + C.wallMultPerLevel * lvl;
+      const bank = (lvl) => p.maxTroops() * bankShare(lvl);
+      const wall = (lvl) => (C.wallMult + C.wallMultPerLevel * lvl) * capitalPerks(lvl).wallX;
       const outer = (lvl) => C.outerMult + C.outerMultPerLevel * lvl;
-      const shots = (lvl) => CONFIG.capitalSamShots + Math.floor(lvl / CONFIG.capitalSamShotsEvery);
+      const shots = (lvl) => CONFIG.capitalSamShots + capitalPerks(lvl).shield;
+      const next = Math.min(C.maxLevel, up + 1);
+      card.givesTitle = `El nivel ${next} te da`;
       card.gives = [
         { icon: 'oro', label: 'Oro pasivo', value: `+${pct(C.gold)}`, note: `≈ +${formatNumber(passive * C.gold)}/s más` },
-        { icon: 'banco', label: 'Banco de tropas', value: `+${pct(C.bankPerLevel)} del techo`, note: `+${fmtTroops(p.maxTroops() * C.bankPerLevel)} de sitio` },
-        { icon: 'muralla', label: 'Murallas', value: `+${dec(C.wallMultPerLevel)} de defensa` },
+        { icon: 'banco', label: 'Banco de tropas', value: `+${fmtTroops(bank(next) - bank(up))}`, note: `cabrán ${fmtTroops(bank(next))} (el ${pct(bankShare(next))} de tu techo)` },
+        { icon: 'muralla', label: 'Murallas', value: `×${dec(wall(next))}`, note: 'antes de sumar lo que guardes en el banco' },
       ];
+      const perk = C.perks.find((x) => x.level === next);
+      if (perk && up < C.maxLevel) card.gives.push({ icon: 'estrella', label: 'Premio', value: '', note: perk.text });
+      card.perks = C.perks.map((pk) => ({ level: pk.level, text: pk.text, state: pk.level <= up ? 'hecho' : pk.level === up + 1 ? 'siguiente' : 'futuro' }));
+      card.level = up;
       if (!cap) {
         card.have = 'No tienes capital.';
         card.haveWarn = true;
         card.maxed = true;
       } else if (up >= C.maxLevel) {
         card.maxed = true;
-        card.have = `Nivel ${up} (el máximo): +${pct(C.gold * up)} de oro, banco de ${fmtTroops(bank(up))} tropas, murallas ×${dec(wall(up))}.`;
+        card.gives = [];
+        card.givesTitle = '';
+        card.have = `Nivel ${up}, el máximo: +${pct(C.gold * up + capitalPerks(up).gold)} de oro, banco de ${fmtTroops(bank(up))} y murallas ×${dec(wall(up))}.`;
       } else {
-        card.have = `Nivel ${up} de ${C.maxLevel}${up ? `: +${pct(C.gold * up)} de oro` : ''} · banco ${fmtTroops(cap.bank || 0)} / ${fmtTroops(bank(up))}.`;
+        card.have = `Nivel ${up} de ${C.maxLevel} (${tier.name}) · banco ${fmtTroops(cap.bank || 0)} / ${fmtTroops(bank(up))}.`;
+        if (p.troops < card.troops) {
+          card.have += ` Te faltan ${fmtTroops(card.troops - p.troops)} tropas.`;
+          card.haveWarn = true;
+        }
         card.next = {
-          title: `Nivel ${up} → ${up + 1}`,
+          title: `Nivel ${up} → ${next}`,
           rows: [
-            { label: 'Oro pasivo', from: `+${pct(C.gold * up)}`, to: `+${pct(C.gold * (up + 1))}` },
-            { label: 'Banco de tropas', from: fmtTroops(bank(up)), to: fmtTroops(bank(up + 1)) },
-            { label: 'Murallas', from: `×${dec(wall(up))}`, to: `×${dec(wall(up + 1))}` },
-            { label: 'Afueras', from: `×${dec(outer(up))}`, to: `×${dec(outer(up + 1))}` },
-            { label: 'Escudo antimisiles', from: `${shots(up)} por salva`, to: `${shots(up + 1)} por salva` },
+            { label: 'Oro pasivo', from: `+${pct(C.gold * up + capitalPerks(up).gold)}`, to: `+${pct(C.gold * next + capitalPerks(next).gold)}` },
+            { label: 'Banco de tropas', from: fmtTroops(bank(up)), to: fmtTroops(bank(next)) },
+            { label: 'Murallas', from: `×${dec(wall(up))}`, to: `×${dec(wall(next))}` },
+            { label: 'Afueras', from: `×${dec(outer(up))}`, to: `×${dec(outer(next))}` },
+            { label: 'Escudo antimisiles', from: `${shots(up)} por salva`, to: `${shots(next)} por salva` },
           ].filter((r) => r.from !== r.to),
         };
       }
-      card.how = cap && cap.work ? 'Ya tiene una obra en marcha: espera a que acabe.' : 'Clic y empieza la obra. Una obra a la vez, hasta el nivel 10.';
+      card.how = cap && cap.work ? 'Ya tiene una obra en marcha: espera a que acabe.' : `Clic y empieza la obra (se pagan el oro y las tropas). Una obra a la vez, hasta el nivel ${C.maxLevel}.`;
       break;
     }
     case 'village': {
@@ -9220,8 +9380,8 @@ function shortEffect(game, p, kind) {
   switch (kind) {
     case 'capUp': {
       const cap = p.capital;
-      if (cap && cap.up >= MECH.capital.maxLevel) return 'Al máximo';
-      return `+${pct(MECH.capital.gold)} oro`;
+      if (cap && cap.up >= MECH.capital.maxLevel) return 'Nivel máximo';
+      return `Nivel ${(cap ? cap.up : 0) + 1}: +${pct(MECH.capital.gold)} oro`;
     }
     case 'village':
       return `+${formatNumber(MECH.village.gold * goldFactor(p) * PER_SEC)}/s · +${fmtTroops(MECH.village.cap * capFactor(p))}`;
@@ -9259,7 +9419,10 @@ function activeBonuses(game, p) {
   const out = [];
   const cap = p.capital;
   if (cap && cap.up > 0 && game.buildingAt.get(cap.tile) === cap) {
-    out.push({ id: 'capital', icon: '🏰', title: `Capital nivel ${cap.up}`, value: `+${pct(MECH.capital.gold * cap.up)} oro`, text: `Tu capital a nivel ${cap.up}: +${pct(MECH.capital.gold * cap.up)} de oro pasivo, banco de tropas del ${pct(MECH.capital.bankBase + MECH.capital.bankPerLevel * cap.up)} de tu techo y murallas ×${dec(MECH.capital.wallMult + MECH.capital.wallMultPerLevel * cap.up)}.`, left: null });
+    const pk = capitalPerks(cap.up);
+    const gold = MECH.capital.gold * cap.up + pk.gold;
+    const perks = MECH.capital.perks.filter((x) => x.level <= cap.up).map((x) => x.text);
+    out.push({ id: 'capital', icon: '🏰', title: `Capital nivel ${cap.up}`, value: `+${pct(gold)} oro`, text: `Tu capital a nivel ${cap.up}: +${pct(gold)} de oro pasivo y banco de tropas del ${pct(bankShare(cap.up))} de tu techo.${perks.length ? ` Premios: ${perks.join('; ')}.` : ''}`, left: null });
   }
   for (const b of p.buffs || []) {
     const left = Math.max(0, Math.ceil(((b.until - game.ticks) * TICK_MS) / 1000));
@@ -10425,7 +10588,7 @@ const { assignNationColors, botColor } = __require('colors');
 const { POI, POI_TYPES, placePoints } = __require('estrategia');
 const { LUGARES, LUGAR_CFG, pickLugar } = __require('lugares');
 const { SPECS, TECHS, addMods, emptyMods, techAvailable } = __require('tecnologias');
-const { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
+const { bankShare, bigEmpireBonus, capitalPerks, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -10920,9 +11083,17 @@ class Game {
     // Lugares de interés: mejoras para siempre y bonos que aún duran (doc-1.6)
     if (p.permMods) addMods(m, p.permMods);
     for (const b of p.buffs) if (b.until > this.ticks) addMods(m, LUGARES[b.kind].buff);
-    // Mejoras de la capital (doc-1.7: una sola, que sube el oro; el banco va aparte)
+    // Mejoras de la capital (doc-1.7: una sola, que sube el oro; el banco va
+    // aparte) y los premios de sus niveles (doc-1.8)
     const cap = p.capital;
-    if (cap && this.buildingAt.get(cap.tile) === cap) m.gold += MECH.capital.gold * cap.up;
+    if (cap && this.buildingAt.get(cap.tile) === cap) {
+      const pk = capitalPerks(cap.up);
+      m.gold += MECH.capital.gold * cap.up + pk.gold;
+      m.growth += pk.growth;
+      m.cap += pk.cap;
+      m.boats += pk.boats;
+      m.trade += pk.trade;
+    }
     p.passes = passes;
     p.mods = m;
   }
@@ -11002,6 +11173,12 @@ class Game {
     return b;
   }
 
+  /** Radios de las murallas y de las afueras de una capital (los premios de nivel los amplían). */
+  capitalRadii(cap) {
+    const pk = capitalPerks(cap ? cap.up || 0 : 0);
+    return { wall: CONFIG.capitalWallRadius + pk.wall * RES, outer: CONFIG.capitalOuterRadius + pk.outer * RES };
+  }
+
   /** Zona de la capital de `p` en la casilla `t`: 2 = dentro de las murallas, 1 = afueras, 0 = fuera. */
   capitalZone(p, t) {
     const cap = p && p.capital;
@@ -11010,31 +11187,56 @@ class Game {
     const dx = map.x(cap.tile) - map.x(t);
     const dy = map.y(cap.tile) - map.y(t);
     const d2 = dx * dx + dy * dy;
-    const R = CONFIG.capitalWallRadius;
+    const { wall: R, outer: O } = this.capitalRadii(cap);
     if (d2 <= R * R) return 2;
-    const O = CONFIG.capitalOuterRadius;
     return d2 <= O * O ? 1 : 0;
+  }
+
+  /** Lo que el banco suma a las murallas: ×(1 + 0,6 × banco / techo), hasta un banco de 3 techos (doc-1.8). */
+  bankDefense(p) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    const C = MECH.capital;
+    return 1 + C.bankDefense * Math.min(C.bankDefenseMax, (cap.bank || 0) / Math.max(1, p.maxTroops()));
   }
 
   /**
    * Defensa de la capital de `p` en la casilla `t` (1 = fuera): murallas
-   * ×6 (+0,4 por nivel, y hasta ×1,5 con el banco lleno) y afueras ×2,5
-   * (+0,1 por nivel) (doc-1.7).
+   * ×6 (+0,4 por nivel) × lo que suma el banco (cuantas más tropas
+   * guardadas, más) y afueras ×2,5 (+0,1 por nivel) (doc-1.7 y doc-1.8).
    */
   wallMultiplier(p, t) {
     const zone = this.capitalZone(p, t);
     if (!zone) return 1;
-    const C = MECH.capital;
-    const cap = p.capital;
-    if (zone === 1) return C.outerMult + C.outerMultPerLevel * cap.up;
-    const full = Math.min(1, cap.bank / Math.max(1, this.bankCap(p)));
-    return (C.wallMult + C.wallMultPerLevel * cap.up) * (1 + C.wallBankBonus * full);
+    return zone === 1 ? this.outerDefense(p) : this.wallDefense(p);
   }
 
-  /** Precio del siguiente nivel de la capital. */
+  /** Defensa dentro de las murallas de la capital de `p`. */
+  wallDefense(p) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    const C = MECH.capital;
+    return (C.wallMult + C.wallMultPerLevel * cap.up) * capitalPerks(cap.up).wallX * this.bankDefense(p);
+  }
+
+  /** Defensa en las afueras de la capital de `p`. */
+  outerDefense(p) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    return MECH.capital.outerMult + MECH.capital.outerMultPerLevel * cap.up;
+  }
+
+  /** Precio en oro del siguiente nivel de la capital. */
   capitalCost(p) {
     const lvl = p.capital ? p.capital.up || 0 : 0;
     return Math.round(capitalPrice(lvl) * this.rules.priceMult);
+  }
+
+  /** Tropas que cuesta el siguiente nivel de la capital: (6 % + 3 % × nivel) del techo (doc-1.8). */
+  capitalTroopCost(p) {
+    const lvl = p.capital ? p.capital.up || 0 : 0;
+    const C = MECH.capital;
+    return Math.round(p.maxTroops() * (C.troopBase + C.troopPerLevel * lvl));
   }
 
   _canUpgradeCapital(p) {
@@ -11044,19 +11246,23 @@ class Game {
     if ((b.up || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Tu capital ya está al máximo' };
     const cost = this.capitalCost(p);
     if (p.gold < cost) return { ok: false, reason: `Te falta oro: la mejora cuesta ${formatNumber(cost)}` };
-    return { ok: true, reason: '', cost, capital: b };
+    const troops = this.capitalTroopCost(p);
+    if (p.troops < troops) return { ok: false, reason: `Te faltan tropas: la mejora pide ${fmtTroops(troops)} soldados` };
+    return { ok: true, reason: '', cost, troops, capital: b };
   }
 
   _startCapitalWork(p) {
     const b = p.capital;
     const cost = this.capitalCost(p);
+    const troops = this.capitalTroopCost(p);
     p.gold -= cost;
+    p.troops = Math.max(0, p.troops - troops);
     p.spent.buildings += cost;
     p.stats.built++;
     const C = MECH.capital;
     const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b.up || 0)) * (1 - p.mods.buildSpeed)));
     b.work = { track: 'up', end: this.ticks + time, time };
-    if (p === this.human) this._emit(`🏰 Obras en la capital: nivel ${(b.up || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
+    if (p === this.human) this._emit(`🏰 Obras en la capital: nivel ${(b.up || 0) + 1} (${Math.round(time / 10)} s; ${formatNumber(cost)} de oro y ${fmtTroops(troops)} tropas)`, 'info');
     return true;
   }
 
@@ -11070,7 +11276,8 @@ class Game {
     p.stats.lastFinished = 'city';
     if (p === this.human) {
       const C = MECH.capital;
-      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco de tropas para ${fmtTroops(this.bankCap(p))}`, 'good');
+      const perk = C.perks.find((x) => x.level === b.up);
+      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco para ${fmtTroops(this.bankCap(p))}${perk ? ` · Premio: ${perk.text}` : ''}`, 'good', perk ? { sfx: 'logro' } : null);
     }
   }
 
@@ -11080,8 +11287,7 @@ class Game {
   bankCap(p) {
     const cap = p && p.capital;
     if (!cap) return 0;
-    const C = MECH.capital;
-    return p.maxTroops() * (C.bankBase + C.bankPerLevel * (cap.up || 0));
+    return p.maxTroops() * bankShare(cap.up || 0);
   }
 
   /** Guarda en la capital la parte `ratio` de sus soldados (lo que quepa). Devuelve cuántos. */
@@ -12146,7 +12352,7 @@ class Game {
   /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
   /** Interceptores por salva de una batería (o del escudo de una capital). */
   samShots(b) {
-    if (b.kind === 'capital') return CONFIG.capitalSamShots + Math.floor((b.up || 0) / CONFIG.capitalSamShotsEvery);
+    if (b.kind === 'capital') return CONFIG.capitalSamShots + capitalPerks(b.up || 0).shield;
     return CONFIG.samShots + CONFIG.samShotsPerLevel * (b.level - 1);
   }
 
@@ -14621,8 +14827,8 @@ const TABS = [
     name: 'Economía',
     items: [
       ['moneda', 'Oro', 'Ganas 100 de oro por turno pase lo que pase y, además, tu territorio produce: cuanto más grande, más (medio mundo da unas diez veces el oro base). Suman también pueblos, pesqueros, mercantes, trenes, regalos de aliados y el botín de quien elimines.'],
-      ['corona', 'Tu capital', 'Naces con tu capital amurallada: dentro de las murallas conquistarte cuesta seis veces más, en las afueras dos veces y media, las bombas no arrasan lo que hay dentro y su escudo derriba los misiles que se acercan. Mejórala desde la barra (Z), sin elegir sitio: cada nivel da +25 % de oro y más sitio en su banco de tropas.'],
-      ['corona', 'Banco de tropas', 'Guarda soldados en tu capital (Guardar o X: la fuerza de ataque elegida) y sácalos cuando los necesites (Sacar o Mayús + X). Lo guardado no ataca ni frena tu regeneración; con tus tropas al tope, la capital sigue reclutando hacia el banco, y lleno refuerza las murallas. Si cae, quien la toma se lleva botín y la mitad del banco, y la refundas con la mitad de las mejoras.'],
+      ['corona', 'Tu capital', 'Naces con tu capital amurallada: dentro de las murallas conquistarte cuesta seis veces más, en las afueras dos veces y media, las bombas no arrasan lo que hay dentro y su escudo derriba los misiles que se acercan. Su muralla se ve en el mapa como una frontera de píxeles del metal de su nivel. Mejorarla es clave pero cuesta oro y tropas, cada vez más (Z, o toca su emblema en el panel): cada nivel da +20 % de oro, mucho más banco y murallas más fuertes, y los niveles 3 a 12 traen premios (escudo, afueras, crecimiento, barcos, techo, comercio). Del 1 al 12 su emblema pasa de piedra a bronce, plata, oro y oro real; el 12, la ciudadela dorada, es muy difícil.'],
+      ['corona', 'Banco de tropas', 'Guarda soldados en tu capital con el botón Guardar (o X: el 25 % de tus soldados cada vez) y sácalos cuando los necesites (Sacar todo o Mayús + X). Lo guardado no ataca ni frena tu regeneración y, cuantas más tropas guardes, más fuertes son las murallas (y más gruesas en el mapa); con tus tropas al tope, la capital sigue reclutando hacia el banco. Si cae, quien la toma se lleva botín y la mitad del banco, y la refundas con la mitad de las mejoras.'],
       ['tropas', 'Trabajadores', 'Con la regla «Economía con trabajadores», el deslizador «Reparto» divide tu población entre soldados (atacan y defienden) y trabajadores (dan oro).'],
       ['ciudad', 'Edificios', 'Pueblos (B): baratos, +300 de oro/s y +6 000 de techo por nivel. Ciudades: +25 000 de techo de tropas por nivel. Puertos: pesqueros que vuelven con oro (tantos como su nivel) y mercantes a puertos de otros países que os pagan a los dos. Fábricas: vías y trenes que dan oro en cada estación. Las obras tardan unos segundos.'],
       ['bandera', 'Lugares de interés', 'Los discos dorados del mapa (tesoros, mercenarios, graneros, forjas, ruinas y fortalezas) dan un premio a quien los conquiste: oro o tropas al momento, un bono de unos segundos o una pequeña mejora para siempre. Luego aparece otro en otro sitio.'],
@@ -14858,6 +15064,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
   { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
   { tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
   { tag: 'Mapa', title: 'Frentes en rojo', text: 'Las fronteras donde se lucha se ponen rojas, los barcos marcan dónde van a desembarcar y el tooltip es más pequeño y claro.', art: 2 },
@@ -17965,6 +18172,7 @@ return { rulesSummary, viewFromHash, Home };
 __define('icons', function () {
 // Iconos de edificios dibujados con primitivas de canvas. Se usan igual en el
 // mapa y en los botones de construcción, así siempre coinciden.
+const { CAPITAL_TIERS, capitalTier } = __require('capital-tier');
 const { FLAG_COLS, FLAG_H, FLAG_INDEX, FLAG_SPRITE, FLAG_W } = __require('banderas');
 
 const TAU = Math.PI * 2;
@@ -18438,6 +18646,166 @@ function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline = fals
     ctx.scale(0.62, 0.62);
   } else ctx.scale(0.7, 0.7);
   paintGlyph(ctx, g, color === '#ffffff' ? '#eef2f7' : color, false);
+  ctx.restore();
+}
+
+/**
+ * Emblema de la capital (doc-1.8): un medallón de metal con el castillo en
+ * relieve. El metal sale del tramo de su nivel (piedra, bronce, plata, oro,
+ * oro real y, a nivel 12, la ciudadela dorada con corona). `ring`: anillo
+ * del color del dueño; `outline`: filo blanco (la tuya).
+ */
+function drawCapitalEmblem(ctx, cx, cy, size, level, { ring = null, outline = false } = {}) {
+  const T = CAPITAL_TIERS[capitalTier(level)];
+  const [hi, mid, lo] = T.metal;
+  const g = glyphs().capital;
+  ctx.save();
+  ctx.translate(cx, cy);
+  const k = size / 20;
+  ctx.scale(k, k);
+  if (outline) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 11.4, 0, TAU);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  }
+  if (ring) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 10.4, 0, TAU);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = ring;
+    ctx.stroke();
+  }
+  // Medallón de metal con su bisel
+  const grad = ctx.createRadialGradient(-3, -4, 0.5, 0, 0, 10);
+  grad.addColorStop(0, hi);
+  grad.addColorStop(0.55, mid);
+  grad.addColorStop(1, lo);
+  ctx.beginPath();
+  ctx.arc(0, 0, 9.3, 0, TAU);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = lo;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 7.7, 0, TAU);
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.stroke();
+  // Castillo en relieve: sombra clara debajo y el castillo oscuro encima
+  ctx.save();
+  ctx.translate(0, 0.9);
+  ctx.scale(0.6, 0.6);
+  ctx.translate(0.6, 0.8);
+  paintGlyph(ctx, g, 'rgba(255, 255, 255, 0.35)', false);
+  ctx.translate(-0.6, -0.8);
+  paintGlyph(ctx, g, T.id === 'piedra' ? '#2b2f37' : 'rgba(40, 24, 6, 0.9)', false);
+  ctx.restore();
+  // Ciudadela dorada: corona encima
+  if (T.rays) {
+    ctx.save();
+    ctx.translate(0, -10.6);
+    ctx.beginPath();
+    ctx.moveTo(-4.6, 2);
+    ctx.lineTo(-4.6, -1.8);
+    ctx.lineTo(-2.3, 0);
+    ctx.lineTo(0, -2.8);
+    ctx.lineTo(2.3, 0);
+    ctx.lineTo(4.6, -1.8);
+    ctx.lineTo(4.6, 2);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd75a';
+    ctx.fill();
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = '#8a5a10';
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * Animación del emblema de la capital (cada fotograma): resplandor que late,
+ * un brillo que lo recorre (desde plata), chispas (desde oro) y rayos que
+ * giran (ciudadela dorada). `t`: milisegundos.
+ */
+function drawCapitalFx(ctx, cx, cy, size, level, t, { back = true } = {}) {
+  const T = CAPITAL_TIERS[capitalTier(level)];
+  const r = size / 2;
+  ctx.save();
+  if (back) {
+    if (T.rays) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((t / 4000) % TAU);
+      ctx.fillStyle = 'rgba(255, 215, 90, 0.22)';
+      for (let i = 0; i < 12; i++) {
+        ctx.rotate(TAU / 12);
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.12, 0);
+        ctx.lineTo(r * 0.12, 0);
+        ctx.lineTo(0, -r * 2.1);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (T.glow > 0) {
+      const k = 0.5 + 0.5 * Math.sin(t / (T.rays ? 380 : 620));
+      const R = r * (1.35 + 0.25 * k);
+      const g = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, R);
+      g.addColorStop(0, `rgba(255, 210, 90, ${T.glow * (0.55 + 0.45 * k)})`);
+      g.addColorStop(1, 'rgba(255, 210, 90, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, TAU);
+      ctx.fill();
+    }
+  } else {
+    if (T.shine) {
+      // Una franja de luz que cruza el medallón cada pocos segundos
+      const period = T.rays ? 1800 : 3200;
+      const f = (t % period) / period;
+      if (f < 0.4) {
+        const x = cx - r + (f / 0.4) * r * 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.93, 0, TAU);
+        ctx.clip();
+        const g = ctx.createLinearGradient(x - r * 0.35, cy - r, x + r * 0.35, cy + r);
+        g.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        g.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+        g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        ctx.restore();
+      }
+    }
+    for (let i = 0; i < T.sparks; i++) {
+      // Chispas de cuatro puntas que aparecen y se apagan alrededor
+      const ph = (t / 900 + i * 0.37) % 1;
+      const a = i * 2.39 + Math.floor(t / 900 + i * 0.37) * 1.7;
+      const d = r * (1.05 + 0.25 * ((i * 0.61) % 1));
+      const s = r * 0.22 * Math.sin(ph * Math.PI);
+      if (s <= 0.2) continue;
+      const x = cx + Math.cos(a) * d;
+      const y = cy + Math.sin(a) * d;
+      ctx.fillStyle = `rgba(255, 245, 200, ${0.9 * Math.sin(ph * Math.PI)})`;
+      ctx.beginPath();
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s * 0.28, y - s * 0.28);
+      ctx.lineTo(x + s, y);
+      ctx.lineTo(x + s * 0.28, y + s * 0.28);
+      ctx.lineTo(x, y + s);
+      ctx.lineTo(x - s * 0.28, y + s * 0.28);
+      ctx.lineTo(x - s, y);
+      ctx.lineTo(x - s * 0.28, y - s * 0.28);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
@@ -19243,7 +19611,7 @@ function drawPointIcon(ctx, kind, cx, cy, size, { ring = null } = {}) {
   ctx.restore();
 }
 
-return { drawBuildingIcon, drawBuildingReal, drawFrame, drawEmblem, emblemFor, PATTERN_FNS, loadFlags, flagReady, hasFlag, drawFlag, flagCss, installFlagSprite, drawPointIcon };
+return { drawBuildingIcon, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawFrame, drawEmblem, emblemFor, PATTERN_FNS, loadFlags, flagReady, hasFlag, drawFlag, flagCss, installFlagSprite, drawPointIcon };
 });
 __define('identidad', function () {
 // Identidad firmada para las salas clasificatorias: cada navegador tiene un
@@ -22234,11 +22602,11 @@ function humanIntent(intent) {
   game.queueIntent({ ...intent, playerId: human.id });
 }
 
-/** Banco de tropas de la capital (doc-1.7): 'in' guarda la fuerza de ataque elegida; 'out' lo saca todo. */
+/** Banco de tropas de la capital: 'in' guarda el 25 % de tus soldados (doc-1.8); 'out' lo saca todo. */
 function bankTroops(op) {
   const { game, human } = state;
   if (state.demo || !human || !human.alive || game.phase !== 'playing' || !human.capital) return;
-  humanIntent({ type: 'bank', op, ratio: op === 'in' ? state.ratio : 1 });
+  humanIntent({ type: 'bank', op, ratio: op === 'in' ? BANK_STEP : 1 });
 }
 
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
@@ -22255,6 +22623,9 @@ function setBuildMode(kind) {
   state.buildMode = state.buildMode === kind ? null : kind;
   ui.update(game, human, state.ratio, state.buildMode);
 }
+
+/** Parte de tus soldados que guarda cada pulsación de «Guardar» (o X). */
+const BANK_STEP = 0.25;
 
 const buildKeys = Object.fromEntries(BUILDING_KINDS.map((k) => [BUILDINGS[k].key, k]));
 
@@ -22332,8 +22703,9 @@ const input = new Input(canvas, camera, {
 ui.on({
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
-  // Banco de tropas de la capital: guarda la fuerza de ataque elegida o lo saca todo
+  // Banco de tropas de la capital: guarda el 25 % de tus soldados o lo saca todo
   onBank: bankTroops,
+  onUpgradeCapital: () => setBuildMode('capUp'),
   // Desarrollo y diplomacia ampliada
   onSpec: (spec) => humanIntent({ type: 'spec', spec }),
   onResearch: (tech) => humanIntent({ type: 'research', tech }),
@@ -23706,7 +24078,7 @@ __define('mecanicas', function () {
  * industria y población, pueblos, pesqueros, comercio más frecuente y
  * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.7';
+const MECH_VERSION = 'doc-1.8';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -23719,7 +24091,7 @@ const MECH_VERSION = 'doc-1.7';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7; clasico-9, con las de doc-1.8. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -23729,8 +24101,8 @@ const MECH_VERSION = 'doc-1.7';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-8', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-7', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-9', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-8', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -23872,40 +24244,62 @@ const MECH = {
   // 2000×1000): 1.000 casillas → +44; 20.000 → +232; medio mundo (~300.000)
   // → +1.030 por turno (10 veces el oro base). Las colonias, la mitad
   tax: { k: 1, exp: 0.55, colonyShare: 0.5 },
-  // Capital (doc-1.6, rehecha en doc-1.7): cada nación nace con la suya,
-  // amurallada. Una sola mejora (sin ocupar más mapa), de nivel 0 a 10: +25 %
-  // del oro pasivo, +15 % de capacidad del banco de tropas y murallas más
-  // fuertes por nivel. Precio de cada nivel: 150k × 1,75^nivel.
-  // Murallas (CONFIG.capitalWallRadius): defensa ×6 (+0,4 por nivel, y hasta
-  // ×1,5 más con el banco lleno); afueras (CONFIG.capitalOuterRadius): ×2,5
-  // (+0,1 por nivel). Las bombas no destruyen lo que hay dentro de las murallas.
-  // Banco de tropas: guardas soldados en la capital (no atacan, no cuentan
-  // para el techo ni frenan la regeneración) y los sacas cuando quieras. Cabe
-  // el 30 % del techo de tropas (+15 % por nivel). Si tus tropas están al
-  // tope, la capital sigue reclutando hacia el banco a la mitad del ritmo
-  // máximo de regeneración. Si cae, el conquistador se lleva botín (oro y la
-  // mitad del banco en tropas) y la capital se traslada con la mitad de sus
-  // niveles y el banco vacío
+  // Capital (doc-1.6, rehecha en doc-1.7 y doc-1.8): cada nación nace con la
+  // suya, amurallada. Una sola mejora, de nivel 0 a 12 (el 12, muy difícil):
+  // cada nivel cuesta oro (150k × 1,62^nivel) y tropas ((6 % + 3 % × nivel)
+  // de tu techo), cada vez más; da +20 % del oro pasivo, más banco de tropas
+  // y murallas más fuertes, y algunos niveles traen un premio (perks).
+  // Murallas (CONFIG.capitalWallRadius, frontera de píxeles en el mapa):
+  // defensa ×6 (+0,4 por nivel) × (1 + 0,6 × banco / techo de tropas, hasta
+  // un banco de 3 techos): cuantas más tropas guardadas, más fuerte. Afueras
+  // (CONFIG.capitalOuterRadius): ×2,5 (+0,1 por nivel). Las bombas no
+  // destruyen lo que hay dentro de las murallas.
+  // Banco de tropas: guardas soldados (no atacan, no cuentan para el techo
+  // ni frenan la regeneración) y los sacas cuando quieras. Cabe techo × (0,3
+  // + 0,15 n + 0,01 n²): del 30 % a nivel 0 al 354 % a nivel 12. Con tus
+  // tropas al tope, la capital sigue reclutando hacia el banco a la mitad del
+  // ritmo máximo. Si cae, el conquistador se lleva botín (oro y la mitad del
+  // banco en tropas) y la capital se traslada con la mitad de sus niveles y
+  // el banco vacío
   capital: {
-    maxLevel: 10,
-    gold: 0.25,
+    maxLevel: 12,
+    gold: 0.2,
     priceBase: 150000,
-    priceGrowth: 1.75,
+    priceGrowth: 1.62,
+    troopBase: 0.06,
+    troopPerLevel: 0.03,
     buildTicks: 50,
-    buildTicksPerLevel: 10,
+    buildTicksPerLevel: 15,
     wallMult: 6,
     wallMultPerLevel: 0.4,
-    wallBankBonus: 0.5,
+    bankDefense: 0.6,
+    bankDefenseMax: 3,
     outerMult: 2.5,
     outerMultPerLevel: 0.1,
     bankBase: 0.3,
     bankPerLevel: 0.15,
+    bankPerLevel2: 0.01,
     bankRecruit: 0.5,
     bankFull: 0.97, // tropas/techo a partir del cual la capital recluta hacia el banco
     bankLoot: 0.5,
     lootBase: 250000,
     lootShare: 0.2,
     keepShare: 0.5,
+    // Premios de algunos niveles (se ven por adelantado en la ficha de la
+    // capital). shield: disparos del escudo; outer/wall: casillas de más
+    // (× RES); growth, cap, boats, trade, gold: modificadores; wallX: × murallas
+    perks: [
+      { level: 3, shield: 1, text: '+1 disparo del escudo antimisiles' },
+      { level: 4, outer: 3, text: 'Afueras 3 casillas más amplias' },
+      { level: 5, growth: 0.1, text: '+10 % de crecimiento de tropas' },
+      { level: 6, shield: 1, text: '+1 disparo del escudo antimisiles' },
+      { level: 7, boats: 1, text: '+1 barco de transporte a la vez' },
+      { level: 8, wall: 2, text: 'Murallas 2 casillas más amplias' },
+      { level: 9, shield: 1, text: '+1 disparo del escudo antimisiles' },
+      { level: 10, cap: 0.1, text: '+10 % de techo de tropas' },
+      { level: 11, trade: 0.25, text: '+25 % de oro de mercantes, trenes y pesqueros' },
+      { level: 12, gold: 0.5, wallX: 1.25, shield: 1, text: 'Ciudadela dorada: +50 % de oro, murallas ×1,25 y +1 disparo del escudo' },
+    ],
   },
   // Pueblos (doc-1.6): pequeños y baratos; +30 de oro por turno y +60k de techo por nivel
   village: { gold: 30, cap: 60000, step: 40000, priceCap: 400000 },
@@ -23921,6 +24315,26 @@ function territoryGold(tiles, docArea = 1) {
 }
 
 /** Precio del siguiente nivel de una mejora de la capital (`level`: el que tiene ahora). */
+/** Lo que suman los premios de la capital hasta el nivel `level` (doc-1.8). */
+function capitalPerks(level) {
+  const out = { shield: 0, outer: 0, wall: 0, growth: 0, cap: 0, boats: 0, trade: 0, gold: 0, wallX: 1 };
+  for (const pk of MECH.capital.perks) {
+    if (pk.level > level) continue;
+    for (const [k, v] of Object.entries(pk)) {
+      if (k === 'level' || k === 'text') continue;
+      if (k === 'wallX') out.wallX *= v;
+      else out[k] += v;
+    }
+  }
+  return out;
+}
+
+/** Parte del techo de tropas que cabe en el banco de una capital de nivel `level`. */
+function bankShare(level) {
+  const C = MECH.capital;
+  return C.bankBase + C.bankPerLevel * level + C.bankPerLevel2 * level * level;
+}
+
 function capitalPrice(level) {
   let v = MECH.capital.priceBase;
   for (let i = 0; i < level; i++) v *= MECH.capital.priceGrowth;
@@ -24121,7 +24535,7 @@ function priceFor(kind, n) {
   }
 }
 
-return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, territoryGold, capitalPrice, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpSpeedRatio, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
+return { MECH_VERSION, PROFILES, profileOf, rulesetId, MECH, territoryGold, capitalPerks, bankShare, capitalPrice, detExp, detLn, detPow, maxTroopsFor, regenPerTick, startOffsets, neutralTimeCost, pvpSpeedRatio, pvpTile, bigEmpireBonus, tradeGold, tradeSpawnChance, priceFor };
 });
 __define('minimapa', function () {
 // Minimapa: todo el mapa en pequeño (relieve y territorios), con el recuadro
@@ -29093,13 +29507,15 @@ __define('render', function () {
 const { BUILDINGS, CONFIG, RES, TICK_MS } = __require('config');
 const { rgbToCss, shadeRgb, territoryRgb, vividRgb } = __require('colors');
 const { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } = __require('format');
-const { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } = __require('icons');
+const { PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } = __require('icons');
+const { CAPITAL_TIERS, capitalTier } = __require('capital-tier');
 const { forgetTerrain, paintTerrain } = __require('terreno');
 const { MECH } = __require('mecanicas');
 const { Fx, drawMissileSprite, resetFxSprites } = __require('fx');
 const { drawCargo, drawFishing, drawTransport, drawWarship } = __require('barcos');
 const { LUGARES } = __require('lugares');
 
+const TAU = Math.PI * 2;
 const COLONY_ALPHA = 108; // las colonias, más tenues
 const FILL_ALPHA = 142; // territorio semitransparente: se ve el terreno debajo (algo menos que antes: colores más nítidos)
 const LABEL_INTERVAL_MS = 500;
@@ -29193,6 +29609,12 @@ const smooth = (a, b, v) => {
   const t = clamp((v - a) / (b - a), 0, 1);
   return t * t * (3 - 2 * t);
 };
+
+/** '#rrggbb' → [r, g, b]. */
+function hexRgb(h) {
+  const v = parseInt(h.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
 
 function makeCanvas(w, h) {
   const c = document.createElement('canvas');
@@ -30553,7 +30975,6 @@ class Renderer {
     const zr = camera.zoom * RES;
     const human = game.human;
     const size = clamp(this._buildingSize() * 1.45, 12, 34);
-    const wallR = CONFIG.capitalWallRadius * camera.zoom;
     for (const b of game.capitals) {
       const p = game.players[b.owner];
       if (!p) continue;
@@ -30561,47 +30982,165 @@ class Renderer {
       const friend = mine || (human && human.allies.has(p.id));
       if (zr < 0.6 && !friend) continue;
       const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
-      const m = Math.max(size, CONFIG.capitalOuterRadius * camera.zoom) + 4;
+      const radii = game.capitalRadii ? game.capitalRadii(b) : { wall: CONFIG.capitalWallRadius, outer: CONFIG.capitalOuterRadius };
+      const wallR = radii.wall * camera.zoom;
+      const m = Math.max(size * 2, radii.outer * camera.zoom) + 4;
       if (sx < -m || sy < -m || sx > camera.viewW + m || sy > camera.viewH + m) continue;
-      // Muralla: un anillo almenado. La tuya, en cuanto se distingue; las
+      // Murallas en píxeles (doc-1.8): la tuya, en cuanto se distingue; las
       // demás, solo de cerca (con decenas de capitales a la vista recargaban)
-      if (wallR >= (mine ? 14 : 44)) {
-        ctx.beginPath();
-        ctx.arc(sx, sy, wallR, 0, Math.PI * 2);
-        ctx.lineWidth = Math.max(2, Math.min(5, wallR * 0.06));
-        ctx.setLineDash([Math.max(3, wallR * 0.09), Math.max(2, wallR * 0.05)]);
-        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.85 : 0.6})`;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(20, 16, 10, 0.45)';
-        ctx.beginPath();
-        ctx.arc(sx, sy, wallR + ctx.lineWidth * 2.5, 0, Math.PI * 2);
-        ctx.stroke();
-        // Afueras (doc-1.7): un anillo fino y discontinuo, más fuera
-        const outR = CONFIG.capitalOuterRadius * camera.zoom;
-        ctx.beginPath();
-        ctx.arc(sx, sy, outR, 0, Math.PI * 2);
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([3, 5]);
-        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.45 : 0.3})`;
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-      if (mine && this.anim) {
-        const k = 0.5 + 0.5 * Math.sin(now / 520);
-        ctx.fillStyle = `rgba(255, 214, 110, ${0.16 + 0.12 * k})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, size * (0.72 + 0.1 * k), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      const spr = this._buildingSprite('capital', p, size);
+      if (wallR >= (mine ? 12 : 40)) this._drawCapitalWalls(b, p, radii);
+      const lvl = b.up || 0;
+      // Emblema: medallón de su metal (más dorado cuanto más nivel) con su
+      // resplandor, el brillo que lo cruza, chispas y rayos a nivel 12
+      const fx = this.anim && (mine || zr >= 1.2);
+      if (fx) drawCapitalFx(ctx, sx, sy, size, lvl, now, { back: true });
+      const spr = this._capitalSprite(b, p, size);
       const w = spr.width / this.dpr;
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      if (fx) drawCapitalFx(ctx, sx, sy, size, lvl, now, { back: false });
       const prog = game.capitalProgress ? game.capitalProgress(b) : null;
       if (prog !== null) this._drawConstruction(sx, sy, size, prog, now);
-      else if (b.up > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.up);
+      else if (lvl > 0 && (mine ? zr >= 0.9 : zr >= 2.4)) this._drawLevel(sx, sy, size, lvl);
+      // Lo que hay en su banco: la tuya siempre, las demás de cerca
+      if ((b.bank || 0) >= 1 && (mine || zr >= 2.4) && game.bankCap) this._drawBankTag(sx, sy + size * 0.62 + 3, b, p, mine);
     }
+  }
+
+  /** Emblema de una capital según su tramo de nivel (en caché por dueño, tramo y tamaño). */
+  _capitalSprite(b, p, size) {
+    const px = Math.max(8, Math.round((size * this.dpr) / 2) * 2);
+    const human = p === this.game.human;
+    const key = `capital|${p.id}|${px}|${human ? 1 : 0}|${capitalTier(b.up || 0)}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil(px * 1.7);
+      c = makeCanvas(S, S);
+      drawCapitalEmblem(c.getContext('2d'), S / 2, S / 2 + px * 0.05, px, b.up || 0, { ring: rgbToCss(p.color), outline: human });
+      this._sprites.set(key, c);
+    }
+    return c;
+  }
+
+  /**
+   * Murallas de una capital como frontera de píxeles (doc-1.8): un anillo de
+   * casillas (solo las suyas) con almenas, del metal de su nivel, más grueso
+   * cuantas más tropas guarda su banco (de 1 a 3 casillas), y las afueras
+   * como un punteado de su color. Se pinta a una casilla por píxel en un
+   * lienzo aparte (se rehace cada segundo o si cambia algo) y se escala sin
+   * suavizar: cuadradito a cuadradito, como el territorio.
+   */
+  _drawCapitalWalls(b, p, radii) {
+    const { ctx, game, camera } = this;
+    const map = game.map;
+    const R = radii.wall;
+    const O = radii.outer;
+    const tier = capitalTier(b.up || 0);
+    const ratio = (b.bank || 0) / Math.max(1, p.maxTroops());
+    const thick = 2 + (ratio >= 0.4 ? 1 : 0) + (ratio >= 1.5 ? 1 : 0);
+    this._wallCache ??= new Map();
+    let e = this._wallCache.get(b.id);
+    const key = `${b.tile}|${R}|${O}|${tier}|${thick}|${p.id}`;
+    if (!e || e.key !== key || game.ticks - e.tick >= 10) {
+      const n = 2 * O + 3;
+      const c = e && e.canvas.width === n ? e.canvas : makeCanvas(n, n);
+      const g = c.getContext('2d');
+      const img = g.createImageData(n, n);
+      const d = img.data;
+      const T = CAPITAL_TIERS[tier].metal.map(hexRgb);
+      const [pr, pg, pb] = p.color;
+      const cx = map.x(b.tile);
+      const cy = map.y(b.tile);
+      const owner = game.owner;
+      const W = map.width;
+      for (let j = 0; j < n; j++) {
+        const y = cy - O - 1 + j;
+        if (y < 0 || y >= map.height) continue;
+        for (let i = 0; i < n; i++) {
+          const x = cx - O - 1 + i;
+          if (x < 0 || x >= W) continue;
+          const dx = x - cx;
+          const dy = y - cy;
+          const r = Math.sqrt(dx * dx + dy * dy);
+          let col = null;
+          let a = 255;
+          if (r <= R && r > R - thick) {
+            // Muralla: el filo de fuera más claro, el resto del metal
+            col = r > R - 1 ? T[0] : T[1];
+          } else if (r > R && r <= R + 1) {
+            // Almenas: una sí y una no por el borde de fuera
+            const ang = Math.atan2(dy, dx);
+            if (Math.floor(((ang + Math.PI) / TAU) * R * 3.2) % 2 === 0) col = T[2];
+          } else if (r > O - 1 && r <= O) {
+            // Afueras: punteado del color del dueño
+            const ang = Math.atan2(dy, dx);
+            if (Math.floor(((ang + Math.PI) / TAU) * O * 2.2) % 2 === 0) {
+              col = [pr, pg, pb];
+              a = 170;
+            }
+          }
+          if (!col || owner[y * W + x] !== p.id) continue;
+          const k = (j * n + i) * 4;
+          d[k] = col[0];
+          d[k + 1] = col[1];
+          d[k + 2] = col[2];
+          d[k + 3] = a;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      e = { key, tick: game.ticks, canvas: c };
+      this._wallCache.set(b.id, e);
+      if (this._wallCache.size > 400) this._wallCache.clear();
+    }
+    const [x0, y0] = camera.worldToScreen(map.x(b.tile) - O - 1, map.y(b.tile) - O - 1);
+    const sz = e.canvas.width * camera.zoom;
+    const smooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(e.canvas, x0, y0, sz, sz);
+    ctx.imageSmoothingEnabled = smooth;
+  }
+
+  /** Pastilla con las tropas del banco de una capital y cuánto le falta para llenarse. */
+  _drawBankTag(sx, sy, b, p, mine) {
+    const { ctx, game } = this;
+    const cap = game.bankCap(p);
+    const fill = Math.min(1, (b.bank || 0) / Math.max(1, cap));
+    const text = fmtTroops(b.bank || 0);
+    ctx.font = '700 10px system-ui, sans-serif';
+    const tw = ctx.measureText(text).width;
+    const w = Math.max(34, tw + 22);
+    const h = 15;
+    const x = sx - w / 2;
+    ctx.fillStyle = 'rgba(14, 18, 28, 0.86)';
+    ctx.beginPath();
+    ctx.roundRect(x, sy, w, h, 7.5);
+    ctx.fill();
+    // Relleno: lo que lleva el banco
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x, sy, w, h, 7.5);
+    ctx.clip();
+    ctx.fillStyle = mine ? 'rgba(242, 179, 61, 0.38)' : 'rgba(200, 200, 210, 0.25)';
+    ctx.fillRect(x, sy, w * fill, h);
+    ctx.restore();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = mine ? 'rgba(242, 179, 61, 0.8)' : 'rgba(255, 255, 255, 0.25)';
+    ctx.beginPath();
+    ctx.roundRect(x + 0.5, sy + 0.5, w - 1, h - 1, 7);
+    ctx.stroke();
+    // Castillito y la cifra
+    ctx.fillStyle = mine ? '#ffd27a' : '#e6e9ef';
+    const ix = x + 6;
+    const iy = sy + 4;
+    ctx.fillRect(ix, iy + 3, 7, 4);
+    ctx.fillRect(ix, iy + 1, 1.6, 2);
+    ctx.fillRect(ix + 2.7, iy, 1.6, 3);
+    ctx.fillRect(ix + 5.4, iy + 1, 1.6, 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, x + 16, sy + h / 2 + 0.5);
   }
 
   /**
@@ -34194,6 +34733,8 @@ const { MECH, regenPerTick, tradeGold } = __require('mecanicas');
 const { LUGARES } = __require('lugares');
 const { FichaUI } = __require('ficha-ui');
 const { activeBonuses, shortEffect } = __require('fichas');
+const { drawCapitalEmblem, drawCapitalFx } = __require('icons');
+const { CAPITAL_TIERS, capitalTier } = __require('capital-tier');
 const { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } = __require('movimiento');
 const { PantallaFin, abrirFin } = __require('fin');
 
@@ -34342,6 +34883,19 @@ class UI {
     // Banco de tropas de la capital (doc-1.7)
     $('banco-guardar').addEventListener('click', () => this.handlers.onBank?.('in'));
     $('banco-sacar').addEventListener('click', () => this.handlers.onBank?.('out'));
+    // El emblema de la capital: su ficha (niveles, mejora y premios)
+    const emblem = $('cap-emblema');
+    emblem.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'mouse' && this._game && this._human && this._ficha.cur?.mode !== 'sheet') this._ficha.showBuilding(this._game, this._human, 'capUp', emblem, 'hover');
+    });
+    emblem.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && this._ficha.cur?.mode === 'hover') this._ficha.hide();
+    });
+    emblem.addEventListener('click', () => {
+      if (!this._game || !this._human) return;
+      if (this._ficha.cur?.mode === 'sheet') this._ficha.hide();
+      else this._ficha.showBuilding(this._game, this._human, 'capUp', emblem, 'sheet');
+    });
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
@@ -34544,11 +35098,13 @@ class UI {
         return this._iconUrls.get(k);
       },
       onCancel: (k) => k && this.handlers.onBuildMode?.(k),
+      onUpgrade: () => this.handlers.onUpgradeCapital?.(),
     });
     // Tocar fuera cierra la ficha que se abrió al mantener pulsado o al tocar un bono
     document.addEventListener('pointerdown', (e) => {
       const f = this._ficha;
       if (!f.cur || f.cur.mode === 'hover' || f.cur.mode === 'dock') return;
+      if (e.target.closest?.('#cap-emblema')) return;
       if (f.el.contains(e.target) || (f.cur.anchor && f.cur.anchor.contains(e.target))) return;
       f.hide();
     });
@@ -35329,6 +35885,9 @@ class UI {
       cssProp($('banco-relleno'), 'width', `${(Math.min(1, stored / Math.max(1, bankMax)) * 100).toFixed(1)}%`);
       $('banco-guardar').disabled = !playing || stored >= bankMax - 1 || human.troops < 2;
       $('banco-sacar').disabled = !playing || stored < 1;
+      txt('cap-nivel', String(capB.up || 0));
+      txt('cap-def', `Murallas ×${(Math.round(game.wallDefense(human) * 10) / 10).toString().replace('.', ',')}`);
+      this._drawCapitalEmblem(capB);
     }
     txt('ratio-valor', `${Math.round(ratio * 100)}%`);
     cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
@@ -35439,6 +35998,47 @@ class UI {
       this._bonusHtml = html;
       actualizarHtml(box, html);
     }
+  }
+
+  /**
+   * Emblema de la capital en el panel (doc-1.8): el medallón de su metal,
+   * con su resplandor, brillo, chispas y rayos (unas 25 veces por segundo).
+   */
+  _drawCapitalEmblem(cap) {
+    const lvl = cap.up || 0;
+    const tier = capitalTier(lvl);
+    const box = $('pj-banco');
+    if (box.dataset.tier !== String(tier)) {
+      box.dataset.tier = String(tier);
+      box.title = `Capital de ${CAPITAL_TIERS[tier].name.toLowerCase()}`;
+    }
+    const now = performance.now();
+    const animated = CAPITAL_TIERS[tier].glow > 0 && !document.hidden;
+    if (this._emblemLvl === lvl && (!animated || now - (this._emblemAt || 0) < 40)) return;
+    this._emblemAt = now;
+    const c = $('cap-icono');
+    if (this._emblemLvl !== lvl || !this._emblemSprite) {
+      this._emblemLvl = lvl;
+      const s = document.createElement('canvas');
+      s.width = c.width;
+      s.height = c.height;
+      drawCapitalEmblem(s.getContext('2d'), s.width / 2, s.height / 2 + 2, s.width * 0.52, lvl, {});
+      this._emblemSprite = s;
+      // El botón de mejorar la capital de la barra lleva el mismo emblema
+      const icon = this._buildIcons.get('capUp');
+      if (icon) {
+        const g = icon.getContext('2d');
+        g.clearRect(0, 0, icon.width, icon.height);
+        drawCapitalEmblem(g, icon.width / 2, icon.height / 2 + 1, icon.width * 0.78, lvl, {});
+        this._iconUrls?.delete('capUp');
+      }
+    }
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    const size = c.width * 0.52;
+    if (animated) drawCapitalFx(g, c.width / 2, c.height / 2 + 2, size, lvl, now, { back: true });
+    g.drawImage(this._emblemSprite, 0, 0);
+    if (animated) drawCapitalFx(g, c.width / 2, c.height / 2 + 2, size, lvl, now, { back: false });
   }
 
   _showBonus(chip) {
