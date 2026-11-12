@@ -56,7 +56,7 @@ const TABS = [
       ['tropas', 'Tropas', 'Se regeneran solas, más rápido cerca del 42 % de tu techo y nada al llenarlo: no esperes con la barra llena. Más territorio y ciudades, más techo.'],
       ['espadas', 'Atacar', 'Sale el % de tus tropas que marque «Fuerza de ataque». En tierra libre cada casilla cuesta 3,2 tropas en llanura, 4 en meseta y 4,8 en montaña; contra otro país, más cuantos más defensores tenga. Cuantas más tropas mandes, más rápido avanzas.'],
       ['retirada', 'Retirada', 'La ✕ de una tarjeta de combate retira las tropas del frente a los 2 s. Contra otro país pierdes el 25 % de ellas; en tierra libre, nada.'],
-      ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya al momento y sin bajas. Un río la cierra igual que tu frontera.'],
+      ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya enseguida (en menos de medio segundo) y sin bajas. Un río la cierra igual que tu frontera.'],
       ['mapa', 'Ríos', 'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar se navegan: puedes poner puertos en sus orillas y los barcos pasan por ellos, también para desembarcar en la otra orilla. Pasa el ratón por encima para ver si es navegable.'],
       ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
       ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
