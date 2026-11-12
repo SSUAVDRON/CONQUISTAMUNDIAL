@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="7018af6 2026-11-12 22:48 UTC">
+<meta name="trinchera-build" content="06ee026 2026-11-12 23:36 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4896,6 +4896,206 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .ficha.ficha-hoja .ficha-mejorar { margin-top: 9px; }
 .ficha.ficha-hoja .ficha-pips { margin-top: 10px; }
 
+/* =========================================================== Perfil renovado (con amigos y clan) */
+/* Cabecera: estandarte, emblema, nombre, chapas (clan, amigos, liga) y anillo de nivel */
+#inicio .tarjeta-perfil { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 20px 24px; min-height: 150px; }
+.tarjeta-perfil::after { background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.15) 55%, rgba(0, 0, 0, 0.35)); }
+.tarjeta-perfil::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 50%); }
+.tarjeta-perfil canvas { width: 118px; height: 118px; }
+.tp-textos { gap: 5px; }
+.tp-titulo { color: var(--oro-200, #ffe3a1); }
+.tp-nombre { font-size: 34px; }
+.tp-chapas { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 1px; }
+.tp-chapas:has(.tp-chapas-g:empty + .tp-chapas-g:empty) { display: none; }
+.tp-chapas-g { display: contents; }
+.tp-chapa { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.18); backdrop-filter: blur(4px); white-space: nowrap; }
+.tp-chapa b { color: var(--oro-200, #ffe3a1); font-weight: 900; letter-spacing: 0.03em; }
+.tp-chapa canvas { width: 16px !important; height: 16px !important; filter: none !important; }
+.chapa-liga { border-color: color-mix(in srgb, var(--liga, #fff) 55%, transparent); color: color-mix(in srgb, var(--liga, #fff) 70%, #fff); }
+.chapa-amigos i { width: 7px; height: 7px; border-radius: 50%; background: #6b7587; }
+.chapa-amigos i.punto-linea { background: #5fd38d; box-shadow: 0 0 0 3px rgba(95, 211, 141, 0.2); }
+.tp-datos { color: rgba(255, 255, 255, 0.86); }
+/* Anillo de experiencia con el nivel dentro */
+.tp-anillo { position: relative; z-index: 2; display: grid; place-items: center; width: 92px; height: 92px; flex: none; }
+.tp-anillo svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5)); }
+.tpa-fondo { fill: rgba(8, 12, 22, 0.72); stroke: rgba(255, 255, 255, 0.14); stroke-width: 6; }
+.tpa-relleno { fill: none; stroke: #f2b33d; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 0 100; transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); filter: drop-shadow(0 0 4px rgba(242, 179, 61, 0.6)); }
+#inicio .tp-anillo .tp-nivel { position: static; transform: none; width: auto; height: auto; margin-top: -8px; font-size: 30px; font-weight: 900; color: #ffe08a; background: none; box-shadow: none; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+.tp-xp { position: absolute; bottom: 19px; font-size: 9.5px; font-weight: 700; color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  #inicio .tarjeta-perfil { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .tarjeta-perfil canvas { width: 72px; height: 72px; }
+  .tp-nombre { font-size: 23px; }
+  .tp-anillo { position: absolute; top: 10px; right: 10px; width: 64px; height: 64px; }
+  #inicio .tp-anillo .tp-nivel { font-size: 21px; margin-top: -5px; }
+  .tp-xp { bottom: 12px; font-size: 8px; }
+  .tp-textos { padding-right: 62px; }
+  .tp-datos { font-size: 12px; }
+}
+
+/* Estadísticas en fichas con icono */
+.est-fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
+.est-ficha { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 9px; align-items: center; padding: 10px 11px; border-radius: 12px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)); border: 1px solid rgba(255, 255, 255, 0.07); min-width: 0; }
+.est-ficha.grande { background: linear-gradient(180deg, rgba(242, 179, 61, 0.14), rgba(242, 179, 61, 0.03)); border-color: rgba(242, 179, 61, 0.28); }
+.ef-icono { grid-row: 1 / 3; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); color: var(--oro-200, #ffe3a1); }
+.est-ficha.grande .ef-icono { background: rgba(242, 179, 61, 0.2); color: #ffd27a; }
+.ef-icono svg { width: 17px; height: 17px; }
+.ef-valor { font-size: 18px; font-weight: 800; line-height: 1.1; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ef-etq { font-size: 11px; line-height: 1.2; color: var(--texto-2, #9aa6b8); overflow: hidden; text-overflow: ellipsis; }
+.bloque-estad .nivel { margin-bottom: 4px; }
+@media (max-width: 560px) { .est-fichas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Números de aviso en las pestañas (solicitudes, invitaciones) */
+.pp-n, #tab-perfil-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 5px; border-radius: 9px; font-size: 11px; font-weight: 900; line-height: 1; color: #1b1205; background: linear-gradient(180deg, #ffd87a, #e8a52f); vertical-align: 1px; animation: ppN 2s ease-in-out infinite; }
+.pp-n[hidden], #tab-perfil-n[hidden] { display: none; }
+@keyframes ppN { 50% { box-shadow: 0 0 0 4px rgba(242, 179, 61, 0.22); } }
+
+/* ---------- Amigos y clan ---------- */
+.perfil-social { display: flex; flex-direction: column; gap: 14px; }
+.soc-ic { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; }
+.soc-ic svg { width: 100%; height: 100%; }
+.soc-cab { display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr); gap: 12px; }
+.soc-codigo, .soc-cab-buscar { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 16px; background: linear-gradient(160deg, rgba(242, 179, 61, 0.16), rgba(20, 28, 46, 0.9) 55%); border: 1px solid rgba(242, 179, 61, 0.28); }
+.soc-cab-buscar { background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)); border-color: rgba(255, 255, 255, 0.09); }
+.soc-codigo small, .soc-cab-buscar > small { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-2, #9aa6b8); }
+.soc-codigo strong { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 30px; font-weight: 800; letter-spacing: 0.08em; color: #ffe08a; text-shadow: 0 2px 12px rgba(242, 179, 61, 0.35); }
+.soc-codigo p { margin: 0; font-size: 12px; color: var(--texto-2, #9aa6b8); }
+.soc-copiar { position: absolute; top: 14px; right: 14px; }
+.soc-buscar { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); }
+.soc-buscar:focus-within { border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 0 0 3px rgba(242, 179, 61, 0.15); }
+.soc-buscar .soc-ic { color: var(--texto-2, #9aa6b8); }
+.soc-buscar input { flex: 1; min-width: 0; height: 36px; border: 0; padding: 0; background: none; color: var(--texto-1, #e9eef6); font: inherit; font-size: 14px; outline: none; box-shadow: none; }
+.soc-buscar button { flex: none; }
+.soc-seccion { display: flex; flex-direction: column; gap: 8px; }
+.soc-h { display: flex; align-items: baseline; gap: 10px; margin: 4px 2px 0; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-2, #9aa6b8); }
+.soc-h small { font-size: 11.5px; font-weight: 700; letter-spacing: 0; text-transform: none; color: #5fd38d; }
+.soc-h::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+.soc-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.soc-resultados { grid-template-columns: 1fr; margin-top: 4px; }
+/* Tarjeta de un jugador: su estandarte de fondo, oscurecido */
+.soc-tarjeta { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; isolation: isolate; min-width: 0; }
+.soc-tarjeta::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 12, 22, 0.55), rgba(8, 12, 22, 0.9) 40%); }
+.soc-emb { position: relative; flex: none; display: grid; place-items: center; width: 48px; height: 48px; }
+.soc-emblema { width: 48px; height: 48px; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5)); }
+.soc-punto { position: absolute; right: 0; bottom: 2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #0c111c; background: #6b7587; }
+.soc-punto.linea { background: #5fd38d; }
+.soc-punto.sala { background: #6cc0ff; }
+.soc-punto.jugando { background: #f2b33d; }
+.soc-textos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.soc-nombre { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; font-weight: 800; }
+.soc-nombre-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
+.soc-tag { flex: none; font-size: 12px; font-weight: 900; letter-spacing: 0.04em; color: #ffe3a1; }
+.soc-tag.grande { font-size: inherit; margin-right: 8px; }
+.soc-sub { font-size: 12px; color: rgba(255, 255, 255, 0.72); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soc-estado { font-size: 11.5px; font-weight: 700; color: #8f9aab; }
+.soc-estado.linea { color: #5fd38d; }
+.soc-estado.sala { color: #6cc0ff; }
+.soc-estado.jugando { color: #f2b33d; }
+.soc-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex: none; }
+.soc-acciones button { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.btn-peligro:hover:not(:disabled) { color: #ff9f8f; border-color: rgba(255, 120, 100, 0.5); }
+button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg, #ff9f8f, #e0573f) !important; border-color: #ffb3a6 !important; }
+.soc-rol { display: inline-flex; align-items: center; gap: 3px; flex: none; height: 19px; padding: 0 7px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.02em; color: #c9d0db; background: rgba(255, 255, 255, 0.08); }
+.soc-rol .soc-ic { width: 11px; height: 11px; }
+.soc-rol.rol-lider { color: #1b1205; background: linear-gradient(180deg, #ffe08a, #e0a12e); }
+.soc-rol.rol-oficial { color: #cfe8ff; background: rgba(108, 192, 255, 0.2); }
+.soc-rol.grande { height: 26px; padding: 0 10px; font-size: 12px; }
+.soc-chapa { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--texto-2, #9aa6b8); background: rgba(255, 255, 255, 0.06); }
+.soc-chapa.ok { color: #9be38f; background: rgba(95, 211, 141, 0.12); }
+.soc-vacio { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 20px; border-radius: 16px; text-align: center; background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)); border: 1px dashed rgba(255, 255, 255, 0.12); }
+.soc-vacio h3 { margin: 4px 0 0; font-family: var(--serif); font-size: 21px; color: #fff; }
+.soc-vacio p { margin: 0; max-width: 460px; font-size: 13.5px; line-height: 1.5; color: var(--texto-2, #9aa6b8); }
+.soc-vacio-ic { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; color: #ffd27a; background: radial-gradient(circle at 35% 30%, rgba(242, 179, 61, 0.35), rgba(242, 179, 61, 0.08)); border: 1px solid rgba(242, 179, 61, 0.35); }
+.soc-vacio-ic .soc-ic { width: 28px; height: 28px; }
+.soc-vacio-botones { display: flex; gap: 8px; margin-top: 6px; }
+.soc-cargando, .soc-nada { padding: 14px; text-align: center; font-size: 13px; color: var(--texto-2, #9aa6b8); }
+.soc-nada { padding: 6px 2px 0; text-align: left; }
+.soc-mensaje { padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #cdf3c6; background: rgba(95, 211, 141, 0.12); border: 1px solid rgba(95, 211, 141, 0.3); animation: subir 0.3s both; }
+.soc-mensaje.error { color: #ffc9b8; background: rgba(255, 110, 90, 0.12); border-color: rgba(255, 110, 90, 0.35); }
+@media (max-width: 760px) {
+  .soc-cab { grid-template-columns: 1fr; }
+  .soc-lista { grid-template-columns: 1fr; }
+  .soc-tarjeta { flex-wrap: wrap; }
+  .soc-acciones { width: 100%; justify-content: stretch; }
+  .soc-acciones > * { flex: 1 1 0; }
+  .soc-codigo strong { font-size: 26px; }
+}
+
+/* Clan */
+.clan-cab { position: relative; display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 18px; overflow: hidden; background: radial-gradient(130% 120% at 0% 0%, rgba(242, 179, 61, 0.2), transparent 55%), linear-gradient(160deg, #1c2640, #0b0f19); border: 1px solid rgba(242, 179, 61, 0.3); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4); }
+.clan-insignia { flex: none; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 22px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); }
+.clan-insignia .soc-emblema { width: 72px; height: 72px; }
+.clan-textos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.clan-etq { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-200, #ffe3a1); }
+.clan-nombre { margin: 0; font-family: var(--serif); font-size: 27px; line-height: 1.15; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+.clan-desc { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.8); }
+.clan-datos { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; font-size: 12.5px; color: var(--texto-2, #9aa6b8); }
+.clan-datos b { color: #fff; font-size: 15px; }
+.clan-botones { display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: none; }
+.clan-intro { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); }
+.clan-intro h3 { margin: 0 0 3px; font-family: var(--serif); font-size: 20px; color: #fff; }
+.clan-intro p { margin: 0; font-size: 13px; color: var(--texto-2, #9aa6b8); }
+.clan-rejilla { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; align-items: start; }
+.clan-form, .clan-buscar { display: flex; flex-direction: column; gap: 10px; }
+.clan-form h3, .clan-buscar h3 { margin: 0; font-family: var(--serif); font-size: 19px; color: #fff; }
+.clan-form-insignia { display: flex; align-items: center; gap: 12px; }
+.clan-form-ins-op { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.clan-formas { display: flex; flex-wrap: wrap; gap: 5px; }
+.clan-formas button { display: grid; place-items: center; width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+.clan-formas button[aria-checked="true"] { border-color: var(--acento, #f2b33d); background: rgba(242, 179, 61, 0.16); }
+.clan-formas .soc-emblema { width: 22px; height: 22px; }
+.clan-form-colores { display: flex; align-items: center; gap: 6px; }
+.clan-form-colores select { flex: 1; min-width: 0; }
+.clan-form-colores input[type="color"] { width: 36px; height: 32px; padding: 2px; flex: none; }
+.clan-tag-in { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; }
+.clan-form textarea { resize: vertical; min-height: 54px; }
+.clan-abierto { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-1, #e9eef6); cursor: pointer; }
+.clan-form-botones { display: flex; gap: 8px; }
+.clan-form-botones button { flex: 1; }
+.clan-lista { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.clan-fila { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+.clan-fila:nth-child(1) .clan-pos { color: #ffd27a; }
+.clan-fila:nth-child(2) .clan-pos { color: #dfe6f0; }
+.clan-fila:nth-child(3) .clan-pos { color: #e9a46a; }
+.clan-pos { flex: none; width: 22px; text-align: center; font-weight: 900; font-size: 14px; color: var(--texto-2, #9aa6b8); }
+.clan-fila-btn { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 0; padding: 2px; border: 0; background: none; text-align: left; cursor: pointer; }
+.clan-fila-btn:hover .clan-fila-t strong { color: #ffe3a1; }
+.clan-fila-btn .soc-emblema { width: 36px; height: 36px; }
+.clan-fila-t { display: flex; flex-direction: column; min-width: 0; }
+.clan-fila-t strong { font-size: 14px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clan-fila-t small { font-size: 11.5px; color: var(--texto-2, #9aa6b8); }
+.clan-fila > button:last-child, .clan-fila > .soc-chapa { flex: none; min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.soc-volver { align-self: flex-start; }
+@media (max-width: 860px) { .clan-rejilla { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .clan-cab { flex-wrap: wrap; padding: 16px; gap: 12px; }
+  .clan-insignia { width: 64px; height: 64px; border-radius: 18px; }
+  .clan-insignia .soc-emblema { width: 54px; height: 54px; }
+  .clan-nombre { font-size: 22px; }
+  .clan-botones { flex-direction: row; flex-wrap: wrap; width: 100%; }
+  .clan-botones > * { flex: 1 1 auto; }
+}
+
+/* Aviso de invitación a sala (arriba) */
+.soc-aviso { position: fixed; z-index: 95; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 20px); padding: 10px 12px; border-radius: 16px; background: linear-gradient(180deg, #1d2840, #0d121e); border: 1px solid rgba(242, 179, 61, 0.45); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); animation: avisoBaja 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.soc-aviso[hidden] { display: none; }
+.soc-aviso .soc-emb, .soc-aviso .soc-emblema { width: 36px; height: 36px; }
+.soc-aviso-t { display: flex; flex-direction: column; font-size: 13px; color: var(--texto-2, #9aa6b8); }
+.soc-aviso-t strong { font-size: 14.5px; color: #fff; }
+.soc-aviso button { min-height: 34px; }
+@keyframes avisoBaja { from { opacity: 0; transform: translate(-50%, -14px); } }
+@media (prefers-reduced-motion: reduce) { .soc-aviso, .pp-n, #tab-perfil-n { animation: none; } }
+/* Ajustes de amigos y clan */
+.soc-tarjeta { flex-wrap: wrap; row-gap: 8px; }
+.soc-textos { flex: 1 1 150px; }
+.soc-acciones { margin-left: auto; }
+.clan-form textarea { width: 100%; padding: 9px 11px; border-radius: 10px; font: inherit; font-size: 14px; line-height: 1.4; color: var(--texto-1, #e9eef6); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.14); }
+.clan-form textarea:focus { outline: none; border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 0 0 3px rgba(242, 179, 61, 0.15); }
+.clan-formas button { width: 40px; height: 40px; }
+.clan-formas .soc-emblema { width: 30px; height: 30px; }
+.est-fichas { grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); }
+.ef-icono { width: 30px; height: 30px; }
+
 </style>
 </head>
 <body>
@@ -5002,7 +5202,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
         <nav class="ini-pestanas" role="tablist" aria-label="Secciones">
           <button type="button" role="tab" id="tab-jugar" data-vista="jugar" aria-selected="true"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3 L13 8 L5 13 Z" fill="currentColor"/></svg><span>Jugar</span></button>
           <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5 V9 M6.5 13.5 V5 M10 13.5 V7.5 M13.5 13.5 V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Progreso</span> <span id="cuenta-logros" class="cuenta"></span></button>
-          <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span></button>
+          <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span> <span id="tab-perfil-n" class="cuenta aviso-n" hidden></span></button>
           <button type="button" role="tab" id="tab-arsenal" data-vista="arsenal" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
@@ -5253,6 +5453,8 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       <section class="vista" data-vista="perfil" role="tabpanel" aria-labelledby="tab-perfil" hidden>
         <div class="sub-pestanas" id="perfil-pestanas" role="tablist" aria-label="Perfil">
           <button type="button" role="tab" id="pp-resumen" data-perfil="resumen" aria-selected="true" aria-controls="perfil-resumen">Resumen</button>
+          <button type="button" role="tab" id="pp-amigos" data-perfil="amigos" aria-selected="false" aria-controls="perfil-amigos">Amigos <span id="pp-amigos-n" class="pp-n" hidden></span></button>
+          <button type="button" role="tab" id="pp-clan" data-perfil="clan" aria-selected="false" aria-controls="perfil-clan">Clan <span id="pp-clan-n" class="pp-n" hidden></span></button>
           <button type="button" role="tab" id="pp-aspecto" data-perfil="aspecto" aria-selected="false" aria-controls="perfil-aspecto">Aspecto</button>
         </div>
         <div id="perfil-resumen" class="perfil-panel" role="tabpanel" aria-labelledby="pp-resumen">
@@ -5261,11 +5463,27 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
             <div class="tp-textos">
               <span class="tp-titulo" id="tp-titulo"></span>
               <strong class="tp-nombre" id="tp-nombre"></strong>
+              <div class="tp-chapas"><span id="tp-chapas-social" class="tp-chapas-g"></span><span id="tp-chapas-liga" class="tp-chapas-g"></span></div>
               <span class="tp-datos" id="tp-datos"></span>
             </div>
-            <span class="tp-nivel" id="tp-nivel">1</span>
+            <div class="tp-anillo" id="tp-anillo" title="Nivel y experiencia">
+              <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="tpa-fondo" cx="36" cy="36" r="31"/><circle class="tpa-relleno" id="tp-anillo-relleno" cx="36" cy="36" r="31" pathLength="100"/></svg>
+              <span class="tp-nivel" id="tp-nivel">1</span>
+              <small class="tp-xp" id="tp-xp"></small>
+            </div>
           </div>
           <div class="perfil-rejilla">
+            <div class="bloque bloque-estad">
+              <h2>Estadísticas</h2>
+              <div class="nivel">
+                <span class="nivel-num" id="perfil-nivel">1</span>
+                <div class="nivel-datos">
+                  <div class="nivel-barra llena-al-ver"><span id="perfil-xp-barra"></span></div>
+                  <small id="perfil-xp"></small>
+                </div>
+              </div>
+              <div id="estadisticas" class="est-fichas"></div>
+            </div>
             <div class="bloque">
               <h2>Tu nación</h2>
               <label class="campo"><span>Nombre de tu nación</span>
@@ -5274,17 +5492,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
               <label class="campo campo-color"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
               <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
               <button type="button" class="enlace-ini" id="ir-aspecto">Emblema, marco, estandarte y más en «Aspecto» <span aria-hidden="true">›</span></button>
-            </div>
-            <div class="bloque">
-              <h2>Progreso</h2>
-              <div class="nivel">
-                <span class="nivel-num" id="perfil-nivel">1</span>
-                <div class="nivel-datos">
-                  <div class="nivel-barra llena-al-ver"><span id="perfil-xp-barra"></span></div>
-                  <small id="perfil-xp"></small>
-                </div>
-              </div>
-              <dl id="estadisticas" class="estadisticas"></dl>
               <p id="nota-nube" class="nota"></p>
               <div id="perfil-cuenta" class="perfil-cuenta" hidden>
                 <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/></svg></span>
@@ -5307,6 +5514,9 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
             <div id="perfil-historial"></div>
           </div>
         </div>
+        <!-- Amigos y clan (en la web, con cuenta): los pinta social-ui.js -->
+        <div id="perfil-amigos" class="perfil-panel perfil-social" role="tabpanel" aria-labelledby="pp-amigos" hidden></div>
+        <div id="perfil-clan" class="perfil-panel perfil-social" role="tabpanel" aria-labelledby="pp-clan" hidden></div>
         <div id="perfil-aspecto" class="perfil-panel" role="tabpanel" aria-labelledby="pp-aspecto" hidden>
           <div class="bolsa">
             <span class="bolsa-monedas" id="bolsa-monedas"></span>
@@ -5993,7 +6203,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "7018af6 2026-11-12 22:48 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "06ee026 2026-11-12 23:36 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -14856,6 +15066,7 @@ const TABS = [
     items: [
       ['manos', 'Alianzas', 'En la ficha de otra nación: proponer o romper alianzas, enviar tropas u oro y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s.'],
       ['pergamino', 'Pactos y paz', 'Pacto de no agresión de 5 minutos, paz (con un tributo si quieres) y «Pedir ayuda» a tus aliados contra quien más te ataca.'],
+      ['corona', 'Amigos y clanes', 'En la web, con tu cuenta: en Perfil › Amigos tienes tu código de amigo; búscalos por el nombre de su nación o por su código y verás si están en línea, en una sala o jugando. Con una sala abierta, invítales y les saldrá un aviso para unirse. En Perfil › Clan puedes fundar uno con su etiqueta e insignia o unirte a otro (abierto o con solicitud): el líder y los oficiales aceptan solicitudes y gestionan los rangos.'],
       ['corona', 'Victoria', 'Según la partida: dominación (el 70 % de la tierra), capitales, economía o supervivencia. También ganas si solo quedáis en pie tú y tus aliados.'],
       ['reloj', 'Perfiles de reglas', 'Clásico: ritmo ágil, sin puntos estratégicos ni tecnologías. Trinchera: más lento, con puntos estratégicos (capitales, núcleos industriales, puertos clave y pasos de montaña) y tecnologías.'],
     ],
@@ -15064,6 +15275,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
   { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
   { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
   { tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
@@ -15085,6 +15297,26 @@ const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imp
 const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
 /** Naciones de la IA en una partida online (más cargan demasiado el lockstep). */
 const ONLINE_MAX_BOTS = 60;
+
+/** Iconos de las fichas de estadísticas del perfil (16×16, trazo). */
+const statIcon = (d, fill = false) => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}" ${fill ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"'}/></svg>`;
+const STAT_ICONS = {
+  bandera: statIcon('M4 14.5V2M4 2.5h8l-2 3 2 3H4'),
+  copa: statIcon('M5 2.5h6v3.2a3 3 0 0 1-6 0zM5 3.5H2.8a2.2 2.2 0 0 0 2.4 3M11 3.5h2.2a2.2 2.2 0 0 1-2.4 3M8 8.7v3M5.5 13.5h5'),
+  diana: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M8 10.8a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6M8 8.2v-.4'),
+  espadas: statIcon('M3 13 11 5M5 14l8-8M10.5 3.5l3-1-1 3M2 11.5l2.5 2.5'),
+  mapa: statIcon('M1.8 4 6 2.3l4 1.6 4.2-1.6v9.7L10 13.7l-4-1.6-4.2 1.6zM6 2.3v9.8M10 3.9v9.8'),
+  rayo: statIcon('M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z'),
+  reloj: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M8 4.8V8l2.3 1.5'),
+  castillo: statIcon('M2.5 14V6.5h2v1.8h1.6V6.5h3.8v1.8h1.6V6.5h2V14zM6.5 14v-2.5a1.5 1.5 0 0 1 3 0V14'),
+  manos: statIcon('M1.5 7.5 4 5l3 1.5 2.5-1.5 5 2.5M4 5v4l3 3 1.5-1M7 6.5 5.5 8.5l2 1.5M14.5 7.5 12 10l-2 1.5'),
+  globo: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M2 8h12M8 2c-2 2-2.6 4-2.6 6S6 12 8 14c2-2 2.6-4 2.6-6S10 4 8 2'),
+  podio: statIcon('M1.5 14h13M2.5 14V9.5h3.6V14M6.1 14V6h3.8v8M9.9 14v-6h3.6v6'),
+  medalla: statIcon('M5.5 1.5 8 6l2.5-4.5M8 15a4 4 0 1 1 0-8 4 4 0 0 1 0 8M8 9.4v2.2'),
+  escudo: statIcon('M8 1.8 13.5 4v4c0 3.2-2.4 5.3-5.5 6.4C4.9 13.3 2.5 11.2 2.5 8V4z'),
+  check: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M5.3 8.2l1.9 1.9 3.6-3.8'),
+  moneda: statIcon('M8 14.2A6.2 6.2 0 1 1 8 1.8a6.2 6.2 0 0 1 0 12.4M8 4.5v7M10 5.8c-.5-.6-1.2-.9-2-.9-1.2 0-2 .6-2 1.5 0 2 4 1 4 3.1 0 .9-.9 1.6-2.1 1.6-.9 0-1.7-.4-2.1-1'),
+};
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -16326,7 +16558,21 @@ class Home {
     $('tp-titulo').textContent = titleName(p) || 'Recluta';
     const info = levelInfo(p.xp);
     $('tp-nivel').textContent = String(info.level);
-    $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
+    // Anillo de experiencia hacia el siguiente nivel
+    const frac = Math.max(0, Math.min(1, info.progress));
+    $('tp-anillo-relleno').style.strokeDasharray = `${(frac * 100).toFixed(1)} 100`;
+    $('tp-xp').textContent = `${p.xp - info.start}/${info.next - info.start} XP`;
+    const winRate = p.stats.partidas ? Math.round((100 * p.stats.victorias) / p.stats.partidas) : 0;
+    $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas${p.stats.partidas ? ` · ${winRate} % ganadas` : ''} · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
+    // Liga de la clasificatoria
+    const r = p.rango;
+    const liga = $('tp-chapas-liga');
+    if (liga) {
+      if (r && r.partidas > 0 && !inPlacement(r)) {
+        const k = rankOf(r.puntos);
+        liga.replaceChildren(el('span', { class: 'tp-chapa chapa-liga', style: `--liga: rgb(${k.league.color.join(',')})` }, badgeCanvas(r, 16), k.label));
+      } else liga.replaceChildren();
+    }
   }
 
   renderAppearance() {
@@ -17132,31 +17378,35 @@ class Home {
     $('perfil-xp').textContent = `${p.xp - info.start} / ${info.next - info.start} XP para el nivel ${info.level + 1}`;
     const s = p.stats;
     const int = (n) => formatNumber(Math.round(n));
+    // [etiqueta, valor, formato, icono, destacada]
     const rows = [
-      ['Partidas', s.partidas, int],
-      ['Victorias', s.victorias, (n) => `${int(n)}${s.partidas ? ` (${Math.round((100 * s.victorias) / s.partidas)} %)` : ''}`],
-      ['Naciones eliminadas', s.eliminaciones, int],
-      ['Edificios construidos', s.edificios, int],
-      ['Alianzas firmadas', s.alianzas, int],
-      ['Partidas online', s.online, int],
-      ['Mayor territorio', s.mejorPct || 0, formatPercent],
-      ['Victoria más rápida', s.mejorTiempo, (n) => (n == null ? '—' : formatTime(n))],
-      ['Tiempo jugado', s.tiempoJugado || 0, (n) => formatTime(Math.round(n))],
+      ['Partidas', s.partidas, int, 'bandera'],
+      ['Victorias', s.victorias, int, 'copa', true],
+      ['De cada 100, ganadas', s.partidas ? (100 * s.victorias) / s.partidas : 0, (n) => `${Math.round(n)} %`, 'diana'],
+      ['Naciones eliminadas', s.eliminaciones, int, 'espadas'],
+      ['Mayor territorio', s.mejorPct || 0, formatPercent, 'mapa', true],
+      ['Victoria más rápida', s.mejorTiempo, (n) => (n == null ? '—' : formatTime(n)), 'rayo'],
+      ['Tiempo jugado', s.tiempoJugado || 0, (n) => formatTime(Math.round(n)), 'reloj'],
+      ['Edificios construidos', s.edificios, int, 'castillo'],
+      ['Alianzas firmadas', s.alianzas, int, 'manos'],
+      ['Partidas online', s.online, int, 'globo'],
     ];
     // Puesto medio y mejor puesto (de las partidas del historial que lo guardaron)
     const placed = p.historial.filter((g) => g.puesto > 0 && g.de > 1);
     if (placed.length) {
-      rows.push(['Puesto medio', placed.reduce((a, g) => a + g.puesto, 0) / placed.length, (n) => `${Math.round(n)}.º`]);
-      rows.push(['Mejor puesto', Math.min(...placed.map((g) => g.puesto)), (n) => `${Math.round(n)}.º`]);
+      rows.push(['Puesto medio', placed.reduce((a, g) => a + g.puesto, 0) / placed.length, (n) => `${Math.round(n)}.º`, 'podio']);
+      rows.push(['Mejor puesto', Math.min(...placed.map((g) => g.puesto)), (n) => `${Math.round(n)}.º`, 'medalla']);
     }
-    rows.push(['Clasificatorias', s.clasificatorias || 0, int]);
-    rows.push(['Retos completados', (s.retosDiarios || 0) + (s.retosSemanales || 0), int]);
-    rows.push(['Monedas ganadas', s.monedasGanadas || 0, int]);
+    rows.push(['Clasificatorias', s.clasificatorias || 0, int, 'escudo']);
+    rows.push(['Retos completados', (s.retosDiarios || 0) + (s.retosSemanales || 0), int, 'check']);
+    rows.push(['Monedas ganadas', s.monedasGanadas || 0, int, 'moneda']);
     $('estadisticas').replaceChildren(
-      ...rows.flatMap(([k, v, fmt]) => {
-        const dd = el('dd', { text: fmt(v) });
-        if (count && typeof v === 'number' && v > 0) contar(dd, v, { de: 0, ms: 800, formato: fmt });
-        return [el('dt', { text: k }), dd];
+      ...rows.map(([k, v, fmt, ic, big]) => {
+        const val = el('strong', { class: 'ef-valor', text: fmt(v) });
+        if (count && typeof v === 'number' && v > 0) contar(val, v, { de: 0, ms: 800, formato: fmt });
+        const icono = el('span', { class: 'ef-icono' });
+        icono.innerHTML = STAT_ICONS[ic] || '';
+        return el('div', { class: `est-ficha${big ? ' grande' : ''}` }, icono, val, el('small', { class: 'ef-etq', text: k }));
       }),
     );
     llenarAlVer($('perfil-resumen'));
@@ -17245,18 +17495,37 @@ class Home {
     }
   }
 
-  /** Sub-pestaña del perfil: 'resumen' o 'aspecto'. */
+  /** Sub-pestaña del perfil: 'resumen', 'amigos', 'clan' o 'aspecto'. */
   _profileTab(tab, anim = true) {
+    if (!$(`perfil-${tab}`)) tab = 'resumen';
     this.profileTab = tab;
     for (const b of document.querySelectorAll('#perfil-pestanas [data-perfil]')) b.setAttribute('aria-selected', String(b.dataset.perfil === tab));
     rodar($('perfil-pestanas'));
     const on = $(`perfil-${tab}`);
-    const off = $(`perfil-${tab === 'resumen' ? 'aspecto' : 'resumen'}`);
-    off.hidden = true;
+    for (const pnl of document.querySelectorAll('#perfil-pestanas ~ .perfil-panel')) if (pnl !== on) pnl.hidden = true;
     if (anim && this.view === 'perfil') mostrar(on, { y: 8, scale: 1, ms: 220 });
     else on.hidden = false;
     underline($('perfil-pestanas'), anim);
     if (tab === 'resumen' && this.view === 'perfil') this.renderProgress(true);
+    // Amigos y clan (social-ui.js) se pintan al verse
+    $('perfil-pestanas').dispatchEvent(new CustomEvent('pestana', { detail: tab }));
+  }
+
+  /**
+   * Chapas sociales de la tarjeta del perfil: tu clan y tus amigos (las pone
+   * social-ui.js cuando llegan los datos; null sin cuenta).
+   */
+  setSocialSummary(sum) {
+    const box = $('tp-chapas-social');
+    if (!box) return;
+    if (!sum) {
+      box.replaceChildren();
+      return;
+    }
+    const chips = [];
+    if (sum.clan) chips.push(el('span', { class: 'tp-chapa chapa-clan', title: sum.clan.nombre }, el('b', { text: `[${sum.clan.tag}]` }), ` ${sum.clan.nombre}`));
+    chips.push(el('span', { class: 'tp-chapa chapa-amigos', title: 'Amigos en línea / amigos' }, el('i', { class: sum.enLinea ? 'punto-linea' : 'punto-fuera' }), `${sum.enLinea ? `${sum.enLinea} en línea · ` : ''}${sum.amigos} ${sum.amigos === 1 ? 'amigo' : 'amigos'}`));
+    box.replaceChildren(...chips);
   }
 
   /** Vista previa fija de tu nación en «Aspecto»: estandarte, emblema con marco, nombre, título y patrón. */
@@ -20997,6 +21266,8 @@ const { bootLoader, withLoading } = __require('loading');
 const { paintMapPreview, paintTerrain } = __require('terreno');
 const { Account } = __require('cuenta');
 const { AccountUI } = __require('cuenta-ui');
+const { Social } = __require('social');
+const { SocialUI } = __require('social-ui');
 const { Tutorial } = __require('tutorial');
 const { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } = __require('cloud');
 const { connectTransport } = __require('net');
@@ -21828,12 +22099,81 @@ function scheduleCloudSync(delay = 2500) {
 }
 
 // Cuenta (solo en la web, con la API de cuentas): el perfil entero en el servidor
-const account = Account.available() ? new Account({ onChange: (st) => accountUI?.render(st) }) : null;
+const account = Account.available()
+  ? new Account({
+      onChange: (st) => {
+        accountUI?.render(st);
+        onAccountChange(st);
+      },
+    })
+  : null;
 const accountUI = new AccountUI(account, { profile, onSynced: afterAccountSync });
 state.account = account; // para pruebas automáticas
+
+// Amigos, invitaciones a sala y clanes (en la web, con cuenta)
+const social = account ? new Social(account, { onChange: (data) => socialUI.update(data) }) : null;
+const socialUI = new SocialUI(social, {
+  accountUI,
+  getRoom: roomForInvite,
+  onJoinInvite: joinInvite,
+  onSummary: (sum) => home.setSocialSummary(sum),
+  isBusy: () => !!(state.game && !state.demo),
+});
+state.social = social;
+if (social) {
+  // Lo que ven tus amigos: menú, sala o partida
+  social.estadoFn = () => (state.game && !state.demo ? 'partida' : state.sala && !state.sala.started ? 'sala' : 'menu');
+}
+let socialSignedIn = false;
+/** Al entrar o salir de la cuenta: amigos y clan aparecen o se van. */
+function onAccountChange(st) {
+  if (!social || st.signedIn === socialSignedIn) return;
+  socialSignedIn = st.signedIn;
+  if (st.signedIn) {
+    social.saveCard(profile).finally(() => social.refresh());
+    social.poll(30000);
+  } else {
+    social.poll(0);
+    social.data = null;
+    socialUI.update(null);
+  }
+}
+/** Tu sala abierta (para invitar a amigos): { code, red } o null. */
+function roomForInvite() {
+  const sala = state.sala;
+  if (!sala || sala.started || !transport || transport.kind === 'claude') return null;
+  return { code: sala.code, red: roomNet() };
+}
+/** El servidor de salas, como en el enlace de invitación («b=1» o «red=local»). */
+function roomNet() {
+  if (!transport) return '';
+  if (transport.kind === 'mqtt' && transport.brokerIndex >= 0) return `b=${transport.brokerIndex}`;
+  if (transport.kind === 'local') return 'red=local';
+  return '';
+}
+/** Unirse a la sala de una invitación: aquí mismo si es el mismo servidor de salas; si no, con su enlace. */
+function joinInvite(inv) {
+  social?.dismissInvite(inv.id).catch(() => {});
+  const code = normalizeCode(inv.sala);
+  if (code.length !== 5) return;
+  if (transport && (inv.red || '') === roomNet() && !(state.game && !state.demo)) {
+    state.pendingEntry = code;
+    home.showLobby();
+    home.renderEntry(entryStub(code), { estado: 'buscando' });
+    openEntry();
+    return;
+  }
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('sala', code.toUpperCase());
+  for (const [k, v] of new URLSearchParams(inv.red || '')) url.searchParams.set(k, v);
+  location.assign(url.toString());
+}
 /** El perfil cambió con lo de la cuenta: repinta el inicio y aplica los ajustes. */
 function afterAccountSync() {
   try {
+    social?.saveCard(profile);
     applySettings();
     home.renderChip();
     if (state.demo) home.renderAll();
@@ -23069,7 +23409,11 @@ async function syncAtBoot() {
   if (!account) return;
   const ok = await account.probe();
   accountUI.setAvailable(ok);
-  if (ok && account.signedIn) await account.sync(profile).catch(() => {});
+  socialUI.setAvailable(ok);
+  if (ok && account.signedIn) {
+    await account.sync(profile).catch(() => {});
+    onAccountChange(account.state);
+  }
 }
 boot();
 requestAnimationFrame(frame);
@@ -33284,6 +33628,924 @@ function hashString(str) {
 }
 
 return { mulberry32, Rng, hashString };
+});
+__define('social-ui', function () {
+// Interfaz de Amigos y Clan (pestañas del perfil) y avisos de invitación a
+// sala. Los datos y las acciones están en social.js; aquí solo se pintan.
+//
+// Sin cuenta: invita a crearla. En el enlace de Claude (sin API): explica que
+// amigos y clanes están en la web con cuenta.
+const { drawEmblem, drawFrame } = __require('icons');
+const { NAME_COLORS, SHAPES, SYMBOLS } = __require('profile');
+const { timeAgo } = __require('cuenta-ui');
+
+const $ = (id) => document.getElementById(id);
+const CLAN_MAX = 30;
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'text') e.textContent = v;
+    else if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k);
+  return e;
+}
+
+const SVG = {
+  copiar: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+  buscar: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m10.5 10.5 3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  mas: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+  amigos: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  clan: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 13.5 4v4c0 3.2-2.4 5.3-5.5 6.4C4.9 13.3 2.5 11.2 2.5 8V4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m5.6 8 1.7 1.7L10.6 6.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  corona: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12V5l3 2.5L8 3l3 4.5L14 5v7z" fill="currentColor"/></svg>',
+  estrella: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 9.9 5.9l4.4.5-3.3 3 .9 4.4L8 11.6l-3.9 2.2.9-4.4-3.3-3 4.4-.5z" fill="currentColor"/></svg>',
+  sala: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 13.5V6l5.5-3.5L13.5 6v7.5M6 13.5V9h4v4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+};
+const icon = (name) => {
+  const s = document.createElement('span');
+  s.className = 'soc-ic';
+  s.innerHTML = SVG[name] || '';
+  return s;
+};
+
+/** Emblema con su marco, en un lienzo (en caché por su aspecto). */
+const emblemCache = new Map();
+function emblemImg(emblema, marco, size = 48) {
+  const key = JSON.stringify([emblema, marco, size]);
+  let url = emblemCache.get(key);
+  if (!url) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size * 2;
+    const ctx = c.getContext('2d');
+    drawEmblem(ctx, emblema || { shape: 'escudo', symbol: 'estrella', bg: '#2f7dff', fg: '#ffffff' }, size, size, size * 1.32);
+    if (marco) drawFrame(ctx, marco, size, size, size * 1.32);
+    url = c.toDataURL();
+    if (emblemCache.size > 300) emblemCache.clear();
+    emblemCache.set(key, url);
+  }
+  return el('img', { class: 'soc-emblema', src: url, alt: '', width: size, height: size });
+}
+
+const nameColor = (f) => {
+  const c = NAME_COLORS.find((x) => x.id === f.colorNombre);
+  return c && c.color ? c.color : f.emblema?.bg || '#ffd23f';
+};
+
+const formatCode = (c) => (c && c.length === 8 ? `${c.slice(0, 4)}-${c.slice(4)}` : c || '');
+
+/** «En línea», «En una sala», «Jugando» o «Visto hace…». */
+function presence(p, now) {
+  if (p.estado === 'partida') return { cls: 'jugando', text: 'Jugando' };
+  if (p.estado === 'sala') return { cls: 'sala', text: 'En una sala' };
+  if (p.estado === 'menu') return { cls: 'linea', text: 'En línea' };
+  return { cls: 'fuera', text: p.visto ? `Visto ${timeAgo(p.visto * 1000, now)}` : 'Desconectado' };
+}
+
+const ROLES = { lider: 'Líder', oficial: 'Oficial', miembro: 'Miembro' };
+
+class SocialUI {
+  /**
+   * `social`: el de social.js (o null si este sitio no tiene API).
+   * `accountUI`: para abrir «Entrar» / «Crear cuenta».
+   * `getRoom()`: tu sala abierta ({ code, red }) o null (para invitar).
+   * `onJoinInvite(inv)`: entrar en la sala de una invitación.
+   */
+  constructor(social, { accountUI = null, getRoom = () => null, onJoinInvite = () => {}, onSummary = () => {}, isBusy = () => false } = {}) {
+    this.social = social;
+    this.isBusy = isBusy;
+    this.accountUI = accountUI;
+    this.getRoom = getRoom;
+    this.onJoinInvite = onJoinInvite;
+    this.onSummary = onSummary;
+    this.available = false; // ¿hay API en este sitio?
+    this.tab = null;
+    this.clanView = null; // detalle del clan (el tuyo o el que miras)
+    this.clanList = null;
+    this.results = null;
+    this.searchText = '';
+    this.clanSearch = '';
+    this._seenInvites = new Set();
+    this._confirm = null;
+    this.editing = false;
+    this.draft = { nombre: '', tag: '', descripcion: '', abierto: true, insignia: { shape: 'escudo', symbol: 'corona', bg: '#8a1c1c', fg: '#ffd23f' } };
+    // Las pestañas del perfil avisan al cambiar (ver home.js, _profileTab)
+    $('perfil-pestanas')?.addEventListener('pestana', (e) => this.show(e.detail));
+    this.toast = el('div', { class: 'soc-aviso', role: 'status', 'aria-live': 'polite', hidden: true });
+    document.body.append(this.toast);
+  }
+
+  /** ¿Hay amigos y clanes en este sitio? (lo dice la API al arrancar) */
+  setAvailable(on) {
+    this.available = !!on;
+    this.render();
+  }
+
+  /** La pestaña del perfil que se ve ('resumen', 'amigos', 'clan' o 'aspecto'). */
+  show(tab) {
+    this.tab = tab;
+    if (tab === 'amigos' || tab === 'clan') {
+      this.render();
+      if (this.social?.ready) {
+        this.social.refresh();
+        if (tab === 'clan') this._loadClans();
+      }
+    }
+  }
+
+  /** Datos nuevos de la API (o un error). */
+  update(data) {
+    this._badges(data);
+    this._invites(data);
+    this.onSummary(data ? { clan: data.clan, amigos: data.amigos.length, enLinea: data.amigos.filter((a) => a.estado !== 'fuera').length } : null);
+    // Con la pestaña del clan a la vista, sus miembros y solicitudes se recargan en cada sondeo
+    if (this.tab === 'clan' && data?.clan && !this._clanLoading) this._loadClan(data.clan.id);
+    this.render();
+  }
+
+  // ------------------------------------------------------------------ pintar
+
+  render() {
+    if (this.tab === 'amigos') this._renderFriends();
+    else if (this.tab === 'clan') this._renderClan();
+  }
+
+  /** Sin API o sin cuenta: lo que hay que hacer para tener amigos y clanes. */
+  _gate(box, what) {
+    if (!this.available) {
+      box.replaceChildren(
+        this._empty('amigos', `${what} están en la web`, 'Para añadir amigos y crear o unirte a un clan, juega en la web de Trinchera con tu cuenta (correo y contraseña). Ahí verás quién está en línea y podrás invitarle a tu sala.'),
+      );
+      return true;
+    }
+    if (!this.social?.ready) {
+      box.replaceChildren(
+        this._empty(
+          'amigos',
+          `Crea una cuenta para ver ${what.toLowerCase()}`,
+          'Con una cuenta tienes tu código de amigo, ves quién está en línea, invitas a tus amigos a tu sala y puedes fundar un clan o unirte a uno. Tu progreso se guarda también.',
+          el('button', { type: 'button', class: 'principal', text: 'Crear cuenta', onclick: () => this.accountUI?.open('crear') }),
+          el('button', { type: 'button', class: 'btn-sec', text: 'Entrar', onclick: () => this.accountUI?.open('entrar') }),
+        ),
+      );
+      return true;
+    }
+    if (!this.social.data) {
+      box.replaceChildren(el('div', { class: 'soc-cargando', text: this.social.error || 'Cargando…' }));
+      return true;
+    }
+    return false;
+  }
+
+  _empty(ic, title, text, ...actions) {
+    return el('div', { class: 'soc-vacio' }, el('span', { class: 'soc-vacio-ic' }, icon(ic)), el('h3', { text: title }), el('p', { text }), actions.length ? el('div', { class: 'soc-vacio-botones' }, ...actions) : null);
+  }
+
+  _section(title, extra, ...kids) {
+    return el('section', { class: 'soc-seccion' }, el('h3', { class: 'soc-h' }, el('span', { text: title }), extra ? el('small', { text: extra }) : null), ...kids);
+  }
+
+  /** Tarjeta de un jugador: emblema, nombre, clan, título y nivel, estado y botones. */
+  _player(p, { now, sub = null, actions = [], rol = null } = {}) {
+    const f = p.ficha || {};
+    const pres = presence(p, now);
+    const title = [f.titulo, `Nivel ${f.nivel || 1}`, f.liga ? f.liga.nombre : null].filter(Boolean).join(' · ');
+    return el(
+      'div',
+      { class: `soc-tarjeta est-${f.estandarte || 'noche'}` },
+      el('span', { class: 'soc-emb' }, emblemImg(f.emblema, f.marco), el('span', { class: `soc-punto ${pres.cls}`, title: pres.text })),
+      el(
+        'div',
+        { class: 'soc-textos' },
+        el(
+          'strong',
+          { class: 'soc-nombre' },
+          p.clan ? el('span', { class: 'soc-tag', text: `[${p.clan.tag}]` }) : null,
+          el('span', { class: 'soc-nombre-t', text: p.nombre, style: `color:${nameColor(f)}` }),
+          rol ? el('span', { class: `soc-rol rol-${rol}` }, rol === 'lider' ? icon('corona') : rol === 'oficial' ? icon('estrella') : null, ROLES[rol]) : null,
+        ),
+        el('small', { class: 'soc-sub', text: sub || title }),
+        el('small', { class: `soc-estado ${pres.cls}`, text: pres.text }),
+      ),
+      actions.length ? el('div', { class: 'soc-acciones' }, ...actions) : null,
+    );
+  }
+
+  _btn(text, cls, fn, opts = {}) {
+    const b = el('button', { type: 'button', class: cls, text, title: opts.title || null, disabled: opts.disabled || null });
+    b.addEventListener('click', async () => {
+      if (b.disabled) return;
+      // Las acciones que no se deshacen piden un segundo toque
+      if (opts.confirm && this._confirm !== b) {
+        this._confirm = b;
+        b.dataset.texto = b.textContent;
+        b.textContent = opts.confirm;
+        b.classList.add('confirmar');
+        setTimeout(() => {
+          if (this._confirm === b) {
+            this._confirm = null;
+            b.textContent = b.dataset.texto;
+            b.classList.remove('confirmar');
+          }
+        }, 3000);
+        return;
+      }
+      this._confirm = null;
+      b.disabled = true;
+      try {
+        await fn();
+      } catch (err) {
+        this._flash(err.message || 'Algo ha fallado.', 'error');
+      } finally {
+        b.disabled = false;
+      }
+    });
+    return b;
+  }
+
+  _flash(text, kind = 'ok') {
+    const box = this.tab === 'clan' ? $('perfil-clan') : $('perfil-amigos');
+    let m = box?.querySelector('.soc-mensaje');
+    if (!box) return;
+    if (!m) {
+      m = el('div', { class: 'soc-mensaje', role: 'status' });
+      box.prepend(m);
+    }
+    m.className = `soc-mensaje ${kind}`;
+    m.textContent = text;
+    clearTimeout(this._flashT);
+    this._flashT = setTimeout(() => m.remove(), 4000);
+  }
+
+  // ------------------------------------------------------------------ amigos
+
+  _renderFriends() {
+    const box = $('perfil-amigos');
+    if (!box || this._gate(box, 'Los amigos')) return;
+    const d = this.social.data;
+    const now = (d.ahora || Date.now() / 1000) * 1000;
+    const room = this.getRoom();
+    const online = d.amigos.filter((a) => a.estado !== 'fuera').length;
+    const parts = [];
+    // Tu código y el buscador
+    const input = el('input', { type: 'search', placeholder: 'Nombre de una nación o código (ABCD-2345)', value: this.searchText, 'aria-label': 'Buscar jugadores', maxlength: 30 });
+    const form = el('form', { class: 'soc-buscar' }, icon('buscar'), input, el('button', { type: 'submit', class: 'principal', text: 'Buscar' }));
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this._search(input.value);
+    });
+    parts.push(
+      el(
+        'div',
+        { class: 'soc-cab' },
+        el(
+          'div',
+          { class: 'soc-codigo' },
+          el('small', { text: 'Tu código de amigo' }),
+          el('strong', { text: formatCode(d.yo.codigo) }),
+          this._btn('Copiar', 'btn-sec soc-copiar', async () => {
+            await navigator.clipboard?.writeText(formatCode(d.yo.codigo));
+            this._flash('Código copiado: compártelo con quien quieras añadir.');
+          }),
+          el('p', { text: 'Pásaselo a tus amigos: con él te envían una solicitud.' }),
+        ),
+        el('div', { class: 'soc-cab-buscar' }, el('small', { text: 'Añadir amigos' }), form, this._results(now)),
+      ),
+    );
+    // Invitaciones a sala
+    if (d.invitaciones.length) {
+      parts.push(
+        this._section(
+          'Te invitan a jugar',
+          null,
+          el('div', { class: 'soc-lista' }, ...d.invitaciones.map((i) => this._player(i.de, { now, sub: `Te invita a su sala ${i.sala.toUpperCase()} · ${timeAgo(i.creado * 1000, now)}`, actions: [this._btn('Unirme', 'principal', async () => this.onJoinInvite(i)), this._btn('Descartar', 'btn-sec', () => this.social.dismissInvite(i.id))] }))),
+        ),
+      );
+    }
+    // Solicitudes recibidas
+    if (d.recibidas.length) {
+      parts.push(
+        this._section(
+          'Solicitudes de amistad',
+          String(d.recibidas.length),
+          el('div', { class: 'soc-lista' }, ...d.recibidas.map((p) => this._player(p, { now, actions: [this._btn('Aceptar', 'principal', () => this.social.respondFriend(p.id, true).then(() => this._flash(`Ahora eres amigo de ${p.nombre}.`))), this._btn('Rechazar', 'btn-sec', () => this.social.respondFriend(p.id, false))] }))),
+        ),
+      );
+    }
+    // Amigos
+    parts.push(
+      this._section(
+        'Amigos',
+        d.amigos.length ? `${online} en línea · ${d.amigos.length}` : null,
+        d.amigos.length
+          ? el(
+              'div',
+              { class: 'soc-lista' },
+              ...d.amigos.map((p) => {
+                const acts = [];
+                if (room && p.estado !== 'fuera') {
+                  acts.push(this._btn('Invitar', 'principal', () => this.social.invite(p.id, room.code, room.red).then(() => this._flash(`Invitación enviada a ${p.nombre}.`)), { title: `Invitar a ${p.nombre} a tu sala ${room.code.toUpperCase()}` }));
+                }
+                acts.push(this._btn('Quitar', 'btn-sec btn-peligro', () => this.social.removeFriend(p.id), { confirm: '¿Quitar?' }));
+                return this._player(p, { now, actions: acts });
+              }),
+            )
+          : this._empty('amigos', 'Aún no tienes amigos', 'Busca a alguien por el nombre de su nación o pásale tu código. Cuando acepte, verás si está en línea y podrás invitarle a tu sala.'),
+      ),
+    );
+    if (!room && d.amigos.some((a) => a.estado !== 'fuera')) parts.push(el('p', { class: 'nota', text: 'Crea una sala en Multijugador para invitar a tus amigos en línea.' }));
+    // Enviadas
+    if (d.enviadas.length) {
+      parts.push(this._section('Solicitudes enviadas', String(d.enviadas.length), el('div', { class: 'soc-lista' }, ...d.enviadas.map((p) => this._player(p, { now, sub: `Enviada ${timeAgo(p.desde * 1000, now)}`, actions: [this._btn('Cancelar', 'btn-sec', () => this.social.removeFriend(p.id))] })))));
+    }
+    const msg = box.querySelector('.soc-mensaje');
+    box.replaceChildren(...(msg ? [msg] : []), ...parts);
+  }
+
+  _results(now) {
+    if (!this.results) return null;
+    if (!this.results.length) return el('p', { class: 'soc-nada', text: 'No hay nadie con ese nombre o código.' });
+    return el(
+      'div',
+      { class: 'soc-lista soc-resultados' },
+      ...this.results.map((p) => {
+        const rel = p.relacion;
+        const act = rel === 'amigos'
+          ? el('span', { class: 'soc-chapa ok', text: 'Amigos' })
+          : rel === 'enviada'
+          ? el('span', { class: 'soc-chapa', text: 'Enviada' })
+          : this._btn(rel === 'recibida' ? 'Aceptar' : 'Añadir', 'principal', async () => {
+              const r = await this.social.addFriend(p.codigo);
+              p.relacion = r.estado === 'amigos' ? 'amigos' : 'enviada';
+              this._flash(r.estado === 'amigos' ? `Ahora eres amigo de ${p.nombre}.` : `Solicitud enviada a ${p.nombre}.`);
+            });
+        return this._player(p, { now, actions: [act] });
+      }),
+    );
+  }
+
+  async _search(text) {
+    this.searchText = text.trim();
+    if (!this.searchText) {
+      this.results = null;
+      this.render();
+      return;
+    }
+    try {
+      // Un código completo: solicitud directa
+      this.results = (await this.social.search(this.searchText)).jugadores;
+    } catch (err) {
+      this._flash(err.message, 'error');
+      this.results = [];
+    }
+    this.render();
+  }
+
+  // -------------------------------------------------------------------- clan
+
+  async _loadClan(id) {
+    this._clanLoading = true;
+    try {
+      this.clanView = await this.social.clan(id);
+    } catch (err) {
+      this.clanView = null;
+      if (err.status !== 404) this._flash(err.message, 'error');
+    } finally {
+      this._clanLoading = false;
+    }
+    this.render();
+  }
+
+  async _loadClans() {
+    try {
+      this.clanList = (await this.social.clans(this.clanSearch)).clanes;
+    } catch (err) {
+      this.clanList = [];
+      this._flash(err.message, 'error');
+    }
+    this.render();
+  }
+
+  _insignia(ins, size = 56) {
+    return emblemImg(ins, null, size);
+  }
+
+  _renderClan() {
+    const box = $('perfil-clan');
+    if (!box || this._gate(box, 'Los clanes')) return;
+    const d = this.social.data;
+    const now = (d.ahora || Date.now() / 1000) * 1000;
+    const parts = d.clan ? this._myClan(d, now) : this._noClan(d, now);
+    const msg = box.querySelector('.soc-mensaje');
+    box.replaceChildren(...(msg ? [msg] : []), ...parts);
+  }
+
+  _clanHead(c, extra = []) {
+    return el(
+      'div',
+      { class: 'clan-cab' },
+      el('span', { class: 'clan-insignia' }, this._insignia(c.insignia, 72)),
+      el(
+        'div',
+        { class: 'clan-textos' },
+        el('small', { class: 'clan-etq', text: c.abierto ? 'Clan abierto' : 'Clan con solicitud' }),
+        el('h2', { class: 'clan-nombre' }, el('span', { class: 'soc-tag grande', text: `[${c.tag}]` }), el('span', { text: c.nombre })),
+        c.descripcion ? el('p', { class: 'clan-desc', text: c.descripcion }) : null,
+        el(
+          'div',
+          { class: 'clan-datos' },
+          el('span', {}, el('b', { text: `${c.miembros}/${CLAN_MAX}` }), ' miembros'),
+          el('span', {}, el('b', { text: String(c.victorias) }), ' victorias'),
+          el('span', {}, el('b', { text: String(c.nivel) }), ' niveles'),
+        ),
+      ),
+      extra.length ? el('div', { class: 'clan-botones' }, ...extra) : null,
+    );
+  }
+
+  _myClan(d, now) {
+    const c = d.clan;
+    const v = this.clanView && this.clanView.clan.id === c.id ? this.clanView : null;
+    const rol = c.rol;
+    const boss = rol === 'lider' || rol === 'oficial';
+    const parts = [];
+    if (this.editing && boss) {
+      parts.push(this._clanForm(true));
+    } else {
+      parts.push(
+        this._clanHead(c, [
+          el('span', { class: `soc-rol rol-${rol} grande` }, rol === 'lider' ? icon('corona') : rol === 'oficial' ? icon('estrella') : null, `Eres ${ROLES[rol].toLowerCase()}`),
+          boss ? this._btn('Editar', 'btn-sec', async () => {
+            this.editing = true;
+            this.draft = { ...this.draft, descripcion: c.descripcion, abierto: c.abierto, insignia: { ...c.insignia } };
+            this.render();
+          }) : null,
+          this._btn('Salir del clan', 'btn-sec btn-peligro', async () => {
+            await this.social.leaveClan();
+            this.clanView = null;
+            this._flash('Has salido del clan.');
+            this._loadClans();
+          }, { confirm: rol === 'lider' && c.miembros > 1 ? '¿Salir? El liderazgo pasa a otro' : c.miembros === 1 ? '¿Salir? El clan se disuelve' : '¿Seguro?' }),
+        ].filter(Boolean)),
+      );
+    }
+    if (!v) {
+      parts.push(el('div', { class: 'soc-cargando', text: 'Cargando miembros…' }));
+      return parts;
+    }
+    if (boss && v.solicitudes?.length) {
+      parts.push(
+        this._section(
+          'Quieren entrar',
+          String(v.solicitudes.length),
+          el('div', { class: 'soc-lista' }, ...v.solicitudes.map((p) => this._player(p, { now, sub: `Lo pidió ${timeAgo(p.desde * 1000, now)}`, actions: [this._btn('Aceptar', 'principal', () => this.social.respondClan(p.id, true).then(() => this._reloadClan())), this._btn('Rechazar', 'btn-sec', () => this.social.respondClan(p.id, false).then(() => this._reloadClan()))] }))),
+        ),
+      );
+    }
+    const me = d.yo.id;
+    parts.push(
+      this._section(
+        'Miembros',
+        `${v.miembros.filter((m) => m.estado !== 'fuera').length} en línea · ${v.miembros.length}`,
+        el(
+          'div',
+          { class: 'soc-lista' },
+          ...v.miembros.map((m) => {
+            const acts = [];
+            if (m.id !== me) {
+              if (rol === 'lider') {
+                if (m.rol === 'miembro') acts.push(this._btn('Ascender', 'btn-sec', () => this.social.setRole(m.id, 'oficial').then(() => this._reloadClan()), { title: 'Hacerle oficial: acepta solicitudes, edita el clan y expulsa miembros' }));
+                if (m.rol === 'oficial') acts.push(this._btn('Degradar', 'btn-sec', () => this.social.setRole(m.id, 'miembro').then(() => this._reloadClan())));
+                acts.push(this._btn('Líder', 'btn-sec', () => this.social.setRole(m.id, 'lider').then(() => this._reloadClan()), { confirm: '¿Pasarle el clan?', title: 'Pasarle el liderazgo (tú quedas como oficial)' }));
+              }
+              if ((rol === 'lider' && m.rol !== 'lider') || (rol === 'oficial' && m.rol === 'miembro')) {
+                acts.push(this._btn('Expulsar', 'btn-sec btn-peligro', () => this.social.kick(m.id).then(() => this._reloadClan()), { confirm: '¿Expulsar?' }));
+              }
+            }
+            return this._player(m, { now, rol: m.rol, actions: acts });
+          }),
+        ),
+      ),
+    );
+    return parts;
+  }
+
+  async _reloadClan() {
+    const id = this.social.data?.clan?.id;
+    if (id) await this._loadClan(id);
+  }
+
+  _noClan(d, now) {
+    const parts = [];
+    // Detalle de un clan que estás mirando
+    if (this.clanView && !d.clan) {
+      const v = this.clanView;
+      const pedido = d.pedidos.includes(v.clan.id);
+      parts.push(
+        el('button', { type: 'button', class: 'enlace-ini soc-volver', text: '‹ Todos los clanes', onclick: () => {
+          this.clanView = null;
+          this.render();
+        } }),
+        this._clanHead(v.clan, [this._joinButton(v.clan, pedido)]),
+        this._section('Miembros', `${v.miembros.length}/${CLAN_MAX}`, el('div', { class: 'soc-lista' }, ...v.miembros.map((m) => this._player(m, { now, rol: m.rol })))),
+      );
+      return parts;
+    }
+    parts.push(
+      el(
+        'div',
+        { class: 'clan-intro' },
+        el('span', { class: 'soc-vacio-ic' }, icon('clan')),
+        el('div', {}, el('h3', { text: 'Únete a un clan o funda el tuyo' }), el('p', { text: `Un clan reúne hasta ${CLAN_MAX} jugadores con su etiqueta, como [TAG], junto a vuestro nombre. Sus victorias suman para el ranking de clanes.` })),
+      ),
+    );
+    const grid = el('div', { class: 'clan-rejilla' });
+    grid.append(this._clanForm(false), this._clanFinder(d));
+    parts.push(grid);
+    return parts;
+  }
+
+  _joinButton(c, pedido) {
+    if (pedido) return this._btn('Pedido · Cancelar', 'btn-sec', () => this.social.cancelClan(c.id).then(() => this.render()));
+    if (c.miembros >= CLAN_MAX) return el('span', { class: 'soc-chapa', text: 'Lleno' });
+    return this._btn(c.abierto ? 'Unirme' : 'Pedir entrar', 'principal', async () => {
+      const r = await this.social.joinClan(c.id);
+      if (r.estado === 'dentro') {
+        this.clanView = null;
+        this._flash(`¡Ya eres de [${c.tag}] ${c.nombre}!`);
+        this._loadClan(c.id);
+      } else this._flash('Solicitud enviada: el líder o un oficial te aceptará.');
+    });
+  }
+
+  _clanFinder(d) {
+    const input = el('input', { type: 'search', placeholder: 'Nombre o etiqueta', value: this.clanSearch, 'aria-label': 'Buscar clanes', maxlength: 30 });
+    const form = el('form', { class: 'soc-buscar' }, icon('buscar'), input, el('button', { type: 'submit', class: 'btn-sec', text: 'Buscar' }));
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.clanSearch = input.value.trim();
+      this._loadClans();
+    });
+    const list = this.clanList;
+    return el(
+      'div',
+      { class: 'bloque clan-buscar' },
+      el('h3', { text: this.clanSearch ? 'Clanes encontrados' : 'Ranking de clanes' }),
+      form,
+      list == null
+        ? el('div', { class: 'soc-cargando', text: 'Cargando…' })
+        : !list.length
+        ? el('p', { class: 'soc-nada', text: this.clanSearch ? 'Ningún clan con ese nombre o etiqueta.' : 'Todavía no hay clanes: ¡funda el primero!' })
+        : el(
+            'ol',
+            { class: 'clan-lista' },
+            ...list.map((c, i) =>
+              el(
+                'li',
+                { class: 'clan-fila' },
+                el('span', { class: 'clan-pos', text: this.clanSearch ? '' : String(i + 1) }),
+                el('button', { type: 'button', class: 'clan-fila-btn', onclick: async () => {
+                  try {
+                    this.clanView = await this.social.clan(c.id);
+                  } catch (err) {
+                    this._flash(err.message, 'error');
+                  }
+                  this.render();
+                } },
+                  this._insignia(c.insignia, 36),
+                  el('span', { class: 'clan-fila-t' }, el('strong', {}, el('span', { class: 'soc-tag', text: `[${c.tag}]` }), ' ', c.nombre), el('small', { text: `${c.miembros}/${CLAN_MAX} · ${c.victorias} victorias${c.abierto ? ' · abierto' : ''}` })),
+                ),
+                this._joinButton(c, d.pedidos.includes(c.id)),
+              ),
+            ),
+          ),
+    );
+  }
+
+  /** Formulario para fundar (o editar) un clan, con su insignia. */
+  _clanForm(edit) {
+    const dr = this.draft;
+    const preview = el('span', { class: 'clan-insignia' }, this._insignia(dr.insignia, 72));
+    const repaint = () => preview.replaceChildren(this._insignia(dr.insignia, 72));
+    const field = (label, input) => el('label', { class: 'campo' }, el('span', { text: label }), input);
+    const nombre = el('input', { maxlength: 24, placeholder: 'Legión del Norte', value: dr.nombre });
+    nombre.addEventListener('input', () => (dr.nombre = nombre.value));
+    const tag = el('input', { maxlength: 5, placeholder: 'LDN', value: dr.tag, class: 'clan-tag-in', autocapitalize: 'characters' });
+    tag.addEventListener('input', () => {
+      tag.value = tag.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      dr.tag = tag.value;
+    });
+    const desc = el('textarea', { maxlength: 160, rows: 2, placeholder: 'Quiénes sois y a qué jugáis' });
+    desc.value = dr.descripcion;
+    desc.addEventListener('input', () => (dr.descripcion = desc.value));
+    const abierto = el('input', { type: 'checkbox' });
+    abierto.checked = !!dr.abierto;
+    abierto.addEventListener('change', () => (dr.abierto = abierto.checked));
+    const shapes = el('div', { class: 'clan-formas', role: 'radiogroup', 'aria-label': 'Forma' }, ...SHAPES.slice(0, 6).map((s) => {
+      const b = el('button', { type: 'button', role: 'radio', 'aria-checked': String(dr.insignia.shape === s.id), title: s.name }, emblemImg({ ...dr.insignia, shape: s.id }, null, 30));
+      b.addEventListener('click', () => {
+        dr.insignia.shape = s.id;
+        this.render();
+      });
+      return b;
+    }));
+    const symbols = el('select', { 'aria-label': 'Símbolo' }, ...SYMBOLS.map((s) => el('option', { value: s.id, text: s.name, selected: dr.insignia.symbol === s.id || null })));
+    symbols.addEventListener('change', () => {
+      dr.insignia.symbol = symbols.value;
+      repaint();
+    });
+    const bg = el('input', { type: 'color', value: dr.insignia.bg, 'aria-label': 'Fondo' });
+    bg.addEventListener('input', () => {
+      dr.insignia.bg = bg.value;
+      repaint();
+    });
+    const fg = el('input', { type: 'color', value: dr.insignia.fg, 'aria-label': 'Símbolo' });
+    fg.addEventListener('input', () => {
+      dr.insignia.fg = fg.value;
+      repaint();
+    });
+    const submit = edit
+      ? [this._btn('Guardar cambios', 'principal', async () => {
+          await this.social.editClan({ descripcion: dr.descripcion, insignia: dr.insignia, abierto: dr.abierto });
+          this.editing = false;
+          this._flash('Clan actualizado.');
+          this._reloadClan();
+        }), this._btn('Cancelar', 'btn-sec', async () => {
+          this.editing = false;
+          this.render();
+        })]
+      : [this._btn('Fundar el clan', 'principal', async () => {
+          const r = await this.social.createClan({ nombre: dr.nombre, tag: dr.tag, descripcion: dr.descripcion, insignia: dr.insignia, abierto: dr.abierto });
+          this._flash(`¡Has fundado [${r.clan.tag}] ${r.clan.nombre}!`);
+          this._loadClan(r.clan.id);
+        })];
+    return el(
+      'div',
+      { class: 'bloque clan-form' },
+      el('h3', { text: edit ? 'Editar el clan' : 'Fundar un clan' }),
+      el('div', { class: 'clan-form-insignia' }, preview, el('div', { class: 'clan-form-ins-op' }, shapes, el('div', { class: 'clan-form-colores' }, symbols, bg, fg))),
+      edit ? null : el('div', { class: 'fila-2' }, field('Nombre', nombre), field('Etiqueta (2-5)', tag)),
+      field('Descripción', desc),
+      el('label', { class: 'clan-abierto' }, abierto, el('span', { text: 'Cualquiera puede unirse (si no, hay que pedirlo)' })),
+      el('div', { class: 'clan-form-botones' }, ...submit),
+    );
+  }
+
+  // ------------------------------------------------------- avisos y chapas
+
+  _badges(d) {
+    const nA = d ? d.recibidas.length + d.invitaciones.length : 0;
+    const nC = d?.clan?.solicitudes || 0;
+    for (const [id, n] of [['pp-amigos-n', nA], ['pp-clan-n', nC]]) {
+      const b = $(id);
+      if (!b) continue;
+      b.hidden = !n;
+      b.textContent = n > 9 ? '9+' : String(n);
+    }
+    const total = $('tab-perfil-n');
+    if (total) {
+      total.hidden = !(nA + nC);
+      total.textContent = String(Math.min(9, nA + nC));
+    }
+  }
+
+  /** Invitaciones nuevas a una sala: un aviso arriba con «Unirme». */
+  _invites(d) {
+    if (!d) return;
+    // En mitad de una partida no se avisa (se verá al volver al menú)
+    if (this.isBusy()) return;
+    const fresh = d.invitaciones.filter((i) => !this._seenInvites.has(i.id));
+    for (const i of d.invitaciones) this._seenInvites.add(i.id);
+    if (!fresh.length) return;
+    const i = fresh[0];
+    const t = this.toast;
+    t.replaceChildren(
+      el('span', { class: 'soc-emb' }, emblemImg(i.de.ficha?.emblema, i.de.ficha?.marco, 36)),
+      el('div', { class: 'soc-aviso-t' }, el('strong', { text: i.de.nombre }), el('span', { text: `te invita a su sala ${i.sala.toUpperCase()}` })),
+      this._btn('Unirme', 'principal', async () => {
+        t.hidden = true;
+        this.onJoinInvite(i);
+      }),
+      this._btn('Ahora no', 'btn-sec', async () => {
+        t.hidden = true;
+      }),
+    );
+    t.hidden = false;
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => (t.hidden = true), 20000);
+  }
+}
+
+return { SocialUI };
+});
+__define('social', function () {
+// Amigos, invitaciones a sala y clanes (en la web, con cuenta): habla con
+// api/social.php usando la sesión de cuenta.js. La interfaz está en
+// social-ui.js. Sin cuenta, o en el enlace de Claude (sin API), no hace nada.
+const { levelInfo, titleName } = __require('profile');
+const { rankOf, inPlacement } = __require('rangos');
+
+const API = 'api/social.php';
+
+class SocialError extends Error {
+  constructor(message, status = 0, body = {}) {
+    super(message);
+    this.status = status;
+    this.field = body.campo || '';
+  }
+}
+
+/** Ficha pública de tu perfil: lo que ven tus amigos y tu clan (nada privado). */
+function cardOf(profile) {
+  const s = profile.stats || {};
+  const card = {
+    nombre: profile.nombre || 'Mi nación',
+    nivel: levelInfo(profile.xp || 0).level,
+    titulo: titleName(profile) || '',
+    emblema: profile.emblema,
+    marco: profile.marco,
+    estandarte: profile.estandarte,
+    colorNombre: profile.colorNombre,
+    victorias: s.victorias || 0,
+    partidas: s.partidas || 0,
+    mejor: s.mejorPct || 0,
+  };
+  const r = profile.rango;
+  if (r && r.partidas > 0 && !inPlacement(r)) {
+    const k = rankOf(r.puntos);
+    card.liga = { nombre: k.label, pl: Math.round(r.puntos) };
+  }
+  return card;
+}
+
+/**
+ * Estado social y acciones. `onChange(data)` cada vez que llegan datos
+ * nuevos (o un error). `data`: lo que devuelve la acción «social» de la API.
+ */
+class Social {
+  constructor(account, { onChange = () => {}, fetchFn = typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null, base = '' } = {}) {
+    this.account = account;
+    this.onChange = onChange;
+    this.fetch = fetchFn;
+    this.url = `${base}${API}`;
+    this.data = null;
+    this.error = '';
+    this.estado = 'menu';
+    this._cardJson = '';
+    this._timer = null;
+    this._busy = null;
+  }
+
+  get ready() {
+    return !!(this.account && this.account.signedIn);
+  }
+
+  async call(accion, data = {}) {
+    if (!this.ready) throw new SocialError('Inicia sesión para usar amigos y clanes.', 401);
+    if (!this.fetch) throw new SocialError('Sin conexión.');
+    let res;
+    try {
+      res = await this.fetch(this.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion, token: this.account.session.token, ...data }), cache: 'no-store' });
+    } catch {
+      throw new SocialError('No hay conexión con el servidor. Inténtalo de nuevo.');
+    }
+    let body = {};
+    try {
+      body = await res.json();
+    } catch {
+      /* respuesta vacía */
+    }
+    if (!res.ok) throw new SocialError(res.status === 404 && !body.error ? 'Este servidor no tiene amigos ni clanes.' : body.error || 'Algo ha fallado. Inténtalo de nuevo.', res.status, body);
+    return body;
+  }
+
+  /** Trae amigos, solicitudes, invitaciones y tu clan (y te marca en línea). */
+  refresh() {
+    if (!this.ready) {
+      this.data = null;
+      return Promise.resolve(null);
+    }
+    if (this._busy) return this._busy;
+    if (this.estadoFn) this.estado = this.estadoFn();
+    this._last = Date.now();
+    this._busy = this.call('social', { estado: this.estado })
+      .then((d) => {
+        this.data = d;
+        this.error = '';
+        this._emit();
+        return d;
+      })
+      .catch((err) => {
+        this.error = err.message;
+        this._emit();
+        return null;
+      })
+      .finally(() => {
+        this._busy = null;
+      });
+    return this._busy;
+  }
+
+  _emit() {
+    try {
+      this.onChange(this.data, this.error);
+    } catch {
+      /* la interfaz no debe romper esto */
+    }
+  }
+
+  /** Sondeo: cada `ms` (30 s en el menú; menos a menudo en partida). */
+  poll(ms) {
+    clearInterval(this._timer);
+    this._timer = null;
+    if (!ms || !this.ready) return;
+    this._timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      // En partida, cada 90 s basta (solo para seguir «en línea»)
+      if (this.estadoFn && this.estadoFn() === 'partida' && Date.now() - (this._last || 0) < 85000) return;
+      this.refresh();
+    }, ms);
+  }
+
+  /** Dónde estás: 'menu', 'sala' o 'partida' (lo ven tus amigos). */
+  setEstado(estado) {
+    this.estado = estado;
+  }
+
+  /** Manda tu ficha pública si ha cambiado. */
+  async saveCard(profile) {
+    if (!this.ready) return;
+    const card = cardOf(profile);
+    const json = JSON.stringify(card);
+    if (json === this._cardJson) return;
+    this._cardJson = json;
+    try {
+      await this.call('ficha_guardar', { ficha: card });
+    } catch {
+      this._cardJson = '';
+    }
+  }
+
+  // Acciones (cada una refresca los datos al terminar)
+  async _act(accion, data) {
+    const out = await this.call(accion, data);
+    await this.refresh();
+    return out;
+  }
+  search(texto) {
+    return this.call('buscar', { texto });
+  }
+  addFriend(codigo) {
+    return this._act('amigo_solicitar', { codigo });
+  }
+  respondFriend(id, aceptar) {
+    return this._act('amigo_responder', { id, aceptar });
+  }
+  removeFriend(id) {
+    return this._act('amigo_quitar', { id });
+  }
+  invite(id, sala, red) {
+    return this.call('invitar', { id, sala, red });
+  }
+  dismissInvite(id) {
+    return this._act('invitacion_borrar', { id });
+  }
+  clans(texto = '') {
+    return this.call('clanes', { texto });
+  }
+  clan(id) {
+    return this.call('clan_ver', { id });
+  }
+  createClan(c) {
+    return this._act('clan_crear', c);
+  }
+  joinClan(id) {
+    return this._act('clan_unirse', { id });
+  }
+  cancelClan(id) {
+    return this._act('clan_cancelar', { id });
+  }
+  respondClan(cuenta, aceptar) {
+    return this._act('clan_responder', { cuenta, aceptar });
+  }
+  leaveClan() {
+    return this._act('clan_salir');
+  }
+  kick(cuenta) {
+    return this._act('clan_expulsar', { cuenta });
+  }
+  setRole(cuenta, rol) {
+    return this._act('clan_rol', { cuenta, rol });
+  }
+  editClan(c) {
+    return this._act('clan_editar', c);
+  }
+}
+
+return { SocialError, cardOf, Social };
 });
 __define('sonido', function () {
 // Sonido del juego, todo sintetizado con Web Audio (sin ficheros):

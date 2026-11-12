@@ -1,8 +1,9 @@
-# Solo se sirven rangos.php y cuentas.php: ni comun.php (piezas internas) ni
+# Solo se sirven rangos.php, cuentas.php y social.php: ni las piezas internas
+# (comun.php, sesion.php y social-comun.php) ni
 # bases de datos u otros archivos
 <FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|sal|db|log)$">
   Require all denied
 </FilesMatch>
-<Files "comun.php">
+<FilesMatch "^(comun|sesion|social-comun)\.php$">
   Require all denied
-</Files>
+</FilesMatch>
