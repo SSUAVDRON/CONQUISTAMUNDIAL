@@ -90,7 +90,7 @@ async function main() {
   const js = safeForScript(await bundleModules());
 
   const title = /<title>([\s\S]*?)<\/title>/.exec(html)[1].trim();
-  const body = /<body>([\s\S]*?)<\/body>/.exec(html)[1]
+  const body = /<body[^>]*>([\s\S]*?)<\/body>/.exec(html)[1]
     .replace(/\s*<script type="module" src="(\.\/)?src\/main\.js(\?v=[0-9a-f]+)?"><\/script>\s*/, '\n')
     .trim();
   const viewport = /<meta name="viewport"[^>]*>/.exec(html)[0];
