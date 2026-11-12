@@ -66,11 +66,8 @@ test('pedir más bots que países añade naciones inventadas además de los paí
   assert.ok(players.every((p) => p.spawned), 'todas aparecen en el mapa');
 });
 
-test('ríos: solo sobre tierra, sin huecos en diagonal y iguales con la misma semilla', async () => {
-  const { generateMap, loadRealMap, markRivers } = await import('../src/map.js');
-  const { CONFIG } = await import('../src/config.js');
-  const { Game } = await import('../src/game.js');
-  // Una línea diagonal queda unida casilla a casilla (no se puede pasar entre dos)
+test('ríos: trazos sin huecos en diagonal (un río no deja pasar entre dos casillas)', async () => {
+  const { markRivers } = await import('../src/map.js');
   const w = 12;
   const h = 12;
   const terrain = new Uint8Array(w * h).fill(1);
@@ -82,23 +79,7 @@ test('ríos: solo sobre tierra, sin huecos en diagonal y iguales con la misma se
       assert.ok(next >= 1, `casilla de río aislada en ${x},${y}`);
     }
   }
-  // Mapas aleatorios: deterministas y nunca sobre el agua
-  const a = generateMap(400, 240, 99);
-  const b = generateMap(400, 240, 99);
-  assert.deepEqual(a.river, b.river);
-  let n = 0;
-  for (let i = 0; i < a.size; i++) {
-    if (!a.river[i]) continue;
-    n++;
-    assert.notEqual(a.terrain[i], 0);
-  }
-  assert.ok(n > 0, 'el mapa aleatorio debería tener algún río');
-  // Mapas reales: hay ríos; son solo visuales (el documento de mecánicas no los tiene)
+  // Los ríos de los mapas reales son agua (ver tests/rios.test.js)
   const { map } = loadRealMap('europa');
-  const t = map.river.findIndex((v, i) => v && map.terrain[i] === 1);
-  assert.ok(t >= 0);
-  const g = new Game({ map, seed: 1 });
-  const plain = map.landTiles.find((i) => !map.river[i] && map.terrain[i] === 1);
-  assert.deepEqual(g.conquestCost(t, null, 5000, 10), g.conquestCost(plain, null, 5000, 10));
-  void CONFIG;
+  assert.ok(map.river.some((v, i) => v && map.terrain[i] === 0));
 });

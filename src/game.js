@@ -228,19 +228,41 @@ export class Game {
 
   /** Casillas de la zona inicial (52) que caben en `t`: tierra libre de la misma masa. */
   startFits(t) {
+    return this._startZone(t).length;
+  }
+
+  /**
+   * Casillas de la zona inicial en `t`: tierra libre de la misma masa y unida
+   * a `t` por tierra dentro de la zona (un río la corta: no se empieza en las
+   * dos orillas).
+   */
+  _startZone(t) {
     const map = this.map;
     const cx = map.x(t);
     const cy = map.y(t);
     const body = map.landBody[t];
-    let n = 0;
+    const cand = (this._zoneSet ??= new Set());
+    cand.clear();
     for (const [dx, dy] of START_OFFSETS) {
       const x = cx + dx;
       const y = cy + dy;
       if (!map.inBounds(x, y)) continue;
       const i = map.index(x, y);
-      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) n++;
+      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) cand.add(i);
     }
-    return n;
+    if (!cand.has(t)) return [];
+    const out = [t];
+    cand.delete(t);
+    const nb = (this._zoneNb ??= new Int32Array(4));
+    for (let q = 0; q < out.length; q++) {
+      const c = map.neighbors(out[q], nb);
+      for (let k = 0; k < c; k++) {
+        if (!cand.has(nb[k])) continue;
+        cand.delete(nb[k]);
+        out.push(nb[k]);
+      }
+    }
+    return out;
   }
 
   /**
@@ -374,21 +396,12 @@ export class Game {
   spawnPlayer(p, tile, minBody = CONFIG.minSpawnBodySize) {
     const map = this.map;
     if (!this.spawnCheck(p, tile, minBody).ok) return false;
-    const body = map.landBody[tile];
     if (p.spawned) this._releaseAll(p);
 
     // Zona inicial (documento, 02.2): el disco lógico de radio 4 desplazado
-    // (−0,5, −0,5) → 52 casillas. Si toca mar, otra masa de tierra o casillas
-    // ya ocupadas, se recorta (nunca se solapan propietarios).
-    const cx = map.x(tile);
-    const cy = map.y(tile);
-    for (const [dx, dy] of START_OFFSETS) {
-      const x = cx + dx;
-      const y = cy + dy;
-      if (!map.inBounds(x, y)) continue;
-      const i = map.index(x, y);
-      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) this.setOwner(i, p.id);
-    }
+    // (−0,5, −0,5) → 52 casillas. Si toca mar, un río, otra masa de tierra o
+    // casillas ya ocupadas, se recorta (nunca se solapan propietarios)
+    for (const i of this._startZone(tile)) this.setOwner(i, p.id);
     p.spawned = true;
     p.spawnTile = tile;
     // Tropas iniciales: humano 25 000, bot 10 000 (naciones, como un humano)
@@ -1377,6 +1390,7 @@ export class Game {
     const map = this.map;
     const owner = this.owner;
     const terrain = map.terrain;
+    const river = map.river;
     const o = owner[start];
     const stamp = this._nextStamp();
     const seen = this._stampArr;
@@ -1412,6 +1426,7 @@ export class Game {
       for (let k = 0; k < cnt; k++) {
         const v = nb[k];
         if (terrain[v] === 0) {
+          if (river[v]) continue; // un río cierra la bolsa como una frontera
           ok = false; // tiene costa: no es un cerco
           break;
         }
@@ -1474,9 +1489,10 @@ export class Game {
         // En el borde: la bolsa toca el límite del mapa
         if (--room[d] < 0) return this._probeEnd(steps, true);
         const v = cur[d] + dirs[d];
-        if (terrain[v] === 0) return this._probeEnd(steps, true);
+        if (terrain[v] === 0 && !map.river[v]) return this._probeEnd(steps, true);
         const ov = owner[v];
-        if (ov === aid) {
+        // El cerco propio o un río cierran este rayo
+        if (ov === aid || terrain[v] === 0) {
           alive &= ~(1 << d);
           continue;
         }
@@ -1786,7 +1802,7 @@ export class Game {
   _waterNextTo(tile) {
     const nb = NB_MISC;
     const c = this.map.neighbors(tile, nb);
-    for (let k = 0; k < c; k++) if (this.map.terrain[nb[k]] === 0) return nb[k];
+    for (let k = 0; k < c; k++) if (this.map.navigable(nb[k])) return nb[k];
     return -1;
   }
 
@@ -2120,7 +2136,7 @@ export class Game {
     const nb = NB_MISC;
     const c = map.neighbors(port.tile, nb);
     for (let k = 0; k < c; k++) {
-      if (map.terrain[nb[k]] === 0) return { ok: true, reason: '', water: nb[k], zone: sea >= 0 ? tile : nb[k] };
+      if (map.navigable(nb[k])) return { ok: true, reason: '', water: nb[k], zone: sea >= 0 ? tile : nb[k] };
     }
     return { ok: false, reason: 'Ese puerto no tiene agua al lado' };
   }
@@ -2643,11 +2659,12 @@ export class Game {
     for (const t of p.border) {
       if (!map.coastal[t]) continue;
       const c0 = map.neighbors(t, nb0);
-      for (let k = 0; k < c0; k++) if (terrain[nb0[k]] === 0) cg.goal[this._cellOf(nb0[k])] = gs;
+      for (let k = 0; k < c0; k++) if (map.navigable(nb0[k])) cg.goal[this._cellOf(nb0[k])] = gs;
     }
+    // Solo por agua navegable: un río que no llega al mar no se navega
     const starts = [];
     const c1 = map.neighbors(dest, nb0);
-    for (let k = 0; k < c1; k++) if (terrain[nb0[k]] === 0) starts.push(nb0[k]);
+    for (let k = 0; k < c1; k++) if (map.navigable(nb0[k])) starts.push(nb0[k]);
     if (!starts.length) return null;
     if (!this._coarseCorridor(starts, (cell) => cg.goal[cell] === gs, SEARCH.landing / AREA)) return null;
     const W0 = map.width;
@@ -2669,7 +2686,7 @@ export class Game {
       let c = map.neighbors(dest, nb);
       for (let k = 0; k < c; k++) {
         const n = nb[k];
-        if (terrain[n] !== 0 || seen[n] === stamp) continue;
+        if (!map.navigable(n) || seen[n] === stamp) continue;
         seen[n] = stamp;
         parent[n] = -1;
         queue[tail++] = n;

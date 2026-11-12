@@ -232,9 +232,12 @@ function paintTerrainNow(map) {
 
   // ---- Qué vecinos son de otro tipo (agua/tierra), para playas y espuma
   //  bits: 1 O, 2 E, 4 N, 8 S, 16 NO, 32 NE, 64 SO, 128 SE
+  // Los ríos son agua en la partida, pero se dibujan sobre la tierra: no
+  // cuentan como mar para la costa ni para el color del mar
+  const river = map.river && map.river.some((v) => v) ? map.river : null;
   const edge = new Uint8Array(size);
   const isW = new Uint8Array(size);
-  for (let i = 0; i < size; i++) isW[i] = terrain[i] === WATER ? 1 : 0;
+  for (let i = 0; i < size; i++) isW[i] = terrain[i] === WATER && !(river && river[i]) ? 1 : 0;
   for (let y = 0; y < H; y++) {
     const up = y > 0;
     const down = y < H - 1;
@@ -270,7 +273,6 @@ function paintTerrainNow(map) {
   };
 
   // ---- Tierra a alta resolución
-  const river = map.river && map.river.some((v) => v) ? map.river : null;
   const LW = W * S;
   const LH = H * S;
   const land = makeCanvas(LW, LH);
@@ -288,8 +290,8 @@ function paintTerrainNow(map) {
       const i = cy * W + cx;
       const o = py * LW + pxl;
       const m = edge[i];
-      if (terrain[i] === WATER) continue; // el mar va en su propia capa
       const rv = river ? river[i] : 0;
+      if (terrain[i] === WATER && !rv) continue; // el mar va en su propia capa
       if (rv) {
         // Río: azul algo más claro que el mar (los grandes, un poco más hondos),
         // con la orilla un pelín más oscura y algo de grano
@@ -326,7 +328,7 @@ function paintTerrainNow(map) {
   let head = 0;
   let tail = 0;
   for (let i = 0; i < size; i++) {
-    if (terrain[i] !== WATER) {
+    if (!isW[i]) {
       dist[i] = 0;
       queue[tail++] = i;
     }
@@ -429,12 +431,7 @@ export function paintMapPreview(canvas, data, crop = null) {
       const i = Math.min(h - 1, ty | 0) * w + Math.min(w - 1, tx | 0);
       const o = (py * W + px) * 4;
       d[o + 3] = 255;
-      if (terrain[i] === WATER) {
-        d[o] = SEA[0];
-        d[o + 1] = SEA[1];
-        d[o + 2] = SEA[2];
-        continue;
-      }
+      // Río (agua en la partida, pero dibujado sobre la tierra)
       if (data.river && data.river[i]) {
         const c = data.river[i] === 2 ? RIVER_BIG : RIVER;
         d[o] = c[0];
@@ -442,9 +439,16 @@ export function paintMapPreview(canvas, data, crop = null) {
         d[o + 2] = c[2];
         continue;
       }
+      if (terrain[i] === WATER) {
+        d[o] = SEA[0];
+        d[o + 1] = SEA[1];
+        d[o + 2] = SEA[2];
+        continue;
+      }
       const e = elev(tx, ty);
-      // Costa: contorno oscuro
-      const coast = terrain[Math.min(h - 1, (ty + sy) | 0) * w + Math.min(w - 1, tx | 0)] === WATER || terrain[Math.min(h - 1, ty | 0) * w + Math.min(w - 1, (tx + sx) | 0)] === WATER;
+      // Costa: contorno oscuro (junto al mar, no junto a un río)
+      const sea = (k) => terrain[k] === WATER && !(data.river && data.river[k]);
+      const coast = sea(Math.min(h - 1, (ty + sy) | 0) * w + Math.min(w - 1, tx | 0)) || sea(Math.min(h - 1, ty | 0) * w + Math.min(w - 1, (tx + sx) | 0));
       if (coast) {
         d[o] = COAST[0];
         d[o + 1] = COAST[1];

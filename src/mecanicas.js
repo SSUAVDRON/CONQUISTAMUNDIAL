@@ -16,10 +16,12 @@
  * tropas = más rápido (también contra países), colonias rápidas y baratas en
  * tierra libre, crecimiento algo más cuadrado y sonda del cerco. doc-1.3:
  * desembarcos solo con puerto, barcos un 40 % más lentos, rutas por los
- * estrechos (Ormuz, Bósforo) y mejor reparto inicial. En multijugador,
+ * estrechos (Ormuz, Bósforo) y mejor reparto inicial. doc-1.4: los ríos son
+ * agua (fronteras; los que llegan al mar se navegan) y colonias ágiles y
+ * distintas (ritmo propio, sin depender de su población). En multijugador,
  * versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.3';
+export const MECH_VERSION = 'doc-1.4';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -31,7 +33,8 @@ export const MECH_VERSION = 'doc-1.3';
  *   PROVISIONALES (barrido en herramientas/calibrar.js) hasta tener mediciones
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
- *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3. Sin puntos estratégicos (ni bonos ni botín de
+ *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
+ *   clasico-5, con las de doc-1.4. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -41,8 +44,8 @@ export const MECH_VERSION = 'doc-1.3';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-4', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-3', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-5', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-4', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -101,6 +104,7 @@ export const MECH = {
   // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
   neutralTimeFloor: 1.25,
   // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
+  // (doc-1.4: bajas ×0,38, antes ×0,5)
   colonyNeutralLoss: 0.38,
   colonyNeutralSpeed: 1,
   // PROPUESTA (doc-1.4): su velocidad en tierra libre no depende de cuánto

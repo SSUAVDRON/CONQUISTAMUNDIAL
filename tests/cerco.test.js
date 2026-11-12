@@ -10,7 +10,7 @@ import { Rng } from '../src/rng.js';
 
 const MAX = Math.round(MECH.annexMaxTiles * (RES / 2) ** 2);
 
-/** El recorrido completo, sin sonda (como era antes): ¿está cercada la bolsa de `start`? */
+/** El recorrido completo, sin sonda (como era antes): ¿está cercada la bolsa de `start`? El mar abre la bolsa; un río la cierra. */
 function reference(game, start, aid) {
   const { map, owner } = game;
   const fail = game._annexFail;
@@ -23,7 +23,10 @@ function reference(game, start, aid) {
     if (c < 4) return null;
     for (let k = 0; k < c; k++) {
       const v = nb[k];
-      if (map.terrain[v] === 0) return null;
+      if (map.terrain[v] === 0) {
+        if (map.river[v]) continue; // un río cierra la bolsa como una frontera
+        return null;
+      }
       const ov = owner[v];
       if (ov === aid) continue;
       if (ov !== o || fail[v] === game.ticks || (!seen.has(v) && queue.length >= MAX)) return null;

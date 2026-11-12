@@ -1747,7 +1747,8 @@ export class UI {
       return;
     }
     const map = game.map;
-    if (!map.isLand(tile)) {
+    // En el mar no hay nada que contar; en un río, si se navega o es solo frontera
+    if (!map.isLand(tile) && !map.river[tile]) {
       tip.hidden = true;
       this._tipTile = -1;
       return;
@@ -1783,10 +1784,15 @@ export class UI {
     tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   }
 
-  /** Texto del tooltip de una casilla de tierra. */
+  /** Texto del tooltip de una casilla de tierra (o de un río). */
   _tipHtml(game, tile) {
     const map = game.map;
-    const terrain = `${TERRAIN_NAMES[map.terrain[tile]]}${map.river[tile] ? ' · río' : ''}`;
+    if (!map.isLand(tile)) {
+      return map.navigable(tile)
+        ? '<b>Río</b> <span class="suave">· navegable: puertos en sus orillas y barcos</span>'
+        : '<b>Río</b> <span class="suave">· frontera: no se cruza por tierra</span>';
+    }
+    const terrain = TERRAIN_NAMES[map.terrain[tile]];
     const o = game.owner[tile];
     if (o) {
       const p = game.players[o];

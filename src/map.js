@@ -15,18 +15,25 @@ const MIN_ISLAND = 40 * AREA; // islas más pequeñas se hunden (jugabilidad)
 const MAX_LAKE = 15 * AREA; // lagos más pequeños se rellenan
 
 export class GameMap {
-  constructor(width, height, terrain, shade) {
+  constructor(width, height, terrain, shade, river = null) {
     this.width = width;
     this.height = height;
     this.size = width * height;
     this.terrain = terrain; // Uint8Array, valores de TERRAIN
     this.shade = shade; // Uint8Array 0..255: altura relativa (tierra) o profundidad (agua)
-    this.river = new Uint8Array(width * height); // 0 = sin río, 1 = río, 2 = río grande
+    // 0 = sin río, 1 = río, 2 = río grande. Los ríos son agua (fronteras que no
+    // se cruzan por tierra); esto solo dice cómo dibujarlos
+    this.river = river || new Uint8Array(width * height);
     this._computeDerived();
   }
 
   isLand(i) {
     return this.terrain[i] !== WATER;
+  }
+
+  /** Agua por la que navegan los barcos: un mar o lago, o un río que llega a uno. */
+  navigable(i) {
+    return this.terrain[i] === WATER && this.waterOpen[this.waterBody[i]] === 1;
   }
 
   x(i) {
@@ -58,46 +65,60 @@ export class GameMap {
   }
 
   _computeDerived() {
-    const { size, terrain } = this;
-    const nb = new Int32Array(4);
-    const coastal = new Uint8Array(size);
-    const landList = [];
-    const coastList = [];
-    for (let i = 0; i < size; i++) {
-      if (terrain[i] === WATER) continue;
-      landList.push(i);
-      const c = this.neighbors(i, nb);
-      for (let k = 0; k < c; k++) {
-        if (terrain[nb[k]] === WATER) {
-          coastal[i] = 1;
-          break;
-        }
-      }
-      if (coastal[i]) coastList.push(i);
-    }
-    this.landCount = landList.length;
-    this.landTiles = Int32Array.from(landList);
-    this.coastal = coastal;
-    this.coastTiles = Int32Array.from(coastList);
-
-    const land = labelComponents(this, true);
+    const { size, terrain, river, width: w } = this;
+    // Una sola cola para las dos búsquedas (en el mundo son 18 MB)
+    const queue = new Int32Array(size);
+    const land = labelComponents(this, true, queue);
     this.landBody = land.labels;
     this.landBodySizes = land.sizes;
-    const water = labelComponents(this, false);
-    this.waterBody = water.labels;
+    const water = labelComponents(this, false, queue);
+    const wl = water.labels;
+    this.waterBody = wl;
     this.waterBodySizes = water.sizes;
+    // Masas de agua navegables: las que tienen mar o lago (no solo río). Un río
+    // que no llega a ninguno es solo frontera: ni puertos ni barcos
+    const open = new Uint8Array(water.sizes.length);
+    let landCount = 0;
+    for (let i = 0; i < size; i++) {
+      if (terrain[i] !== WATER) landCount++;
+      else if (!river[i]) open[wl[i]] = 1;
+    }
+    this.waterOpen = open;
+    // Costa = tierra junto a agua navegable (puertos, desembarcos, comercio)
+    const nav = (n) => terrain[n] === WATER && open[wl[n]] === 1;
+    const coastal = new Uint8Array(size);
+    const landTiles = new Int32Array(landCount);
+    let li = 0;
+    let coastCount = 0;
+    for (let i = 0; i < size; i++) {
+      if (terrain[i] === WATER) continue;
+      landTiles[li++] = i;
+      const x = i % w;
+      if ((x > 0 && nav(i - 1)) || (x < w - 1 && nav(i + 1)) || (i >= w && nav(i - w)) || (i < size - w && nav(i + w))) {
+        coastal[i] = 1;
+        coastCount++;
+      }
+    }
+    const coastTiles = new Int32Array(coastCount);
+    for (let k = 0, c = 0; k < landCount; k++) if (coastal[landTiles[k]]) coastTiles[c++] = landTiles[k];
+    this.landCount = landCount;
+    this.landTiles = landTiles;
+    this.coastal = coastal;
+    this.coastTiles = coastTiles;
   }
 }
 
-/** Etiqueta componentes conexas (4-vecindad) de tierra o de agua. */
-function labelComponents(map, wantLand) {
-  const { size, terrain } = map;
+/** Etiqueta componentes conexas (4-vecindad) de tierra o de agua (vecinas en línea: es de lo más lento al cargar un mapa). */
+function labelComponents(map, wantLand, queue = new Int32Array(map.size)) {
+  const { size, terrain, width: w } = map;
   const labels = new Int32Array(size).fill(-1);
   const sizes = [];
-  const queue = new Int32Array(size);
-  const nb = new Int32Array(4);
+  const want = wantLand ? 1 : 0;
+  // 1 = del tipo buscado (tierra o agua)
+  const kind = new Uint8Array(size);
+  for (let i = 0; i < size; i++) kind[i] = (terrain[i] !== WATER ? 1 : 0) === want ? 1 : 0;
   for (let s = 0; s < size; s++) {
-    if (labels[s] !== -1 || (terrain[s] !== WATER) !== wantLand) continue;
+    if (labels[s] !== -1 || !kind[s]) continue;
     const id = sizes.length;
     let head = 0;
     let tail = 0;
@@ -105,13 +126,26 @@ function labelComponents(map, wantLand) {
     labels[s] = id;
     while (head < tail) {
       const t = queue[head++];
-      const c = map.neighbors(t, nb);
-      for (let k = 0; k < c; k++) {
-        const n = nb[k];
-        if (labels[n] === -1 && (terrain[n] !== WATER) === wantLand) {
-          labels[n] = id;
-          queue[tail++] = n;
-        }
+      const x = t % w;
+      let n = t - 1;
+      if (x > 0 && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
+      }
+      n = t + 1;
+      if (x < w - 1 && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
+      }
+      n = t - w;
+      if (n >= 0 && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
+      }
+      n = t + w;
+      if (n < size && kind[n] && labels[n] === -1) {
+        labels[n] = id;
+        queue[tail++] = n;
       }
     }
     sizes.push(tail);
@@ -203,7 +237,193 @@ export function generateMap(width, height, seed) {
   map.relief = { w: rw, h: rh, step, data };
   map.tileKm = 7; // relieve algo más suave que en los mapas reales
   traceRivers(map, elev, rng);
+  riversToWater(width, height, terrain, map.river, shade);
+  map._computeDerived();
   return map;
+}
+
+/** Hueco máximo (casillas por tierra) que se abre para unir un tramo de río al agua o a otro río. */
+const RIVER_LINK = 24;
+/** La tierra que los ríos dejan aislada y mide menos que esto pasa a ser río. */
+const RIVER_SLIVER = 12;
+
+/**
+ * Los ríos pasan a ser agua: fronteras que no se cruzan por tierra y, si
+ * llegan al mar (o a un lago), vías por las que navegan los barcos.
+ *  1. Cada tramo suelto (no toca agua) se une por el camino más corto por
+ *     tierra, de como mucho RIVER_LINK casillas, al agua o a otro tramo. Cada
+ *     unión junta dos grupos distintos, así que no se cierran anillos que
+ *     dejen tierra encerrada. Los datos traen los ríos troceados (al cruzar
+ *     lagos que el mapa ya no tiene, deltas…) y así vuelven a ser continuos.
+ *  2. Las casillas de río pasan a ser agua (`river` sigue diciendo cómo dibujarlas).
+ *  3. La tierra que queda aislada junto a un río y mide menos de
+ *     RIVER_SLIVER casillas pasa a ser río (sin islotes imposibles).
+ * Todo determinista (mismo orden de recorrido en todos los equipos).
+ * Devuelve cuántos tramos se quedaron sin salida (solo frontera).
+ */
+export function riversToWater(w, h, terrain, river, shade) {
+  const size = w * h;
+  const tmp = { width: w, height: h, size, terrain, neighbors: GameMap.prototype.neighbors };
+  const nb = new Int32Array(4);
+  const lab = new Int32Array(size).fill(-1);
+  const seen = new Uint8Array(size);
+  // Solo se recorren las casillas de río (no todo el mapa en cada vuelta)
+  const list = [];
+  for (let i = 0; i < size; i++) if (river[i]) list.push(i);
+  let stranded = 0;
+  // Tramos que no encontraron salida, por su primera casilla y tamaño: si no
+  // han cambiado, no se vuelven a buscar en la vuelta siguiente
+  const dry = new Map();
+  for (let round = 0; round < 16; round++) {
+    // Tramos (4 vecinas) y si tocan agua
+    for (const t of list) lab[t] = -1;
+    const comps = [];
+    for (const s of list) {
+      if (lab[s] >= 0) continue;
+      const id = comps.length;
+      const tiles = [s];
+      lab[s] = id;
+      let touch = false;
+      for (let q = 0; q < tiles.length; q++) {
+        const c = tmp.neighbors(tiles[q], nb);
+        for (let k = 0; k < c; k++) {
+          const n = nb[k];
+          if (river[n]) {
+            if (lab[n] < 0) {
+              lab[n] = id;
+              tiles.push(n);
+            }
+          } else if (terrain[n] === WATER) touch = true;
+        }
+      }
+      comps.push({ tiles, touch });
+    }
+    // Grupos ya unidos en esta vuelta (para no unir dos veces lo mismo)
+    const group = comps.map((_, i) => i);
+    const find = (i) => {
+      while (group[i] !== i) i = group[i] = group[group[i]];
+      return i;
+    };
+    const wet = comps.map((c) => c.touch);
+    let linked = 0;
+    stranded = 0;
+    for (let id = 0; id < comps.length; id++) {
+      if (wet[find(id)]) continue;
+      const me = find(id);
+      const tiles = comps[id].tiles;
+      if (dry.get(tiles[0]) === tiles.length) {
+        stranded++;
+        continue;
+      }
+      // Búsqueda en anchura por tierra sin río desde todo el tramo. En `seen`
+      // va de qué lado se llegó (1 desde la derecha, 2 izquierda, 3 abajo,
+      // 4 arriba) para rehacer el camino sin otra tabla del tamaño del mapa
+      const visited = [];
+      let frontier = tiles;
+      let hit = -1;
+      let hitTarget = -1;
+      for (let d = 0; d < RIVER_LINK && hit < 0 && frontier.length; d++) {
+        const next = [];
+        for (const t of frontier) {
+          const c = tmp.neighbors(t, nb);
+          for (let k = 0; k < c; k++) {
+            const n = nb[k];
+            if (river[n]) {
+              if (d > 0 && find(lab[n]) !== me) {
+                hit = t;
+                hitTarget = find(lab[n]);
+                break;
+              }
+              continue;
+            }
+            if (terrain[n] === WATER) {
+              if (d > 0) {
+                hit = t;
+                hitTarget = -1;
+                break;
+              }
+              continue;
+            }
+            if (seen[n]) continue;
+            seen[n] = t === n + 1 ? 1 : t === n - 1 ? 2 : t === n + w ? 3 : 4;
+            visited.push(n);
+            next.push(n);
+          }
+          if (hit >= 0) break;
+        }
+        frontier = next;
+      }
+      const path = [];
+      if (hit >= 0) {
+        for (let t = hit; !river[t]; ) {
+          path.push(t);
+          const dir = seen[t];
+          t = dir === 1 ? t + 1 : dir === 2 ? t - 1 : dir === 3 ? t + w : t - w;
+        }
+      }
+      for (const t of visited) seen[t] = 0;
+      if (hit < 0) {
+        dry.set(tiles[0], tiles.length);
+        stranded++;
+        continue;
+      }
+      for (const t of path) {
+        river[t] = 1;
+        lab[t] = me; // el camino nuevo es ya de este grupo
+        list.push(t);
+      }
+      if (hitTarget >= 0) {
+        group[me] = hitTarget;
+        if (wet[me]) wet[hitTarget] = true;
+      } else wet[me] = true;
+      linked++;
+    }
+    if (!linked) break;
+  }
+  // Los ríos pasan a ser agua
+  for (const i of list) {
+    terrain[i] = WATER;
+    shade[i] = 0;
+  }
+  // Islotes que dejan los ríos → río: desde cada orilla se rellena la tierra
+  // hasta RIVER_SLIVER casillas; si se acaba antes, es un islote
+  // (seen: 1 = ya mirada, forma parte de una tierra grande)
+  const region = [];
+  const nb2 = new Int32Array(4);
+  for (const r of list) {
+    const c0 = tmp.neighbors(r, nb);
+    for (let k0 = 0; k0 < c0; k0++) {
+      const s = nb[k0];
+      if (terrain[s] === WATER || seen[s]) continue;
+      region.length = 0;
+      region.push(s);
+      seen[s] = 1;
+      let big = false;
+      for (let q = 0; q < region.length && !big; q++) {
+        const c = tmp.neighbors(region[q], nb2);
+        for (let k = 0; k < c; k++) {
+          const n = nb2[k];
+          if (terrain[n] === WATER) continue;
+          if (seen[n]) {
+            // Tocar tierra ya mirada (grande) o la propia
+            if (!region.includes(n)) big = true;
+            continue;
+          }
+          seen[n] = 1;
+          region.push(n);
+          if (region.length >= RIVER_SLIVER) big = true;
+        }
+      }
+      if (!big) {
+        for (const t of region) {
+          terrain[t] = WATER;
+          shade[t] = 0;
+          river[t] = 1;
+        }
+      }
+    }
+  }
+  return stranded;
 }
 
 /**
@@ -410,8 +630,11 @@ export function loadRealMap(id) {
   }
   if (i !== size) throw new Error(`Mapa ${id} dañado`);
   carveStraits(data, terrain);
-  const map = new GameMap(w, h, terrain, realShade(id, w, h, terrain));
-  markRivers(w, h, terrain, RIVERS[id] || [], map.river);
+  const shade = realShade(id, w, h, terrain);
+  // Ríos: se marcan sobre la tierra y pasan a ser agua antes de calcular costas y masas
+  const river = markRivers(w, h, terrain, [...(RIVERS[id] || []), ...mouthLines(data)]);
+  riversToWater(w, h, terrain, river, shade);
+  const map = new GameMap(w, h, terrain, shade, river);
   map.lat = data.lat || null; // [sur, norte] en grados: clima del terreno (desiertos, tundra…)
   map.relief = data.relief ? decodeRelief(data.relief) : null;
   // Kilómetros por casilla (a media latitud): para la fuerza del sombreado del relieve
@@ -420,9 +643,35 @@ export function loadRealMap(id) {
     map.tileKm = ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w;
   }
   map.rowWeight = data.lat ? rowWeights(data.lat, h) : null;
-  const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile, area, iso: iso || '' }));
+  // Un punto real que ahora cae en un río (Burundi, Bangladés…) pasa a la tierra más cercana
+  const countries = data.countries.map(([name, tile, area, iso]) => ({ name, tile: map.isLand(tile) ? tile : nearestLand(map, tile), area, iso: iso || '' }));
   lastReal = { id, map, countries };
   return { map, countries: countries.map((c) => ({ ...c })) };
+}
+
+/** Casilla de tierra más cercana a `tile` (búsqueda en anchura determinista; prefiere la tierra más grande en un empate). */
+function nearestLand(map, tile) {
+  const nb = new Int32Array(4);
+  const seen = new Set([tile]);
+  let frontier = [tile];
+  while (frontier.length) {
+    let best = -1;
+    for (const t of frontier) {
+      if (map.isLand(t) && (best < 0 || map.landBodySizes[map.landBody[t]] > map.landBodySizes[map.landBody[best]])) best = t;
+    }
+    if (best >= 0) return best;
+    const next = [];
+    for (const t of frontier) {
+      const c = map.neighbors(t, nb);
+      for (let k = 0; k < c; k++) {
+        if (seen.has(nb[k])) continue;
+        seen.add(nb[k]);
+        next.push(nb[k]);
+      }
+    }
+    frontier = next;
+  }
+  return tile;
 }
 
 /**
@@ -445,6 +694,54 @@ const STRAITS = [
     [25.9, 39.95],
   ],
 ];
+
+/**
+ * Desembocaduras que los datos no traen (el río acaba unas casillas tierra
+ * adentro) y que la unión automática al agua más cercana resolvería mal: el
+ * Nilo llegaba al golfo de Suez y el Rin se unía al Danubio (una barrera de
+ * mar a mar que no existe). Líneas [lon, lat] que empiezan sobre los últimos
+ * vértices del río (para que se toquen seguro) y acaban en el mar; se pintan
+ * como río grande.
+ */
+const MOUTHS = [
+  // Nilo: de El Cairo al Mediterráneo por el brazo de Rosetta
+  [
+    [31.26, 29.18],
+    [31.26, 30.06],
+    [30.95, 30.55],
+    [30.6, 31.1],
+    [30.38, 31.45],
+    [30.3, 31.75],
+  ],
+  // Rin: por el Waal hasta el mar del Norte (Hoek van Holland)
+  [
+    [6.18, 51.81],
+    [5.1, 51.81],
+    [4.45, 51.9],
+    [4.05, 51.98],
+    [3.75, 52.02],
+  ],
+];
+
+/** Las desembocaduras de MOUTHS que caben en el mapa, como polilíneas de río en casillas. */
+function mouthLines(data) {
+  if (!data.lon || !data.lat) return [];
+  const { w, h } = data;
+  const [lon0, lon1] = data.lon;
+  const [lat0, lat1] = data.lat;
+  const top = millerY(lat1);
+  const span = top - millerY(lat0);
+  const out = [];
+  for (const line of MOUTHS) {
+    if (!line.every(([lon, lat]) => lon >= lon0 && lon <= lon1 && lat >= lat0 && lat <= lat1)) continue;
+    const pts = [2];
+    for (const [lon, lat] of line) {
+      pts.push(Math.min(w - 1, Math.floor(((lon - lon0) / (lon1 - lon0)) * w)), Math.min(h - 1, Math.floor(((top - millerY(lat)) / span) * h)));
+    }
+    out.push(pts);
+  }
+  return out;
+}
 
 /** Miller (como herramientas/mapas.js): la y del mapa crece hacia el sur. */
 const millerY = (lat) => 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * ((lat * Math.PI) / 180)));
