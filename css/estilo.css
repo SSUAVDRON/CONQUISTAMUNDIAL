@@ -4631,3 +4631,66 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 @keyframes bpLatido { 0% { box-shadow: 0 0 0 0 rgba(185, 140, 255, 0.7); } 100% { box-shadow: 0 0 0 10px rgba(185, 140, 255, 0); } }
 @media (max-width: 720px) { .busqueda-pill { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { .cp-radar::before, .cp-radar i, .bp-punto, .busqueda-pill { animation: none; } }
+
+/* ---------- Banco de tropas de la capital (doc-1.7) ---------- */
+.pj-banco { display: flex; align-items: center; gap: 7px; margin-top: 8px; padding: 4px 4px 4px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 11.5px; line-height: 1; }
+.pj-banco[hidden], #panel-jugador.plegado .pj-banco { display: none; }
+.banco-etq { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); cursor: help; }
+.banco-etq .etq-icono { width: 13px; height: 13px; color: var(--acento); }
+.banco-barra { position: relative; flex: 1 1 auto; min-width: 24px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+#banco-relleno { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, #b8862a, var(--acento)); transition: width 0.3s ease; }
+.banco-cifra { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.banco-cifra strong { color: var(--texto-1); font-weight: 700; }
+.banco-cifra .max { color: var(--texto-suave); }
+.banco-btn { flex: none; height: 24px; padding: 0 9px; border-radius: 7px; border: 1px solid rgba(242, 179, 61, 0.38); background: rgba(242, 179, 61, 0.13); color: var(--acento); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s, transform 0.12s, opacity 0.15s; }
+.banco-btn + .banco-btn { margin-left: -3px; }
+.banco-btn:hover:not(:disabled) { background: rgba(242, 179, 61, 0.24); }
+.banco-btn:active:not(:disabled) { transform: scale(0.95); }
+.banco-btn:disabled { opacity: 0.38; cursor: default; }
+#banco-sacar { border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); color: var(--texto-1); }
+#banco-sacar:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+@media (max-width: 420px) {
+  .pj-banco { gap: 6px; margin-top: 6px; padding-left: 6px; }
+  .banco-btn { height: 26px; padding: 0 8px; }
+}
+
+/* ---------- Barra de edificios (doc-1.7): una sola fila que encoge con la pantalla ---------- */
+/* Ancho de cada botón: lo que deja el hueco entre el panel y los avisos, entre 12 */
+#hud.escritorio #barra-obras { --obra-w: clamp(40px, calc((100vw - 776px) / 12), 62px); padding: 7px 8px 8px; }
+#hud.escritorio #construir.agrupado .grupo-obras { padding: 0 8px; gap: 5px; }
+#hud.escritorio #construir.agrupado .g-items { grid-template-rows: 46px; grid-auto-columns: var(--obra-w); gap: 4px; }
+#hud.escritorio .obra { height: 46px; padding: 2px; }
+#hud.escritorio .obra canvas { width: 24px; height: 24px; }
+#hud.escritorio .obra .b-coste { font-size: 10.5px; letter-spacing: -0.01em; }
+#hud.escritorio .obra .b-num { top: 2px; right: 3px; font-size: 10px; }
+@media (min-width: 1500px) {
+  #hud.escritorio .obra { height: 50px; }
+  #hud.escritorio #construir.agrupado .g-items { grid-template-rows: 50px; }
+  #hud.escritorio .obra canvas { width: 26px; height: 26px; }
+}
+/* Botones estrechos: la tecla sale en el título (al pasar el ratón), no en la esquina */
+@media (max-width: 1439px) {
+  #hud.escritorio .obra .b-tecla { display: none; }
+  #hud.escritorio .obra .b-coste { font-size: 10px; }
+}
+
+/* Pestañas de los grupos (móvil y pantallas estrechas): el nombre entero */
+.g-tab { gap: 5px; padding: 4px 8px 4px 4px; }
+.g-tab .g-icono { width: 24px; height: 24px; }
+.g-tab .g-nombre { font-size: 12px; text-overflow: clip; }
+.g-tab .g-punto { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; box-shadow: 0 0 0 2px rgba(95, 211, 141, 0.18); }
+#hud.escritorio .g-tab .g-punto { position: static; }
+@media (max-width: 359px) {
+  .g-tab { justify-content: center; padding: 4px 6px; }
+  .g-tab .g-icono { display: none; }
+  .g-tab .g-nombre { flex: 0 1 auto; text-align: center; }
+}
+/* Panel en columnas (pantallas medianas y móvil en horizontal): la columna
+   del ataque es estrecha, así que el banco va en dos filas y sin barra */
+@media (min-width: 721px), (max-height: 500px) and (orientation: landscape) {
+  #hud:not(.escritorio) .pj-banco { flex-wrap: wrap; row-gap: 5px; column-gap: 5px; padding: 5px 6px; margin-top: 6px; }
+  #hud:not(.escritorio) .banco-barra { display: none; }
+  #hud:not(.escritorio) .banco-cifra { margin-left: auto; }
+  #hud:not(.escritorio) .banco-btn { flex: 1 1 40%; height: 24px; padding: 0 4px; }
+  #hud:not(.escritorio) .banco-btn + .banco-btn { margin-left: 0; }
+}

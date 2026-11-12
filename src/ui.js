@@ -153,6 +153,9 @@ export class UI {
       if (!(performance.now() - (this._shareSentAt || 0) < 250)) sendShare();
     });
     reparto.addEventListener('change', sendShare);
+    // Banco de tropas de la capital (doc-1.7)
+    $('banco-guardar').addEventListener('click', () => this.handlers.onBank?.('in'));
+    $('banco-sacar').addEventListener('click', () => this.handlers.onBank?.('out'));
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
@@ -389,7 +392,7 @@ export class UI {
     // abajo en el centro y el resto del panel abajo a la izquierda. En el
     // móvil y las pantallas estrechas, todo junto como siempre.
     const obras = panel.querySelector('.pj-obras');
-    const wide = window.matchMedia?.('(min-width: 1100px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
+    const wide = window.matchMedia?.('(min-width: 1240px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
     const layout = () => {
       const desk = !!wide?.matches;
       if (desk) this.openGroup(null);
@@ -1063,6 +1066,19 @@ export class UI {
     txt('pj-terr', formatShare(human.tiles, landCount));
     txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
     txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
+    // Banco de la capital: cuánto hay guardado y cuánto cabe
+    const capB = human.capital && game.buildingAt.get(human.capital.tile) === human.capital ? human.capital : null;
+    const bankBox = $('pj-banco');
+    if (bankBox.hidden !== !capB) bankBox.hidden = !capB;
+    if (capB) {
+      const bankMax = game.bankCap(human);
+      const stored = capB.bank || 0;
+      txt('banco-tropas', fmtTroops(stored));
+      txt('banco-max', fmtTroops(bankMax));
+      cssProp($('banco-relleno'), 'width', `${(Math.min(1, stored / Math.max(1, bankMax)) * 100).toFixed(1)}%`);
+      $('banco-guardar').disabled = !playing || stored >= bankMax - 1 || human.troops < 2;
+      $('banco-sacar').disabled = !playing || stored < 1;
+    }
     txt('ratio-valor', `${Math.round(ratio * 100)}%`);
     cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
 
@@ -1075,11 +1091,10 @@ export class UI {
       btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
       btn.classList.toggle('en-obras', !!works[kind]);
       if (BUILDINGS[kind].unit === 'capital') {
-        // Mejoras de la capital: su nivel y si están en obras
+        // Mejora de la capital: su nivel y si está en obras
         const cap = human.capital;
-        const track = BUILDINGS[kind].track;
-        const lvl = cap ? cap[track] || 0 : 0;
-        const working = !!(cap && cap.work && cap.work.track === track);
+        const lvl = cap ? cap.up || 0 : 0;
+        const working = !!(cap && cap.work);
         btn.classList.toggle('en-obras', working);
         btn.querySelector('.b-coste').textContent = lvl >= MECH.capital.maxLevel ? 'Máx.' : formatNumber(cost);
         // Nivel en estrellas (corto: va en la esquina del botón; la obra ya se marca con su clase)
@@ -1273,7 +1288,7 @@ export class UI {
         ['Oro base (pasivo, cada turno)', inc.base],
         ['Territorio (cuanto más grande, más)', inc.tax],
         ['Pueblos', inc.villages],
-        [game.profile.points || techs ? 'Bonos (industria de la capital, puntos, tecnologías…)' : 'Industria de la capital', inc.bonus],
+        [game.profile.points || techs ? 'Bonos (capital, puntos, tecnologías…)' : 'Mejoras de la capital', inc.bonus],
         ['Pesqueros', inc.fishing],
         h.economy === 'workers' ? ['Trabajadores', inc.workers] : null,
         ['Trenes y mercantes', inc.trade],
@@ -1963,11 +1978,15 @@ export class UI {
       const b = game.buildingNear(tile, 2 * RES);
       const extra = [];
       if (b) {
-        if (b.kind === 'capital') extra.push(`🏰 Capital${b.ind + b.pop ? ` · ind. ${b.ind} · pob. ${b.pop}` : ''}`);
+        if (b.kind === 'capital') extra.push(`🏰 Capital${b.up ? ` ★${b.up}` : ''}${b.bank >= 1 ? ` · banco ${fmtTroops(b.bank)}` : ''}`);
         else extra.push(`${BUILDINGS[b.kind].name}${b.level > 1 ? ` ${b.level}` : ''}${b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : ''}`);
       }
       const def = game.fortMultiplier(p, tile);
-      if (def > 1 && !(b && b.kind === 'capital')) extra.push(game.wallMultiplier(p, tile) > 1 ? `murallas ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
+      if (def > 1 && !(b && b.kind === 'capital')) {
+        const zone = game.capitalZone ? game.capitalZone(p, tile) : 0;
+        const wall = game.wallMultiplier(p, tile);
+        extra.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
+      }
       const human = game.human;
       const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
       return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o)}`;

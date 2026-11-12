@@ -12,7 +12,7 @@ import { assignNationColors, botColor } from './colors.js';
 import { POI, POI_TYPES, placePoints } from './estrategia.js';
 import { LUGARES, LUGAR_CFG, pickLugar } from './lugares.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
-import { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
+import { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -507,13 +507,9 @@ export class Game {
     // Lugares de interés: mejoras para siempre y bonos que aún duran (doc-1.6)
     if (p.permMods) addMods(m, p.permMods);
     for (const b of p.buffs) if (b.until > this.ticks) addMods(m, LUGARES[b.kind].buff);
-    // Mejoras de la capital (doc-1.6)
+    // Mejoras de la capital (doc-1.7: una sola, que sube el oro; el banco va aparte)
     const cap = p.capital;
-    if (cap && this.buildingAt.get(cap.tile) === cap) {
-      m.gold += MECH.capital.indGold * cap.ind;
-      m.cap += MECH.capital.popCap * cap.pop;
-      m.growth += MECH.capital.popGrowth * cap.pop;
-    }
+    if (cap && this.buildingAt.get(cap.tile) === cap) m.gold += MECH.capital.gold * cap.up;
     p.passes = passes;
     p.mods = m;
   }
@@ -577,12 +573,13 @@ export class Game {
       const p = this.players[i];
       if (!p.alive || p.weak || p.spawnTile < 0 || p.capital) continue;
       if (this.buildingAt.has(p.spawnTile)) continue;
-      this._newCapital(p, p.spawnTile, 0, 0);
+      this._newCapital(p, p.spawnTile, 0);
     }
   }
 
-  _newCapital(p, tile, ind, pop) {
-    const b = { id: this._nextBuildingId++, kind: 'capital', tile, owner: p.id, level: 1, target: 0, ind, pop, work: null };
+  /** `up`: nivel de la mejora (0-10); `bank`: tropas guardadas; `ammo`/`readyAt`: su escudo antimisiles. */
+  _newCapital(p, tile, up) {
+    const b = { id: this._nextBuildingId++, kind: 'capital', tile, owner: p.id, level: 1, target: 0, up, bank: 0, work: null, ammo: null, readyAt: 0 };
     this.buildings.push(b);
     this.buildingAt.set(tile, b);
     this.capitals.push(b);
@@ -592,61 +589,126 @@ export class Game {
     return b;
   }
 
-  /** Defensa de las murallas de la capital de `p` en la casilla `t` (1 = fuera). */
-  wallMultiplier(p, t) {
+  /** Zona de la capital de `p` en la casilla `t`: 2 = dentro de las murallas, 1 = afueras, 0 = fuera. */
+  capitalZone(p, t) {
     const cap = p && p.capital;
-    if (!cap) return 1;
+    if (!cap) return 0;
     const map = this.map;
     const dx = map.x(cap.tile) - map.x(t);
     const dy = map.y(cap.tile) - map.y(t);
+    const d2 = dx * dx + dy * dy;
     const R = CONFIG.capitalWallRadius;
-    if (dx * dx + dy * dy > R * R) return 1;
-    return MECH.capital.wallMult + MECH.capital.wallMultPerLevel * (cap.ind + cap.pop);
+    if (d2 <= R * R) return 2;
+    const O = CONFIG.capitalOuterRadius;
+    return d2 <= O * O ? 1 : 0;
   }
 
-  /** Precio del siguiente nivel de una mejora de la capital ('ind' o 'pop'). */
-  capitalCost(p, track) {
-    const lvl = p.capital ? p.capital[track] || 0 : 0;
+  /**
+   * Defensa de la capital de `p` en la casilla `t` (1 = fuera): murallas
+   * ×6 (+0,4 por nivel, y hasta ×1,5 con el banco lleno) y afueras ×2,5
+   * (+0,1 por nivel) (doc-1.7).
+   */
+  wallMultiplier(p, t) {
+    const zone = this.capitalZone(p, t);
+    if (!zone) return 1;
+    const C = MECH.capital;
+    const cap = p.capital;
+    if (zone === 1) return C.outerMult + C.outerMultPerLevel * cap.up;
+    const full = Math.min(1, cap.bank / Math.max(1, this.bankCap(p)));
+    return (C.wallMult + C.wallMultPerLevel * cap.up) * (1 + C.wallBankBonus * full);
+  }
+
+  /** Precio del siguiente nivel de la capital. */
+  capitalCost(p) {
+    const lvl = p.capital ? p.capital.up || 0 : 0;
     return Math.round(capitalPrice(lvl) * this.rules.priceMult);
   }
 
-  _canUpgradeCapital(p, track) {
+  _canUpgradeCapital(p) {
     const b = p.capital;
     if (!b || this.buildingAt.get(b.tile) !== b) return { ok: false, reason: 'No tienes capital' };
     if (b.work) return { ok: false, reason: 'Tu capital ya tiene una obra en marcha' };
-    if ((b[track] || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Esa mejora de la capital ya está al máximo' };
-    const cost = this.capitalCost(p, track);
+    if ((b.up || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Tu capital ya está al máximo' };
+    const cost = this.capitalCost(p);
     if (p.gold < cost) return { ok: false, reason: `Te falta oro: la mejora cuesta ${formatNumber(cost)}` };
     return { ok: true, reason: '', cost, capital: b };
   }
 
-  _startCapitalWork(p, track) {
+  _startCapitalWork(p) {
     const b = p.capital;
-    const cost = this.capitalCost(p, track);
+    const cost = this.capitalCost(p);
     p.gold -= cost;
     p.spent.buildings += cost;
     p.stats.built++;
     const C = MECH.capital;
-    const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b[track] || 0)) * (1 - p.mods.buildSpeed)));
-    b.work = { track, end: this.ticks + time, time };
-    if (p === this.human) this._emit(`🏰 Obras en la capital: ${track === 'ind' ? 'industria' : 'población'} a nivel ${(b[track] || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
+    const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b.up || 0)) * (1 - p.mods.buildSpeed)));
+    b.work = { track: 'up', end: this.ticks + time, time };
+    if (p === this.human) this._emit(`🏰 Obras en la capital: nivel ${(b.up || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
     return true;
   }
 
   _finishCapitalWork(b) {
-    const track = b.work.track;
     b.work = null;
-    b[track] = (b[track] || 0) + 1;
+    b.up = (b.up || 0) + 1;
     const p = this.players[b.owner];
     if (!p) return;
     this._refreshMods(p);
     p.stats.finished = (p.stats.finished || 0) + 1;
-    p.stats.lastFinished = track === 'ind' ? 'factory' : 'city';
+    p.stats.lastFinished = 'city';
     if (p === this.human) {
       const C = MECH.capital;
-      const text = track === 'ind' ? `+${Math.round(C.indGold * b.ind * 100)} % de oro pasivo` : `+${Math.round(C.popCap * b.pop * 100)} % de techo de tropas y +${Math.round(C.popGrowth * b.pop * 100)} % de crecimiento`;
-      this._emit(`🏰 Capital: ${track === 'ind' ? 'industria' : 'población'} a nivel ${b[track]} (${text})`, 'good');
+      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco de tropas para ${fmtTroops(this.bankCap(p))}`, 'good');
     }
+  }
+
+  // ------------------------------------------------- banco de tropas (doc-1.7)
+
+  /** Tropas que caben en el banco de la capital de `p`. */
+  bankCap(p) {
+    const cap = p && p.capital;
+    if (!cap) return 0;
+    const C = MECH.capital;
+    return p.maxTroops() * (C.bankBase + C.bankPerLevel * (cap.up || 0));
+  }
+
+  /** Guarda en la capital la parte `ratio` de sus soldados (lo que quepa). Devuelve cuántos. */
+  bankDeposit(p, ratio = 1) {
+    const cap = p.capital;
+    if (!cap || this.buildingAt.get(cap.tile) !== cap) return 0;
+    const room = Math.max(0, this.bankCap(p) - cap.bank);
+    const amount = Math.min(room, Math.floor(p.troops * clamp(ratio, 0, 1)));
+    if (amount < 1) {
+      if (room < 1) this._notify(p, 'El banco de la capital está lleno: mejórala para que quepan más', 'warn');
+      return 0;
+    }
+    p.troops -= amount;
+    cap.bank += amount;
+    return amount;
+  }
+
+  /** Saca del banco la parte `ratio` de lo guardado (vuelven a sus soldados). Devuelve cuántos. */
+  bankWithdraw(p, ratio = 1) {
+    const cap = p.capital;
+    if (!cap) return 0;
+    const amount = Math.floor(cap.bank * clamp(ratio, 0, 1));
+    if (amount < 1) return 0;
+    cap.bank -= amount;
+    p.troops += amount;
+    return amount;
+  }
+
+  /** Con sus tropas al tope, la capital sigue reclutando hacia el banco (a la mitad del ritmo máximo). */
+  _bankRecruit(p) {
+    const cap = p.capital;
+    if (!cap || cap.owner !== p.id) return;
+    const C = MECH.capital;
+    const max = p.maxTroops();
+    const P = p.economy === 'workers' ? p.troops + p.workers : p.troops;
+    if (P < max * C.bankFull) return;
+    const room = this.bankCap(p) - cap.bank;
+    if (room <= 0) return;
+    const peak = regenPerTick(max * 0.42, max) * p.paceRegen * p.regenMult * p.troopMult * Math.max(0.1, 1 + p.mods.growth);
+    cap.bank += Math.min(room, peak * C.bankRecruit);
   }
 
   /** Obra en marcha de la capital, de 0 a 1 (o null). */
@@ -670,7 +732,7 @@ export class Game {
     if (victim) {
       this._recount(victim);
       this._refreshMods(victim);
-      this._capitalMoves.push({ id: victim.id, from: b.tile, ind: b.ind, pop: b.pop });
+      this._capitalMoves.push({ id: victim.id, from: b.tile, up: b.up || 0 });
     }
     const map = this.map;
     this.effects.push({ kind: 'capitalFall', x: map.x(b.tile) + 0.5, y: map.y(b.tile) + 0.5, owner: newId, tick: this.ticks });
@@ -680,9 +742,14 @@ export class Game {
     const loot = share + Math.round(MECH.capital.lootBase * winner.goldMult);
     winner.gold += loot;
     winner.income.loot += loot;
+    // Y la mitad de las tropas de su banco (el resto se pierde)
+    const troops = Math.floor((b.bank || 0) * MECH.capital.bankLoot);
+    winner.troops += troops;
+    b.bank = 0;
     winner.stats.capitals = (winner.stats.capitals || 0) + 1;
-    if (winner === this.human) this._emit(`🏰 Has tomado la capital de ${victim.name}: +${formatNumber(loot)} de oro`, 'good', { sfx: 'conquerColony' });
-    else if (victim === this.human) this._emit(`🏰 ${winner.name} ha tomado tu capital y se lleva ${formatNumber(share)} de oro: la corte se traslada`, 'danger', { sfx: 'fall' });
+    const extra = troops >= 1 ? ` y ${fmtTroops(troops)} tropas de su banco` : '';
+    if (winner === this.human) this._emit(`🏰 Has tomado la capital de ${victim.name}: +${formatNumber(loot)} de oro${extra}`, 'good', { sfx: 'conquerColony' });
+    else if (victim === this.human) this._emit(`🏰 ${winner.name} ha tomado tu capital y se lleva ${formatNumber(share)} de oro${extra}: la corte se traslada`, 'danger', { sfx: 'fall' });
   }
 
   /** Refunda las capitales caídas (al final del turno, con la mitad de sus mejoras). */
@@ -701,8 +768,8 @@ export class Game {
         this.buildings = this.buildings.filter((x) => x !== old);
         this.buildingAt.delete(t);
       }
-      const b = this._newCapital(p, t, Math.floor(mv.ind * C.keepShare), Math.floor(mv.pop * C.keepShare));
-      if (p === this.human) this._emit(`🏰 Nueva capital: industria ${b.ind} y población ${b.pop} (la mitad de las mejoras)`, 'info', { tile: t });
+      const b = this._newCapital(p, t, Math.floor(mv.up * C.keepShare));
+      if (p === this.human) this._emit(`🏰 Nueva capital a nivel ${b.up} (la mitad de las mejoras) y con el banco vacío`, 'info', { tile: t });
     }
   }
 
@@ -1139,6 +1206,11 @@ export class Game {
         }
       } else if (it.type === 'share') {
         this.setSoldierShare(p, it.share);
+      } else if (it.type === 'bank') {
+        // Banco de tropas de la capital (doc-1.7): guardar o sacar
+        if (this.phase !== 'playing') continue;
+        if (it.op === 'out') this.bankWithdraw(p, it.ratio ?? 1);
+        else this.bankDeposit(p, it.ratio ?? 1);
       } else if (it.type === 'build') {
         if (this.phase !== 'playing') continue;
         const tile = this.snapBuildTile(p, it.kind, it.tile);
@@ -1659,6 +1731,18 @@ export class Game {
   }
 
   /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
+  /** Interceptores por salva de una batería (o del escudo de una capital). */
+  samShots(b) {
+    if (b.kind === 'capital') return CONFIG.capitalSamShots + Math.floor((b.up || 0) / CONFIG.capitalSamShotsEvery);
+    return CONFIG.samShots + CONFIG.samShotsPerLevel * (b.level - 1);
+  }
+
+  /** Probabilidad de derribar un misil con cada disparo. */
+  samHitChance(b, owner) {
+    const base = b.kind === 'capital' ? CONFIG.capitalSamHit : CONFIG.samHitChance + CONFIG.samHitPerLevel * (b.level - 1);
+    return Math.min(CONFIG.samHitMax, base + (owner?.mods.samHit || 0));
+  }
+
   samRange(lvl = 1) {
     return CONFIG.samRange + CONFIG.samRangePerLevel * (lvl - 1);
   }
@@ -1989,7 +2073,7 @@ export class Game {
    */
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
-    if (def && def.unit === 'capital') return this.capitalCost(p, def.track);
+    if (def && def.unit === 'capital') return this.capitalCost(p);
     const n = p.owned;
     n.warship = 0;
     for (const ws of this.warships) if (ws.owner === p.id && !ws.dead) n.warship++;
@@ -2030,7 +2114,7 @@ export class Game {
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
     if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
     if (def.unique) return { ok: false, reason: `${def.name}: no se construye` };
-    if (def.unit === 'capital') return this._canUpgradeCapital(p, def.track);
+    if (def.unit === 'capital') return this._canUpgradeCapital(p);
     if (def.unit === 'ship') return this._canBuildWarship(p, tile);
     if (def.unit === 'missile') return this._canLaunchMissile(p, tile, kind);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
@@ -2089,7 +2173,7 @@ export class Game {
     const check = this.canBuild(p, kind, tile);
     if (!check.ok) return false;
     const def = BUILDINGS[kind];
-    if (def.unit === 'capital') return this._startCapitalWork(p, def.track);
+    if (def.unit === 'capital') return this._startCapitalWork(p);
     if (check.upgrade) return this._startUpgrade(p, check.upgrade);
     const price = this.buildCost(p, kind);
     p.gold -= price;
@@ -2565,23 +2649,31 @@ export class Game {
     for (const m of this.missiles) {
       m.progress = Math.min(1, m.progress + CONFIG.missileSpeed / m.dist);
       const [mx, my] = this.missilePos(m);
-      // Baterías antimisiles enemigas del lanzador que estén listas y a tiro
+      // Baterías antimisiles (y escudos de las capitales) enemigas del
+      // lanzador que estén listas y a tiro (doc-1.7: salvas de varios
+      // interceptores; si uno falla, el siguiente vuelve a intentarlo)
       for (const b of this.buildings) {
-        if (b.kind !== 'sam' || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
+        const shield = b.kind === 'capital';
+        if ((b.kind !== 'sam' && !shield) || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
         const dx = (b.tile % W) + 0.5 - mx;
         const dy = Math.floor(b.tile / W) + 0.5 - my;
-        const range = this.samRange(b.level);
+        const range = shield ? CONFIG.capitalSamRange : this.samRange(b.level);
         if (dx * dx + dy * dy > range * range) continue;
-        // La batería dispara (y recarga) acierte o no
-        b.readyAt = this.ticks + Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (b.level - 1)));
+        const shooter = this.players[b.owner];
+        const shots = this.samShots(b);
+        if (!(b.ammo > 0)) b.ammo = shots; // salva recargada
+        b.ammo--;
+        // Entre dos disparos de la salva, una pausa corta; al vaciarla, la recarga entera
+        const reload = Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (Math.min(b.level, CONFIG.maxLevel) - 1)));
+        b.readyAt = this.ticks + (b.ammo > 0 ? CONFIG.samGap : Math.max(CONFIG.samGap, reload));
         b.reloadFrom = this.ticks;
-        const hit = this.rng.float() < Math.min(0.95, CONFIG.samHitChance + CONFIG.samHitPerLevel * (b.level - 1) + (this.players[b.owner]?.mods.samHit || 0));
+        const hit = this.rng.float() < this.samHitChance(b, shooter);
         this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
         if (!hit) continue;
         m.dead = true;
-        const shooter = this.players[b.owner];
         const launcher = this.players[m.owner];
-        if (shooter === this.human) this._emit(`🛡 Tu antimisiles ha derribado un misil de ${launcher.name}`, 'good');
+        const what = shield ? 'el escudo de tu capital' : 'tu antimisiles';
+        if (shooter === this.human) this._emit(`🛡 ${what[0].toUpperCase()}${what.slice(1)} ha derribado un misil de ${launcher.name}`, 'good');
         else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
         else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
         break;
@@ -2616,7 +2708,7 @@ export class Game {
         lost.set(o, (lost.get(o) || 0) + 1);
         // Dentro de las murallas de su capital: mueren tropas, pero la casilla
         // y lo que hay en ella aguantan (doc-1.6)
-        if (this.wallMultiplier(this.players[o], t) > 1) {
+        if (this.capitalZone(this.players[o], t) === 2) {
           walled++;
           continue;
         }
@@ -3404,6 +3496,7 @@ export class Game {
       p.income.workers += gb.workers;
       p.income.bonus += gb.bonus;
       this._growPopulation(p);
+      if (p.capital) this._bankRecruit(p);
       if (p.research && this.ticks >= p.research.end) this._finishResearch(p);
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }

@@ -13,11 +13,11 @@
       "./src/attack.js": "./src/attack.js?v=43652095f7",
       "./src/banderas.js": "./src/banderas.js?v=079a0c12a9",
       "./src/barcos.js": "./src/barcos.js?v=a6e288c8d4",
-      "./src/bot.js": "./src/bot.js?v=35fe3b00ef",
+      "./src/bot.js": "./src/bot.js?v=eba7bfa298",
       "./src/camera.js": "./src/camera.js?v=0292fc299c",
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=d1eab0f290",
-      "./src/config.js": "./src/config.js?v=f51b6f1607",
+      "./src/config.js": "./src/config.js?v=a696236a1b",
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=cd375dc108",
       "./src/cuenta.js": "./src/cuenta.js?v=b7a3d60681",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
@@ -27,25 +27,25 @@
       "./src/fin.js": "./src/fin.js?v=72a8fd1796",
       "./src/format.js": "./src/format.js?v=66b8e86f09",
       "./src/fx.js": "./src/fx.js?v=ab7609d597",
-      "./src/game.js": "./src/game.js?v=c6431d86bf",
-      "./src/guia.js": "./src/guia.js?v=006a33a8a2",
+      "./src/game.js": "./src/game.js?v=3c7838293a",
+      "./src/guia.js": "./src/guia.js?v=c9288543e7",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=7969edb89e",
-      "./src/icons.js": "./src/icons.js?v=956483eb4a",
+      "./src/home.js": "./src/home.js?v=0880fda645",
+      "./src/icons.js": "./src/icons.js?v=e11a5f0f58",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
       "./src/lugares.js": "./src/lugares.js?v=c147c74cd2",
-      "./src/main.js": "./src/main.js?v=7209809fe7",
+      "./src/main.js": "./src/main.js?v=1f70ac6a05",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
-      "./src/mecanicas.js": "./src/mecanicas.js?v=1a0b4683ba",
+      "./src/mecanicas.js": "./src/mecanicas.js?v=02a3035f56",
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ba770718d0",
       "./src/mqtt.js": "./src/mqtt.js?v=822e5b7211",
-      "./src/multiplayer.js": "./src/multiplayer.js?v=6276a21e62",
+      "./src/multiplayer.js": "./src/multiplayer.js?v=d0ccc5d593",
       "./src/musica.js": "./src/musica.js?v=1c7e053d4e",
       "./src/names.js": "./src/names.js?v=a3419d11bb",
       "./src/net.js": "./src/net.js?v=4c4fd542c2",
@@ -55,7 +55,7 @@
       "./src/presentacion.js": "./src/presentacion.js?v=853ea16b6c",
       "./src/profile.js": "./src/profile.js?v=4551c371f3",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
-      "./src/render.js": "./src/render.js?v=1eb04e9c13",
+      "./src/render.js": "./src/render.js?v=0a53e73869",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=ee313e0dbb",
@@ -65,12 +65,12 @@
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=c7841f8591",
-      "./src/ui.js": "./src/ui.js?v=a1674726a5"
+      "./src/ui.js": "./src/ui.js?v=3f43b0bd54"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=5f273a2306">
+  <link rel="stylesheet" href="css/estilo.css?v=b033a09099">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -859,6 +859,14 @@
         <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
         <input id="reparto" type="range" min="5" max="100" step="5" value="70">
       </label>
+      <!-- Banco de tropas de la capital (doc-1.7) -->
+      <div class="pj-banco" id="pj-banco" hidden>
+        <span class="banco-etq" title="Banco de tropas de tu capital: guarda soldados a salvo (no atacan ni frenan tu regeneración) y sácalos cuando los necesites. Con tus tropas al tope, la capital sigue reclutando hacia el banco. Lleno, refuerza las murallas"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z" fill="currentColor"/></svg>Banco</span>
+        <span class="banco-barra" aria-hidden="true"><span id="banco-relleno"></span></span>
+        <span class="banco-cifra"><strong id="banco-tropas">0</strong><span class="max"> / <span id="banco-max">0</span></span></span>
+        <button type="button" id="banco-guardar" class="banco-btn" title="Guardar en la capital la fuerza de ataque elegida (tecla X)">Guardar</button>
+        <button type="button" id="banco-sacar" class="banco-btn" title="Sacar todas las tropas del banco (Mayús + X)">Sacar</button>
+      </div>
       </div>
       <div class="pj-col pj-obras">
       <div id="construir" role="group" aria-label="Construir"></div>

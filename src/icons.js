@@ -389,18 +389,15 @@ function glyphs() {
   // Corona pequeña (las mejoras de la capital)
   const crown = new Path2D();
   polyTo(crown, [-5, -5.4, -5, -9.6, -2.6, -7.4, 0, -10.4, 2.6, -7.4, 5, -9.6, 5, -5.4]);
-  const capInd = new Path2D();
-  capInd.addPath(factory, new DOMMatrix().translate(0, 2.4).scale(0.8));
-  capInd.addPath(crown);
-  const capPop = new Path2D();
-  capPop.addPath(city, new DOMMatrix().translate(0, 2.4).scale(0.8));
-  capPop.addPath(crown);
+  // Mejorar la capital (doc-1.7): el castillo con una corona encima
+  const capUp = new Path2D();
+  capUp.addPath(capital, new DOMMatrix().translate(0, 2.2).scale(0.82));
+  capUp.addPath(crown, new DOMMatrix().translate(0, -0.6));
 
   GLYPHS = {
     village: { fill: village, rule: 'evenodd' },
     capital: { fill: capital, rule: 'evenodd', stroke: capFlag, lw: 1.4 },
-    capInd: { fill: capInd, rule: 'evenodd' },
-    capPop: { fill: capPop, rule: 'evenodd' },
+    capUp: { fill: capUp, rule: 'evenodd' },
     city: { fill: city, rule: 'evenodd' },
     factory: { fill: factory, rule: 'evenodd' },
     port: { fill: port, rule: 'nonzero', stroke: anchor, lw: 2.2 },

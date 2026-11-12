@@ -24,7 +24,7 @@
  * industria y población, pueblos, pesqueros, comercio más frecuente y
  * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.6';
+export const MECH_VERSION = 'doc-1.7';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -37,7 +37,7 @@ export const MECH_VERSION = 'doc-1.6';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -47,8 +47,8 @@ export const MECH_VERSION = 'doc-1.6';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-7', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-6', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-8', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-7', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -107,9 +107,11 @@ export const MECH = {
   // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
   neutralTimeFloor: 1.25,
   // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
-  // (doc-1.4: bajas ×0,38, antes ×0,5)
-  colonyNeutralLoss: 0.38,
-  colonyNeutralSpeed: 1,
+  // (doc-1.4: bajas ×0,38, antes ×0,5; doc-1.7: ×0,2 y mandan menos cada vez,
+  // para que no se queden sin tropas al expandirse; ritmo ×0,85 para que no
+  // crezcan más que las naciones)
+  colonyNeutralLoss: 0.2,
+  colonyNeutralSpeed: 0.85,
   // PROPUESTA (doc-1.4): su velocidad en tierra libre no depende de cuánto
   // mandan: como una nación con este envío (y su ritmo propio, ver bot.js)
   colonyRefTroops: 6600,
@@ -188,25 +190,37 @@ export const MECH = {
   // 2000×1000): 1.000 casillas → +44; 20.000 → +232; medio mundo (~300.000)
   // → +1.030 por turno (10 veces el oro base). Las colonias, la mitad
   tax: { k: 1, exp: 0.55, colonyShare: 0.5 },
-  // Capital (doc-1.6): cada nación nace con la suya, amurallada. Sus mejoras
-  // (sin ocupar más mapa): Industria +25 % del oro pasivo por nivel y
-  // Población +10 % de techo de tropas y +8 % de crecimiento por nivel. Precio
-  // de cada nivel: 150k × 1,75^nivel. Murallas: defensa ×4 (+0,15 por nivel
-  // de mejora) hasta wallRadius casillas del documento. Si cae, el
-  // conquistador se lleva botín y la capital se traslada con la mitad de sus
-  // niveles. Las bombas no destruyen lo que hay dentro de las murallas
+  // Capital (doc-1.6, rehecha en doc-1.7): cada nación nace con la suya,
+  // amurallada. Una sola mejora (sin ocupar más mapa), de nivel 0 a 10: +25 %
+  // del oro pasivo, +15 % de capacidad del banco de tropas y murallas más
+  // fuertes por nivel. Precio de cada nivel: 150k × 1,75^nivel.
+  // Murallas (CONFIG.capitalWallRadius): defensa ×6 (+0,4 por nivel, y hasta
+  // ×1,5 más con el banco lleno); afueras (CONFIG.capitalOuterRadius): ×2,5
+  // (+0,1 por nivel). Las bombas no destruyen lo que hay dentro de las murallas.
+  // Banco de tropas: guardas soldados en la capital (no atacan, no cuentan
+  // para el techo ni frenan la regeneración) y los sacas cuando quieras. Cabe
+  // el 30 % del techo de tropas (+15 % por nivel). Si tus tropas están al
+  // tope, la capital sigue reclutando hacia el banco a la mitad del ritmo
+  // máximo de regeneración. Si cae, el conquistador se lleva botín (oro y la
+  // mitad del banco en tropas) y la capital se traslada con la mitad de sus
+  // niveles y el banco vacío
   capital: {
     maxLevel: 10,
-    indGold: 0.25,
-    popCap: 0.1,
-    popGrowth: 0.08,
+    gold: 0.25,
     priceBase: 150000,
     priceGrowth: 1.75,
     buildTicks: 50,
     buildTicksPerLevel: 10,
-    wallRadius: 7,
-    wallMult: 4,
-    wallMultPerLevel: 0.15,
+    wallMult: 6,
+    wallMultPerLevel: 0.4,
+    wallBankBonus: 0.5,
+    outerMult: 2.5,
+    outerMultPerLevel: 0.1,
+    bankBase: 0.3,
+    bankPerLevel: 0.15,
+    bankRecruit: 0.5,
+    bankFull: 0.97, // tropas/techo a partir del cual la capital recluta hacia el banco
+    bankLoot: 0.5,
     lootBase: 250000,
     lootShare: 0.2,
     keepShare: 0.5,

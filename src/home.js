@@ -53,6 +53,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
   { tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
   { tag: 'Mapa', title: 'Frentes en rojo', text: 'Las fronteras donde se lucha se ponen rojas, los barcos marcan dónde van a desembarcar y el tooltip es más pequeño y claro.', art: 2 },
   { tag: 'Mapa', title: 'Colores y banderas', text: 'Cada país se distingue de sus vecinos, los barcos llevan su bandera y los territorios sueltos de una nación, también.', art: 2 },

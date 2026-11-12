@@ -1474,7 +1474,7 @@ export class Renderer {
       const friend = mine || (human && human.allies.has(p.id));
       if (zr < 0.6 && !friend) continue;
       const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
-      const m = Math.max(size, wallR) + 4;
+      const m = Math.max(size, CONFIG.capitalOuterRadius * camera.zoom) + 4;
       if (sx < -m || sy < -m || sx > camera.viewW + m || sy > camera.viewH + m) continue;
       // Muralla: un anillo almenado. La tuya, en cuanto se distingue; las
       // demás, solo de cerca (con decenas de capitales a la vista recargaban)
@@ -1491,6 +1491,15 @@ export class Renderer {
         ctx.beginPath();
         ctx.arc(sx, sy, wallR + ctx.lineWidth * 2.5, 0, Math.PI * 2);
         ctx.stroke();
+        // Afueras (doc-1.7): un anillo fino y discontinuo, más fuera
+        const outR = CONFIG.capitalOuterRadius * camera.zoom;
+        ctx.beginPath();
+        ctx.arc(sx, sy, outR, 0, Math.PI * 2);
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 5]);
+        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.45 : 0.3})`;
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
       if (mine && this.anim) {
         const k = 0.5 + 0.5 * Math.sin(now / 520);
@@ -1504,7 +1513,7 @@ export class Renderer {
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
       const prog = game.capitalProgress ? game.capitalProgress(b) : null;
       if (prog !== null) this._drawConstruction(sx, sy, size, prog, now);
-      else if (b.ind + b.pop > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.ind + b.pop);
+      else if (b.up > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.up);
     }
   }
 

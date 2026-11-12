@@ -78,7 +78,13 @@ export const CONFIG = {
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   fortRadius: 12 * RES,
-  capitalWallRadius: 7 * RES, // murallas de la capital (casillas; mecánica en MECH.capital)
+  capitalWallRadius: 10 * RES, // murallas de la capital (casillas; mecánica en MECH.capital; doc-1.7: antes 7)
+  capitalOuterRadius: 17 * RES, // afueras: menos defensa que dentro de las murallas, pero más que el campo
+  // Escudo antimisiles propio de la capital (doc-1.7): como una batería, sin construirla
+  capitalSamRange: 26 * RES,
+  capitalSamHit: 0.8,
+  capitalSamShots: 2, // interceptores por salva (+1 cada capitalSamShotsEvery niveles de la capital)
+  capitalSamShotsEvery: 3,
   capitalClearance: 3, // casillas libres alrededor de la capital (se construye junto a ella)
   fortDefenseMult: 3, // efecto de defensa (× tiempo y bajas del atacante) dentro del radio del puesto
   // Niveles y obras (el precio de un nivel es el del siguiente edificio de su tipo: mecanicas.js)
@@ -86,12 +92,14 @@ export const CONFIG = {
   upgradeTimeMult: 0.8, // subir de nivel tarda el 80 % de la obra nueva
   // Efecto de cada nivel por encima del 1: ciudad +250k de techo de tropas,
   // fábrica más alcance de vías, puesto defensivo +2 de radio y +0,4 de
-  // defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto
+  // defensa, silo −15 % de recarga, antimisiles +4 de radio, +3 % de acierto
+  // y un interceptor más por salva
   fortRadiusPerLevel: 2 * RES,
   fortMultPerLevel: 0.4,
   siloReloadPerLevel: 0.15,
-  samRangePerLevel: 3 * RES,
-  samHitPerLevel: 0.07,
+  samRangePerLevel: 4 * RES,
+  samHitPerLevel: 0.03,
+  samShotsPerLevel: 1,
 
   // Buques de guerra
   warshipHp: 100,
@@ -124,10 +132,15 @@ export const CONFIG = {
   missileRange: 220 * RES, // distancia máxima desde el silo
   siloReload: 150, // ticks entre lanzamientos de un mismo silo
   missileTroopLoss: 1.2, // × densidad del defensor por casilla arrasada
-  samRange: 22 * RES, // radio de intercepción de una batería
-  samReload: 200, // ticks (20 s) que tarda una batería en recargar tras disparar
-  samReloadPerLevel: 0.12, // cada nivel recarga un 12 % más rápido
-  samHitChance: 0.65, // probabilidad de derribar el misil al disparar
+  // Antimisiles (doc-1.7: mucho más fuertes; antes 22 de radio, un disparo,
+  // 65 % de acierto y 20 s de recarga)
+  samRange: 30 * RES, // radio de intercepción de una batería
+  samShots: 2, // interceptores por salva: dispara uno, y si falla o llega otro misil, el siguiente
+  samGap: 3, // ticks entre dos disparos de la misma salva
+  samReload: 70, // ticks (7 s) que tarda en recargar la salva entera
+  samReloadPerLevel: 0.1, // cada nivel recarga un 10 % más rápido
+  samHitChance: 0.85, // probabilidad de derribar el misil con cada disparo
+  samHitMax: 0.98,
 
   // Diplomacia
   maxAllies: 3,
@@ -238,17 +251,17 @@ export const BUILDINGS = {
   village: { name: 'Pueblo', fem: false, base: 40000, build: 30, key: 'KeyB', desc: 'Pequeño y barato: +300 de oro/s y +6.000 de techo de tropas por nivel' },
   // La capital: una por nación, nace con ella (no se construye). Sus mejoras
   // se compran desde la barra y se aplican al momento, sin elegir sitio
-  capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada: defensa ×4 alrededor y las bombas no destruyen lo que hay dentro' },
-  capInd: { name: 'Industria de la capital', short: 'Industria', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'ind', desc: '+25 % de oro pasivo (territorio, base y pueblos) por nivel' },
-  capPop: { name: 'Población de la capital', short: 'Población', fem: true, base: 150000, build: 0, key: 'KeyX', unit: 'capital', track: 'pop', desc: '+10 % de techo de tropas y +8 % de crecimiento por nivel' },
+  capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada (defensa ×6 dentro y ×2,5 en las afueras), con escudo antimisiles y banco de tropas; las bombas no destruyen lo que hay dentro' },
+  // Una sola mejora (doc-1.7): más oro y más sitio en el banco de tropas
+  capUp: { name: 'Mejorar la capital', short: 'Capital', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'up', desc: '+25 % de oro pasivo, +15 % de capacidad del banco de tropas y murallas más fuertes por nivel' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
-  fort: { name: 'Puesto defensivo', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
+  fort: { name: 'Puesto defensivo', short: 'Puesto', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },
   silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar bombas' },
-  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', desc: 'Derriba bombas enemigas cercanas; recarga 20 s tras cada disparo' },
+  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', desc: 'Derriba bombas enemigas cercanas: salvas de 2 interceptores (+1 por nivel) con un 85 % de acierto cada uno; recarga en 7 s' },
   // No son edificios: el buque se bota desde un puerto y las bombas salen de un silo
   warship: { name: 'Buque', fem: false, base: 250000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Clic en el mar: patrulla esa zona para siempre; hunde buques y transportes y captura mercantes' },
-  missile: { name: 'Bomba atómica', fem: true, base: 750000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
+  missile: { name: 'Bomba atómica', short: 'Atómica', fem: true, base: 750000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
   hbomb: { name: 'Bomba H', fem: true, base: 5000000, build: 0, key: 'KeyJ', unit: 'missile', fixed: true, desc: 'Bomba de hidrógeno: arrasa una zona mucho mayor' },
   mirv: { name: 'MIRV', fem: false, base: 25000000, build: 0, key: 'KeyK', unit: 'missile', fixed: true, desc: 'Se divide en muchas cabezas que caen por todo el país enemigo' },
 };
@@ -261,7 +274,7 @@ export const BUILDING_KINDS = Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k]
  * `icon`: el edificio que la representa en su botón.
  */
 export const BUILD_GROUPS = [
-  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['capInd', 'capPop', 'village', 'city', 'port', 'factory'] },
+  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['capUp', 'village', 'city', 'port', 'factory'] },
   { id: 'defensa', name: 'Defensa', icon: 'fort', kinds: ['fort', 'sam', 'warship'] },
   { id: 'ataque', name: 'Ataque', icon: 'missile', kinds: ['silo', 'missile', 'hbomb', 'mirv'] },
 ];

@@ -579,7 +579,7 @@ export class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp', 'bank']);
 const SAFE_ID = /^[a-z]{2,16}$/;
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
@@ -597,6 +597,7 @@ function cleanIntent(raw) {
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
+  if (raw.op === 'in' || raw.op === 'out') out.op = raw.op; // banco de tropas de la capital
   // Lo que se puede pedir desde la barra (la tabla de edificios; la capital nace con la nación)
   if (typeof raw.kind === 'string' && BUILDING_KINDS.includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;

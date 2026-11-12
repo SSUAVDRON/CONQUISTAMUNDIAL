@@ -66,6 +66,7 @@ export class BotBrain {
     if (this._helpAllies(max)) return;
     this._develop();
     this._maybeBuild(counts, coastal);
+    this._useBank(max);
     if (p.active.silo && r.chance(0.2 + this.aggression * 0.25)) this._fireMissile(counts);
 
     // 0. Defensa activa: si le atacan con fuerza, contraataca con lo justo para
@@ -210,6 +211,28 @@ export class BotBrain {
    * Contraataque: un ataque enemigo grande en curso se anula lanzando otro en
    * sentido contrario con algo más de tropas (si las tiene en casa).
    */
+  /**
+   * Banco de tropas de la capital (doc-1.7): guarda una parte cuando va
+   * sobrada (así regenera más rápido) y lo saca todo cuando está en guerra y
+   * se queda corta.
+   */
+  _useBank(max) {
+    const g = this.game;
+    const p = this.player;
+    const cap = p.capital;
+    if (!cap || g.buildingAt.get(cap.tile) !== cap) return;
+    if (cap.bank >= 1 && p.troops < max * 0.3) {
+      let war = false;
+      for (const id of p.attacks.keys()) if (id) war = true;
+      if (!war) war = g.attacks.some((a) => a.targetId === p.id && a.troops > 0);
+      if (war) {
+        g.bankWithdraw(p, 1);
+        return;
+      }
+    }
+    if (p.troops > max * 0.9) g.bankDeposit(p, 0.25);
+  }
+
   _counterAttack() {
     const g = this.game;
     const p = this.player;
@@ -320,8 +343,8 @@ export class BotBrain {
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
     else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
-    // Su capital (doc-1.6): industria y población, alternando; y pueblos baratos
-    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = p.capital.ind <= p.capital.pop ? 'capInd' : 'capPop';
+    // Su capital (doc-1.7: una sola mejora); y pueblos baratos
+    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = 'capUp';
     else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
@@ -331,7 +354,7 @@ export class BotBrain {
     else if (p.tiles > 2000 * AREA && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
     else if (p.active.port > 0 && p.buildings.warship < p.active.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
-    if (want === 'capInd' || want === 'capPop') {
+    if (want === 'capUp') {
       if (p.gold < g.buildCost(p, want)) return false;
       return g.build(p, want, -1);
     }
@@ -669,7 +692,7 @@ export class ColonyBrain {
     this.nextThink = 0;
     this.grudges = new Set();
     const t = (k) => colonyTrait(game, player.id, k);
-    this.sendShare = 0.3 + t(0) * 0.15; // 30-45 % de sus tropas
+    this.sendShare = 0.16 + t(0) * 0.1; // 16-26 % de sus tropas (doc-1.7: antes 30-45 %)
     this.thinkScale = 0.75 + t(1) * 0.5; // como una nación (0,85), con variación
     player.pace = 0.8 + t(2) * 0.5; // ritmo propio en tierra libre (0,8-1,3)
     player.growNoise = CONFIG.growRandom * (0.6 + t(3) * 2.4); // de pareja a irregular

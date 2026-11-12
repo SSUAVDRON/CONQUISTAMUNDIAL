@@ -1,6 +1,6 @@
-// Economía de doc-1.6: el territorio produce oro, la capital amurallada (con
-// mejoras de industria y población, murallas, botín y traslado si cae), los
-// pueblos y los lugares de interés.
+// Economía de doc-1.6 y doc-1.7: el territorio produce oro, la capital
+// amurallada (una mejora, banco de tropas, murallas y afueras, escudo
+// antimisiles, botín y traslado si cae), los pueblos y los lugares de interés.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
@@ -51,38 +51,69 @@ test('capital: nace donde te despliegas (naciones y jugadores, no colonias) y no
   assert.ok(!play({ capitals: false }).h.capital, 'sin la regla, sin capital');
 });
 
-test('capital: industria y población se mejoran sin elegir sitio, tardan, encarecen y tienen tope', () => {
+test('capital: una sola mejora, sin elegir sitio; tarda, encarece, tiene tope y da oro y sitio en el banco', () => {
   const { game, h } = play();
   h.gold = 1e9;
   const base = h.goldBreakdown();
-  const cap0 = h.maxTroops();
-  const grow0 = h.mods.growth;
-  assert.equal(game.buildCost(h, 'capInd'), capitalPrice(0));
-  game.queueIntent({ type: 'build', kind: 'capInd', playerId: h.id });
+  const bank0 = game.bankCap(h);
+  assert.ok(Math.abs(bank0 - h.maxTroops() * MECH.capital.bankBase) < 1e-6, 'el banco nace con el 30 % del techo');
+  assert.equal(game.buildCost(h, 'capUp'), capitalPrice(0));
+  game.queueIntent({ type: 'build', kind: 'capUp', playerId: h.id });
   game.tick();
-  assert.equal(h.capital.work.track, 'ind', 'en obras');
-  assert.equal(game.canBuild(h, 'capPop').ok, false, 'una obra a la vez');
+  assert.ok(h.capital.work, 'en obras');
+  assert.equal(game.canBuild(h, 'capUp').ok, false, 'una obra a la vez');
   while (h.capital.work) game.tick();
-  assert.equal(h.capital.ind, 1);
+  assert.equal(h.capital.up, 1);
   const b = h.goldBreakdown();
   assert.ok(Math.abs(b.bonus - (b.base + b.tax + b.villages) * h.mods.gold) < 1e-9);
   assert.ok(b.bonus - base.bonus > (b.base + b.tax) * 0.24, '+25 % del oro pasivo');
-  assert.equal(game.buildCost(h, 'capInd'), capitalPrice(1), 'el siguiente nivel cuesta más');
-  assert.ok(game.build(h, 'capPop'));
-  while (h.capital.work) game.tick();
-  assert.ok(h.maxTroops() > cap0 * 1.09, '+10 % de techo');
-  assert.ok(Math.abs(h.mods.growth - grow0 - MECH.capital.popGrowth) < 1e-9, '+8 % de crecimiento');
-  h.capital.ind = MECH.capital.maxLevel;
-  assert.equal(game.canBuild(h, 'capInd').ok, false, 'tope de nivel');
+  assert.ok(Math.abs(game.bankCap(h) - h.maxTroops() * (MECH.capital.bankBase + MECH.capital.bankPerLevel)) < 1e-6, '+15 % de banco');
+  assert.equal(game.buildCost(h, 'capUp'), capitalPrice(1), 'el siguiente nivel cuesta más');
+  h.capital.up = MECH.capital.maxLevel;
+  assert.equal(game.canBuild(h, 'capUp').ok, false, 'tope de nivel');
 });
 
-test('capital: las murallas defienden mucho y las bombas no arrasan lo que hay dentro', () => {
+test('capital: banco de tropas; se guarda y se saca con órdenes, cabe lo que dice su nivel y recluta con el excedente', () => {
+  const { game, h } = play();
+  const cap = h.capital;
+  h.troops = 10000;
+  game.queueIntent({ type: 'bank', op: 'in', ratio: 0.4, playerId: h.id });
+  game.tick();
+  assert.equal(cap.bank, 4000, 'guarda el 40 % de sus soldados');
+  assert.ok(h.troops < 6000 + 300 && h.troops >= 6000, 'que salen de los soldados (más lo que regeneran en el turno)');
+  // No cabe más de lo que dice su nivel
+  h.troops = game.bankCap(h) * 5;
+  game.bankDeposit(h, 1);
+  assert.ok(Math.abs(cap.bank - game.bankCap(h)) < 1, 'lleno');
+  // Sacarlo todo
+  const before = h.troops;
+  const stored = cap.bank;
+  game.queueIntent({ type: 'bank', op: 'out', playerId: h.id });
+  game.tick();
+  assert.ok(cap.bank < stored * 0.05, 'se vacía (salvo lo que la capital recluta en ese turno: sus tropas quedan al tope)');
+  assert.ok(h.troops >= before + stored - 1, 'vuelven a los soldados');
+  // Con las tropas al tope, la capital recluta hacia el banco
+  h.troops = h.maxTroops();
+  game.tick();
+  assert.ok(cap.bank > 0, 'recluta con el excedente');
+  // El banco lleno refuerza las murallas
+  cap.bank = 0;
+  const empty = game.wallMultiplier(h, cap.tile);
+  cap.bank = game.bankCap(h);
+  assert.ok(Math.abs(game.wallMultiplier(h, cap.tile) - empty * (1 + MECH.capital.wallBankBonus)) < 1e-9);
+});
+
+test('capital: murallas fuertes, afueras reforzadas y las bombas no arrasan lo que hay dentro', () => {
   const { game, h, o, map } = play();
   const c = h.capital.tile;
   const inside = game.wallMultiplier(h, c);
   assert.ok(inside >= MECH.capital.wallMult);
+  assert.equal(game.capitalZone(h, c), 2);
   assert.ok(game.fortMultiplier(h, c) >= inside, 'cuenta como defensa');
-  const far = map.index(Math.min(map.width - 1, map.x(c) + CONFIG.capitalWallRadius + 3), map.y(c));
+  const outer = map.index(Math.min(map.width - 1, map.x(c) + CONFIG.capitalWallRadius + 2), map.y(c));
+  assert.equal(game.capitalZone(h, outer), 1, 'afueras');
+  assert.equal(game.wallMultiplier(h, outer), MECH.capital.outerMult);
+  const far = map.index(Math.min(map.width - 1, map.x(c) + CONFIG.capitalOuterRadius + 3), map.y(c));
   assert.equal(game.wallMultiplier(h, far), 1);
   // Una bomba sobre la capital: las casillas de dentro de la muralla siguen siendo suyas
   const before = h.tiles;
@@ -92,27 +123,50 @@ test('capital: las murallas defienden mucho y las bombas no arrasan lo que hay d
   assert.ok(h.tiles > 0 && h.tiles <= before);
 });
 
-test('capital: si cae, quien la toma se lleva botín y la nación la refunda con la mitad de sus mejoras', () => {
+test('capital: su escudo derriba los misiles que se le acercan', () => {
+  const { game, h, o, map } = play();
+  const c = h.capital.tile;
+  let shots = 0;
+  let hits = 0;
+  for (let i = 0; i < 12; i++) {
+    h.capital.readyAt = 0;
+    h.capital.ammo = null;
+    // Un misil enemigo que cae sobre la capital, lanzado desde fuera del alcance del escudo
+    const from = map.index(Math.max(0, map.x(c) - CONFIG.capitalSamRange - 20), map.y(c));
+    game.missiles.push({ owner: o.id, targetId: h.id, from, to: c, progress: 0, dist: CONFIG.capitalSamRange + 20, radius: CONFIG.missileRadius });
+    const t0 = game.ticks;
+    for (let k = 0; k < 60 && game.missiles.length; k++) game.tick();
+    game.missiles.length = 0;
+    const fired = game.effects.filter((e) => e.tick > t0 && e.from === c);
+    shots += fired.length;
+    hits += fired.filter((e) => e.kind === 'intercept').length;
+  }
+  assert.ok(hits >= 9, `derriba casi todos: ${hits}/12 (${shots} disparos)`);
+});
+
+test('capital: si cae, quien la toma se lleva botín (oro y tropas del banco) y la nación la refunda con la mitad de sus mejoras', () => {
   const { game, h, o } = play();
   h.gold = 1e9;
   // Con una ciudad: la capital se refundará en ella
   const city = findOwn(game, h);
   assert.ok(buildNow(game, h, 'city', city));
-  h.capital.ind = 4;
-  h.capital.pop = 3;
+  h.capital.up = 5;
+  h.capital.bank = 8000;
   h.gold = 1000000;
   const oGold = o.gold;
+  const oTroops = o.troops;
   const tile = h.capital.tile;
   game.setOwner(tile, o.id);
   assert.ok(!game.buildingAt.has(tile) || game.buildingAt.get(tile).kind !== 'capital', 'la capital cae');
   assert.equal(h.capital, null);
   const loot = 0.2 * 1000000 + MECH.capital.lootBase;
   assert.ok(Math.abs(o.gold - oGold - loot) < 1, 'botín: el 20 % de su oro y una recompensa');
+  assert.ok(Math.abs(o.troops - oTroops - 4000) < 1, 'y la mitad de su banco');
   assert.ok(Math.abs(h.gold - 800000) < 1);
   game.tick();
   assert.ok(h.capital, 'refundada al final del turno');
-  assert.equal(h.capital.ind, 2);
-  assert.equal(h.capital.pop, 1);
+  assert.equal(h.capital.up, 2);
+  assert.equal(h.capital.bank, 0, 'con el banco vacío');
   assert.equal(h.capital.tile, city, 'en su mejor ciudad');
   assert.equal(game.owner[h.capital.tile], h.id);
 });

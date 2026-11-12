@@ -479,6 +479,8 @@ function toggleMute() {
 document.getElementById('btn-sonido')?.addEventListener('click', toggleMute);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyN' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) toggleMute();
+  // X: guardar tropas en la capital; Mayús+X: sacarlas
+  if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey && !e.repeat && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) bankTroops(e.shiftKey ? 'out' : 'in');
 });
 
 function applySettings() {
@@ -1592,7 +1594,7 @@ function coopGroups(n, coop) {
 
 /** Con roles en el cooperativo: qué decide cada uno (para evitar compras o ataques por accidente). */
 const ROLE_TYPES = {
-  militar: new Set(['action', 'cancelAttack']),
+  militar: new Set(['action', 'cancelAttack', 'bank']),
   economia: new Set(['share', 'research', 'spec', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']),
 };
 const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'hbomb', 'mirv', 'silo', 'sam']);
@@ -1619,6 +1621,13 @@ function humanIntent(intent) {
     return;
   }
   game.queueIntent({ ...intent, playerId: human.id });
+}
+
+/** Banco de tropas de la capital (doc-1.7): 'in' guarda la fuerza de ataque elegida; 'out' lo saca todo. */
+function bankTroops(op) {
+  const { game, human } = state;
+  if (state.demo || !human || !human.alive || game.phase !== 'playing' || !human.capital) return;
+  humanIntent({ type: 'bank', op, ratio: op === 'in' ? state.ratio : 1 });
 }
 
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
@@ -1712,6 +1721,8 @@ const input = new Input(canvas, camera, {
 ui.on({
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
+  // Banco de tropas de la capital: guarda la fuerza de ataque elegida o lo saca todo
+  onBank: bankTroops,
   // Desarrollo y diplomacia ampliada
   onSpec: (spec) => humanIntent({ type: 'spec', spec }),
   onResearch: (tech) => humanIntent({ type: 'research', tech }),

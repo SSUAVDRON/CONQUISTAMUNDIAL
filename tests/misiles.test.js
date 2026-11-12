@@ -88,7 +88,7 @@ test('los misiles no dañan a los aliados ni se pueden lanzar contra ellos', () 
   assert.equal(game.canBuild(a, 'missile', tb).ok, false);
 });
 
-test('los antimisiles derriban misiles enemigos (a veces fallan) y recargan', () => {
+test('los antimisiles derriban casi todos los misiles: salvas de varios interceptores (si uno falla, el siguiente lo intenta) y recargan', () => {
   const { map, game, a, b, ta, tb } = setup();
   for (const atk of [...b.attacks.values()]) game._endAttack(atk);
   buildNow(game, a, 'silo', ta);
@@ -99,6 +99,8 @@ test('los antimisiles derriban misiles enemigos (a veces fallan) y recargan', ()
   const silo = game.buildings.find((x) => x.owner === a.id && x.kind === 'silo');
   let shots = 0;
   let hits = 0;
+  let rounds = 0;
+  let retried = 0;
   for (let round = 0; round < 16; round++) {
     // Objetivo a tiro de la batería pero fuera del radio de la explosión
     const target = [...map.landTiles].find((t) => {
@@ -113,10 +115,14 @@ test('los antimisiles derriban misiles enemigos (a veces fallan) y recargan', ()
     assert.ok(buildNow(game, a, 'missile', target));
     for (let i = 0; i < 200 && game.missiles.length; i++) game.tick();
     const fired = game.effects.filter((e) => e.tick > t0 && (e.kind === 'intercept' || e.kind === 'miss'));
+    rounds++;
     shots += fired.length;
     hits += fired.filter((e) => e.kind === 'intercept').length;
+    if (fired.length > 1 && fired[0].kind === 'miss') retried++;
   }
   assert.ok(game.buildings.includes(sam), 'la batería sigue en pie');
-  assert.ok(shots >= 8, `la batería debería disparar a cada misil que pasa: ${shots}`);
-  assert.ok(hits >= 2 && hits < shots, `derriba algunos y falla otros: ${hits}/${shots}`);
+  assert.ok(rounds >= 8 && shots >= rounds, `la batería debería disparar a cada misil que pasa: ${shots} disparos, ${rounds} misiles`);
+  assert.ok(hits >= rounds * 0.8, `derriba casi todos: ${hits}/${rounds}`);
+  // Si un interceptor falla, el segundo de la salva vuelve a disparar al mismo misil
+  if (shots > hits) assert.ok(retried >= 1, 'tras un fallo, otro disparo');
 });
