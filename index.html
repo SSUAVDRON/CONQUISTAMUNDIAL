@@ -31,9 +31,9 @@
       "./src/format.js": "./src/format.js?v=66b8e86f09",
       "./src/fx.js": "./src/fx.js?v=ab7609d597",
       "./src/game.js": "./src/game.js?v=88d6a94c30",
-      "./src/guia.js": "./src/guia.js?v=e4dec4afa8",
+      "./src/guia.js": "./src/guia.js?v=ca86666a88",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=b6a3c8c959",
+      "./src/home.js": "./src/home.js?v=609d4b0aba",
       "./src/icons.js": "./src/icons.js?v=d26e1519c8",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
@@ -41,7 +41,7 @@
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
       "./src/lugares.js": "./src/lugares.js?v=5289949ba5",
-      "./src/main.js": "./src/main.js?v=1fd3e132e5",
+      "./src/main.js": "./src/main.js?v=2437813848",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
       "./src/mecanicas.js": "./src/mecanicas.js?v=ade8d29dd1",
@@ -63,6 +63,8 @@
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=ee313e0dbb",
       "./src/rng.js": "./src/rng.js?v=f9717328bc",
+      "./src/social-ui.js": "./src/social-ui.js?v=7cbafa4872",
+      "./src/social.js": "./src/social.js?v=9c2974925b",
       "./src/sonido.js": "./src/sonido.js?v=9eb19f354e",
       "./src/tecnologias.js": "./src/tecnologias.js?v=e5f4d0a332",
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
@@ -73,7 +75,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=2ca89911dc">
+  <link rel="stylesheet" href="css/estilo.css?v=fe7d04ac16">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -179,7 +181,7 @@
         <nav class="ini-pestanas" role="tablist" aria-label="Secciones">
           <button type="button" role="tab" id="tab-jugar" data-vista="jugar" aria-selected="true"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3 L13 8 L5 13 Z" fill="currentColor"/></svg><span>Jugar</span></button>
           <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5 V9 M6.5 13.5 V5 M10 13.5 V7.5 M13.5 13.5 V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Progreso</span> <span id="cuenta-logros" class="cuenta"></span></button>
-          <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span></button>
+          <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span> <span id="tab-perfil-n" class="cuenta aviso-n" hidden></span></button>
           <button type="button" role="tab" id="tab-arsenal" data-vista="arsenal" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
@@ -430,6 +432,8 @@
       <section class="vista" data-vista="perfil" role="tabpanel" aria-labelledby="tab-perfil" hidden>
         <div class="sub-pestanas" id="perfil-pestanas" role="tablist" aria-label="Perfil">
           <button type="button" role="tab" id="pp-resumen" data-perfil="resumen" aria-selected="true" aria-controls="perfil-resumen">Resumen</button>
+          <button type="button" role="tab" id="pp-amigos" data-perfil="amigos" aria-selected="false" aria-controls="perfil-amigos">Amigos <span id="pp-amigos-n" class="pp-n" hidden></span></button>
+          <button type="button" role="tab" id="pp-clan" data-perfil="clan" aria-selected="false" aria-controls="perfil-clan">Clan <span id="pp-clan-n" class="pp-n" hidden></span></button>
           <button type="button" role="tab" id="pp-aspecto" data-perfil="aspecto" aria-selected="false" aria-controls="perfil-aspecto">Aspecto</button>
         </div>
         <div id="perfil-resumen" class="perfil-panel" role="tabpanel" aria-labelledby="pp-resumen">
@@ -438,11 +442,27 @@
             <div class="tp-textos">
               <span class="tp-titulo" id="tp-titulo"></span>
               <strong class="tp-nombre" id="tp-nombre"></strong>
+              <div class="tp-chapas"><span id="tp-chapas-social" class="tp-chapas-g"></span><span id="tp-chapas-liga" class="tp-chapas-g"></span></div>
               <span class="tp-datos" id="tp-datos"></span>
             </div>
-            <span class="tp-nivel" id="tp-nivel">1</span>
+            <div class="tp-anillo" id="tp-anillo" title="Nivel y experiencia">
+              <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="tpa-fondo" cx="36" cy="36" r="31"/><circle class="tpa-relleno" id="tp-anillo-relleno" cx="36" cy="36" r="31" pathLength="100"/></svg>
+              <span class="tp-nivel" id="tp-nivel">1</span>
+              <small class="tp-xp" id="tp-xp"></small>
+            </div>
           </div>
           <div class="perfil-rejilla">
+            <div class="bloque bloque-estad">
+              <h2>Estadísticas</h2>
+              <div class="nivel">
+                <span class="nivel-num" id="perfil-nivel">1</span>
+                <div class="nivel-datos">
+                  <div class="nivel-barra llena-al-ver"><span id="perfil-xp-barra"></span></div>
+                  <small id="perfil-xp"></small>
+                </div>
+              </div>
+              <div id="estadisticas" class="est-fichas"></div>
+            </div>
             <div class="bloque">
               <h2>Tu nación</h2>
               <label class="campo"><span>Nombre de tu nación</span>
@@ -451,17 +471,6 @@
               <label class="campo campo-color"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
               <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
               <button type="button" class="enlace-ini" id="ir-aspecto">Emblema, marco, estandarte y más en «Aspecto» <span aria-hidden="true">›</span></button>
-            </div>
-            <div class="bloque">
-              <h2>Progreso</h2>
-              <div class="nivel">
-                <span class="nivel-num" id="perfil-nivel">1</span>
-                <div class="nivel-datos">
-                  <div class="nivel-barra llena-al-ver"><span id="perfil-xp-barra"></span></div>
-                  <small id="perfil-xp"></small>
-                </div>
-              </div>
-              <dl id="estadisticas" class="estadisticas"></dl>
               <p id="nota-nube" class="nota"></p>
               <div id="perfil-cuenta" class="perfil-cuenta" hidden>
                 <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/></svg></span>
@@ -484,6 +493,9 @@
             <div id="perfil-historial"></div>
           </div>
         </div>
+        <!-- Amigos y clan (en la web, con cuenta): los pinta social-ui.js -->
+        <div id="perfil-amigos" class="perfil-panel perfil-social" role="tabpanel" aria-labelledby="pp-amigos" hidden></div>
+        <div id="perfil-clan" class="perfil-panel perfil-social" role="tabpanel" aria-labelledby="pp-clan" hidden></div>
         <div id="perfil-aspecto" class="perfil-panel" role="tabpanel" aria-labelledby="pp-aspecto" hidden>
           <div class="bolsa">
             <span class="bolsa-monedas" id="bolsa-monedas"></span>

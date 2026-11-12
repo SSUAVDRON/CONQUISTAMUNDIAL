@@ -18,6 +18,8 @@ import { bootLoader, withLoading } from './loading.js';
 import { paintMapPreview, paintTerrain } from './terreno.js';
 import { Account } from './cuenta.js';
 import { AccountUI } from './cuenta-ui.js';
+import { Social } from './social.js';
+import { SocialUI } from './social-ui.js';
 import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
@@ -849,12 +851,81 @@ function scheduleCloudSync(delay = 2500) {
 }
 
 // Cuenta (solo en la web, con la API de cuentas): el perfil entero en el servidor
-const account = Account.available() ? new Account({ onChange: (st) => accountUI?.render(st) }) : null;
+const account = Account.available()
+  ? new Account({
+      onChange: (st) => {
+        accountUI?.render(st);
+        onAccountChange(st);
+      },
+    })
+  : null;
 const accountUI = new AccountUI(account, { profile, onSynced: afterAccountSync });
 state.account = account; // para pruebas automáticas
+
+// Amigos, invitaciones a sala y clanes (en la web, con cuenta)
+const social = account ? new Social(account, { onChange: (data) => socialUI.update(data) }) : null;
+const socialUI = new SocialUI(social, {
+  accountUI,
+  getRoom: roomForInvite,
+  onJoinInvite: joinInvite,
+  onSummary: (sum) => home.setSocialSummary(sum),
+  isBusy: () => !!(state.game && !state.demo),
+});
+state.social = social;
+if (social) {
+  // Lo que ven tus amigos: menú, sala o partida
+  social.estadoFn = () => (state.game && !state.demo ? 'partida' : state.sala && !state.sala.started ? 'sala' : 'menu');
+}
+let socialSignedIn = false;
+/** Al entrar o salir de la cuenta: amigos y clan aparecen o se van. */
+function onAccountChange(st) {
+  if (!social || st.signedIn === socialSignedIn) return;
+  socialSignedIn = st.signedIn;
+  if (st.signedIn) {
+    social.saveCard(profile).finally(() => social.refresh());
+    social.poll(30000);
+  } else {
+    social.poll(0);
+    social.data = null;
+    socialUI.update(null);
+  }
+}
+/** Tu sala abierta (para invitar a amigos): { code, red } o null. */
+function roomForInvite() {
+  const sala = state.sala;
+  if (!sala || sala.started || !transport || transport.kind === 'claude') return null;
+  return { code: sala.code, red: roomNet() };
+}
+/** El servidor de salas, como en el enlace de invitación («b=1» o «red=local»). */
+function roomNet() {
+  if (!transport) return '';
+  if (transport.kind === 'mqtt' && transport.brokerIndex >= 0) return `b=${transport.brokerIndex}`;
+  if (transport.kind === 'local') return 'red=local';
+  return '';
+}
+/** Unirse a la sala de una invitación: aquí mismo si es el mismo servidor de salas; si no, con su enlace. */
+function joinInvite(inv) {
+  social?.dismissInvite(inv.id).catch(() => {});
+  const code = normalizeCode(inv.sala);
+  if (code.length !== 5) return;
+  if (transport && (inv.red || '') === roomNet() && !(state.game && !state.demo)) {
+    state.pendingEntry = code;
+    home.showLobby();
+    home.renderEntry(entryStub(code), { estado: 'buscando' });
+    openEntry();
+    return;
+  }
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('sala', code.toUpperCase());
+  for (const [k, v] of new URLSearchParams(inv.red || '')) url.searchParams.set(k, v);
+  location.assign(url.toString());
+}
 /** El perfil cambió con lo de la cuenta: repinta el inicio y aplica los ajustes. */
 function afterAccountSync() {
   try {
+    social?.saveCard(profile);
     applySettings();
     home.renderChip();
     if (state.demo) home.renderAll();
@@ -2090,7 +2161,11 @@ async function syncAtBoot() {
   if (!account) return;
   const ok = await account.probe();
   accountUI.setAvailable(ok);
-  if (ok && account.signedIn) await account.sync(profile).catch(() => {});
+  socialUI.setAvailable(ok);
+  if (ok && account.signedIn) {
+    await account.sync(profile).catch(() => {});
+    onAccountChange(account.state);
+  }
 }
 boot();
 requestAnimationFrame(frame);

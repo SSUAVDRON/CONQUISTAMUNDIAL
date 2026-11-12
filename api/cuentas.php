@@ -13,7 +13,9 @@
 //   perfil_guardar { token, perfil, version }       → { ok, version }
 //                  409 { perfil, version } si otro dispositivo guardó antes
 //   proveedores    {}                               → { proveedores: [] }
-//   borrar_cuenta  { token, password }              → { ok }  (todo lo de la cuenta)
+//   borrar_cuenta  { token, password }              → { ok }  (todo lo de la cuenta, también amigos y clan)
+//
+// Amigos y clanes: social.php.
 //
 // Seguridad: contraseñas con password_hash (bcrypt) y de 8 caracteres como
 // mínimo; el token de sesión es aleatorio (32 bytes) y se guarda solo su
@@ -28,48 +30,16 @@
 declare(strict_types=1);
 
 require __DIR__ . '/comun.php';
+require __DIR__ . '/sesion.php';
+require __DIR__ . '/social-comun.php';
 
 const PERFIL_MAX = 65536;              // bytes del perfil en JSON
-const SESION_DIAS = 180;               // sin usarla, caduca
-const REGISTROS_IP_HORA = 10;
+define('REGISTROS_IP_HORA', max(1, (int) (getenv('TRINCHERA_REGISTROS_HORA') ?: 10)));
 const ENTRADAS_IP_HORA = 60;
 const ENTRADAS_CORREO_15MIN = 10;
 // Hash de relleno (de una contraseña que nadie tiene) para los correos que no existen
 const DUMMY_HASH = '$2y$10$YZkO2steD8kdIz.v/Z9htuMas/IOsQp2FoSaydnQAr3DeoAmh3lLe';
 define('GUARDADOS_CUENTA_HORA', max(1, (int) (getenv('TRINCHERA_GUARDADOS_HORA') ?: 240)));
-
-/** Tablas de las cuentas (se crean la primera vez). */
-function preparar_cuentas(PDO $pdo): void {
-    $mysql = es_mysql($pdo);
-    $id = $mysql ? 'BIGINT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    $charset = $mysql ? ' DEFAULT CHARSET=utf8mb4' : '';
-    $pdo->exec("CREATE TABLE IF NOT EXISTS cuentas (
-        id $id,
-        email VARCHAR(190) NOT NULL UNIQUE,
-        nombre VARCHAR(40) NOT NULL,
-        hash VARCHAR(255) NOT NULL,
-        creado BIGINT NOT NULL
-    )$charset");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS cuenta_proveedores (
-        proveedor VARCHAR(20) NOT NULL,
-        sujeto VARCHAR(190) NOT NULL,
-        cuenta_id BIGINT NOT NULL,
-        creado BIGINT NOT NULL,
-        PRIMARY KEY (proveedor, sujeto)
-    )$charset");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS sesiones (
-        token CHAR(64) PRIMARY KEY,
-        cuenta_id BIGINT NOT NULL,
-        creado BIGINT NOT NULL,
-        usado BIGINT NOT NULL
-    )$charset");
-    $pdo->exec('CREATE TABLE IF NOT EXISTS perfiles (
-        cuenta_id BIGINT PRIMARY KEY,
-        perfil ' . ($mysql ? 'MEDIUMTEXT' : 'TEXT') . " NOT NULL,
-        version INT NOT NULL,
-        actualizado BIGINT NOT NULL
-    )$charset");
-}
 
 function correo_valido($v): string {
     $e = is_string($v) ? mb_strtolower(trim($v)) : '';
@@ -83,37 +53,6 @@ function contrasena($v, bool $nueva): string {
     if (strlen($p) > 200) responder(400, ['error' => 'La contraseña es demasiado larga.', 'campo' => 'password']);
     if ($p === '') responder(400, ['error' => 'Escribe tu contraseña.', 'campo' => 'password']);
     return $p;
-}
-
-function hash_token(array $c, string $token): string {
-    return hash('sha256', ($c['sal'] ?? '') . 'sesion:' . $token);
-}
-
-/** Abre una sesión nueva para la cuenta y devuelve el token (solo lo ve el cliente). */
-function nueva_sesion(PDO $pdo, array $c, int $cuentaId): string {
-    $token = bin2hex(random_bytes(32));
-    $ahora = time();
-    $pdo->prepare('INSERT INTO sesiones (token, cuenta_id, creado, usado) VALUES (?, ?, ?, ?)')->execute([hash_token($c, $token), $cuentaId, $ahora, $ahora]);
-    // De paso, limpia sesiones caducadas (de vez en cuando)
-    if (random_int(0, 19) === 0) $pdo->prepare('DELETE FROM sesiones WHERE usado < ?')->execute([$ahora - SESION_DIAS * 86400]);
-    return $token;
-}
-
-/** La cuenta del token (o 401). Anota el uso como mucho una vez al día. */
-function cuenta_de(PDO $pdo, array $c, $token): array {
-    if (!is_string($token) || !preg_match('/^[0-9a-f]{64}$/', $token)) responder(401, ['error' => 'Inicia sesión de nuevo.']);
-    $h = hash_token($c, $token);
-    $st = $pdo->prepare('SELECT s.usado, c.id, c.email, c.nombre FROM sesiones s JOIN cuentas c ON c.id = s.cuenta_id WHERE s.token = ?');
-    $st->execute([$h]);
-    $f = $st->fetch();
-    $ahora = time();
-    if (!$f || (int) $f['usado'] < $ahora - SESION_DIAS * 86400) responder(401, ['error' => 'Tu sesión ha caducado: vuelve a entrar.']);
-    if ((int) $f['usado'] < $ahora - 86400) $pdo->prepare('UPDATE sesiones SET usado = ? WHERE token = ?')->execute([$ahora, $h]);
-    return ['id' => (int) $f['id'], 'email' => $f['email'], 'nombre' => $f['nombre']];
-}
-
-function publica(array $cuenta): array {
-    return ['email' => $cuenta['email'], 'nombre' => $cuenta['nombre']];
 }
 
 $c = configuracion();
@@ -229,6 +168,9 @@ switch ($accion) {
         if (!$f || !password_verify($password, $f['hash'])) responder(401, ['error' => 'La contraseña no es correcta.', 'campo' => 'password']);
         $pdo->beginTransaction();
         foreach (['perfiles', 'sesiones', 'cuenta_proveedores'] as $tabla) $pdo->prepare("DELETE FROM $tabla WHERE cuenta_id = ?")->execute([$cuenta['id']]);
+        // Y lo social: amigos, invitaciones, su ficha y su clan (que pasa a otro o se disuelve)
+        preparar_social($pdo);
+        borrar_social($pdo, $cuenta['id']);
         $pdo->prepare('DELETE FROM cuentas WHERE id = ?')->execute([$cuenta['id']]);
         $pdo->commit();
         responder(200, ['ok' => true]);

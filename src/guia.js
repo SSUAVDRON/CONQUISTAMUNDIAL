@@ -72,6 +72,7 @@ const TABS = [
     items: [
       ['manos', 'Alianzas', 'En la ficha de otra nación: proponer o romper alianzas, enviar tropas u oro y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s.'],
       ['pergamino', 'Pactos y paz', 'Pacto de no agresión de 5 minutos, paz (con un tributo si quieres) y «Pedir ayuda» a tus aliados contra quien más te ataca.'],
+      ['corona', 'Amigos y clanes', 'En la web, con tu cuenta: en Perfil › Amigos tienes tu código de amigo; búscalos por el nombre de su nación o por su código y verás si están en línea, en una sala o jugando. Con una sala abierta, invítales y les saldrá un aviso para unirse. En Perfil › Clan puedes fundar uno con su etiqueta e insignia o unirte a otro (abierto o con solicitud): el líder y los oficiales aceptan solicitudes y gestionan los rangos.'],
       ['corona', 'Victoria', 'Según la partida: dominación (el 70 % de la tierra), capitales, economía o supervivencia. También ganas si solo quedáis en pie tú y tus aliados.'],
       ['reloj', 'Perfiles de reglas', 'Clásico: ritmo ágil, sin puntos estratégicos ni tecnologías. Trinchera: más lento, con puntos estratégicos (capitales, núcleos industriales, puertos clave y pasos de montaña) y tecnologías.'],
     ],

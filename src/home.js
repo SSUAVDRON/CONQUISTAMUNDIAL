@@ -53,6 +53,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
   { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
   { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
   { tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
@@ -74,6 +75,26 @@ const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imp
 const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
 /** Naciones de la IA en una partida online (más cargan demasiado el lockstep). */
 const ONLINE_MAX_BOTS = 60;
+
+/** Iconos de las fichas de estadísticas del perfil (16×16, trazo). */
+const statIcon = (d, fill = false) => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}" ${fill ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"'}/></svg>`;
+const STAT_ICONS = {
+  bandera: statIcon('M4 14.5V2M4 2.5h8l-2 3 2 3H4'),
+  copa: statIcon('M5 2.5h6v3.2a3 3 0 0 1-6 0zM5 3.5H2.8a2.2 2.2 0 0 0 2.4 3M11 3.5h2.2a2.2 2.2 0 0 1-2.4 3M8 8.7v3M5.5 13.5h5'),
+  diana: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M8 10.8a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6M8 8.2v-.4'),
+  espadas: statIcon('M3 13 11 5M5 14l8-8M10.5 3.5l3-1-1 3M2 11.5l2.5 2.5'),
+  mapa: statIcon('M1.8 4 6 2.3l4 1.6 4.2-1.6v9.7L10 13.7l-4-1.6-4.2 1.6zM6 2.3v9.8M10 3.9v9.8'),
+  rayo: statIcon('M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z'),
+  reloj: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M8 4.8V8l2.3 1.5'),
+  castillo: statIcon('M2.5 14V6.5h2v1.8h1.6V6.5h3.8v1.8h1.6V6.5h2V14zM6.5 14v-2.5a1.5 1.5 0 0 1 3 0V14'),
+  manos: statIcon('M1.5 7.5 4 5l3 1.5 2.5-1.5 5 2.5M4 5v4l3 3 1.5-1M7 6.5 5.5 8.5l2 1.5M14.5 7.5 12 10l-2 1.5'),
+  globo: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M2 8h12M8 2c-2 2-2.6 4-2.6 6S6 12 8 14c2-2 2.6-4 2.6-6S10 4 8 2'),
+  podio: statIcon('M1.5 14h13M2.5 14V9.5h3.6V14M6.1 14V6h3.8v8M9.9 14v-6h3.6v6'),
+  medalla: statIcon('M5.5 1.5 8 6l2.5-4.5M8 15a4 4 0 1 1 0-8 4 4 0 0 1 0 8M8 9.4v2.2'),
+  escudo: statIcon('M8 1.8 13.5 4v4c0 3.2-2.4 5.3-5.5 6.4C4.9 13.3 2.5 11.2 2.5 8V4z'),
+  check: statIcon('M8 14A6 6 0 1 1 8 2a6 6 0 0 1 0 12M5.3 8.2l1.9 1.9 3.6-3.8'),
+  moneda: statIcon('M8 14.2A6.2 6.2 0 1 1 8 1.8a6.2 6.2 0 0 1 0 12.4M8 4.5v7M10 5.8c-.5-.6-1.2-.9-2-.9-1.2 0-2 .6-2 1.5 0 2 4 1 4 3.1 0 .9-.9 1.6-2.1 1.6-.9 0-1.7-.4-2.1-1'),
+};
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -1315,7 +1336,21 @@ export class Home {
     $('tp-titulo').textContent = titleName(p) || 'Recluta';
     const info = levelInfo(p.xp);
     $('tp-nivel').textContent = String(info.level);
-    $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
+    // Anillo de experiencia hacia el siguiente nivel
+    const frac = Math.max(0, Math.min(1, info.progress));
+    $('tp-anillo-relleno').style.strokeDasharray = `${(frac * 100).toFixed(1)} 100`;
+    $('tp-xp').textContent = `${p.xp - info.start}/${info.next - info.start} XP`;
+    const winRate = p.stats.partidas ? Math.round((100 * p.stats.victorias) / p.stats.partidas) : 0;
+    $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas${p.stats.partidas ? ` · ${winRate} % ganadas` : ''} · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
+    // Liga de la clasificatoria
+    const r = p.rango;
+    const liga = $('tp-chapas-liga');
+    if (liga) {
+      if (r && r.partidas > 0 && !inPlacement(r)) {
+        const k = rankOf(r.puntos);
+        liga.replaceChildren(el('span', { class: 'tp-chapa chapa-liga', style: `--liga: rgb(${k.league.color.join(',')})` }, badgeCanvas(r, 16), k.label));
+      } else liga.replaceChildren();
+    }
   }
 
   renderAppearance() {
@@ -2121,31 +2156,35 @@ export class Home {
     $('perfil-xp').textContent = `${p.xp - info.start} / ${info.next - info.start} XP para el nivel ${info.level + 1}`;
     const s = p.stats;
     const int = (n) => formatNumber(Math.round(n));
+    // [etiqueta, valor, formato, icono, destacada]
     const rows = [
-      ['Partidas', s.partidas, int],
-      ['Victorias', s.victorias, (n) => `${int(n)}${s.partidas ? ` (${Math.round((100 * s.victorias) / s.partidas)} %)` : ''}`],
-      ['Naciones eliminadas', s.eliminaciones, int],
-      ['Edificios construidos', s.edificios, int],
-      ['Alianzas firmadas', s.alianzas, int],
-      ['Partidas online', s.online, int],
-      ['Mayor territorio', s.mejorPct || 0, formatPercent],
-      ['Victoria más rápida', s.mejorTiempo, (n) => (n == null ? '—' : formatTime(n))],
-      ['Tiempo jugado', s.tiempoJugado || 0, (n) => formatTime(Math.round(n))],
+      ['Partidas', s.partidas, int, 'bandera'],
+      ['Victorias', s.victorias, int, 'copa', true],
+      ['De cada 100, ganadas', s.partidas ? (100 * s.victorias) / s.partidas : 0, (n) => `${Math.round(n)} %`, 'diana'],
+      ['Naciones eliminadas', s.eliminaciones, int, 'espadas'],
+      ['Mayor territorio', s.mejorPct || 0, formatPercent, 'mapa', true],
+      ['Victoria más rápida', s.mejorTiempo, (n) => (n == null ? '—' : formatTime(n)), 'rayo'],
+      ['Tiempo jugado', s.tiempoJugado || 0, (n) => formatTime(Math.round(n)), 'reloj'],
+      ['Edificios construidos', s.edificios, int, 'castillo'],
+      ['Alianzas firmadas', s.alianzas, int, 'manos'],
+      ['Partidas online', s.online, int, 'globo'],
     ];
     // Puesto medio y mejor puesto (de las partidas del historial que lo guardaron)
     const placed = p.historial.filter((g) => g.puesto > 0 && g.de > 1);
     if (placed.length) {
-      rows.push(['Puesto medio', placed.reduce((a, g) => a + g.puesto, 0) / placed.length, (n) => `${Math.round(n)}.º`]);
-      rows.push(['Mejor puesto', Math.min(...placed.map((g) => g.puesto)), (n) => `${Math.round(n)}.º`]);
+      rows.push(['Puesto medio', placed.reduce((a, g) => a + g.puesto, 0) / placed.length, (n) => `${Math.round(n)}.º`, 'podio']);
+      rows.push(['Mejor puesto', Math.min(...placed.map((g) => g.puesto)), (n) => `${Math.round(n)}.º`, 'medalla']);
     }
-    rows.push(['Clasificatorias', s.clasificatorias || 0, int]);
-    rows.push(['Retos completados', (s.retosDiarios || 0) + (s.retosSemanales || 0), int]);
-    rows.push(['Monedas ganadas', s.monedasGanadas || 0, int]);
+    rows.push(['Clasificatorias', s.clasificatorias || 0, int, 'escudo']);
+    rows.push(['Retos completados', (s.retosDiarios || 0) + (s.retosSemanales || 0), int, 'check']);
+    rows.push(['Monedas ganadas', s.monedasGanadas || 0, int, 'moneda']);
     $('estadisticas').replaceChildren(
-      ...rows.flatMap(([k, v, fmt]) => {
-        const dd = el('dd', { text: fmt(v) });
-        if (count && typeof v === 'number' && v > 0) contar(dd, v, { de: 0, ms: 800, formato: fmt });
-        return [el('dt', { text: k }), dd];
+      ...rows.map(([k, v, fmt, ic, big]) => {
+        const val = el('strong', { class: 'ef-valor', text: fmt(v) });
+        if (count && typeof v === 'number' && v > 0) contar(val, v, { de: 0, ms: 800, formato: fmt });
+        const icono = el('span', { class: 'ef-icono' });
+        icono.innerHTML = STAT_ICONS[ic] || '';
+        return el('div', { class: `est-ficha${big ? ' grande' : ''}` }, icono, val, el('small', { class: 'ef-etq', text: k }));
       }),
     );
     llenarAlVer($('perfil-resumen'));
@@ -2234,18 +2273,37 @@ export class Home {
     }
   }
 
-  /** Sub-pestaña del perfil: 'resumen' o 'aspecto'. */
+  /** Sub-pestaña del perfil: 'resumen', 'amigos', 'clan' o 'aspecto'. */
   _profileTab(tab, anim = true) {
+    if (!$(`perfil-${tab}`)) tab = 'resumen';
     this.profileTab = tab;
     for (const b of document.querySelectorAll('#perfil-pestanas [data-perfil]')) b.setAttribute('aria-selected', String(b.dataset.perfil === tab));
     rodar($('perfil-pestanas'));
     const on = $(`perfil-${tab}`);
-    const off = $(`perfil-${tab === 'resumen' ? 'aspecto' : 'resumen'}`);
-    off.hidden = true;
+    for (const pnl of document.querySelectorAll('#perfil-pestanas ~ .perfil-panel')) if (pnl !== on) pnl.hidden = true;
     if (anim && this.view === 'perfil') mostrar(on, { y: 8, scale: 1, ms: 220 });
     else on.hidden = false;
     underline($('perfil-pestanas'), anim);
     if (tab === 'resumen' && this.view === 'perfil') this.renderProgress(true);
+    // Amigos y clan (social-ui.js) se pintan al verse
+    $('perfil-pestanas').dispatchEvent(new CustomEvent('pestana', { detail: tab }));
+  }
+
+  /**
+   * Chapas sociales de la tarjeta del perfil: tu clan y tus amigos (las pone
+   * social-ui.js cuando llegan los datos; null sin cuenta).
+   */
+  setSocialSummary(sum) {
+    const box = $('tp-chapas-social');
+    if (!box) return;
+    if (!sum) {
+      box.replaceChildren();
+      return;
+    }
+    const chips = [];
+    if (sum.clan) chips.push(el('span', { class: 'tp-chapa chapa-clan', title: sum.clan.nombre }, el('b', { text: `[${sum.clan.tag}]` }), ` ${sum.clan.nombre}`));
+    chips.push(el('span', { class: 'tp-chapa chapa-amigos', title: 'Amigos en línea / amigos' }, el('i', { class: sum.enLinea ? 'punto-linea' : 'punto-fuera' }), `${sum.enLinea ? `${sum.enLinea} en línea · ` : ''}${sum.amigos} ${sum.amigos === 1 ? 'amigo' : 'amigos'}`));
+    box.replaceChildren(...chips);
   }
 
   /** Vista previa fija de tu nación en «Aspecto»: estandarte, emblema con marco, nombre, título y patrón. */

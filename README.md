@@ -131,6 +131,44 @@ Jugar les invita a guardar su progreso (se puede descartar). Google y Apple:
 la API ya tiene la tabla de proveedores y dirá cuáles están activos. En el
 enlace de Claude no hay cuentas: sigue la nube de Claude.
 
+**Perfil renovado, amigos y clanes.** El perfil tiene cuatro pestañas:
+**Resumen**, **Amigos**, **Clan** y **Aspecto**.
+
+- **Resumen:** una cabecera con tu estandarte de fondo, el emblema con su marco, el
+  título y el nombre; chapas con tu clan (`[TAG] Nombre`), tus amigos en línea y
+  tu liga; tus cifras (victorias, partidas, % ganadas, mejor territorio) y un
+  anillo dorado con tu nivel y la experiencia que te falta. Las estadísticas van
+  en fichas con icono (las importantes, doradas) en vez de una lista.
+- **Amigos** (con cuenta, en la web; `api/social.php`): tu **código de amigo**
+  (8 letras y números, como `KWWE-9355`, con «Copiar»); un buscador por nombre
+  de nación (desde 2 letras) o por código; las solicitudes recibidas (Aceptar o
+  Rechazar) y enviadas (Cancelar); y tus amigos con su emblema, estandarte,
+  clan, título, nivel y liga, y si están **en línea**, **en una sala**,
+  **jugando** o cuándo se les vio. Si os pedís amistad el uno al otro, sois
+  amigos al momento.
+- **Invitar a tu sala:** con una sala abierta, «Invitar» junto a cada amigo en
+  línea. Al amigo le sale un aviso arriba («Aquitania te invita a su sala
+  ABC23», con Unirme y Ahora no) y la invitación queda en su pestaña Amigos 10
+  minutos. En mitad de una partida no se avisa.
+- **Clan:** fundar uno con nombre, **etiqueta** de 2 a 5 letras (única,
+  como `[LDA]`), descripción, insignia (forma, símbolo y dos colores) y si es
+  **abierto** (cualquiera entra) o **con solicitud**. Un clan a la vez y hasta
+  30 miembros. El **ranking de clanes** (por victorias de sus miembros) y un
+  buscador por nombre o etiqueta; al tocar un clan, sus miembros. El clan tiene
+  tres rangos:
+  - **líder:** asciende y degrada oficiales, pasa el liderazgo y expulsa;
+  - **oficial:** acepta solicitudes, edita el clan y expulsa miembros;
+  - **miembro**.
+
+  Si el líder se va, el clan pasa al oficial más antiguo (o al miembro más
+  antiguo); si se queda vacío, se disuelve. Las acciones que no se deshacen
+  (quitar, expulsar, pasar el liderazgo, salir) piden un segundo toque.
+- **Avisos:** un número dorado en la pestaña Perfil y en Amigos o Clan cuando
+  tienes solicitudes o invitaciones. Los datos se refrescan cada 30 s en el
+  menú (cada 90 s en partida, solo para seguir «en línea»).
+- **Sin cuenta:** las pestañas invitan a crearla. En el enlace de Claude
+  explican que amigos y clanes están en la web con cuenta.
+
 Las pestañas cambian con una transición corta (sale la vista y entra la nueva)
 y un subrayado que se desliza; se manejan también con el teclado (flechas,
 Inicio y Fin). Los diálogos (fin de partida, confirmación, guía, compra,
@@ -433,10 +471,42 @@ hora y conexión, y de intentos de entrar por conexión y por correo; perfiles d
 64 KB como mucho; mismo mensaje si el correo no existe o la contraseña no es.
 El token va en el cuerpo JSON (Hostinger quita la cabecera `Authorization`).
 Cada cuenta se puede borrar con `borrar_cuenta` (token y contraseña: se va
-todo lo suyo). Recuperar la contraseña por correo llegará más adelante. Para
+todo lo suyo, también sus amistades, invitaciones, su ficha pública y su sitio
+en el clan, que pasa a otro o se disuelve). Recuperar la contraseña por correo llegará más adelante. Para
 comprobarla:
 `curl -X POST -d '{"accion":"proveedores"}' https://tu-web/api/cuentas.php`
 debe responder `{"proveedores":[]}`.
+
+**Amigos y clanes** (`api/social.php`, con el token de la cuenta). Las piezas
+internas (`api/sesion.php` y `api/social-comun.php`) no se sirven. Tablas:
+
+- `publicos`: la **ficha pública** de cada cuenta. Es lo único que ven los demás:
+  nombre de la nación, nivel, título, emblema, marco, estandarte, color del
+  nombre, victorias, partidas y liga; nunca el correo ni las monedas. Guarda
+  también su código de amigo y cuándo se le vio por última vez.
+- `amistades`: pendiente o aceptada.
+- `invitaciones`: a una sala, duran 10 minutos.
+- `clanes`: nombre y etiqueta únicos.
+- `clan_miembros`: con su rango.
+- `clan_solicitudes`.
+
+Acciones: `ficha_guardar`, `social` (todo de una vez, y te marca en línea con
+«menú», «sala» o «partida»), `buscar`, `amigo_solicitar` (por código),
+`amigo_responder`, `amigo_quitar`, `invitar`, `invitacion_borrar`, `clanes`,
+`clan_ver`, `clan_crear`, `clan_unirse`, `clan_cancelar`, `clan_responder`,
+`clan_salir`, `clan_expulsar`, `clan_rol` y `clan_editar`.
+
+Límites de uso por cuenta:
+
+- 40 solicitudes de amistad por hora;
+- 200 amigos y 50 solicitudes sin responder;
+- 5 clanes fundados al día;
+- 5 solicitudes de clan pendientes;
+- búsquedas.
+
+Las búsquedas no aceptan comodines. El límite de cuentas nuevas por conexión
+se puede cambiar con la variable `TRINCHERA_REGISTROS_HORA` (los tests la
+suben).
 
 Fuera del enlace de Claude y sin cuenta, el perfil y la clasificación general
 se guardan en cada navegador; el multijugador entre ordenadores va por el
@@ -676,6 +746,9 @@ CONQUISTAMUNDIAL/
 ├── api/rangos.php      Tabla global de rangos para la web (PHP 8 + PDO; configuración fuera de public_html)
 ├── api/cuentas.php     Cuentas: registro, entrar, sesiones y perfil con versiones
 ├── api/comun.php       Piezas comunes de la API (base de datos, respuesta, límites; no se sirve)
+├── api/sesion.php      Tablas de cuentas y comprobación del token (no se sirve)
+├── api/social.php      Amigos, invitaciones a sala y clanes
+├── api/social-comun.php Tablas sociales, ficha pública y borrado (no se sirve)
 ├── herramientas/
 │   ├── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
 │   ├── mapas.js        Genera src/mapas-reales.js desde Natural Earth
@@ -703,6 +776,8 @@ CONQUISTAMUNDIAL/
 │   ├── ladder.js       Tabla global de rangos (base de datos de Claude o api/rangos.php)
 │   ├── cuenta.js       Cuenta en la web: sesión, entrar, crear cuenta y sincronizar el perfil
 │   ├── cuenta-ui.js    Interfaz de la cuenta: botón Entrar, diálogo, bloque del perfil y tarjeta
+│   ├── social.js       Amigos, invitaciones y clanes: cliente de api/social.php y ficha pública
+│   ├── social-ui.js    Pestañas Amigos y Clan del perfil y aviso de invitación a sala
 │   ├── identidad.js    Identidad firmada (ECDSA P-256) para las salas clasificatorias
 │   ├── reto.js         Retos por enlace («Supera mi partida»)
 │   ├── portada.js      Portada animada del inicio

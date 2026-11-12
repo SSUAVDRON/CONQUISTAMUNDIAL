@@ -4886,3 +4886,203 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 #hud.escritorio .ficha.ficha-hoja { pointer-events: auto; }
 .ficha.ficha-hoja .ficha-mejorar { margin-top: 9px; }
 .ficha.ficha-hoja .ficha-pips { margin-top: 10px; }
+
+/* =========================================================== Perfil renovado (con amigos y clan) */
+/* Cabecera: estandarte, emblema, nombre, chapas (clan, amigos, liga) y anillo de nivel */
+#inicio .tarjeta-perfil { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 20px 24px; min-height: 150px; }
+.tarjeta-perfil::after { background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.15) 55%, rgba(0, 0, 0, 0.35)); }
+.tarjeta-perfil::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 50%); }
+.tarjeta-perfil canvas { width: 118px; height: 118px; }
+.tp-textos { gap: 5px; }
+.tp-titulo { color: var(--oro-200, #ffe3a1); }
+.tp-nombre { font-size: 34px; }
+.tp-chapas { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 1px; }
+.tp-chapas:has(.tp-chapas-g:empty + .tp-chapas-g:empty) { display: none; }
+.tp-chapas-g { display: contents; }
+.tp-chapa { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.18); backdrop-filter: blur(4px); white-space: nowrap; }
+.tp-chapa b { color: var(--oro-200, #ffe3a1); font-weight: 900; letter-spacing: 0.03em; }
+.tp-chapa canvas { width: 16px !important; height: 16px !important; filter: none !important; }
+.chapa-liga { border-color: color-mix(in srgb, var(--liga, #fff) 55%, transparent); color: color-mix(in srgb, var(--liga, #fff) 70%, #fff); }
+.chapa-amigos i { width: 7px; height: 7px; border-radius: 50%; background: #6b7587; }
+.chapa-amigos i.punto-linea { background: #5fd38d; box-shadow: 0 0 0 3px rgba(95, 211, 141, 0.2); }
+.tp-datos { color: rgba(255, 255, 255, 0.86); }
+/* Anillo de experiencia con el nivel dentro */
+.tp-anillo { position: relative; z-index: 2; display: grid; place-items: center; width: 92px; height: 92px; flex: none; }
+.tp-anillo svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5)); }
+.tpa-fondo { fill: rgba(8, 12, 22, 0.72); stroke: rgba(255, 255, 255, 0.14); stroke-width: 6; }
+.tpa-relleno { fill: none; stroke: #f2b33d; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 0 100; transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); filter: drop-shadow(0 0 4px rgba(242, 179, 61, 0.6)); }
+#inicio .tp-anillo .tp-nivel { position: static; transform: none; width: auto; height: auto; margin-top: -8px; font-size: 30px; font-weight: 900; color: #ffe08a; background: none; box-shadow: none; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+.tp-xp { position: absolute; bottom: 19px; font-size: 9.5px; font-weight: 700; color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  #inicio .tarjeta-perfil { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .tarjeta-perfil canvas { width: 72px; height: 72px; }
+  .tp-nombre { font-size: 23px; }
+  .tp-anillo { position: absolute; top: 10px; right: 10px; width: 64px; height: 64px; }
+  #inicio .tp-anillo .tp-nivel { font-size: 21px; margin-top: -5px; }
+  .tp-xp { bottom: 12px; font-size: 8px; }
+  .tp-textos { padding-right: 62px; }
+  .tp-datos { font-size: 12px; }
+}
+
+/* Estadísticas en fichas con icono */
+.est-fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
+.est-ficha { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 9px; align-items: center; padding: 10px 11px; border-radius: 12px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)); border: 1px solid rgba(255, 255, 255, 0.07); min-width: 0; }
+.est-ficha.grande { background: linear-gradient(180deg, rgba(242, 179, 61, 0.14), rgba(242, 179, 61, 0.03)); border-color: rgba(242, 179, 61, 0.28); }
+.ef-icono { grid-row: 1 / 3; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); color: var(--oro-200, #ffe3a1); }
+.est-ficha.grande .ef-icono { background: rgba(242, 179, 61, 0.2); color: #ffd27a; }
+.ef-icono svg { width: 17px; height: 17px; }
+.ef-valor { font-size: 18px; font-weight: 800; line-height: 1.1; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ef-etq { font-size: 11px; line-height: 1.2; color: var(--texto-2, #9aa6b8); overflow: hidden; text-overflow: ellipsis; }
+.bloque-estad .nivel { margin-bottom: 4px; }
+@media (max-width: 560px) { .est-fichas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Números de aviso en las pestañas (solicitudes, invitaciones) */
+.pp-n, #tab-perfil-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 5px; border-radius: 9px; font-size: 11px; font-weight: 900; line-height: 1; color: #1b1205; background: linear-gradient(180deg, #ffd87a, #e8a52f); vertical-align: 1px; animation: ppN 2s ease-in-out infinite; }
+.pp-n[hidden], #tab-perfil-n[hidden] { display: none; }
+@keyframes ppN { 50% { box-shadow: 0 0 0 4px rgba(242, 179, 61, 0.22); } }
+
+/* ---------- Amigos y clan ---------- */
+.perfil-social { display: flex; flex-direction: column; gap: 14px; }
+.soc-ic { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; }
+.soc-ic svg { width: 100%; height: 100%; }
+.soc-cab { display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr); gap: 12px; }
+.soc-codigo, .soc-cab-buscar { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 16px; background: linear-gradient(160deg, rgba(242, 179, 61, 0.16), rgba(20, 28, 46, 0.9) 55%); border: 1px solid rgba(242, 179, 61, 0.28); }
+.soc-cab-buscar { background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)); border-color: rgba(255, 255, 255, 0.09); }
+.soc-codigo small, .soc-cab-buscar > small { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-2, #9aa6b8); }
+.soc-codigo strong { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 30px; font-weight: 800; letter-spacing: 0.08em; color: #ffe08a; text-shadow: 0 2px 12px rgba(242, 179, 61, 0.35); }
+.soc-codigo p { margin: 0; font-size: 12px; color: var(--texto-2, #9aa6b8); }
+.soc-copiar { position: absolute; top: 14px; right: 14px; }
+.soc-buscar { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); }
+.soc-buscar:focus-within { border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 0 0 3px rgba(242, 179, 61, 0.15); }
+.soc-buscar .soc-ic { color: var(--texto-2, #9aa6b8); }
+.soc-buscar input { flex: 1; min-width: 0; height: 36px; border: 0; padding: 0; background: none; color: var(--texto-1, #e9eef6); font: inherit; font-size: 14px; outline: none; box-shadow: none; }
+.soc-buscar button { flex: none; }
+.soc-seccion { display: flex; flex-direction: column; gap: 8px; }
+.soc-h { display: flex; align-items: baseline; gap: 10px; margin: 4px 2px 0; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-2, #9aa6b8); }
+.soc-h small { font-size: 11.5px; font-weight: 700; letter-spacing: 0; text-transform: none; color: #5fd38d; }
+.soc-h::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+.soc-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.soc-resultados { grid-template-columns: 1fr; margin-top: 4px; }
+/* Tarjeta de un jugador: su estandarte de fondo, oscurecido */
+.soc-tarjeta { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; isolation: isolate; min-width: 0; }
+.soc-tarjeta::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 12, 22, 0.55), rgba(8, 12, 22, 0.9) 40%); }
+.soc-emb { position: relative; flex: none; display: grid; place-items: center; width: 48px; height: 48px; }
+.soc-emblema { width: 48px; height: 48px; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5)); }
+.soc-punto { position: absolute; right: 0; bottom: 2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #0c111c; background: #6b7587; }
+.soc-punto.linea { background: #5fd38d; }
+.soc-punto.sala { background: #6cc0ff; }
+.soc-punto.jugando { background: #f2b33d; }
+.soc-textos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.soc-nombre { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; font-weight: 800; }
+.soc-nombre-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
+.soc-tag { flex: none; font-size: 12px; font-weight: 900; letter-spacing: 0.04em; color: #ffe3a1; }
+.soc-tag.grande { font-size: inherit; margin-right: 8px; }
+.soc-sub { font-size: 12px; color: rgba(255, 255, 255, 0.72); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soc-estado { font-size: 11.5px; font-weight: 700; color: #8f9aab; }
+.soc-estado.linea { color: #5fd38d; }
+.soc-estado.sala { color: #6cc0ff; }
+.soc-estado.jugando { color: #f2b33d; }
+.soc-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex: none; }
+.soc-acciones button { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.btn-peligro:hover:not(:disabled) { color: #ff9f8f; border-color: rgba(255, 120, 100, 0.5); }
+button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg, #ff9f8f, #e0573f) !important; border-color: #ffb3a6 !important; }
+.soc-rol { display: inline-flex; align-items: center; gap: 3px; flex: none; height: 19px; padding: 0 7px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.02em; color: #c9d0db; background: rgba(255, 255, 255, 0.08); }
+.soc-rol .soc-ic { width: 11px; height: 11px; }
+.soc-rol.rol-lider { color: #1b1205; background: linear-gradient(180deg, #ffe08a, #e0a12e); }
+.soc-rol.rol-oficial { color: #cfe8ff; background: rgba(108, 192, 255, 0.2); }
+.soc-rol.grande { height: 26px; padding: 0 10px; font-size: 12px; }
+.soc-chapa { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--texto-2, #9aa6b8); background: rgba(255, 255, 255, 0.06); }
+.soc-chapa.ok { color: #9be38f; background: rgba(95, 211, 141, 0.12); }
+.soc-vacio { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 20px; border-radius: 16px; text-align: center; background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)); border: 1px dashed rgba(255, 255, 255, 0.12); }
+.soc-vacio h3 { margin: 4px 0 0; font-family: var(--serif); font-size: 21px; color: #fff; }
+.soc-vacio p { margin: 0; max-width: 460px; font-size: 13.5px; line-height: 1.5; color: var(--texto-2, #9aa6b8); }
+.soc-vacio-ic { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; color: #ffd27a; background: radial-gradient(circle at 35% 30%, rgba(242, 179, 61, 0.35), rgba(242, 179, 61, 0.08)); border: 1px solid rgba(242, 179, 61, 0.35); }
+.soc-vacio-ic .soc-ic { width: 28px; height: 28px; }
+.soc-vacio-botones { display: flex; gap: 8px; margin-top: 6px; }
+.soc-cargando, .soc-nada { padding: 14px; text-align: center; font-size: 13px; color: var(--texto-2, #9aa6b8); }
+.soc-nada { padding: 6px 2px 0; text-align: left; }
+.soc-mensaje { padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #cdf3c6; background: rgba(95, 211, 141, 0.12); border: 1px solid rgba(95, 211, 141, 0.3); animation: subir 0.3s both; }
+.soc-mensaje.error { color: #ffc9b8; background: rgba(255, 110, 90, 0.12); border-color: rgba(255, 110, 90, 0.35); }
+@media (max-width: 760px) {
+  .soc-cab { grid-template-columns: 1fr; }
+  .soc-lista { grid-template-columns: 1fr; }
+  .soc-tarjeta { flex-wrap: wrap; }
+  .soc-acciones { width: 100%; justify-content: stretch; }
+  .soc-acciones > * { flex: 1 1 0; }
+  .soc-codigo strong { font-size: 26px; }
+}
+
+/* Clan */
+.clan-cab { position: relative; display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 18px; overflow: hidden; background: radial-gradient(130% 120% at 0% 0%, rgba(242, 179, 61, 0.2), transparent 55%), linear-gradient(160deg, #1c2640, #0b0f19); border: 1px solid rgba(242, 179, 61, 0.3); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4); }
+.clan-insignia { flex: none; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 22px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); }
+.clan-insignia .soc-emblema { width: 72px; height: 72px; }
+.clan-textos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.clan-etq { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-200, #ffe3a1); }
+.clan-nombre { margin: 0; font-family: var(--serif); font-size: 27px; line-height: 1.15; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+.clan-desc { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.8); }
+.clan-datos { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; font-size: 12.5px; color: var(--texto-2, #9aa6b8); }
+.clan-datos b { color: #fff; font-size: 15px; }
+.clan-botones { display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: none; }
+.clan-intro { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); }
+.clan-intro h3 { margin: 0 0 3px; font-family: var(--serif); font-size: 20px; color: #fff; }
+.clan-intro p { margin: 0; font-size: 13px; color: var(--texto-2, #9aa6b8); }
+.clan-rejilla { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; align-items: start; }
+.clan-form, .clan-buscar { display: flex; flex-direction: column; gap: 10px; }
+.clan-form h3, .clan-buscar h3 { margin: 0; font-family: var(--serif); font-size: 19px; color: #fff; }
+.clan-form-insignia { display: flex; align-items: center; gap: 12px; }
+.clan-form-ins-op { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.clan-formas { display: flex; flex-wrap: wrap; gap: 5px; }
+.clan-formas button { display: grid; place-items: center; width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+.clan-formas button[aria-checked="true"] { border-color: var(--acento, #f2b33d); background: rgba(242, 179, 61, 0.16); }
+.clan-formas .soc-emblema { width: 22px; height: 22px; }
+.clan-form-colores { display: flex; align-items: center; gap: 6px; }
+.clan-form-colores select { flex: 1; min-width: 0; }
+.clan-form-colores input[type="color"] { width: 36px; height: 32px; padding: 2px; flex: none; }
+.clan-tag-in { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; }
+.clan-form textarea { resize: vertical; min-height: 54px; }
+.clan-abierto { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-1, #e9eef6); cursor: pointer; }
+.clan-form-botones { display: flex; gap: 8px; }
+.clan-form-botones button { flex: 1; }
+.clan-lista { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.clan-fila { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+.clan-fila:nth-child(1) .clan-pos { color: #ffd27a; }
+.clan-fila:nth-child(2) .clan-pos { color: #dfe6f0; }
+.clan-fila:nth-child(3) .clan-pos { color: #e9a46a; }
+.clan-pos { flex: none; width: 22px; text-align: center; font-weight: 900; font-size: 14px; color: var(--texto-2, #9aa6b8); }
+.clan-fila-btn { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 0; padding: 2px; border: 0; background: none; text-align: left; cursor: pointer; }
+.clan-fila-btn:hover .clan-fila-t strong { color: #ffe3a1; }
+.clan-fila-btn .soc-emblema { width: 36px; height: 36px; }
+.clan-fila-t { display: flex; flex-direction: column; min-width: 0; }
+.clan-fila-t strong { font-size: 14px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clan-fila-t small { font-size: 11.5px; color: var(--texto-2, #9aa6b8); }
+.clan-fila > button:last-child, .clan-fila > .soc-chapa { flex: none; min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.soc-volver { align-self: flex-start; }
+@media (max-width: 860px) { .clan-rejilla { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .clan-cab { flex-wrap: wrap; padding: 16px; gap: 12px; }
+  .clan-insignia { width: 64px; height: 64px; border-radius: 18px; }
+  .clan-insignia .soc-emblema { width: 54px; height: 54px; }
+  .clan-nombre { font-size: 22px; }
+  .clan-botones { flex-direction: row; flex-wrap: wrap; width: 100%; }
+  .clan-botones > * { flex: 1 1 auto; }
+}
+
+/* Aviso de invitación a sala (arriba) */
+.soc-aviso { position: fixed; z-index: 95; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 20px); padding: 10px 12px; border-radius: 16px; background: linear-gradient(180deg, #1d2840, #0d121e); border: 1px solid rgba(242, 179, 61, 0.45); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); animation: avisoBaja 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.soc-aviso[hidden] { display: none; }
+.soc-aviso .soc-emb, .soc-aviso .soc-emblema { width: 36px; height: 36px; }
+.soc-aviso-t { display: flex; flex-direction: column; font-size: 13px; color: var(--texto-2, #9aa6b8); }
+.soc-aviso-t strong { font-size: 14.5px; color: #fff; }
+.soc-aviso button { min-height: 34px; }
+@keyframes avisoBaja { from { opacity: 0; transform: translate(-50%, -14px); } }
+@media (prefers-reduced-motion: reduce) { .soc-aviso, .pp-n, #tab-perfil-n { animation: none; } }
+/* Ajustes de amigos y clan */
+.soc-tarjeta { flex-wrap: wrap; row-gap: 8px; }
+.soc-textos { flex: 1 1 150px; }
+.soc-acciones { margin-left: auto; }
+.clan-form textarea { width: 100%; padding: 9px 11px; border-radius: 10px; font: inherit; font-size: 14px; line-height: 1.4; color: var(--texto-1, #e9eef6); background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.14); }
+.clan-form textarea:focus { outline: none; border-color: rgba(242, 179, 61, 0.55); box-shadow: 0 0 0 3px rgba(242, 179, 61, 0.15); }
+.clan-formas button { width: 40px; height: 40px; }
+.clan-formas .soc-emblema { width: 30px; height: 30px; }
+.est-fichas { grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); }
+.ef-icono { width: 30px; height: 30px; }
