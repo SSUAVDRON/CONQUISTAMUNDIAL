@@ -174,3 +174,25 @@ test('logros medibles: progreso «7/10» según la estadística, completo al con
     assert.ok(['nivel', 'comprados'].includes(a.meta.stat) || a.meta.stat in defaultProfile().stats, a.id);
   }
 });
+
+test('monedas al unir dos dispositivos: ganadas − gastadas (sin perder ni duplicar)', async () => {
+  const { normalizeProfile: norm, mergeProfiles: merge, buyItem: buy, TITLES: T } = await import('../src/profile.js');
+  // Perfil de antes (sin «gastadas»): lo gastado sale de lo comprado
+  const viejo = norm({ monedas: 50, comprados: { 'titulo:temible': 1 }, stats: { monedasGanadas: 10 } });
+  assert.equal(viejo.stats.monedasGastadas, 400);
+  assert.equal(viejo.stats.monedasGanadas, 450);
+  assert.equal(viejo.monedas, 50);
+  // Dos dispositivos con 1000 ganadas; en B se compra algo, A es más nuevo
+  const base = norm({ monedas: 1000, stats: { monedasGanadas: 1000, monedasGastadas: 0 } });
+  const a = JSON.parse(JSON.stringify(base));
+  const b = JSON.parse(JSON.stringify(base));
+  const grande = T.find((t) => t.id === 'grande');
+  assert.ok(buy(b, grande));
+  assert.equal(b.monedas, 300);
+  a.actualizado = b.actualizado + 1000;
+  const m = merge(a, b);
+  assert.equal(m.monedas, 300, 'la compra de B cuenta aunque A sea más nuevo');
+  assert.ok(m.comprados['titulo:grande']);
+  // Y al revés da lo mismo
+  assert.equal(merge(b, a).monedas, 300);
+});

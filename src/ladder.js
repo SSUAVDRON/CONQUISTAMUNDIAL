@@ -73,6 +73,18 @@ export function apiIdentity(storage = typeof localStorage !== 'undefined' ? loca
   }
 }
 
+/** Usa este id y secreto (los de tu cuenta, para tener la misma fila en todos tus dispositivos). */
+export function setApiIdentity({ id, secreto }, storage = typeof localStorage !== 'undefined' ? localStorage : null) {
+  if (!/^[0-9a-f]{32}$/.test(id || '') || !/^[0-9a-f]{64}$/.test(secreto || '')) return false;
+  try {
+    storage.setItem(ID_KEY, id);
+    storage.setItem(SECRET_KEY, secreto);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Id público (lo que devuelve la API para marcar tu fila): los 16 primeros del sha-256 del id. */
 async function publicId(id) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id));

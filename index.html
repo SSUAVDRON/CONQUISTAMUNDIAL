@@ -18,6 +18,8 @@
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=61b9fe2d81",
       "./src/config.js": "./src/config.js?v=04f7c70ebb",
+      "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=cd375dc108",
+      "./src/cuenta.js": "./src/cuenta.js?v=b7a3d60681",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
       "./src/errores.js": "./src/errores.js?v=1a5ed3f3a9",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
@@ -32,9 +34,9 @@
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=370e36db66",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
-      "./src/ladder.js": "./src/ladder.js?v=c9c00ff77d",
+      "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=fc4c6cfb10",
-      "./src/main.js": "./src/main.js?v=dcc2d64bb9",
+      "./src/main.js": "./src/main.js?v=5c316959fe",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=eebaf66b1d",
       "./src/mecanicas.js": "./src/mecanicas.js?v=f6e2acf7ed",
@@ -47,7 +49,7 @@
       "./src/noise.js": "./src/noise.js?v=142ffe2f2b",
       "./src/player.js": "./src/player.js?v=85e33ad08b",
       "./src/portada.js": "./src/portada.js?v=a6d45c3308",
-      "./src/profile.js": "./src/profile.js?v=e322c02e25",
+      "./src/profile.js": "./src/profile.js?v=4551c371f3",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
       "./src/render.js": "./src/render.js?v=cc34e171e5",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
@@ -64,7 +66,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=1d3bc5e7d3">
+  <link rel="stylesheet" href="css/estilo.css?v=cebb67d52c">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -129,8 +131,12 @@
           <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clasificación</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
+        <button type="button" id="btn-cuenta" class="btn-cuenta" title="Entrar o crear una cuenta" aria-label="Entrar o crear una cuenta" hidden>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.2" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.8 14 c0.6 -3 2.6 -4.4 5.2 -4.4 s4.6 1.4 5.2 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Entrar</span>
+        </button>
         <button type="button" id="chip-perfil" class="chip-perfil" data-ir="perfil" aria-label="Abrir tu perfil">
-          <span class="chip-avatar"><canvas id="chip-emblema" width="80" height="80"></canvas><span class="chip-rango" id="chip-rango"></span></span>
+          <span class="chip-avatar"><canvas id="chip-emblema" width="80" height="80"></canvas><span class="chip-rango" id="chip-rango"></span><span class="chip-nube" id="chip-nube" title="Progreso guardado en tu cuenta" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/><path d="M6 9.2 l1.4 1.4 l2.8 -2.8" fill="none" stroke="#0b1426" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
           <span class="chip-textos">
             <strong id="chip-nombre"></strong>
             <span class="chip-linea"><small id="chip-nivel"></small><small id="chip-xp-txt" class="chip-xp-txt"></small></span>
@@ -165,6 +171,21 @@
           </div>
         </div>
         <!-- Clasificatoria: tu rango de la temporada y las partidas que cuentan -->
+        <section class="tarjeta-cuenta" id="tarjeta-cuenta" aria-labelledby="tcu-titulo" hidden>
+          <div class="tcu-arte" aria-hidden="true">
+            <svg viewBox="0 0 64 64"><path d="M32 6 L54 13 V30 C54 44 44 53 32 58 C20 53 10 44 10 30 V13 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/><path class="tcu-nube" d="M21 40 h20 a6.5 6.5 0 0 0 0.6 -13 a9 9 0 0 0 -17.2 -1.4 a7.2 7.2 0 0 0 -3.4 14.4 z" fill="#e9eef7"/><path class="tcu-check" d="M25.5 33.5 l4.5 4.5 l8.5 -8.5" fill="none" stroke="#3fae6b" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="tcu-textos">
+            <h2 id="tcu-titulo">Guarda tu progreso</h2>
+            <p>Crea una cuenta gratis y sigue con tu nivel, tus monedas, tu aspecto y tu rango en el móvil y en el ordenador.</p>
+          </div>
+          <div class="tcu-botones">
+            <button type="button" class="principal" id="tcu-crear">Crear cuenta</button>
+            <button type="button" class="btn-sec" id="tcu-entrar">Ya tengo cuenta</button>
+          </div>
+          <button type="button" class="tcu-cerrar" id="tcu-cerrar" aria-label="Ahora no">✕</button>
+        </section>
+
         <section class="clasificatoria" id="clasificatoria" aria-labelledby="cl-titulo">
           <div class="cl-insignia" id="cl-insignia"></div>
           <div class="cl-datos">
@@ -334,6 +355,14 @@
               </div>
               <dl id="estadisticas" class="estadisticas"></dl>
               <p id="nota-nube" class="nota"></p>
+              <div id="perfil-cuenta" class="perfil-cuenta" hidden>
+                <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/></svg></span>
+                <div class="pc-textos">
+                  <strong id="pc-titulo">Cuenta</strong>
+                  <small id="pc-estado"></small>
+                </div>
+                <div class="pc-botones" id="pc-botones"></div>
+              </div>
             </div>
           </div>
           <div class="bloque perfil-clasif">
@@ -854,6 +883,63 @@
         <button type="button" id="fin-seguir">Seguir mirando</button>
         <button type="button" id="fin-menu">Menú</button>
         <button type="button" id="fin-nueva" class="principal">Revancha</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tu cuenta: entrar o crear cuenta (cuenta-ui.js) -->
+  <div id="dialogo-cuenta" class="pantalla dialogo" aria-labelledby="dcu-titulo" hidden>
+    <div class="dialogo-caja dialogo-cuenta">
+      <header class="cu-cabecera">
+        <span class="cu-escudo" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/><path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/><path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/><path d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div class="cu-titulos">
+          <h2 id="dcu-titulo">Tu cuenta de Trinchera</h2>
+          <p>Tu progreso, a salvo y en todos tus dispositivos.</p>
+        </div>
+        <button type="button" class="dialogo-cerrar" data-cerrar aria-label="Cerrar">✕</button>
+      </header>
+      <div class="cu-pestanas" role="tablist" aria-label="Cuenta">
+        <button type="button" role="tab" id="cu-tab-entrar" data-modo="entrar" aria-selected="true">Entrar</button>
+        <button type="button" role="tab" id="cu-tab-crear" data-modo="crear" aria-selected="false">Crear cuenta</button>
+        <span class="cu-subrayado" aria-hidden="true"></span>
+      </div>
+      <div class="cu-cuerpo" id="cu-cuerpo">
+        <form id="cu-form" class="cu-form" novalidate>
+          <label class="cu-campo" data-solo="crear">
+            <span>Nombre de comandante</span>
+            <input id="cu-nombre" type="text" autocomplete="nickname" maxlength="18" placeholder="Como te verán en la tabla">
+          </label>
+          <label class="cu-campo">
+            <span>Correo electrónico</span>
+            <input id="cu-email" type="email" autocomplete="email" inputmode="email" required placeholder="tu@correo.com">
+          </label>
+          <label class="cu-campo">
+            <span>Contraseña</span>
+            <span class="cu-clave">
+              <input id="cu-password" type="password" autocomplete="current-password" required minlength="8" placeholder="Al menos 8 caracteres">
+              <button type="button" id="cu-ver" class="cu-ver" aria-label="Mostrar la contraseña" aria-pressed="false">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8 C3.2 4.8 5.4 3.4 8 3.4 S12.8 4.8 14.5 8 C12.8 11.2 10.6 12.6 8 12.6 S3.2 11.2 1.5 8 z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2.1" fill="currentColor"/><path class="cu-ver-tacha" d="M3 13 L13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </button>
+            </span>
+          </label>
+          <div class="cu-fuerza" data-solo="crear" aria-live="polite"><span class="cu-fuerza-barra"><span id="cu-fuerza"></span></span><small id="cu-fuerza-txt"></small></div>
+          <p id="cu-error" class="cu-error" role="alert"></p>
+          <button type="submit" id="cu-enviar" class="principal grande cu-enviar">
+            <span class="cu-enviar-txt">Entrar</span>
+            <span class="cu-spinner" aria-hidden="true"></span>
+          </button>
+          <div class="cu-proveedores" id="cu-proveedores" hidden></div>
+          <p class="cu-nota" data-solo="entrar">¿Olvidaste la contraseña? Pronto podrás recuperarla por correo.</p>
+          <p class="cu-nota" data-solo="crear">Lo que llevas en este dispositivo (nivel, monedas, aspecto y rango) se une a tu cuenta.</p>
+        </form>
+        <div class="cu-hecho" id="cu-hecho" hidden>
+          <svg class="cu-hecho-icono" viewBox="0 0 64 64" aria-hidden="true"><circle class="cu-hecho-circulo" cx="32" cy="32" r="27" fill="none" stroke="#3fae6b" stroke-width="4"/><path class="cu-hecho-check" d="M20 33 l8 8 l16 -17" fill="none" stroke="#5fd38d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 id="cu-hecho-titulo">¡Listo, comandante!</h3>
+          <p id="cu-hecho-texto">Tu progreso se ha unido a tu cuenta.</p>
+          <button type="button" class="principal" data-cerrar>Continuar</button>
+        </div>
       </div>
     </div>
   </div>

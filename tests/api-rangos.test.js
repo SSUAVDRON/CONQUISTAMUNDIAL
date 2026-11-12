@@ -82,7 +82,7 @@ test('sin configurar nada: SQLite fuera de public_html (una para la raíz y otra
   const web = join(home, 'public_html');
   for (const sub of ['api', 'prueba/api']) {
     mkdirSync(join(web, sub), { recursive: true });
-    copyFileSync(join(ROOT, 'api', 'rangos.php'), join(web, sub, 'rangos.php'));
+    for (const f of ['rangos.php', 'comun.php']) copyFileSync(join(ROOT, 'api', f), join(web, sub, f));
   }
   const port = PORT + 1;
   const env = { ...process.env, TRINCHERA_ESPERA_ID: '2' };

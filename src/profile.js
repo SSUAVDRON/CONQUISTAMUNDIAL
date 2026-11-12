@@ -169,6 +169,11 @@ for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'e
 }
 export const itemKey = (item) => `${item.cat}:${item.id}`;
 
+/** Precio en monedas de cada objeto de la tienda, por su clave. */
+const PRICE_BY_KEY = new Map(
+  [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
+);
+
 /** Mejores puntos de la clasificatoria (esta temporada o las anteriores). */
 function rankBest(p) {
   const r = p.rango;
@@ -333,6 +338,7 @@ export function buyItem(profile, item) {
   if (!item || !item.unlock || !item.unlock.price || isUnlocked(profile, item)) return false;
   if ((profile.monedas || 0) < item.unlock.price) return false;
   profile.monedas -= item.unlock.price;
+  profile.stats.monedasGastadas = (profile.stats.monedasGastadas || 0) + item.unlock.price;
   profile.comprados[itemKey(item)] = Date.now();
   saveProfile(profile);
   return true;
@@ -398,6 +404,7 @@ export function defaultProfile() {
       retosSemanales: 0,
       clasificatorias: 0, // partidas clasificatorias jugadas (todas las temporadas)
       monedasGanadas: 0,
+      monedasGastadas: 0, // en la tienda (las monedas son ganadas − gastadas)
     },
     logros: {}, // id → fecha (ms)
     monedas: 0, // se ganan con logros, retos diarios y partidas; se gastan en la tienda
@@ -438,6 +445,21 @@ export function normalizeProfile(p) {
   const d = defaultProfile();
   if (!p || typeof p !== 'object') return d;
   const pick = (list, v, dflt) => (list.some((x) => x.id === v) ? v : dflt);
+  const out = normalizeFields(p, d, pick);
+  // Monedas: ganadas − gastadas (así dos dispositivos se unen sin perder ni
+  // duplicar). Perfiles de antes: lo gastado sale de lo comprado y lo ganado
+  // se ajusta para que cuadre con las monedas que tenían
+  const st = out.stats;
+  if (!Number.isFinite(p.stats && p.stats.monedasGastadas)) {
+    st.monedasGastadas = Object.keys(out.comprados).reduce((sum, k) => sum + (PRICE_BY_KEY.get(k) || 0), 0);
+    st.monedasGanadas = out.monedas + st.monedasGastadas;
+  }
+  st.monedasGanadas = Math.max(0, Math.floor(Number(st.monedasGanadas) || 0));
+  st.monedasGastadas = Math.max(0, Math.floor(Number(st.monedasGastadas) || 0));
+  return out;
+}
+
+function normalizeFields(p, d, pick) {
   return {
     ...d,
     ...p,
@@ -508,6 +530,8 @@ export function mergeProfiles(a, b) {
   const rb = b.rango;
   out.rango = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb);
   out.comprados = { ...older.comprados, ...newer.comprados };
+  // Monedas: lo ganado menos lo gastado (los dos, máximos de cada copia)
+  out.monedas = Math.max(0, out.stats.monedasGanadas - out.stats.monedasGastadas);
   const seen = new Set();
   out.historial = [...a.historial, ...b.historial]
     .sort((x, y) => y.fecha - x.fecha)

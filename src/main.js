@@ -16,6 +16,8 @@ import { fmtTroops, formatNumber, formatPercent, formatTime } from './format.js'
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { bootLoader, withLoading } from './loading.js';
 import { paintMapPreview, paintTerrain } from './terreno.js';
+import { Account } from './cuenta.js';
+import { AccountUI } from './cuenta-ui.js';
 import { Tutorial } from './tutorial.js';
 import { getCloud, pullProfile, pushLeaderboard, pushProfile, watchLeaderboard } from './cloud.js';
 import { connectTransport } from './net.js';
@@ -635,12 +637,39 @@ async function beginOnlineGame(sala, payload, hostPeer) {
 
 let cloudTimer = null;
 function scheduleCloudSync(delay = 2500) {
+  scheduleAccountSync(delay);
   clearTimeout(cloudTimer);
   cloudTimer = setTimeout(() => {
     if (!cloud) return;
     pushProfile(cloud, profile);
     pushLeaderboard(cloud, profile);
   }, delay);
+}
+
+// Cuenta (solo en la web, con la API de cuentas): el perfil entero en el servidor
+const account = Account.available() ? new Account({ onChange: (st) => accountUI?.render(st) }) : null;
+const accountUI = new AccountUI(account, { profile, onSynced: afterAccountSync });
+state.account = account; // para pruebas automáticas
+/** El perfil cambió con lo de la cuenta: repinta el inicio y aplica los ajustes. */
+function afterAccountSync() {
+  try {
+    applySettings();
+    home.renderChip();
+    if (state.demo) home.renderAll();
+  } catch (err) {
+    reportError(err, 'cuenta');
+  }
+}
+let accountTimer = null;
+function scheduleAccountSync(delay = 4000) {
+  if (!account || !account.signedIn) return;
+  clearTimeout(accountTimer);
+  accountTimer = setTimeout(() => {
+    account
+      .sync(profile)
+      .then(afterAccountSync)
+      .catch(() => {});
+  }, Math.max(delay, 1500));
 }
 
 function gameResult() {
@@ -753,6 +782,7 @@ function startRanked() {
 /** Recompensa de la temporada anterior (al cambiar de temporada). */
 function grantSeasonReward(reward) {
   profile.monedas = (profile.monedas || 0) + reward.coins;
+  profile.stats.monedasGanadas = (profile.stats.monedasGanadas || 0) + reward.coins;
   saveProfile(profile);
   home.flash?.(`Nueva temporada. Por tu ${reward.league.name} de la anterior: +🪙 ${reward.coins}`, true);
 }
@@ -949,6 +979,7 @@ const home = new Home(profile, {
   onProfileChange(identity) {
     saveProfile(profile);
     if (identity) scheduleCloudSync();
+    else scheduleAccountSync(); // la cuenta guarda todo el perfil (también los ajustes)
     applySettings();
   },
   onQuickPlay: startGame,
@@ -1740,8 +1771,13 @@ async function boot() {
     }
   }
 }
-/** Al arrancar, con la cuenta: trae el perfil guardado (ver cuentas). */
-async function syncAtBoot() {}
+/** Al arrancar: ¿hay cuentas en este servidor? Y, con sesión, trae el perfil guardado. */
+async function syncAtBoot() {
+  if (!account) return;
+  const ok = await account.probe();
+  accountUI.setAvailable(ok);
+  if (ok && account.signedIn) await account.sync(profile).catch(() => {});
+}
 boot();
 requestAnimationFrame(frame);
 
@@ -1820,7 +1856,8 @@ getCloud().then(async (c) => {
   // Tabla de rangos: en Claude, su base de datos; en la web, la API PHP; si no, local
   ladder.start(c, profile.rango.temporada);
   if (!c) {
-    home.setCloudNote('Tu perfil se guarda en este navegador.');
+    // En la web, el bloque «Cuenta» dice si además está en tu cuenta
+    home.setCloudNote(account ? '' : 'Tu perfil se guarda en este navegador.');
     home.setGlobal({ available: false });
     return;
   }

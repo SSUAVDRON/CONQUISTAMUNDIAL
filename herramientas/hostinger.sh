@@ -40,9 +40,9 @@ if [ "$DESTINO" = prueba ]; then
   fi
   npm run empaquetar >/dev/null
   cp dist/dominia.html "$SRC/index.html"
-  # API de la tabla de rangos (PHP); su configuración va fuera de public_html
+  # API en PHP (rangos, cuentas y lo común); su configuración va fuera de public_html
   mkdir -p "$SRC/api"
-  cp api/rangos.php api/.htaccess "$SRC/api/"
+  cp api/*.php api/.htaccess "$SRC/api/"
 else
   # Producción: el mismo archivo que se validó en prueba, byte a byte
   fetch_rama hostinger-prueba
@@ -52,8 +52,11 @@ else
   fi
   git -C "$RAIZ" show origin/hostinger-prueba:index.html > "$SRC/index.html"
   mkdir -p "$SRC/api"
-  git -C "$RAIZ" show origin/hostinger-prueba:api/rangos.php > "$SRC/api/rangos.php" 2>/dev/null || rm -rf "$SRC/api"
-  [ -d "$SRC/api" ] && git -C "$RAIZ" show origin/hostinger-prueba:api/.htaccess > "$SRC/api/.htaccess" 2>/dev/null || true
+  # Todos los archivos de api/ tal como están en prueba
+  for f in $(git -C "$RAIZ" ls-tree --name-only origin/hostinger-prueba api/ 2>/dev/null); do
+    git -C "$RAIZ" show "origin/hostinger-prueba:$f" > "$SRC/$f"
+  done
+  [ -f "$SRC/api/rangos.php" ] || rm -rf "$SRC/api"
 fi
 BUILD=$(grep -o '<meta name="trinchera-build" content="[^"]*"' "$SRC/index.html" | sed 's/.*content="//; s/"$//')
 
@@ -70,10 +73,11 @@ fi
 cp "$SRC/index.html" "$TMP/index.html"
 cp herramientas/hostinger.htaccess "$TMP/.htaccess"
 if [ -d "$SRC/api" ]; then
+  # api/ se sustituye entero (si se quita un archivo, también se quita en la web)
+  rm -rf "$TMP/api"
   mkdir -p "$TMP/api"
-  cp "$SRC/api/rangos.php" "$TMP/api/rangos.php"
-  [ -f "$SRC/api/.htaccess" ] && cp "$SRC/api/.htaccess" "$TMP/api/.htaccess"
-  git -C "$TMP" add api
+  cp -a "$SRC/api/." "$TMP/api/"
+  git -C "$TMP" add -A api
 fi
 git -C "$TMP" add index.html .htaccess
 if git -C "$TMP" diff --cached --quiet; then
