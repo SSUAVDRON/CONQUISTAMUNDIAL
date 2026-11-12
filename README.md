@@ -54,8 +54,18 @@ consejo.
   título y nivel), **tu insignia de rango en grande** con rayos de luz que giran,
   la liga y división, la barra de PL, victorias, derrotas y escudo, y **Buscar
   partida** con dos colas: **Contra la IA** (el mundo, 90 naciones, la IA según
-  tu liga) y **En línea** (entra en la sala clasificatoria pública más llena con
-  sitio o, si no hay, crea una para que entren otros). Debajo: la **escalera de
+  tu liga) y **En línea**, con **emparejamiento automático**
+  (`src/emparejamiento.js`): entras en una cola que se anuncia en el vestíbulo
+  (el canal de las salas públicas) con tu MMR; manda el que más lleva esperando
+  (tras 3 s, para ver a los demás), que elige a los de MMR más parecido (el
+  margen empieza en ±200 y se abre 25 por segundo de espera) y, con 4 o más (o
+  con 2 tras 12 s), crea una sala clasificatoria y avisa a los elegidos; estos
+  entran solos, se marcan listos y la cuenta atrás empieza sola cuando están
+  todos (o, pasados 15 s, con los que hayan llegado; si no llega nadie, vuelve a
+  la cola). Mientras buscas, la página enseña un radar con el tiempo, el rango
+  de los rivales que se buscan y cuántos hay en cola, con «Cancelar búsqueda»;
+  puedes moverte por el menú y un aviso flotante abajo sigue contando (clic para
+  volver, ✕ para cancelar). Debajo: la **escalera de
   las nueve ligas** (las superadas iluminadas, la tuya con «TÚ» y la mejor de la
   temporada con ★), **esta temporada** (porcentaje de victorias en un anillo,
   partidas, puesto medio, racha y mejor rango, con la gráfica de tus puntos en
@@ -531,6 +541,7 @@ CONQUISTAMUNDIAL/
 │   ├── sonido.js       Efectos del menú y de la batalla, ambiente de los frentes y cambio de música según la partida
 │   ├── loading.js      Pantalla de carga
 │   ├── presentacion.js Presentación de la partida: participantes (marco, nivel, rango) y naciones en juego
+│   ├── emparejamiento.js Cola de la clasificatoria en línea: grupos de rango parecido y sala automática
 │   ├── tutorial.js     Tutorial guiado
 │   ├── banderas.js     GENERADO: sprite de banderas (herramientas/banderas.cjs)
 │   ├── profile.js      Perfil, niveles, logros, retos diarios, monedas y tienda

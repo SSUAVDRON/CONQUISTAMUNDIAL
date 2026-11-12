@@ -21,6 +21,7 @@
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=cd375dc108",
       "./src/cuenta.js": "./src/cuenta.js?v=b7a3d60681",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
+      "./src/emparejamiento.js": "./src/emparejamiento.js?v=9aa2bffef5",
       "./src/errores.js": "./src/errores.js?v=1a5ed3f3a9",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
       "./src/fin.js": "./src/fin.js?v=72a8fd1796",
@@ -29,14 +30,14 @@
       "./src/game.js": "./src/game.js?v=58a8bf7973",
       "./src/guia.js": "./src/guia.js?v=58c673b977",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=ed3a582f13",
+      "./src/home.js": "./src/home.js?v=1cc8d0f86c",
       "./src/icons.js": "./src/icons.js?v=f9f7cb7823",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
-      "./src/main.js": "./src/main.js?v=63653bd801",
+      "./src/main.js": "./src/main.js?v=064325dabe",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=eebaf66b1d",
       "./src/mecanicas.js": "./src/mecanicas.js?v=f4edbe2914",
@@ -68,7 +69,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=7f582b578c">
+  <link rel="stylesheet" href="css/estilo.css?v=afc9009ed3">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -147,6 +148,12 @@
   </div>
 
   <canvas id="lienzo"></canvas>
+
+  <!-- Buscando partida (cola de la clasificatoria en línea): sigue mientras navegas por el menú -->
+  <div id="busqueda-pill" class="busqueda-pill" hidden>
+    <button type="button" class="bp-ir" id="bp-ir"><span class="bp-punto" aria-hidden="true"></span><span>Buscando partida</span><b id="bp-tiempo">0:00</b></button>
+    <button type="button" class="bp-cancelar" id="bp-cancelar" aria-label="Cancelar la búsqueda">✕</button>
+  </div>
 
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">
@@ -321,6 +328,10 @@
             <h2>Buscar partida</h2>
             <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
             <p id="cp-cola-nota" class="cp-cola-nota"></p>
+            <div class="cp-buscando" id="cp-buscando" hidden>
+              <span class="cp-radar" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="cp-busca-textos"><strong>Buscando partida <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
+            </div>
             <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
             <small id="cp-cola-extra" class="cp-cola-extra"></small>
           </div>

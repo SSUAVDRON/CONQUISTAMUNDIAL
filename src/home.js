@@ -18,7 +18,7 @@ import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rod
 import { abrirGuia } from './guia.js';
 import { errorReport } from './errores.js';
 import { drawChart, drawSparkline } from './resumen.js';
-import { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName, seasonReward } from './rangos.js';
+import { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, pointsFromMmr, rankOf, rankText, seasonEnd, seasonName, seasonReward } from './rangos.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -674,6 +674,9 @@ export class Home {
       this.renderQueue();
     });
     $('cp-buscar').addEventListener('click', () => this._findMatch());
+    this.search = null;
+    $('bp-ir').addEventListener('click', () => this.go('competitivo'));
+    $('bp-cancelar').addEventListener('click', () => this.h.onFindMatch?.());
     $('btn-repetir').addEventListener('click', () => this._replay());
     $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
     $('novedades-todas').addEventListener('click', () => this._allNews());
@@ -1393,6 +1396,7 @@ export class Home {
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
     if (view === 'competitivo') this.renderCompetitive();
+    if (this.search) this.setSearch(this.search);
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
     else this.cover?.stop();
@@ -1555,11 +1559,24 @@ export class Home {
       $('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
       btn.disabled = false;
       btn.textContent = 'Buscar partida';
+      btn.classList.add('principal', 'btn-brillo');
+      btn.classList.remove('secundario');
+      $('cp-buscando').hidden = true;
       return;
     }
     const net = this.netKind;
-    const open = this._rankedRooms();
+    const searching = !!this.search;
+    $('cp-buscando').hidden = !searching;
+    btn.classList.toggle('secundario', searching);
+    btn.classList.toggle('principal', !searching);
+    btn.classList.toggle('btn-brillo', !searching);
     $('cp-cola-nota').textContent = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores.`;
+    if (searching) {
+      btn.disabled = false;
+      btn.textContent = 'Cancelar búsqueda';
+      $('cp-cola-extra').textContent = 'Te emparejamos con jugadores de rango parecido; cuanto más esperas, más se abre el margen. Puedes moverte por el menú mientras tanto.';
+      return;
+    }
     if (!net || net === 'none') {
       btn.disabled = true;
       $('cp-cola-extra').textContent = 'Sin conexión con el servidor de salas.';
@@ -1568,27 +1585,45 @@ export class Home {
       $('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
     } else {
       btn.disabled = false;
-      $('cp-cola-extra').textContent = open.length
-        ? `${open.length} sala${open.length === 1 ? '' : 's'} clasificatoria${open.length === 1 ? '' : 's'} esperando jugadores: entrarás en la más llena.`
-        : 'No hay salas clasificatorias abiertas: se creará una pública para que entren otros.';
+      $('cp-cola-extra').textContent = 'Entrarás en la cola: te juntamos con jugadores de rango parecido y la partida empieza sola.';
     }
     btn.textContent = 'Buscar partida';
   }
 
-  /** Salas clasificatorias públicas con sitio y de esta versión, la más llena primero. */
-  _rankedRooms() {
-    return this.rooms.filter((x) => x.clasificatoria && !x.otraVersion && (x.jugadores || 1) < (x.plazas || 8)).sort((a, b) => (b.jugadores || 1) - (a.jugadores || 1));
-  }
-
-  /** «Buscar partida»: contra la IA, al momento; en línea, a la sala clasificatoria más llena (o se crea una). */
+  /** «Buscar partida»: contra la IA, al momento; en línea, la cola de emparejamiento. */
   _findMatch() {
     if (this.queue === 'ia') {
       this.h.onRanked?.('ia');
       return;
     }
-    const open = this._rankedRooms();
-    if (open.length) this.h.onJoinRoom?.(open[0].code);
-    else this.h.onRanked?.('sala');
+    // En línea: la cola de emparejamiento (o cancelarla si ya se está buscando)
+    this.h.onFindMatch?.();
+  }
+
+  /**
+   * Estado de la búsqueda en línea: info = { waited, window, inQueue } o null
+   * (sin buscar); `estado` 'encontrada' cuando ya se ha formado la partida.
+   */
+  setSearch(info, estado = '') {
+    this.search = info;
+    const fmt = (ms) => {
+      const s = Math.floor(ms / 1000);
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    };
+    const pill = $('busqueda-pill');
+    if (info) {
+      const r = this.profile.rango;
+      const lo = rankOf(pointsFromMmr(r.mmr - info.window)).label;
+      const hi = rankOf(pointsFromMmr(r.mmr + info.window)).label;
+      $('cp-busca-tiempo').textContent = fmt(info.waited);
+      $('cp-busca-info').textContent = `${lo === hi ? `Rivales de ${lo}` : `Rivales entre ${lo} y ${hi}`} · ${info.inQueue} en cola`;
+      $('bp-tiempo').textContent = fmt(info.waited);
+    }
+    // El aviso flotante, solo por el menú y fuera de la página Competitivo
+    const show = !!info && this.menuVisible() && this.view !== 'competitivo';
+    if (pill.hidden === show) pill.hidden = !show;
+    if (estado === 'encontrada') this._flash('¡Partida encontrada! Entrando en la sala…', true);
+    if (this.view === 'competitivo') this.renderQueue();
   }
 
   /** Escalera de las nueve ligas: las superadas iluminadas, la tuya destacada y la mejor de la temporada marcada. */

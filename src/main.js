@@ -37,8 +37,9 @@ import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
 import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js';
 import { challengeBeaten, challengeLink, parseChallenge } from './reto.js';
-import { RANKED_AI, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } from './rangos.js';
+import { RANKED_AI, RANKED_ROOM, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } from './rangos.js';
 import { presentMatch } from './presentacion.js';
+import { INVITE_MS, Matchmaker } from './emparejamiento.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -368,6 +369,8 @@ async function startGame(opts) {
   state.ranked = opts.ranked || null;
   state.rankedDone = false;
   state.rankOut = null;
+  if (state.mm) stopMatchmaking();
+  state.match = null;
   leaveOnline();
   tutorial.stop();
   const seed = Number.isFinite(opts.seedNum) ? opts.seedNum >>> 0 : opts.seed ? hashString(opts.seed) : randomSeed();
@@ -532,6 +535,83 @@ function defaultRoomSettings() {
   };
 }
 
+// ------------------------------------------------------- emparejamiento
+
+/** «Buscar partida» en línea: entra en la cola (o sale, si ya estaba). */
+function toggleMatchmaking() {
+  if (state.mm) {
+    stopMatchmaking();
+    return;
+  }
+  if (!transport) {
+    home.flash?.('Sin conexión con el servidor de salas.');
+    return;
+  }
+  const r = profile.rango;
+  const reward = ensureSeason(r);
+  if (reward) grantSeasonReward(reward);
+  state.mm = new Matchmaker(transport, {
+    version: RULES_FINGERPRINT,
+    mmr: r.mmr,
+    newCode: newRoomCode,
+    onUpdate: (info) => home.setSearch(info),
+    onHost: (code, members) => {
+      state.mm = null;
+      state.match = { code, host: true, expect: members, deadline: Date.now() + INVITE_MS };
+      home.setSearch(null, 'encontrada');
+      sound.play('listo', 0.9, 0);
+      openSala(code, true, {
+        settings: { bots: RANKED_ROOM.bots, mapSize: RANKED_ROOM.mapSize, difficulty: RANKED_ROOM.difficulty, rules: { ...DEFAULT_RULES, profile: RANKED_ROOM.profile }, clasificatoria: true },
+        info: { nombre: 'Clasificatoria', visibilidad: 'enlace', plazas: Math.max(2, Math.min(8, members.length + 1)) },
+      }).catch(() => {
+        state.match = null;
+        home.flash?.('No se ha podido crear la sala. Vuelve a buscar partida.');
+      });
+    },
+    onJoin: (code) => {
+      state.mm = null;
+      state.match = { code, host: false };
+      home.setSearch(null, 'encontrada');
+      sound.play('listo', 0.9, 0);
+      openSala(code, false, { auto: true });
+    },
+  });
+  state.mm.start();
+}
+
+function stopMatchmaking() {
+  state.mm?.stop();
+  state.mm = null;
+  home.setSearch(null);
+}
+
+/**
+ * Sala formada por el emparejamiento: los invitados se marcan listos solos y
+ * el anfitrión empieza en cuanto están todos (o, pasado el plazo, con los que
+ * haya; si no ha venido nadie, vuelve a la cola).
+ */
+function autoMatch(sala) {
+  const m = state.match;
+  if (!m || m.code !== sala.code || sala.started || sala.countdown) return;
+  if (!m.host) {
+    if (!sala.observer && !sala.myReadyValid()) sala.setReady(true);
+    return;
+  }
+  const st = sala.status();
+  const others = st.players.filter((p) => !p.isMe);
+  const allHere = m.expect.every((peer) => others.some((p) => p.peer === peer && p.ready));
+  const late = Date.now() > m.deadline;
+  if (st.canStart && (allHere || (late && st.total >= 2))) sala.beginCountdown();
+  else if (late && st.total < 2) {
+    // No ha venido nadie: fuera de la sala y otra vez a la cola
+    state.match = null;
+    leaveOnline();
+    home.show();
+    home.go('competitivo', { replace: true });
+    toggleMatchmaking();
+  }
+}
+
 /**
  * Abre una sala. Anfitrión: con la configuración y los datos del formulario
  * «Crear sala» (si falla, lanza el error para que el formulario lo muestre).
@@ -540,6 +620,10 @@ function defaultRoomSettings() {
  */
 async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
   if (!transport) throw new Error('Sin conexión para el multijugador.');
+  if (state.match?.code !== code) {
+    state.match = null;
+    if (state.mm) stopMatchmaking();
+  }
   leaveOnline();
   const sala = new Sala(transport, { code, isHost, me: { ...myIdentity(), name: roomName(profile.nombre, RECRUIT_TAG) }, settings: settings || defaultRoomSettings(), info });
   state.sala = sala;
@@ -564,7 +648,18 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
       home.renderEntry(sala, entry);
     } else home.renderLobby(sala, kind, status);
   };
-  sala.onChange = () => render();
+  sala.onChange = () => {
+    render();
+    autoMatch(sala);
+  };
+  // Sala del emparejamiento: comprobar también con el reloj (plazo para que lleguen)
+  if (state.match?.code === code) {
+    clearInterval(state.matchTimer);
+    state.matchTimer = setInterval(() => {
+      if (state.sala !== sala || sala.started || state.match?.code !== code) clearInterval(state.matchTimer);
+      else autoMatch(sala);
+    }, 1000);
+  }
   sala.onStart = (payload, hostPeer) => {
     home.hideCountdown();
     beginOnlineGame(sala, payload, hostPeer);
@@ -637,6 +732,9 @@ function copyText(text, ok, fail) {
 
 async function beginOnlineGame(sala, payload, hostPeer) {
   if (state.sala !== sala) return;
+  // La sala del emparejamiento ya ha empezado
+  state.match = null;
+  clearInterval(state.matchTimer);
   const myPeer = sala.myPeer();
   const index = payload.players.findIndex((p) => p.peer === myPeer);
   if (index < 0) {
@@ -1099,6 +1197,10 @@ const home = new Home(profile, {
   },
   onSettings: applySettings,
   sound: (name) => sound.play(name, 0.9, 0),
+  /** «Buscar partida» en línea (cola de emparejamiento): entrar o cancelar. */
+  onFindMatch() {
+    toggleMatchmaking();
+  },
   /** «Jugar clasificatoria» (contra la IA) o «Sala clasificatoria» (multijugador). */
   onRanked(kind) {
     if (kind === 'sala') home.showCreate({ ranked: true });
@@ -1169,6 +1271,7 @@ const home = new Home(profile, {
     copyText(link, () => home.showCopy(true), () => home.showCopy(false, link));
   },
   onLeaveRoom() {
+    state.match = null;
     leaveOnline();
     if (state.pendingEntry) {
       // La invitación ya se ha usado: fuera de la dirección (una recarga no vuelve a ella)
