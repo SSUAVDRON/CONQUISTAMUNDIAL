@@ -10,6 +10,8 @@ import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
 import { LUGARES } from './lugares.js';
 import { FichaUI } from './ficha-ui.js';
 import { activeBonuses, shortEffect } from './fichas.js';
+import { drawCapitalEmblem, drawCapitalFx } from './icons.js';
+import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } from './movimiento.js';
 import { PantallaFin, abrirFin } from './fin.js';
 
@@ -158,6 +160,19 @@ export class UI {
     // Banco de tropas de la capital (doc-1.7)
     $('banco-guardar').addEventListener('click', () => this.handlers.onBank?.('in'));
     $('banco-sacar').addEventListener('click', () => this.handlers.onBank?.('out'));
+    // El emblema de la capital: su ficha (niveles, mejora y premios)
+    const emblem = $('cap-emblema');
+    emblem.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'mouse' && this._game && this._human && this._ficha.cur?.mode !== 'sheet') this._ficha.showBuilding(this._game, this._human, 'capUp', emblem, 'hover');
+    });
+    emblem.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && this._ficha.cur?.mode === 'hover') this._ficha.hide();
+    });
+    emblem.addEventListener('click', () => {
+      if (!this._game || !this._human) return;
+      if (this._ficha.cur?.mode === 'sheet') this._ficha.hide();
+      else this._ficha.showBuilding(this._game, this._human, 'capUp', emblem, 'sheet');
+    });
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
@@ -360,11 +375,13 @@ export class UI {
         return this._iconUrls.get(k);
       },
       onCancel: (k) => k && this.handlers.onBuildMode?.(k),
+      onUpgrade: () => this.handlers.onUpgradeCapital?.(),
     });
     // Tocar fuera cierra la ficha que se abrió al mantener pulsado o al tocar un bono
     document.addEventListener('pointerdown', (e) => {
       const f = this._ficha;
       if (!f.cur || f.cur.mode === 'hover' || f.cur.mode === 'dock') return;
+      if (e.target.closest?.('#cap-emblema')) return;
       if (f.el.contains(e.target) || (f.cur.anchor && f.cur.anchor.contains(e.target))) return;
       f.hide();
     });
@@ -1145,6 +1162,9 @@ export class UI {
       cssProp($('banco-relleno'), 'width', `${(Math.min(1, stored / Math.max(1, bankMax)) * 100).toFixed(1)}%`);
       $('banco-guardar').disabled = !playing || stored >= bankMax - 1 || human.troops < 2;
       $('banco-sacar').disabled = !playing || stored < 1;
+      txt('cap-nivel', String(capB.up || 0));
+      txt('cap-def', `Murallas ×${(Math.round(game.wallDefense(human) * 10) / 10).toString().replace('.', ',')}`);
+      this._drawCapitalEmblem(capB);
     }
     txt('ratio-valor', `${Math.round(ratio * 100)}%`);
     cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
@@ -1255,6 +1275,47 @@ export class UI {
       this._bonusHtml = html;
       actualizarHtml(box, html);
     }
+  }
+
+  /**
+   * Emblema de la capital en el panel (doc-1.8): el medallón de su metal,
+   * con su resplandor, brillo, chispas y rayos (unas 25 veces por segundo).
+   */
+  _drawCapitalEmblem(cap) {
+    const lvl = cap.up || 0;
+    const tier = capitalTier(lvl);
+    const box = $('pj-banco');
+    if (box.dataset.tier !== String(tier)) {
+      box.dataset.tier = String(tier);
+      box.title = `Capital de ${CAPITAL_TIERS[tier].name.toLowerCase()}`;
+    }
+    const now = performance.now();
+    const animated = CAPITAL_TIERS[tier].glow > 0 && !document.hidden;
+    if (this._emblemLvl === lvl && (!animated || now - (this._emblemAt || 0) < 40)) return;
+    this._emblemAt = now;
+    const c = $('cap-icono');
+    if (this._emblemLvl !== lvl || !this._emblemSprite) {
+      this._emblemLvl = lvl;
+      const s = document.createElement('canvas');
+      s.width = c.width;
+      s.height = c.height;
+      drawCapitalEmblem(s.getContext('2d'), s.width / 2, s.height / 2 + 2, s.width * 0.52, lvl, {});
+      this._emblemSprite = s;
+      // El botón de mejorar la capital de la barra lleva el mismo emblema
+      const icon = this._buildIcons.get('capUp');
+      if (icon) {
+        const g = icon.getContext('2d');
+        g.clearRect(0, 0, icon.width, icon.height);
+        drawCapitalEmblem(g, icon.width / 2, icon.height / 2 + 1, icon.width * 0.78, lvl, {});
+        this._iconUrls?.delete('capUp');
+      }
+    }
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    const size = c.width * 0.52;
+    if (animated) drawCapitalFx(g, c.width / 2, c.height / 2 + 2, size, lvl, now, { back: true });
+    g.drawImage(this._emblemSprite, 0, 0);
+    if (animated) drawCapitalFx(g, c.width / 2, c.height / 2 + 2, size, lvl, now, { back: false });
   }
 
   _showBonus(chip) {

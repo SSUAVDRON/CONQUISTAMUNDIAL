@@ -4,7 +4,7 @@
 // bono activo. Las cifras salen de fichas.js; aquí solo se pinta y se coloca.
 
 import { BUILD_GROUPS, TICK_MS } from './config.js';
-import { formatNumber } from './format.js';
+import { fmtTroops, formatNumber } from './format.js';
 import { buildingCard } from './fichas.js';
 
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
@@ -25,6 +25,8 @@ const ICONS = {
   banco: svg('<path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z"/>', true),
   muralla: svg('<path d="M2 14V6h2.4v2h2.4V6h2.4v2h2.4V6H14v8z"/>', true),
   tienes: svg('<path d="M3 8.5 6.4 12 13 4.5"/>'),
+  estrella: svg('<path d="M8 1.8 9.9 5.9l4.4.5-3.3 3 .9 4.4L8 11.6l-3.9 2.2.9-4.4-3.3-3 4.4-.5z"/>', true),
+  candado: svg('<rect x="3.5" y="7" width="9" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>'),
   falta: svg('<path d="M8 2.2 14.5 13.5h-13zM8 6.5v3.2M8 11.6v.1"/>'),
 };
 
@@ -40,7 +42,7 @@ export class FichaUI {
    * @param iconFor  kind → url de su icono (los de la barra)
    * @param onCancel al pulsar «Cancelar» en la tarjeta del móvil mientras colocas
    */
-  constructor(host, { iconFor, onCancel }) {
+  constructor(host, { iconFor, onCancel, onUpgrade }) {
     const el = document.createElement('div');
     el.className = 'ficha';
     el.setAttribute('role', 'tooltip');
@@ -53,7 +55,11 @@ export class FichaUI {
     this._at = 0;
     el.addEventListener('click', (e) => {
       if (e.target.closest('[data-cancelar]')) onCancel?.(this.cur && this.cur.kind);
-      else if (this.cur && this.cur.mode !== 'dock') this.hide();
+      else if (e.target.closest('[data-mejorar]')) {
+        onUpgrade?.();
+        this._at = 0;
+      } else if (e.target.closest('[data-cerrar]')) this.hide();
+      else if (this.cur && (this.cur.mode === 'press' || this.cur.mode === 'bono')) this.hide();
     });
   }
 
@@ -88,7 +94,8 @@ export class FichaUI {
     const now = performance.now();
     if (!force && now - this._at < 330) return;
     this._at = now;
-    this._render(this._buildingHtml(buildingCard(game, p, cur.kind), p, cur.mode));
+    const check = cur.mode === 'sheet' && cur.kind === 'capUp' ? game.canBuild(p, 'capUp') : null;
+    this._render(this._buildingHtml(buildingCard(game, p, cur.kind), p, cur.mode, check));
   }
 
   _render(html) {
@@ -99,6 +106,7 @@ export class FichaUI {
       this._html = html;
     }
     el.classList.toggle('ficha-dock', cur.mode === 'dock');
+    el.classList.toggle('ficha-hoja', cur.mode === 'sheet');
     el.dataset.grupo = cur.type === 'obra' ? this._group(cur.kind) : 'bono';
     clearTimeout(this._hideTimer);
     if (el.hidden) {
@@ -132,6 +140,8 @@ export class FichaUI {
     left = Math.max(8, Math.min(vw - w - 8, left));
     let top = r.top - h - 10;
     if (top < 8) top = Math.min(window.innerHeight - h - 8, r.bottom + 10);
+    // Si no cabe ni encima ni debajo, arriba del todo (con su propio scroll)
+    if (top < 8) top = 8;
     el.style.left = `${Math.round(left)}px`;
     el.style.top = `${Math.round(top)}px`;
     // La flechita apunta al botón
@@ -139,13 +149,14 @@ export class FichaUI {
     el.classList.toggle('debajo', top > r.top);
   }
 
-  _buildingHtml(c, p, mode) {
+  _buildingHtml(c, p, mode, check = null) {
     const group = this._group(c.kind);
     const icon = this.iconFor ? this.iconFor(c.kind) : '';
     const short = p.gold < c.cost && !c.maxed;
+    const shortT = c.troops && p.troops < c.troops;
     const price = c.maxed
       ? '<b>Máx.</b>'
-      : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>`;
+      : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>${c.troops ? `<small class="${shortT ? 'falta' : 'tropas'}">+ ${fmtTroops(c.troops)} tropas</small>` : ''}`;
     const meta = [c.time ? `${ICONS.reloj}${seconds(c.time)} de obra` : '', c.key ? `<kbd>${esc(c.key)}</kbd>` : ''].filter(Boolean).join('');
     const gives = c.gives
       .map(
@@ -158,21 +169,44 @@ export class FichaUI {
             .map((r) => `<div class="fn-fila"><span class="fn-l">${esc(r.label)}</span>${r.from ? `<span class="fn-de">${esc(r.from)}</span><i class="fn-a">→</i>` : ''}<b>${esc(r.to)}</b></div>`)
             .join('')}</div></section>`
         : '';
+    // Capital: los 12 niveles como una fila de piezas y sus premios (en la
+    // hoja, todos; si no, los próximos)
+    const pips = c.level != null
+      ? `<div class="ficha-pips" aria-label="Nivel ${c.level} de 12">${Array.from({ length: 12 }, (_, i) => `<span class="${i < c.level ? 'hecho' : i === c.level ? 'siguiente' : ''}"></span>`).join('')}</div>`
+      : '';
+    let perks = '';
+    if (c.perks && mode !== 'dock') {
+      const list = mode === 'sheet' ? c.perks : c.perks.filter((x) => x.state !== 'hecho').slice(0, 3);
+      if (list.length) {
+        perks = `<section class="ficha-sec"><h4>${mode === 'sheet' ? 'Premios por nivel' : 'Próximos premios'}</h4><ul class="ficha-premios">${list
+          .map((x) => `<li class="${x.state}"><span class="pk-n">${x.level}</span><span class="pk-t">${esc(x.text)}</span><i class="pk-e">${x.state === 'hecho' ? ICONS.tienes : x.state === 'siguiente' ? ICONS.estrella : ICONS.candado}</i></li>`)
+          .join('')}</ul></section>`;
+      }
+    }
+    const upgrade = mode === 'sheet' && c.kind === 'capUp' && !c.maxed
+      ? `<button type="button" class="ficha-mejorar" data-mejorar ${check && !check.ok ? 'disabled' : ''}>Mejorar a nivel ${c.level + 1}<small>${check && !check.ok ? esc(check.reason) : `${formatNumber(c.cost)} de oro · ${fmtTroops(c.troops)} tropas · ${seconds(c.time)}`}</small></button>`
+      : '';
+    const sheet = mode === 'sheet' && c.kind === 'capUp';
+    const close = mode === 'sheet' ? '<button type="button" class="ficha-cerrar" data-cerrar aria-label="Cerrar">×</button>' : '';
     const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : ''}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
     const how = c.how ? `<div class="ficha-como">${esc(c.how)}</div>` : '';
     const cancel = mode === 'dock' ? '<button type="button" class="ficha-cancelar" data-cancelar>Cancelar</button>' : '';
     return `
       <div class="ficha-cab">
         <span class="ficha-icono">${icon ? `<img src="${icon}" alt="">` : ''}</span>
-        <span class="ficha-titulos"><small>${esc(GROUP_NAMES[group] || '')} · ${esc(c.tag)}</small><strong>${esc(c.name)}</strong></span>
+        <span class="ficha-titulos"><small>${c.tagFull ? esc(c.tag) : `${esc(GROUP_NAMES[group] || '')} · ${esc(c.tag)}`}</small><strong>${esc(c.name)}</strong></span>
         <span class="ficha-precio${short ? ' caro' : ''}">${price}</span>
       </div>
-      ${meta ? `<div class="ficha-meta">${meta}</div>` : ''}
-      <p class="ficha-resumen">${esc(c.summary)}</p>
-      <section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>
+      ${close}
+      ${pips}
+      ${sheet ? upgrade : ''}
+      ${!sheet && meta ? `<div class="ficha-meta">${meta}</div>` : ''}
+      ${!sheet ? `<p class="ficha-resumen">${esc(c.summary)}</p>` : ''}
+      ${gives && !sheet ? `<section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>` : ''}
       ${next}
+      ${perks}
       ${have}
-      ${how}
+      ${sheet ? (c.maxed ? how : '') : how}
       ${cancel}`;
   }
 

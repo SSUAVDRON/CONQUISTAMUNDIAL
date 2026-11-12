@@ -442,12 +442,13 @@ Fuera del enlace de Claude y sin cuenta, el perfil y la clasificación general
 se guardan en cada navegador; el multijugador entre ordenadores va por el
 servidor de salas público.
 
-## Economía, capital y lugares de interés (doc-1.6 y doc-1.7)
+## Economía, capital y lugares de interés (doc-1.6 a doc-1.8)
 
-Versión de reglas `doc-1.7` (perfiles `clasico-8` y `trinchera-7`; `doc-1.6`
-trajo la economía, la capital y los lugares; `doc-1.7`, el banco de tropas, una
-sola mejora de la capital, murallas, afueras y escudo más fuertes, antimisiles
-mucho más eficaces y colonias que no se quedan sin tropas): en línea,
+Versión de reglas `doc-1.8` (perfiles `clasico-9` y `trinchera-8`; `doc-1.6`
+trajo la economía, la capital y los lugares; `doc-1.7`, el banco de tropas,
+murallas, afueras y escudo más fuertes, antimisiles mucho más eficaces y
+colonias que no se quedan sin tropas; `doc-1.8`, la capital hasta el nivel 12
+con coste en oro y tropas, premios por nivel y murallas que dependen del banco): en línea,
 versiones distintas no juegan juntas. Todo está en `MECH` (`mecanicas.js`) y
 en `src/lugares.js`.
 
@@ -539,6 +540,45 @@ lo que deciden y desincronizar una partida en línea) y las rutas de los
 pesqueros se guardan. En el dibujo, las insignias de nivel de los edificios
 se pintan una vez y se reutilizan.
 
+
+### La capital hasta el nivel 12 (doc-1.8)
+
+- **Mejorar cuesta oro y tropas, cada vez más:** oro 150k × 1,62^nivel (del
+  1.º, 150k, al 12.º, ~30M; ~79M en total) y tropas (6 % + 3 % × nivel) de tu
+  techo, que salen de tus soldados. Tarda 5 s + 1,5 s por nivel. Hasta el
+  **nivel 12**, muy difícil. Cada nivel da +20 % de oro pasivo, murallas +0,4
+  y **mucho más banco**: cabe techo × (0,3 + 0,15 n + 0,01 n²), del 30 % a
+  nivel 0 al 354 % a nivel 12.
+- **Premios por nivel** (`MECH.capital.perks`), que se ven por adelantado en
+  su ficha: 3, 6 y 9: +1 disparo del escudo; 4: afueras 3 casillas más
+  amplias; 5: +10 % de crecimiento; 7: +1 barco de transporte; 8: murallas 2
+  casillas más amplias; 10: +10 % de techo; 11: +25 % de oro de mercantes,
+  trenes y pesqueros; 12, **ciudadela dorada**: +50 % de oro, murallas ×1,25
+  y +1 disparo.
+- **El banco defiende:** dentro de las murallas, defensa ×(6 + 0,4 n) × (1 +
+  0,6 × banco / techo), hasta un banco de 3 techos (×2,8). Antes el banco solo
+  sumaba hasta ×1,5 al llenarse.
+- **Murallas como frontera de píxeles:** en el mapa, un anillo de casillas
+  (solo las tuyas) con almenas, del metal de su nivel, de 2 a 4 casillas de
+  grueso según lo que guardes (40 % y 150 % de tu techo), y las afueras como
+  un punteado de tu color. Se pinta a una casilla por píxel en un lienzo
+  aparte (se rehace cada segundo) y se escala sin suavizar.
+- **Emblema que se dora:** la capital es un medallón de metal con el castillo
+  en relieve: piedra (0), bronce (1-2), plata (3-5), oro (6-8), oro real
+  (9-11) y ciudadela dorada (12, con corona). Desde bronce, un resplandor que
+  late; desde plata, un brillo que lo cruza; desde oro, chispas; a nivel 12,
+  rayos que giran. El mismo emblema en el mapa, en el panel y en el botón de
+  mejorar (`src/capital-tier.js`, `drawCapitalEmblem` y `drawCapitalFx` en
+  `src/icons.js`). Bajo la capital, una pastilla con las tropas del banco.
+- **En el panel**, un bloque de la capital: su emblema animado con el nivel,
+  «Banco» con la cifra grande, lo que cabe, una barra dorada con brillo y la
+  defensa de las murallas; el botón grande **Guardar** (el 25 % de tus
+  soldados cada vez, o X) y «Sacar todo» (Mayús + X). Al tocar el emblema se
+  abre su **ficha**: nivel en 12 piezas, el botón «Mejorar a nivel N» con su
+  coste (oro, tropas y tiempo, o lo que falta), el siguiente nivel en antes →
+  después y los 10 premios (✓ conseguidos, ★ el siguiente, 🔒 los que vendrán).
+- **Bots:** solo mejoran la capital si tienen más de la mitad de su techo.
+
 ## Reglas
 
 | Concepto | Cómo funciona |
@@ -602,7 +642,7 @@ se pintan una vez y se reutilizan.
 - **Arrastrar**: mover el mapa (al soltar en movimiento sigue un poco y frena) · **Rueda / pellizco**: zoom (la rueda, suave y hacia el cursor; con dos dedos también se desplaza) · **WASD / flechas**: desplazarse
 - **1–9 / 0**: fuerza de ataque 10 %–100 % · **Mayús + rueda**: ajuste fino
 - **Q / E / R / F / G / H / T**: ciudad / puerto / puesto defensivo / fábrica / silo / antimisiles / buque (o los botones del panel), luego clic en el mapa
-- **Z**: mejorar la capital (al momento) · **X** / **Mayús + X**: guardar tropas en el banco de la capital / sacarlas
+- **Z**: mejorar la capital (al momento) · **X** / **Mayús + X**: guardar el 25 % de tus soldados en el banco de la capital / sacarlo todo
 - **M / J / K**: apuntar una bomba atómica / bomba H / MIRV (clic en territorio enemigo)
 - **✕** en la tarjeta de un ataque: retirada (a los 2 s; contra otro país se pierde el 25 %)
 - **T + clic en el mar**: botar un buque de guerra con esa zona de patrulla (fija)

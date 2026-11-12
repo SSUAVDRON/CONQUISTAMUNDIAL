@@ -1623,11 +1623,11 @@ function humanIntent(intent) {
   game.queueIntent({ ...intent, playerId: human.id });
 }
 
-/** Banco de tropas de la capital (doc-1.7): 'in' guarda la fuerza de ataque elegida; 'out' lo saca todo. */
+/** Banco de tropas de la capital: 'in' guarda el 25 % de tus soldados (doc-1.8); 'out' lo saca todo. */
 function bankTroops(op) {
   const { game, human } = state;
   if (state.demo || !human || !human.alive || game.phase !== 'playing' || !human.capital) return;
-  humanIntent({ type: 'bank', op, ratio: op === 'in' ? state.ratio : 1 });
+  humanIntent({ type: 'bank', op, ratio: op === 'in' ? BANK_STEP : 1 });
 }
 
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
@@ -1644,6 +1644,9 @@ function setBuildMode(kind) {
   state.buildMode = state.buildMode === kind ? null : kind;
   ui.update(game, human, state.ratio, state.buildMode);
 }
+
+/** Parte de tus soldados que guarda cada pulsación de «Guardar» (o X). */
+const BANK_STEP = 0.25;
 
 const buildKeys = Object.fromEntries(BUILDING_KINDS.map((k) => [BUILDINGS[k].key, k]));
 
@@ -1721,8 +1724,9 @@ const input = new Input(canvas, camera, {
 ui.on({
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
-  // Banco de tropas de la capital: guarda la fuerza de ataque elegida o lo saca todo
+  // Banco de tropas de la capital: guarda el 25 % de tus soldados o lo saca todo
   onBank: bankTroops,
+  onUpgradeCapital: () => setBuildMode('capUp'),
   // Desarrollo y diplomacia ampliada
   onSpec: (spec) => humanIntent({ type: 'spec', spec }),
   onResearch: (tech) => humanIntent({ type: 'research', tech }),

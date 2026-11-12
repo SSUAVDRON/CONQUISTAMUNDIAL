@@ -24,7 +24,7 @@
  * industria y población, pueblos, pesqueros, comercio más frecuente y
  * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.7';
+export const MECH_VERSION = 'doc-1.8';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -37,7 +37,7 @@ export const MECH_VERSION = 'doc-1.7';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7; clasico-9, con las de doc-1.8. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -47,8 +47,8 @@ export const MECH_VERSION = 'doc-1.7';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-8', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-7', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-9', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-8', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -190,40 +190,62 @@ export const MECH = {
   // 2000×1000): 1.000 casillas → +44; 20.000 → +232; medio mundo (~300.000)
   // → +1.030 por turno (10 veces el oro base). Las colonias, la mitad
   tax: { k: 1, exp: 0.55, colonyShare: 0.5 },
-  // Capital (doc-1.6, rehecha en doc-1.7): cada nación nace con la suya,
-  // amurallada. Una sola mejora (sin ocupar más mapa), de nivel 0 a 10: +25 %
-  // del oro pasivo, +15 % de capacidad del banco de tropas y murallas más
-  // fuertes por nivel. Precio de cada nivel: 150k × 1,75^nivel.
-  // Murallas (CONFIG.capitalWallRadius): defensa ×6 (+0,4 por nivel, y hasta
-  // ×1,5 más con el banco lleno); afueras (CONFIG.capitalOuterRadius): ×2,5
-  // (+0,1 por nivel). Las bombas no destruyen lo que hay dentro de las murallas.
-  // Banco de tropas: guardas soldados en la capital (no atacan, no cuentan
-  // para el techo ni frenan la regeneración) y los sacas cuando quieras. Cabe
-  // el 30 % del techo de tropas (+15 % por nivel). Si tus tropas están al
-  // tope, la capital sigue reclutando hacia el banco a la mitad del ritmo
-  // máximo de regeneración. Si cae, el conquistador se lleva botín (oro y la
-  // mitad del banco en tropas) y la capital se traslada con la mitad de sus
-  // niveles y el banco vacío
+  // Capital (doc-1.6, rehecha en doc-1.7 y doc-1.8): cada nación nace con la
+  // suya, amurallada. Una sola mejora, de nivel 0 a 12 (el 12, muy difícil):
+  // cada nivel cuesta oro (150k × 1,62^nivel) y tropas ((6 % + 3 % × nivel)
+  // de tu techo), cada vez más; da +20 % del oro pasivo, más banco de tropas
+  // y murallas más fuertes, y algunos niveles traen un premio (perks).
+  // Murallas (CONFIG.capitalWallRadius, frontera de píxeles en el mapa):
+  // defensa ×6 (+0,4 por nivel) × (1 + 0,6 × banco / techo de tropas, hasta
+  // un banco de 3 techos): cuantas más tropas guardadas, más fuerte. Afueras
+  // (CONFIG.capitalOuterRadius): ×2,5 (+0,1 por nivel). Las bombas no
+  // destruyen lo que hay dentro de las murallas.
+  // Banco de tropas: guardas soldados (no atacan, no cuentan para el techo
+  // ni frenan la regeneración) y los sacas cuando quieras. Cabe techo × (0,3
+  // + 0,15 n + 0,01 n²): del 30 % a nivel 0 al 354 % a nivel 12. Con tus
+  // tropas al tope, la capital sigue reclutando hacia el banco a la mitad del
+  // ritmo máximo. Si cae, el conquistador se lleva botín (oro y la mitad del
+  // banco en tropas) y la capital se traslada con la mitad de sus niveles y
+  // el banco vacío
   capital: {
-    maxLevel: 10,
-    gold: 0.25,
+    maxLevel: 12,
+    gold: 0.2,
     priceBase: 150000,
-    priceGrowth: 1.75,
+    priceGrowth: 1.62,
+    troopBase: 0.06,
+    troopPerLevel: 0.03,
     buildTicks: 50,
-    buildTicksPerLevel: 10,
+    buildTicksPerLevel: 15,
     wallMult: 6,
     wallMultPerLevel: 0.4,
-    wallBankBonus: 0.5,
+    bankDefense: 0.6,
+    bankDefenseMax: 3,
     outerMult: 2.5,
     outerMultPerLevel: 0.1,
     bankBase: 0.3,
     bankPerLevel: 0.15,
+    bankPerLevel2: 0.01,
     bankRecruit: 0.5,
     bankFull: 0.97, // tropas/techo a partir del cual la capital recluta hacia el banco
     bankLoot: 0.5,
     lootBase: 250000,
     lootShare: 0.2,
     keepShare: 0.5,
+    // Premios de algunos niveles (se ven por adelantado en la ficha de la
+    // capital). shield: disparos del escudo; outer/wall: casillas de más
+    // (× RES); growth, cap, boats, trade, gold: modificadores; wallX: × murallas
+    perks: [
+      { level: 3, shield: 1, text: '+1 disparo del escudo antimisiles' },
+      { level: 4, outer: 3, text: 'Afueras 3 casillas más amplias' },
+      { level: 5, growth: 0.1, text: '+10 % de crecimiento de tropas' },
+      { level: 6, shield: 1, text: '+1 disparo del escudo antimisiles' },
+      { level: 7, boats: 1, text: '+1 barco de transporte a la vez' },
+      { level: 8, wall: 2, text: 'Murallas 2 casillas más amplias' },
+      { level: 9, shield: 1, text: '+1 disparo del escudo antimisiles' },
+      { level: 10, cap: 0.1, text: '+10 % de techo de tropas' },
+      { level: 11, trade: 0.25, text: '+25 % de oro de mercantes, trenes y pesqueros' },
+      { level: 12, gold: 0.5, wallX: 1.25, shield: 1, text: 'Ciudadela dorada: +50 % de oro, murallas ×1,25 y +1 disparo del escudo' },
+    ],
   },
   // Pueblos (doc-1.6): pequeños y baratos; +30 de oro por turno y +60k de techo por nivel
   village: { gold: 30, cap: 60000, step: 40000, priceCap: 400000 },
@@ -239,6 +261,26 @@ export function territoryGold(tiles, docArea = 1) {
 }
 
 /** Precio del siguiente nivel de una mejora de la capital (`level`: el que tiene ahora). */
+/** Lo que suman los premios de la capital hasta el nivel `level` (doc-1.8). */
+export function capitalPerks(level) {
+  const out = { shield: 0, outer: 0, wall: 0, growth: 0, cap: 0, boats: 0, trade: 0, gold: 0, wallX: 1 };
+  for (const pk of MECH.capital.perks) {
+    if (pk.level > level) continue;
+    for (const [k, v] of Object.entries(pk)) {
+      if (k === 'level' || k === 'text') continue;
+      if (k === 'wallX') out.wallX *= v;
+      else out[k] += v;
+    }
+  }
+  return out;
+}
+
+/** Parte del techo de tropas que cabe en el banco de una capital de nivel `level`. */
+export function bankShare(level) {
+  const C = MECH.capital;
+  return C.bankBase + C.bankPerLevel * level + C.bankPerLevel2 * level * level;
+}
+
 export function capitalPrice(level) {
   let v = MECH.capital.priceBase;
   for (let i = 0; i < level; i++) v *= MECH.capital.priceGrowth;

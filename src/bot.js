@@ -344,7 +344,8 @@ export class BotBrain {
     else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
     // Su capital (doc-1.7: una sola mejora); y pueblos baratos
-    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = 'capUp';
+    // (doc-1.8: también cuesta tropas, así que solo si va sobrada)
+    else if (p.capital && !p.capital.work && p.troops > p.maxTroops() * 0.5 && g.rng.chance(0.35)) want = 'capUp';
     else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';

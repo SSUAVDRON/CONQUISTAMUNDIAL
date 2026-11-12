@@ -7,7 +7,8 @@
 // segundo (10 turnos), igual que el resto del panel.
 
 import { BUILDINGS, CONFIG, RES, TICK_MS, BUILD_GROUPS } from './config.js';
-import { MECH, regenPerTick, tradeGold } from './mecanicas.js';
+import { MECH, bankShare, capitalPerks, regenPerTick, tradeGold } from './mecanicas.js';
+import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { fmtTroops, formatNumber } from './format.js';
 import { LUGARES } from './lugares.js';
 
@@ -66,43 +67,57 @@ export function buildingCard(game, p, kind) {
       const C = MECH.capital;
       const cap = p.capital;
       const up = cap ? cap.up || 0 : 0;
-      card.tag = 'Mejora';
-      card.givesTitle = 'Cada nivel te da';
+      const tier = CAPITAL_TIERS[capitalTier(up)];
+      card.tag = `Capital de ${tier.name.toLowerCase()}`;
+      card.tagFull = true;
       card.name = 'Mejorar la capital';
       card.time = cap ? Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * up) * (1 - (p.mods.buildSpeed || 0)))) : 0;
-      card.summary = 'Tu capital da más oro, guarda más tropas en su banco y se defiende mejor. Se mejora al momento, sin elegir sitio.';
+      card.troops = cap && up < C.maxLevel ? game.capitalTroopCost(p) : 0;
+      card.summary = 'La clave de tu nación: más oro, más banco de tropas y murallas más duras. Cada nivel cuesta más oro y más tropas; el 12 es muy difícil.';
       const b = p.goldBreakdown();
       const passive = (b.base + b.tax + b.villages + b.workers) * PER_SEC;
-      const bank = (lvl) => p.maxTroops() * (C.bankBase + C.bankPerLevel * lvl);
-      const wall = (lvl) => C.wallMult + C.wallMultPerLevel * lvl;
+      const bank = (lvl) => p.maxTroops() * bankShare(lvl);
+      const wall = (lvl) => (C.wallMult + C.wallMultPerLevel * lvl) * capitalPerks(lvl).wallX;
       const outer = (lvl) => C.outerMult + C.outerMultPerLevel * lvl;
-      const shots = (lvl) => CONFIG.capitalSamShots + Math.floor(lvl / CONFIG.capitalSamShotsEvery);
+      const shots = (lvl) => CONFIG.capitalSamShots + capitalPerks(lvl).shield;
+      const next = Math.min(C.maxLevel, up + 1);
+      card.givesTitle = `El nivel ${next} te da`;
       card.gives = [
         { icon: 'oro', label: 'Oro pasivo', value: `+${pct(C.gold)}`, note: `≈ +${formatNumber(passive * C.gold)}/s más` },
-        { icon: 'banco', label: 'Banco de tropas', value: `+${pct(C.bankPerLevel)} del techo`, note: `+${fmtTroops(p.maxTroops() * C.bankPerLevel)} de sitio` },
-        { icon: 'muralla', label: 'Murallas', value: `+${dec(C.wallMultPerLevel)} de defensa` },
+        { icon: 'banco', label: 'Banco de tropas', value: `+${fmtTroops(bank(next) - bank(up))}`, note: `cabrán ${fmtTroops(bank(next))} (el ${pct(bankShare(next))} de tu techo)` },
+        { icon: 'muralla', label: 'Murallas', value: `×${dec(wall(next))}`, note: 'antes de sumar lo que guardes en el banco' },
       ];
+      const perk = C.perks.find((x) => x.level === next);
+      if (perk && up < C.maxLevel) card.gives.push({ icon: 'estrella', label: 'Premio', value: '', note: perk.text });
+      card.perks = C.perks.map((pk) => ({ level: pk.level, text: pk.text, state: pk.level <= up ? 'hecho' : pk.level === up + 1 ? 'siguiente' : 'futuro' }));
+      card.level = up;
       if (!cap) {
         card.have = 'No tienes capital.';
         card.haveWarn = true;
         card.maxed = true;
       } else if (up >= C.maxLevel) {
         card.maxed = true;
-        card.have = `Nivel ${up} (el máximo): +${pct(C.gold * up)} de oro, banco de ${fmtTroops(bank(up))} tropas, murallas ×${dec(wall(up))}.`;
+        card.gives = [];
+        card.givesTitle = '';
+        card.have = `Nivel ${up}, el máximo: +${pct(C.gold * up + capitalPerks(up).gold)} de oro, banco de ${fmtTroops(bank(up))} y murallas ×${dec(wall(up))}.`;
       } else {
-        card.have = `Nivel ${up} de ${C.maxLevel}${up ? `: +${pct(C.gold * up)} de oro` : ''} · banco ${fmtTroops(cap.bank || 0)} / ${fmtTroops(bank(up))}.`;
+        card.have = `Nivel ${up} de ${C.maxLevel} (${tier.name}) · banco ${fmtTroops(cap.bank || 0)} / ${fmtTroops(bank(up))}.`;
+        if (p.troops < card.troops) {
+          card.have += ` Te faltan ${fmtTroops(card.troops - p.troops)} tropas.`;
+          card.haveWarn = true;
+        }
         card.next = {
-          title: `Nivel ${up} → ${up + 1}`,
+          title: `Nivel ${up} → ${next}`,
           rows: [
-            { label: 'Oro pasivo', from: `+${pct(C.gold * up)}`, to: `+${pct(C.gold * (up + 1))}` },
-            { label: 'Banco de tropas', from: fmtTroops(bank(up)), to: fmtTroops(bank(up + 1)) },
-            { label: 'Murallas', from: `×${dec(wall(up))}`, to: `×${dec(wall(up + 1))}` },
-            { label: 'Afueras', from: `×${dec(outer(up))}`, to: `×${dec(outer(up + 1))}` },
-            { label: 'Escudo antimisiles', from: `${shots(up)} por salva`, to: `${shots(up + 1)} por salva` },
+            { label: 'Oro pasivo', from: `+${pct(C.gold * up + capitalPerks(up).gold)}`, to: `+${pct(C.gold * next + capitalPerks(next).gold)}` },
+            { label: 'Banco de tropas', from: fmtTroops(bank(up)), to: fmtTroops(bank(next)) },
+            { label: 'Murallas', from: `×${dec(wall(up))}`, to: `×${dec(wall(next))}` },
+            { label: 'Afueras', from: `×${dec(outer(up))}`, to: `×${dec(outer(next))}` },
+            { label: 'Escudo antimisiles', from: `${shots(up)} por salva`, to: `${shots(next)} por salva` },
           ].filter((r) => r.from !== r.to),
         };
       }
-      card.how = cap && cap.work ? 'Ya tiene una obra en marcha: espera a que acabe.' : 'Clic y empieza la obra. Una obra a la vez, hasta el nivel 10.';
+      card.how = cap && cap.work ? 'Ya tiene una obra en marcha: espera a que acabe.' : `Clic y empieza la obra (se pagan el oro y las tropas). Una obra a la vez, hasta el nivel ${C.maxLevel}.`;
       break;
     }
     case 'village': {
@@ -252,8 +267,8 @@ export function shortEffect(game, p, kind) {
   switch (kind) {
     case 'capUp': {
       const cap = p.capital;
-      if (cap && cap.up >= MECH.capital.maxLevel) return 'Al máximo';
-      return `+${pct(MECH.capital.gold)} oro`;
+      if (cap && cap.up >= MECH.capital.maxLevel) return 'Nivel máximo';
+      return `Nivel ${(cap ? cap.up : 0) + 1}: +${pct(MECH.capital.gold)} oro`;
     }
     case 'village':
       return `+${formatNumber(MECH.village.gold * goldFactor(p) * PER_SEC)}/s · +${fmtTroops(MECH.village.cap * capFactor(p))}`;
@@ -291,7 +306,10 @@ export function activeBonuses(game, p) {
   const out = [];
   const cap = p.capital;
   if (cap && cap.up > 0 && game.buildingAt.get(cap.tile) === cap) {
-    out.push({ id: 'capital', icon: '🏰', title: `Capital nivel ${cap.up}`, value: `+${pct(MECH.capital.gold * cap.up)} oro`, text: `Tu capital a nivel ${cap.up}: +${pct(MECH.capital.gold * cap.up)} de oro pasivo, banco de tropas del ${pct(MECH.capital.bankBase + MECH.capital.bankPerLevel * cap.up)} de tu techo y murallas ×${dec(MECH.capital.wallMult + MECH.capital.wallMultPerLevel * cap.up)}.`, left: null });
+    const pk = capitalPerks(cap.up);
+    const gold = MECH.capital.gold * cap.up + pk.gold;
+    const perks = MECH.capital.perks.filter((x) => x.level <= cap.up).map((x) => x.text);
+    out.push({ id: 'capital', icon: '🏰', title: `Capital nivel ${cap.up}`, value: `+${pct(gold)} oro`, text: `Tu capital a nivel ${cap.up}: +${pct(gold)} de oro pasivo y banco de tropas del ${pct(bankShare(cap.up))} de tu techo.${perks.length ? ` Premios: ${perks.join('; ')}.` : ''}`, left: null });
   }
   for (const b of p.buffs || []) {
     const left = Math.max(0, Math.ceil(((b.until - game.ticks) * TICK_MS) / 1000));

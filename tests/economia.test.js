@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { CONFIG, RES } from '../src/config.js';
-import { MECH, capitalPrice, territoryGold } from '../src/mecanicas.js';
+import { MECH, bankShare, capitalPerks, capitalPrice, territoryGold } from '../src/mecanicas.js';
 import { LUGARES } from '../src/lugares.js';
 import { buildNow } from './ayuda.js';
 
@@ -51,24 +51,37 @@ test('capital: nace donde te despliegas (naciones y jugadores, no colonias) y no
   assert.ok(!play({ capitals: false }).h.capital, 'sin la regla, sin capital');
 });
 
-test('capital: una sola mejora, sin elegir sitio; tarda, encarece, tiene tope y da oro y sitio en el banco', () => {
+test('capital: una sola mejora, sin elegir sitio; cuesta oro y tropas, tarda, encarece, llega al 12 y da oro y sitio en el banco', () => {
   const { game, h } = play();
   h.gold = 1e9;
+  h.troops = h.maxTroops();
   const base = h.goldBreakdown();
   const bank0 = game.bankCap(h);
   assert.ok(Math.abs(bank0 - h.maxTroops() * MECH.capital.bankBase) < 1e-6, 'el banco nace con el 30 % del techo');
   assert.equal(game.buildCost(h, 'capUp'), capitalPrice(0));
+  const troopCost = game.capitalTroopCost(h);
+  assert.ok(Math.abs(troopCost - h.maxTroops() * MECH.capital.troopBase) < 1, 'tropas: el 6 % del techo');
+  const t0 = h.troops;
   game.queueIntent({ type: 'build', kind: 'capUp', playerId: h.id });
   game.tick();
   assert.ok(h.capital.work, 'en obras');
+  assert.ok(h.troops < t0 - troopCost * 0.9, 'se pagan las tropas');
   assert.equal(game.canBuild(h, 'capUp').ok, false, 'una obra a la vez');
   while (h.capital.work) game.tick();
   assert.equal(h.capital.up, 1);
   const b = h.goldBreakdown();
   assert.ok(Math.abs(b.bonus - (b.base + b.tax + b.villages) * h.mods.gold) < 1e-9);
-  assert.ok(b.bonus - base.bonus > (b.base + b.tax) * 0.24, '+25 % del oro pasivo');
-  assert.ok(Math.abs(game.bankCap(h) - h.maxTroops() * (MECH.capital.bankBase + MECH.capital.bankPerLevel)) < 1e-6, '+15 % de banco');
-  assert.equal(game.buildCost(h, 'capUp'), capitalPrice(1), 'el siguiente nivel cuesta más');
+  assert.ok(b.bonus - base.bonus > (b.base + b.tax) * 0.19, '+20 % del oro pasivo');
+  assert.ok(Math.abs(game.bankCap(h) - h.maxTroops() * bankShare(1)) < 1e-6, 'más banco');
+  assert.equal(game.buildCost(h, 'capUp'), capitalPrice(1), 'el siguiente nivel cuesta más oro');
+  assert.ok(game.capitalTroopCost(h) > troopCost, 'y más tropas');
+  // Sin tropas suficientes no se puede
+  h.troops = 0;
+  assert.equal(game.canBuild(h, 'capUp').ok, false, 'faltan tropas');
+  h.troops = h.maxTroops();
+  // Tope: nivel 12, con el banco de 3,5 techos
+  assert.equal(MECH.capital.maxLevel, 12);
+  assert.ok(bankShare(12) > 3.5 && bankShare(12) < 3.6);
   h.capital.up = MECH.capital.maxLevel;
   assert.equal(game.canBuild(h, 'capUp').ok, false, 'tope de nivel');
 });
@@ -96,11 +109,32 @@ test('capital: banco de tropas; se guarda y se saca con órdenes, cabe lo que di
   h.troops = h.maxTroops();
   game.tick();
   assert.ok(cap.bank > 0, 'recluta con el excedente');
-  // El banco lleno refuerza las murallas
+  // Cuantas más tropas guardadas, más fuertes las murallas (hasta un banco de 3 techos)
   cap.bank = 0;
   const empty = game.wallMultiplier(h, cap.tile);
-  cap.bank = game.bankCap(h);
-  assert.ok(Math.abs(game.wallMultiplier(h, cap.tile) - empty * (1 + MECH.capital.wallBankBonus)) < 1e-9);
+  cap.bank = h.maxTroops();
+  assert.ok(Math.abs(game.wallMultiplier(h, cap.tile) - empty * (1 + MECH.capital.bankDefense)) < 1e-9, 'un techo guardado: ×1,6');
+  cap.bank = h.maxTroops() * 10;
+  assert.ok(Math.abs(game.wallMultiplier(h, cap.tile) - empty * (1 + MECH.capital.bankDefense * MECH.capital.bankDefenseMax)) < 1e-9, 'con tope');
+});
+
+test('capital: premios de nivel (escudo, afueras y murallas más amplias, crecimiento, barcos, techo, comercio y la ciudadela dorada)', () => {
+  const { game, h } = play();
+  const cap = h.capital;
+  const r0 = game.capitalRadii(cap);
+  const shots0 = game.samShots(cap);
+  const boats0 = h.maxBoats();
+  const growth0 = h.mods.growth;
+  cap.up = 12;
+  game._refreshMods(h);
+  const pk = capitalPerks(12);
+  assert.equal(game.samShots(cap), shots0 + 4, '+1 disparo en los niveles 3, 6, 9 y 12');
+  const r12 = game.capitalRadii(cap);
+  assert.equal(r12.outer, r0.outer + 3 * RES);
+  assert.equal(r12.wall, r0.wall + 2 * RES);
+  assert.equal(h.maxBoats(), boats0 + 1);
+  assert.ok(Math.abs(h.mods.growth - growth0 - pk.growth) < 1e-9);
+  assert.ok(Math.abs(game.wallDefense(h) - (MECH.capital.wallMult + MECH.capital.wallMultPerLevel * 12) * 1.25) < 1e-9, 'murallas ×1,25 a nivel 12');
 });
 
 test('capital: murallas fuertes, afueras reforzadas y las bombas no arrasan lo que hay dentro', () => {

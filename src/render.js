@@ -6,13 +6,15 @@
 import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb, territoryRgb, vividRgb } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
-import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
+import { PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
+import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { forgetTerrain, paintTerrain } from './terreno.js';
 import { MECH } from './mecanicas.js';
 import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 import { LUGARES } from './lugares.js';
 
+const TAU = Math.PI * 2;
 const COLONY_ALPHA = 108; // las colonias, más tenues
 const FILL_ALPHA = 142; // territorio semitransparente: se ve el terreno debajo (algo menos que antes: colores más nítidos)
 const LABEL_INTERVAL_MS = 500;
@@ -106,6 +108,12 @@ const smooth = (a, b, v) => {
   const t = clamp((v - a) / (b - a), 0, 1);
   return t * t * (3 - 2 * t);
 };
+
+/** '#rrggbb' → [r, g, b]. */
+function hexRgb(h) {
+  const v = parseInt(h.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
 
 function makeCanvas(w, h) {
   const c = document.createElement('canvas');
@@ -1466,7 +1474,6 @@ export class Renderer {
     const zr = camera.zoom * RES;
     const human = game.human;
     const size = clamp(this._buildingSize() * 1.45, 12, 34);
-    const wallR = CONFIG.capitalWallRadius * camera.zoom;
     for (const b of game.capitals) {
       const p = game.players[b.owner];
       if (!p) continue;
@@ -1474,47 +1481,165 @@ export class Renderer {
       const friend = mine || (human && human.allies.has(p.id));
       if (zr < 0.6 && !friend) continue;
       const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
-      const m = Math.max(size, CONFIG.capitalOuterRadius * camera.zoom) + 4;
+      const radii = game.capitalRadii ? game.capitalRadii(b) : { wall: CONFIG.capitalWallRadius, outer: CONFIG.capitalOuterRadius };
+      const wallR = radii.wall * camera.zoom;
+      const m = Math.max(size * 2, radii.outer * camera.zoom) + 4;
       if (sx < -m || sy < -m || sx > camera.viewW + m || sy > camera.viewH + m) continue;
-      // Muralla: un anillo almenado. La tuya, en cuanto se distingue; las
+      // Murallas en píxeles (doc-1.8): la tuya, en cuanto se distingue; las
       // demás, solo de cerca (con decenas de capitales a la vista recargaban)
-      if (wallR >= (mine ? 14 : 44)) {
-        ctx.beginPath();
-        ctx.arc(sx, sy, wallR, 0, Math.PI * 2);
-        ctx.lineWidth = Math.max(2, Math.min(5, wallR * 0.06));
-        ctx.setLineDash([Math.max(3, wallR * 0.09), Math.max(2, wallR * 0.05)]);
-        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.85 : 0.6})`;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(20, 16, 10, 0.45)';
-        ctx.beginPath();
-        ctx.arc(sx, sy, wallR + ctx.lineWidth * 2.5, 0, Math.PI * 2);
-        ctx.stroke();
-        // Afueras (doc-1.7): un anillo fino y discontinuo, más fuera
-        const outR = CONFIG.capitalOuterRadius * camera.zoom;
-        ctx.beginPath();
-        ctx.arc(sx, sy, outR, 0, Math.PI * 2);
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([3, 5]);
-        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.45 : 0.3})`;
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-      if (mine && this.anim) {
-        const k = 0.5 + 0.5 * Math.sin(now / 520);
-        ctx.fillStyle = `rgba(255, 214, 110, ${0.16 + 0.12 * k})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, size * (0.72 + 0.1 * k), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      const spr = this._buildingSprite('capital', p, size);
+      if (wallR >= (mine ? 12 : 40)) this._drawCapitalWalls(b, p, radii);
+      const lvl = b.up || 0;
+      // Emblema: medallón de su metal (más dorado cuanto más nivel) con su
+      // resplandor, el brillo que lo cruza, chispas y rayos a nivel 12
+      const fx = this.anim && (mine || zr >= 1.2);
+      if (fx) drawCapitalFx(ctx, sx, sy, size, lvl, now, { back: true });
+      const spr = this._capitalSprite(b, p, size);
       const w = spr.width / this.dpr;
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      if (fx) drawCapitalFx(ctx, sx, sy, size, lvl, now, { back: false });
       const prog = game.capitalProgress ? game.capitalProgress(b) : null;
       if (prog !== null) this._drawConstruction(sx, sy, size, prog, now);
-      else if (b.up > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.up);
+      else if (lvl > 0 && (mine ? zr >= 0.9 : zr >= 2.4)) this._drawLevel(sx, sy, size, lvl);
+      // Lo que hay en su banco: la tuya siempre, las demás de cerca
+      if ((b.bank || 0) >= 1 && (mine || zr >= 2.4) && game.bankCap) this._drawBankTag(sx, sy + size * 0.62 + 3, b, p, mine);
     }
+  }
+
+  /** Emblema de una capital según su tramo de nivel (en caché por dueño, tramo y tamaño). */
+  _capitalSprite(b, p, size) {
+    const px = Math.max(8, Math.round((size * this.dpr) / 2) * 2);
+    const human = p === this.game.human;
+    const key = `capital|${p.id}|${px}|${human ? 1 : 0}|${capitalTier(b.up || 0)}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const S = Math.ceil(px * 1.7);
+      c = makeCanvas(S, S);
+      drawCapitalEmblem(c.getContext('2d'), S / 2, S / 2 + px * 0.05, px, b.up || 0, { ring: rgbToCss(p.color), outline: human });
+      this._sprites.set(key, c);
+    }
+    return c;
+  }
+
+  /**
+   * Murallas de una capital como frontera de píxeles (doc-1.8): un anillo de
+   * casillas (solo las suyas) con almenas, del metal de su nivel, más grueso
+   * cuantas más tropas guarda su banco (de 1 a 3 casillas), y las afueras
+   * como un punteado de su color. Se pinta a una casilla por píxel en un
+   * lienzo aparte (se rehace cada segundo o si cambia algo) y se escala sin
+   * suavizar: cuadradito a cuadradito, como el territorio.
+   */
+  _drawCapitalWalls(b, p, radii) {
+    const { ctx, game, camera } = this;
+    const map = game.map;
+    const R = radii.wall;
+    const O = radii.outer;
+    const tier = capitalTier(b.up || 0);
+    const ratio = (b.bank || 0) / Math.max(1, p.maxTroops());
+    const thick = 2 + (ratio >= 0.4 ? 1 : 0) + (ratio >= 1.5 ? 1 : 0);
+    this._wallCache ??= new Map();
+    let e = this._wallCache.get(b.id);
+    const key = `${b.tile}|${R}|${O}|${tier}|${thick}|${p.id}`;
+    if (!e || e.key !== key || game.ticks - e.tick >= 10) {
+      const n = 2 * O + 3;
+      const c = e && e.canvas.width === n ? e.canvas : makeCanvas(n, n);
+      const g = c.getContext('2d');
+      const img = g.createImageData(n, n);
+      const d = img.data;
+      const T = CAPITAL_TIERS[tier].metal.map(hexRgb);
+      const [pr, pg, pb] = p.color;
+      const cx = map.x(b.tile);
+      const cy = map.y(b.tile);
+      const owner = game.owner;
+      const W = map.width;
+      for (let j = 0; j < n; j++) {
+        const y = cy - O - 1 + j;
+        if (y < 0 || y >= map.height) continue;
+        for (let i = 0; i < n; i++) {
+          const x = cx - O - 1 + i;
+          if (x < 0 || x >= W) continue;
+          const dx = x - cx;
+          const dy = y - cy;
+          const r = Math.sqrt(dx * dx + dy * dy);
+          let col = null;
+          let a = 255;
+          if (r <= R && r > R - thick) {
+            // Muralla: el filo de fuera más claro, el resto del metal
+            col = r > R - 1 ? T[0] : T[1];
+          } else if (r > R && r <= R + 1) {
+            // Almenas: una sí y una no por el borde de fuera
+            const ang = Math.atan2(dy, dx);
+            if (Math.floor(((ang + Math.PI) / TAU) * R * 3.2) % 2 === 0) col = T[2];
+          } else if (r > O - 1 && r <= O) {
+            // Afueras: punteado del color del dueño
+            const ang = Math.atan2(dy, dx);
+            if (Math.floor(((ang + Math.PI) / TAU) * O * 2.2) % 2 === 0) {
+              col = [pr, pg, pb];
+              a = 170;
+            }
+          }
+          if (!col || owner[y * W + x] !== p.id) continue;
+          const k = (j * n + i) * 4;
+          d[k] = col[0];
+          d[k + 1] = col[1];
+          d[k + 2] = col[2];
+          d[k + 3] = a;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      e = { key, tick: game.ticks, canvas: c };
+      this._wallCache.set(b.id, e);
+      if (this._wallCache.size > 400) this._wallCache.clear();
+    }
+    const [x0, y0] = camera.worldToScreen(map.x(b.tile) - O - 1, map.y(b.tile) - O - 1);
+    const sz = e.canvas.width * camera.zoom;
+    const smooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(e.canvas, x0, y0, sz, sz);
+    ctx.imageSmoothingEnabled = smooth;
+  }
+
+  /** Pastilla con las tropas del banco de una capital y cuánto le falta para llenarse. */
+  _drawBankTag(sx, sy, b, p, mine) {
+    const { ctx, game } = this;
+    const cap = game.bankCap(p);
+    const fill = Math.min(1, (b.bank || 0) / Math.max(1, cap));
+    const text = fmtTroops(b.bank || 0);
+    ctx.font = '700 10px system-ui, sans-serif';
+    const tw = ctx.measureText(text).width;
+    const w = Math.max(34, tw + 22);
+    const h = 15;
+    const x = sx - w / 2;
+    ctx.fillStyle = 'rgba(14, 18, 28, 0.86)';
+    ctx.beginPath();
+    ctx.roundRect(x, sy, w, h, 7.5);
+    ctx.fill();
+    // Relleno: lo que lleva el banco
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x, sy, w, h, 7.5);
+    ctx.clip();
+    ctx.fillStyle = mine ? 'rgba(242, 179, 61, 0.38)' : 'rgba(200, 200, 210, 0.25)';
+    ctx.fillRect(x, sy, w * fill, h);
+    ctx.restore();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = mine ? 'rgba(242, 179, 61, 0.8)' : 'rgba(255, 255, 255, 0.25)';
+    ctx.beginPath();
+    ctx.roundRect(x + 0.5, sy + 0.5, w - 1, h - 1, 7);
+    ctx.stroke();
+    // Castillito y la cifra
+    ctx.fillStyle = mine ? '#ffd27a' : '#e6e9ef';
+    const ix = x + 6;
+    const iy = sy + 4;
+    ctx.fillRect(ix, iy + 3, 7, 4);
+    ctx.fillRect(ix, iy + 1, 1.6, 2);
+    ctx.fillRect(ix + 2.7, iy, 1.6, 3);
+    ctx.fillRect(ix + 5.4, iy + 1, 1.6, 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, x + 16, sy + h / 2 + 0.5);
   }
 
   /**

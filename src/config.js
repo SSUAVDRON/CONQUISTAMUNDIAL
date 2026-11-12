@@ -83,8 +83,7 @@ export const CONFIG = {
   // Escudo antimisiles propio de la capital (doc-1.7): como una batería, sin construirla
   capitalSamRange: 26 * RES,
   capitalSamHit: 0.8,
-  capitalSamShots: 2, // interceptores por salva (+1 cada capitalSamShotsEvery niveles de la capital)
-  capitalSamShotsEvery: 3,
+  capitalSamShots: 2, // interceptores por salva (+1 en los niveles 3, 6, 9 y 12 de la capital: MECH.capital.perks)
   capitalClearance: 3, // casillas libres alrededor de la capital (se construye junto a ella)
   fortDefenseMult: 3, // efecto de defensa (× tiempo y bajas del atacante) dentro del radio del puesto
   // Niveles y obras (el precio de un nivel es el del siguiente edificio de su tipo: mecanicas.js)

@@ -12,7 +12,7 @@ import { assignNationColors, botColor } from './colors.js';
 import { POI, POI_TYPES, placePoints } from './estrategia.js';
 import { LUGARES, LUGAR_CFG, pickLugar } from './lugares.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
-import { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
+import { bankShare, bigEmpireBonus, capitalPerks, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -507,9 +507,17 @@ export class Game {
     // Lugares de interés: mejoras para siempre y bonos que aún duran (doc-1.6)
     if (p.permMods) addMods(m, p.permMods);
     for (const b of p.buffs) if (b.until > this.ticks) addMods(m, LUGARES[b.kind].buff);
-    // Mejoras de la capital (doc-1.7: una sola, que sube el oro; el banco va aparte)
+    // Mejoras de la capital (doc-1.7: una sola, que sube el oro; el banco va
+    // aparte) y los premios de sus niveles (doc-1.8)
     const cap = p.capital;
-    if (cap && this.buildingAt.get(cap.tile) === cap) m.gold += MECH.capital.gold * cap.up;
+    if (cap && this.buildingAt.get(cap.tile) === cap) {
+      const pk = capitalPerks(cap.up);
+      m.gold += MECH.capital.gold * cap.up + pk.gold;
+      m.growth += pk.growth;
+      m.cap += pk.cap;
+      m.boats += pk.boats;
+      m.trade += pk.trade;
+    }
     p.passes = passes;
     p.mods = m;
   }
@@ -589,6 +597,12 @@ export class Game {
     return b;
   }
 
+  /** Radios de las murallas y de las afueras de una capital (los premios de nivel los amplían). */
+  capitalRadii(cap) {
+    const pk = capitalPerks(cap ? cap.up || 0 : 0);
+    return { wall: CONFIG.capitalWallRadius + pk.wall * RES, outer: CONFIG.capitalOuterRadius + pk.outer * RES };
+  }
+
   /** Zona de la capital de `p` en la casilla `t`: 2 = dentro de las murallas, 1 = afueras, 0 = fuera. */
   capitalZone(p, t) {
     const cap = p && p.capital;
@@ -597,31 +611,56 @@ export class Game {
     const dx = map.x(cap.tile) - map.x(t);
     const dy = map.y(cap.tile) - map.y(t);
     const d2 = dx * dx + dy * dy;
-    const R = CONFIG.capitalWallRadius;
+    const { wall: R, outer: O } = this.capitalRadii(cap);
     if (d2 <= R * R) return 2;
-    const O = CONFIG.capitalOuterRadius;
     return d2 <= O * O ? 1 : 0;
+  }
+
+  /** Lo que el banco suma a las murallas: ×(1 + 0,6 × banco / techo), hasta un banco de 3 techos (doc-1.8). */
+  bankDefense(p) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    const C = MECH.capital;
+    return 1 + C.bankDefense * Math.min(C.bankDefenseMax, (cap.bank || 0) / Math.max(1, p.maxTroops()));
   }
 
   /**
    * Defensa de la capital de `p` en la casilla `t` (1 = fuera): murallas
-   * ×6 (+0,4 por nivel, y hasta ×1,5 con el banco lleno) y afueras ×2,5
-   * (+0,1 por nivel) (doc-1.7).
+   * ×6 (+0,4 por nivel) × lo que suma el banco (cuantas más tropas
+   * guardadas, más) y afueras ×2,5 (+0,1 por nivel) (doc-1.7 y doc-1.8).
    */
   wallMultiplier(p, t) {
     const zone = this.capitalZone(p, t);
     if (!zone) return 1;
-    const C = MECH.capital;
-    const cap = p.capital;
-    if (zone === 1) return C.outerMult + C.outerMultPerLevel * cap.up;
-    const full = Math.min(1, cap.bank / Math.max(1, this.bankCap(p)));
-    return (C.wallMult + C.wallMultPerLevel * cap.up) * (1 + C.wallBankBonus * full);
+    return zone === 1 ? this.outerDefense(p) : this.wallDefense(p);
   }
 
-  /** Precio del siguiente nivel de la capital. */
+  /** Defensa dentro de las murallas de la capital de `p`. */
+  wallDefense(p) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    const C = MECH.capital;
+    return (C.wallMult + C.wallMultPerLevel * cap.up) * capitalPerks(cap.up).wallX * this.bankDefense(p);
+  }
+
+  /** Defensa en las afueras de la capital de `p`. */
+  outerDefense(p) {
+    const cap = p && p.capital;
+    if (!cap) return 1;
+    return MECH.capital.outerMult + MECH.capital.outerMultPerLevel * cap.up;
+  }
+
+  /** Precio en oro del siguiente nivel de la capital. */
   capitalCost(p) {
     const lvl = p.capital ? p.capital.up || 0 : 0;
     return Math.round(capitalPrice(lvl) * this.rules.priceMult);
+  }
+
+  /** Tropas que cuesta el siguiente nivel de la capital: (6 % + 3 % × nivel) del techo (doc-1.8). */
+  capitalTroopCost(p) {
+    const lvl = p.capital ? p.capital.up || 0 : 0;
+    const C = MECH.capital;
+    return Math.round(p.maxTroops() * (C.troopBase + C.troopPerLevel * lvl));
   }
 
   _canUpgradeCapital(p) {
@@ -631,19 +670,23 @@ export class Game {
     if ((b.up || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Tu capital ya está al máximo' };
     const cost = this.capitalCost(p);
     if (p.gold < cost) return { ok: false, reason: `Te falta oro: la mejora cuesta ${formatNumber(cost)}` };
-    return { ok: true, reason: '', cost, capital: b };
+    const troops = this.capitalTroopCost(p);
+    if (p.troops < troops) return { ok: false, reason: `Te faltan tropas: la mejora pide ${fmtTroops(troops)} soldados` };
+    return { ok: true, reason: '', cost, troops, capital: b };
   }
 
   _startCapitalWork(p) {
     const b = p.capital;
     const cost = this.capitalCost(p);
+    const troops = this.capitalTroopCost(p);
     p.gold -= cost;
+    p.troops = Math.max(0, p.troops - troops);
     p.spent.buildings += cost;
     p.stats.built++;
     const C = MECH.capital;
     const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b.up || 0)) * (1 - p.mods.buildSpeed)));
     b.work = { track: 'up', end: this.ticks + time, time };
-    if (p === this.human) this._emit(`🏰 Obras en la capital: nivel ${(b.up || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
+    if (p === this.human) this._emit(`🏰 Obras en la capital: nivel ${(b.up || 0) + 1} (${Math.round(time / 10)} s; ${formatNumber(cost)} de oro y ${fmtTroops(troops)} tropas)`, 'info');
     return true;
   }
 
@@ -657,7 +700,8 @@ export class Game {
     p.stats.lastFinished = 'city';
     if (p === this.human) {
       const C = MECH.capital;
-      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco de tropas para ${fmtTroops(this.bankCap(p))}`, 'good');
+      const perk = C.perks.find((x) => x.level === b.up);
+      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco para ${fmtTroops(this.bankCap(p))}${perk ? ` · Premio: ${perk.text}` : ''}`, 'good', perk ? { sfx: 'logro' } : null);
     }
   }
 
@@ -667,8 +711,7 @@ export class Game {
   bankCap(p) {
     const cap = p && p.capital;
     if (!cap) return 0;
-    const C = MECH.capital;
-    return p.maxTroops() * (C.bankBase + C.bankPerLevel * (cap.up || 0));
+    return p.maxTroops() * bankShare(cap.up || 0);
   }
 
   /** Guarda en la capital la parte `ratio` de sus soldados (lo que quepa). Devuelve cuántos. */
@@ -1733,7 +1776,7 @@ export class Game {
   /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
   /** Interceptores por salva de una batería (o del escudo de una capital). */
   samShots(b) {
-    if (b.kind === 'capital') return CONFIG.capitalSamShots + Math.floor((b.up || 0) / CONFIG.capitalSamShotsEvery);
+    if (b.kind === 'capital') return CONFIG.capitalSamShots + capitalPerks(b.up || 0).shield;
     return CONFIG.samShots + CONFIG.samShotsPerLevel * (b.level - 1);
   }
 

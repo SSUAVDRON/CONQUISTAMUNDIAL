@@ -13,37 +13,38 @@
       "./src/attack.js": "./src/attack.js?v=43652095f7",
       "./src/banderas.js": "./src/banderas.js?v=079a0c12a9",
       "./src/barcos.js": "./src/barcos.js?v=a6e288c8d4",
-      "./src/bot.js": "./src/bot.js?v=eba7bfa298",
+      "./src/bot.js": "./src/bot.js?v=bcfd5002ca",
       "./src/camera.js": "./src/camera.js?v=0292fc299c",
+      "./src/capital-tier.js": "./src/capital-tier.js?v=8c5a486702",
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=d1eab0f290",
-      "./src/config.js": "./src/config.js?v=a696236a1b",
+      "./src/config.js": "./src/config.js?v=f0e0a94b1e",
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=cd375dc108",
       "./src/cuenta.js": "./src/cuenta.js?v=b7a3d60681",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
       "./src/emparejamiento.js": "./src/emparejamiento.js?v=9aa2bffef5",
       "./src/errores.js": "./src/errores.js?v=1a5ed3f3a9",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
-      "./src/ficha-ui.js": "./src/ficha-ui.js?v=a2a31045bb",
-      "./src/fichas.js": "./src/fichas.js?v=5a822205e6",
+      "./src/ficha-ui.js": "./src/ficha-ui.js?v=1bb89e9b59",
+      "./src/fichas.js": "./src/fichas.js?v=1897af15c9",
       "./src/fin.js": "./src/fin.js?v=72a8fd1796",
       "./src/format.js": "./src/format.js?v=66b8e86f09",
       "./src/fx.js": "./src/fx.js?v=ab7609d597",
-      "./src/game.js": "./src/game.js?v=3c7838293a",
-      "./src/guia.js": "./src/guia.js?v=83d13257a1",
+      "./src/game.js": "./src/game.js?v=88d6a94c30",
+      "./src/guia.js": "./src/guia.js?v=e4dec4afa8",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=0880fda645",
-      "./src/icons.js": "./src/icons.js?v=e11a5f0f58",
+      "./src/home.js": "./src/home.js?v=b6a3c8c959",
+      "./src/icons.js": "./src/icons.js?v=d26e1519c8",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
       "./src/lugares.js": "./src/lugares.js?v=5289949ba5",
-      "./src/main.js": "./src/main.js?v=1f70ac6a05",
+      "./src/main.js": "./src/main.js?v=1fd3e132e5",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
-      "./src/mecanicas.js": "./src/mecanicas.js?v=02a3035f56",
+      "./src/mecanicas.js": "./src/mecanicas.js?v=ade8d29dd1",
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ba770718d0",
       "./src/mqtt.js": "./src/mqtt.js?v=822e5b7211",
@@ -57,7 +58,7 @@
       "./src/presentacion.js": "./src/presentacion.js?v=853ea16b6c",
       "./src/profile.js": "./src/profile.js?v=4551c371f3",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
-      "./src/render.js": "./src/render.js?v=1f70e1d3c6",
+      "./src/render.js": "./src/render.js?v=9317850365",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=ee313e0dbb",
@@ -67,12 +68,12 @@
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=c7841f8591",
-      "./src/ui.js": "./src/ui.js?v=4a12e2282f"
+      "./src/ui.js": "./src/ui.js?v=9ff46284b2"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=01cc386c19">
+  <link rel="stylesheet" href="css/estilo.css?v=2ca89911dc">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -862,13 +863,21 @@
         <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
         <input id="reparto" type="range" min="5" max="100" step="5" value="70">
       </label>
-      <!-- Banco de tropas de la capital (doc-1.7) -->
+      <!-- Capital (doc-1.8): su emblema (abre su ficha de niveles y premios), el banco y el botón para guardar -->
       <div class="pj-banco" id="pj-banco" hidden>
-        <span class="banco-etq" title="Banco de tropas de tu capital: guarda soldados a salvo (no atacan ni frenan tu regeneración) y sácalos cuando los necesites. Con tus tropas al tope, la capital sigue reclutando hacia el banco. Lleno, refuerza las murallas"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z" fill="currentColor"/></svg>Banco</span>
-        <span class="banco-barra" aria-hidden="true"><span id="banco-relleno"></span></span>
-        <span class="banco-cifra"><strong id="banco-tropas">0</strong><span class="max"> / <span id="banco-max">0</span></span></span>
-        <button type="button" id="banco-guardar" class="banco-btn" title="Guardar en la capital la fuerza de ataque elegida (tecla X)">Guardar</button>
-        <button type="button" id="banco-sacar" class="banco-btn" title="Sacar todas las tropas del banco (Mayús + X)">Sacar</button>
+        <button type="button" class="cap-emblema" id="cap-emblema" aria-label="Tu capital: niveles, mejoras y premios">
+          <canvas id="cap-icono" width="112" height="112" aria-hidden="true"></canvas>
+          <span class="cap-nivel" id="cap-nivel">0</span>
+        </button>
+        <div class="cap-info">
+          <div class="cap-fila"><span class="banco-etq">Banco</span><span class="cap-def" id="cap-def" title="Defensa dentro de las murallas: cuantas más tropas guardes, más"></span></div>
+          <div class="banco-cifra"><strong id="banco-tropas">0</strong><span class="max"> / <span id="banco-max">0</span></span></div>
+          <span class="banco-barra" aria-hidden="true"><span id="banco-relleno"></span></span>
+        </div>
+        <div class="cap-botones">
+          <button type="button" id="banco-guardar" class="banco-btn" title="Guarda en la capital el 25 % de tus soldados (tecla X): no atacan, no frenan tu regeneración y hacen más fuertes las murallas"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7.2 8 10.7l3.5-3.5M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Guardar</button>
+          <button type="button" id="banco-sacar" class="banco-btn" title="Saca todas las tropas del banco (Mayús + X)">Sacar todo</button>
+        </div>
       </div>
       </div>
       <div class="pj-col pj-obras">

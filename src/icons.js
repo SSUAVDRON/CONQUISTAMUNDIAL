@@ -1,5 +1,6 @@
 // Iconos de edificios dibujados con primitivas de canvas. Se usan igual en el
 // mapa y en los botones de construcción, así siempre coinciden.
+import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { FLAG_COLS, FLAG_H, FLAG_INDEX, FLAG_SPRITE, FLAG_W } from './banderas.js';
 
 const TAU = Math.PI * 2;
@@ -473,6 +474,166 @@ export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline
     ctx.scale(0.62, 0.62);
   } else ctx.scale(0.7, 0.7);
   paintGlyph(ctx, g, color === '#ffffff' ? '#eef2f7' : color, false);
+  ctx.restore();
+}
+
+/**
+ * Emblema de la capital (doc-1.8): un medallón de metal con el castillo en
+ * relieve. El metal sale del tramo de su nivel (piedra, bronce, plata, oro,
+ * oro real y, a nivel 12, la ciudadela dorada con corona). `ring`: anillo
+ * del color del dueño; `outline`: filo blanco (la tuya).
+ */
+export function drawCapitalEmblem(ctx, cx, cy, size, level, { ring = null, outline = false } = {}) {
+  const T = CAPITAL_TIERS[capitalTier(level)];
+  const [hi, mid, lo] = T.metal;
+  const g = glyphs().capital;
+  ctx.save();
+  ctx.translate(cx, cy);
+  const k = size / 20;
+  ctx.scale(k, k);
+  if (outline) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 11.4, 0, TAU);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  }
+  if (ring) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 10.4, 0, TAU);
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = ring;
+    ctx.stroke();
+  }
+  // Medallón de metal con su bisel
+  const grad = ctx.createRadialGradient(-3, -4, 0.5, 0, 0, 10);
+  grad.addColorStop(0, hi);
+  grad.addColorStop(0.55, mid);
+  grad.addColorStop(1, lo);
+  ctx.beginPath();
+  ctx.arc(0, 0, 9.3, 0, TAU);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = lo;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 7.7, 0, TAU);
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.stroke();
+  // Castillo en relieve: sombra clara debajo y el castillo oscuro encima
+  ctx.save();
+  ctx.translate(0, 0.9);
+  ctx.scale(0.6, 0.6);
+  ctx.translate(0.6, 0.8);
+  paintGlyph(ctx, g, 'rgba(255, 255, 255, 0.35)', false);
+  ctx.translate(-0.6, -0.8);
+  paintGlyph(ctx, g, T.id === 'piedra' ? '#2b2f37' : 'rgba(40, 24, 6, 0.9)', false);
+  ctx.restore();
+  // Ciudadela dorada: corona encima
+  if (T.rays) {
+    ctx.save();
+    ctx.translate(0, -10.6);
+    ctx.beginPath();
+    ctx.moveTo(-4.6, 2);
+    ctx.lineTo(-4.6, -1.8);
+    ctx.lineTo(-2.3, 0);
+    ctx.lineTo(0, -2.8);
+    ctx.lineTo(2.3, 0);
+    ctx.lineTo(4.6, -1.8);
+    ctx.lineTo(4.6, 2);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd75a';
+    ctx.fill();
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = '#8a5a10';
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * Animación del emblema de la capital (cada fotograma): resplandor que late,
+ * un brillo que lo recorre (desde plata), chispas (desde oro) y rayos que
+ * giran (ciudadela dorada). `t`: milisegundos.
+ */
+export function drawCapitalFx(ctx, cx, cy, size, level, t, { back = true } = {}) {
+  const T = CAPITAL_TIERS[capitalTier(level)];
+  const r = size / 2;
+  ctx.save();
+  if (back) {
+    if (T.rays) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((t / 4000) % TAU);
+      ctx.fillStyle = 'rgba(255, 215, 90, 0.22)';
+      for (let i = 0; i < 12; i++) {
+        ctx.rotate(TAU / 12);
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.12, 0);
+        ctx.lineTo(r * 0.12, 0);
+        ctx.lineTo(0, -r * 2.1);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (T.glow > 0) {
+      const k = 0.5 + 0.5 * Math.sin(t / (T.rays ? 380 : 620));
+      const R = r * (1.35 + 0.25 * k);
+      const g = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, R);
+      g.addColorStop(0, `rgba(255, 210, 90, ${T.glow * (0.55 + 0.45 * k)})`);
+      g.addColorStop(1, 'rgba(255, 210, 90, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, TAU);
+      ctx.fill();
+    }
+  } else {
+    if (T.shine) {
+      // Una franja de luz que cruza el medallón cada pocos segundos
+      const period = T.rays ? 1800 : 3200;
+      const f = (t % period) / period;
+      if (f < 0.4) {
+        const x = cx - r + (f / 0.4) * r * 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.93, 0, TAU);
+        ctx.clip();
+        const g = ctx.createLinearGradient(x - r * 0.35, cy - r, x + r * 0.35, cy + r);
+        g.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        g.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+        g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        ctx.restore();
+      }
+    }
+    for (let i = 0; i < T.sparks; i++) {
+      // Chispas de cuatro puntas que aparecen y se apagan alrededor
+      const ph = (t / 900 + i * 0.37) % 1;
+      const a = i * 2.39 + Math.floor(t / 900 + i * 0.37) * 1.7;
+      const d = r * (1.05 + 0.25 * ((i * 0.61) % 1));
+      const s = r * 0.22 * Math.sin(ph * Math.PI);
+      if (s <= 0.2) continue;
+      const x = cx + Math.cos(a) * d;
+      const y = cy + Math.sin(a) * d;
+      ctx.fillStyle = `rgba(255, 245, 200, ${0.9 * Math.sin(ph * Math.PI)})`;
+      ctx.beginPath();
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s * 0.28, y - s * 0.28);
+      ctx.lineTo(x + s, y);
+      ctx.lineTo(x + s * 0.28, y + s * 0.28);
+      ctx.lineTo(x, y + s);
+      ctx.lineTo(x - s * 0.28, y + s * 0.28);
+      ctx.lineTo(x - s, y);
+      ctx.lineTo(x - s * 0.28, y - s * 0.28);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
