@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="1535daf 2026-11-12 20:45 UTC">
+<meta name="trinchera-build" content="3e87b63 2026-11-12 21:35 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4641,6 +4641,69 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 @media (max-width: 720px) { .busqueda-pill { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { .cp-radar::before, .cp-radar i, .bp-punto, .busqueda-pill { animation: none; } }
 
+/* ---------- Banco de tropas de la capital (doc-1.7) ---------- */
+.pj-banco { display: flex; align-items: center; gap: 7px; margin-top: 8px; padding: 4px 4px 4px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 11.5px; line-height: 1; }
+.pj-banco[hidden], #panel-jugador.plegado .pj-banco { display: none; }
+.banco-etq { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); cursor: help; }
+.banco-etq .etq-icono { width: 13px; height: 13px; color: var(--acento); }
+.banco-barra { position: relative; flex: 1 1 auto; min-width: 24px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+#banco-relleno { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, #b8862a, var(--acento)); transition: width 0.3s ease; }
+.banco-cifra { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.banco-cifra strong { color: var(--texto-1); font-weight: 700; }
+.banco-cifra .max { color: var(--texto-suave); }
+.banco-btn { flex: none; height: 24px; padding: 0 9px; border-radius: 7px; border: 1px solid rgba(242, 179, 61, 0.38); background: rgba(242, 179, 61, 0.13); color: var(--acento); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s, transform 0.12s, opacity 0.15s; }
+.banco-btn + .banco-btn { margin-left: -3px; }
+.banco-btn:hover:not(:disabled) { background: rgba(242, 179, 61, 0.24); }
+.banco-btn:active:not(:disabled) { transform: scale(0.95); }
+.banco-btn:disabled { opacity: 0.38; cursor: default; }
+#banco-sacar { border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); color: var(--texto-1); }
+#banco-sacar:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+@media (max-width: 420px) {
+  .pj-banco { gap: 6px; margin-top: 6px; padding-left: 6px; }
+  .banco-btn { height: 26px; padding: 0 8px; }
+}
+
+/* ---------- Barra de edificios (doc-1.7): una sola fila que encoge con la pantalla ---------- */
+/* Ancho de cada botón: lo que deja el hueco entre el panel y los avisos, entre 12 */
+#hud.escritorio #barra-obras { --obra-w: clamp(40px, calc((100vw - 776px) / 12), 62px); padding: 7px 8px 8px; }
+#hud.escritorio #construir.agrupado .grupo-obras { padding: 0 8px; gap: 5px; }
+#hud.escritorio #construir.agrupado .g-items { grid-template-rows: 46px; grid-auto-columns: var(--obra-w); gap: 4px; }
+#hud.escritorio .obra { height: 46px; padding: 2px; }
+#hud.escritorio .obra canvas { width: 24px; height: 24px; }
+#hud.escritorio .obra .b-coste { font-size: 10.5px; letter-spacing: -0.01em; }
+#hud.escritorio .obra .b-num { top: 2px; right: 3px; font-size: 10px; }
+@media (min-width: 1500px) {
+  #hud.escritorio .obra { height: 50px; }
+  #hud.escritorio #construir.agrupado .g-items { grid-template-rows: 50px; }
+  #hud.escritorio .obra canvas { width: 26px; height: 26px; }
+}
+/* Botones estrechos: la tecla sale en el título (al pasar el ratón), no en la esquina */
+@media (max-width: 1439px) {
+  #hud.escritorio .obra .b-tecla { display: none; }
+  #hud.escritorio .obra .b-coste { font-size: 10px; }
+}
+
+/* Pestañas de los grupos (móvil y pantallas estrechas): el nombre entero */
+.g-tab { gap: 5px; padding: 4px 8px 4px 4px; }
+.g-tab .g-icono { width: 24px; height: 24px; }
+.g-tab .g-nombre { font-size: 12px; text-overflow: clip; }
+.g-tab .g-punto { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; box-shadow: 0 0 0 2px rgba(95, 211, 141, 0.18); }
+#hud.escritorio .g-tab .g-punto { position: static; }
+@media (max-width: 359px) {
+  .g-tab { justify-content: center; padding: 4px 6px; }
+  .g-tab .g-icono { display: none; }
+  .g-tab .g-nombre { flex: 0 1 auto; text-align: center; }
+}
+/* Panel en columnas (pantallas medianas y móvil en horizontal): la columna
+   del ataque es estrecha, así que el banco va en dos filas y sin barra */
+@media (min-width: 721px), (max-height: 500px) and (orientation: landscape) {
+  #hud:not(.escritorio) .pj-banco { flex-wrap: wrap; row-gap: 5px; column-gap: 5px; padding: 5px 6px; margin-top: 6px; }
+  #hud:not(.escritorio) .banco-barra { display: none; }
+  #hud:not(.escritorio) .banco-cifra { margin-left: auto; }
+  #hud:not(.escritorio) .banco-btn { flex: 1 1 40%; height: 24px; padding: 0 4px; }
+  #hud:not(.escritorio) .banco-btn + .banco-btn { margin-left: 0; }
+}
+
 </style>
 </head>
 <body>
@@ -5430,6 +5493,14 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
         <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
         <input id="reparto" type="range" min="5" max="100" step="5" value="70">
       </label>
+      <!-- Banco de tropas de la capital (doc-1.7) -->
+      <div class="pj-banco" id="pj-banco" hidden>
+        <span class="banco-etq" title="Banco de tropas de tu capital: guarda soldados a salvo (no atacan ni frenan tu regeneración) y sácalos cuando los necesites. Con tus tropas al tope, la capital sigue reclutando hacia el banco. Lleno, refuerza las murallas"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z" fill="currentColor"/></svg>Banco</span>
+        <span class="banco-barra" aria-hidden="true"><span id="banco-relleno"></span></span>
+        <span class="banco-cifra"><strong id="banco-tropas">0</strong><span class="max"> / <span id="banco-max">0</span></span></span>
+        <button type="button" id="banco-guardar" class="banco-btn" title="Guardar en la capital la fuerza de ataque elegida (tecla X)">Guardar</button>
+        <button type="button" id="banco-sacar" class="banco-btn" title="Sacar todas las tropas del banco (Mayús + X)">Sacar</button>
+      </div>
       </div>
       <div class="pj-col pj-obras">
       <div id="construir" role="group" aria-label="Construir"></div>
@@ -5721,7 +5792,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "1535daf 2026-11-12 20:45 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "3e87b63 2026-11-12 21:35 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -6146,6 +6217,7 @@ class BotBrain {
     if (this._helpAllies(max)) return;
     this._develop();
     this._maybeBuild(counts, coastal);
+    this._useBank(max);
     if (p.active.silo && r.chance(0.2 + this.aggression * 0.25)) this._fireMissile(counts);
 
     // 0. Defensa activa: si le atacan con fuerza, contraataca con lo justo para
@@ -6290,6 +6362,28 @@ class BotBrain {
    * Contraataque: un ataque enemigo grande en curso se anula lanzando otro en
    * sentido contrario con algo más de tropas (si las tiene en casa).
    */
+  /**
+   * Banco de tropas de la capital (doc-1.7): guarda una parte cuando va
+   * sobrada (así regenera más rápido) y lo saca todo cuando está en guerra y
+   * se queda corta.
+   */
+  _useBank(max) {
+    const g = this.game;
+    const p = this.player;
+    const cap = p.capital;
+    if (!cap || g.buildingAt.get(cap.tile) !== cap) return;
+    if (cap.bank >= 1 && p.troops < max * 0.3) {
+      let war = false;
+      for (const id of p.attacks.keys()) if (id) war = true;
+      if (!war) war = g.attacks.some((a) => a.targetId === p.id && a.troops > 0);
+      if (war) {
+        g.bankWithdraw(p, 1);
+        return;
+      }
+    }
+    if (p.troops > max * 0.9) g.bankDeposit(p, 0.25);
+  }
+
   _counterAttack() {
     const g = this.game;
     const p = this.player;
@@ -6400,8 +6494,8 @@ class BotBrain {
     if (threat && p.buildings.fort < 1 + Math.floor(p.tiles / (2500 * AREA))) want = 'fort';
     else if (this.needPort) want = 'port';
     else if (this.saveFor) want = this.saveFor;
-    // Su capital (doc-1.6): industria y población, alternando; y pueblos baratos
-    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = p.capital.ind <= p.capital.pop ? 'capInd' : 'capPop';
+    // Su capital (doc-1.7: una sola mejora); y pueblos baratos
+    else if (p.capital && !p.capital.work && g.rng.chance(0.35)) want = 'capUp';
     else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';
@@ -6411,7 +6505,7 @@ class BotBrain {
     else if (p.tiles > 2000 * AREA && p.buildings.silo < 1 && p.buildings.city >= 2 && g.rng.chance(this.aggression * 0.4)) want = 'silo';
     else if (p.active.port > 0 && p.buildings.warship < p.active.port && p.buildings.city >= 2 && g.rng.chance(0.25 + this.aggression * 0.3)) want = 'warship';
 
-    if (want === 'capInd' || want === 'capPop') {
+    if (want === 'capUp') {
       if (p.gold < g.buildCost(p, want)) return false;
       return g.build(p, want, -1);
     }
@@ -6749,7 +6843,7 @@ class ColonyBrain {
     this.nextThink = 0;
     this.grudges = new Set();
     const t = (k) => colonyTrait(game, player.id, k);
-    this.sendShare = 0.3 + t(0) * 0.15; // 30-45 % de sus tropas
+    this.sendShare = 0.16 + t(0) * 0.1; // 16-26 % de sus tropas (doc-1.7: antes 30-45 %)
     this.thinkScale = 0.75 + t(1) * 0.5; // como una nación (0,85), con variación
     player.pace = 0.8 + t(2) * 0.5; // ritmo propio en tierra libre (0,8-1,3)
     player.growNoise = CONFIG.growRandom * (0.6 + t(3) * 2.4); // de pareja a irregular
@@ -7392,7 +7486,13 @@ const CONFIG = {
   buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   fortRadius: 12 * RES,
-  capitalWallRadius: 7 * RES, // murallas de la capital (casillas; mecánica en MECH.capital)
+  capitalWallRadius: 10 * RES, // murallas de la capital (casillas; mecánica en MECH.capital; doc-1.7: antes 7)
+  capitalOuterRadius: 17 * RES, // afueras: menos defensa que dentro de las murallas, pero más que el campo
+  // Escudo antimisiles propio de la capital (doc-1.7): como una batería, sin construirla
+  capitalSamRange: 26 * RES,
+  capitalSamHit: 0.8,
+  capitalSamShots: 2, // interceptores por salva (+1 cada capitalSamShotsEvery niveles de la capital)
+  capitalSamShotsEvery: 3,
   capitalClearance: 3, // casillas libres alrededor de la capital (se construye junto a ella)
   fortDefenseMult: 3, // efecto de defensa (× tiempo y bajas del atacante) dentro del radio del puesto
   // Niveles y obras (el precio de un nivel es el del siguiente edificio de su tipo: mecanicas.js)
@@ -7400,12 +7500,14 @@ const CONFIG = {
   upgradeTimeMult: 0.8, // subir de nivel tarda el 80 % de la obra nueva
   // Efecto de cada nivel por encima del 1: ciudad +250k de techo de tropas,
   // fábrica más alcance de vías, puesto defensivo +2 de radio y +0,4 de
-  // defensa, silo −15 % de recarga, antimisiles +3 de radio y +7 % de acierto
+  // defensa, silo −15 % de recarga, antimisiles +4 de radio, +3 % de acierto
+  // y un interceptor más por salva
   fortRadiusPerLevel: 2 * RES,
   fortMultPerLevel: 0.4,
   siloReloadPerLevel: 0.15,
-  samRangePerLevel: 3 * RES,
-  samHitPerLevel: 0.07,
+  samRangePerLevel: 4 * RES,
+  samHitPerLevel: 0.03,
+  samShotsPerLevel: 1,
 
   // Buques de guerra
   warshipHp: 100,
@@ -7438,10 +7540,15 @@ const CONFIG = {
   missileRange: 220 * RES, // distancia máxima desde el silo
   siloReload: 150, // ticks entre lanzamientos de un mismo silo
   missileTroopLoss: 1.2, // × densidad del defensor por casilla arrasada
-  samRange: 22 * RES, // radio de intercepción de una batería
-  samReload: 200, // ticks (20 s) que tarda una batería en recargar tras disparar
-  samReloadPerLevel: 0.12, // cada nivel recarga un 12 % más rápido
-  samHitChance: 0.65, // probabilidad de derribar el misil al disparar
+  // Antimisiles (doc-1.7: mucho más fuertes; antes 22 de radio, un disparo,
+  // 65 % de acierto y 20 s de recarga)
+  samRange: 30 * RES, // radio de intercepción de una batería
+  samShots: 2, // interceptores por salva: dispara uno, y si falla o llega otro misil, el siguiente
+  samGap: 3, // ticks entre dos disparos de la misma salva
+  samReload: 70, // ticks (7 s) que tarda en recargar la salva entera
+  samReloadPerLevel: 0.1, // cada nivel recarga un 10 % más rápido
+  samHitChance: 0.85, // probabilidad de derribar el misil con cada disparo
+  samHitMax: 0.98,
 
   // Diplomacia
   maxAllies: 3,
@@ -7552,17 +7659,17 @@ const BUILDINGS = {
   village: { name: 'Pueblo', fem: false, base: 40000, build: 30, key: 'KeyB', desc: 'Pequeño y barato: +300 de oro/s y +6.000 de techo de tropas por nivel' },
   // La capital: una por nación, nace con ella (no se construye). Sus mejoras
   // se compran desde la barra y se aplican al momento, sin elegir sitio
-  capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada: defensa ×4 alrededor y las bombas no destruyen lo que hay dentro' },
-  capInd: { name: 'Industria de la capital', short: 'Industria', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'ind', desc: '+25 % de oro pasivo (territorio, base y pueblos) por nivel' },
-  capPop: { name: 'Población de la capital', short: 'Población', fem: true, base: 150000, build: 0, key: 'KeyX', unit: 'capital', track: 'pop', desc: '+10 % de techo de tropas y +8 % de crecimiento por nivel' },
+  capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada (defensa ×6 dentro y ×2,5 en las afueras), con escudo antimisiles y banco de tropas; las bombas no destruyen lo que hay dentro' },
+  // Una sola mejora (doc-1.7): más oro y más sitio en el banco de tropas
+  capUp: { name: 'Mejorar la capital', short: 'Capital', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'up', desc: '+25 % de oro pasivo, +15 % de capacidad del banco de tropas y murallas más fuertes por nivel' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
-  fort: { name: 'Puesto defensivo', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
+  fort: { name: 'Puesto defensivo', short: 'Puesto', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },
   silo: { name: 'Silo', fem: false, base: 1000000, build: 90, key: 'KeyG', fixed: true, desc: 'Permite lanzar bombas' },
-  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', desc: 'Derriba bombas enemigas cercanas; recarga 20 s tras cada disparo' },
+  sam: { name: 'Antimisiles', fem: false, base: 1500000, build: 160, key: 'KeyH', desc: 'Derriba bombas enemigas cercanas: salvas de 2 interceptores (+1 por nivel) con un 85 % de acierto cada uno; recarga en 7 s' },
   // No son edificios: el buque se bota desde un puerto y las bombas salen de un silo
   warship: { name: 'Buque', fem: false, base: 250000, build: 0, key: 'KeyT', unit: 'ship', desc: 'Clic en el mar: patrulla esa zona para siempre; hunde buques y transportes y captura mercantes' },
-  missile: { name: 'Bomba atómica', fem: true, base: 750000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
+  missile: { name: 'Bomba atómica', short: 'Atómica', fem: true, base: 750000, build: 0, key: 'KeyM', unit: 'missile', fixed: true, desc: 'Arrasa una zona enemiga' },
   hbomb: { name: 'Bomba H', fem: true, base: 5000000, build: 0, key: 'KeyJ', unit: 'missile', fixed: true, desc: 'Bomba de hidrógeno: arrasa una zona mucho mayor' },
   mirv: { name: 'MIRV', fem: false, base: 25000000, build: 0, key: 'KeyK', unit: 'missile', fixed: true, desc: 'Se divide en muchas cabezas que caen por todo el país enemigo' },
 };
@@ -7575,7 +7682,7 @@ const BUILDING_KINDS = Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].unique
  * `icon`: el edificio que la representa en su botón.
  */
 const BUILD_GROUPS = [
-  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['capInd', 'capPop', 'village', 'city', 'port', 'factory'] },
+  { id: 'economia', name: 'Economía', icon: 'city', kinds: ['capUp', 'village', 'city', 'port', 'factory'] },
   { id: 'defensa', name: 'Defensa', icon: 'fort', kinds: ['fort', 'sam', 'warship'] },
   { id: 'ataque', name: 'Ataque', icon: 'missile', kinds: ['silo', 'missile', 'hbomb', 'mirv'] },
 ];
@@ -9694,7 +9801,7 @@ const { assignNationColors, botColor } = __require('colors');
 const { POI, POI_TYPES, placePoints } = __require('estrategia');
 const { LUGARES, LUGAR_CFG, pickLugar } = __require('lugares');
 const { SPECS, TECHS, addMods, emptyMods, techAvailable } = __require('tecnologias');
-const { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
+const { bigEmpireBonus, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } = __require('mecanicas');
 
 /** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
 const START_OFFSETS = startOffsets();
@@ -10189,13 +10296,9 @@ class Game {
     // Lugares de interés: mejoras para siempre y bonos que aún duran (doc-1.6)
     if (p.permMods) addMods(m, p.permMods);
     for (const b of p.buffs) if (b.until > this.ticks) addMods(m, LUGARES[b.kind].buff);
-    // Mejoras de la capital (doc-1.6)
+    // Mejoras de la capital (doc-1.7: una sola, que sube el oro; el banco va aparte)
     const cap = p.capital;
-    if (cap && this.buildingAt.get(cap.tile) === cap) {
-      m.gold += MECH.capital.indGold * cap.ind;
-      m.cap += MECH.capital.popCap * cap.pop;
-      m.growth += MECH.capital.popGrowth * cap.pop;
-    }
+    if (cap && this.buildingAt.get(cap.tile) === cap) m.gold += MECH.capital.gold * cap.up;
     p.passes = passes;
     p.mods = m;
   }
@@ -10259,12 +10362,13 @@ class Game {
       const p = this.players[i];
       if (!p.alive || p.weak || p.spawnTile < 0 || p.capital) continue;
       if (this.buildingAt.has(p.spawnTile)) continue;
-      this._newCapital(p, p.spawnTile, 0, 0);
+      this._newCapital(p, p.spawnTile, 0);
     }
   }
 
-  _newCapital(p, tile, ind, pop) {
-    const b = { id: this._nextBuildingId++, kind: 'capital', tile, owner: p.id, level: 1, target: 0, ind, pop, work: null };
+  /** `up`: nivel de la mejora (0-10); `bank`: tropas guardadas; `ammo`/`readyAt`: su escudo antimisiles. */
+  _newCapital(p, tile, up) {
+    const b = { id: this._nextBuildingId++, kind: 'capital', tile, owner: p.id, level: 1, target: 0, up, bank: 0, work: null, ammo: null, readyAt: 0 };
     this.buildings.push(b);
     this.buildingAt.set(tile, b);
     this.capitals.push(b);
@@ -10274,61 +10378,126 @@ class Game {
     return b;
   }
 
-  /** Defensa de las murallas de la capital de `p` en la casilla `t` (1 = fuera). */
-  wallMultiplier(p, t) {
+  /** Zona de la capital de `p` en la casilla `t`: 2 = dentro de las murallas, 1 = afueras, 0 = fuera. */
+  capitalZone(p, t) {
     const cap = p && p.capital;
-    if (!cap) return 1;
+    if (!cap) return 0;
     const map = this.map;
     const dx = map.x(cap.tile) - map.x(t);
     const dy = map.y(cap.tile) - map.y(t);
+    const d2 = dx * dx + dy * dy;
     const R = CONFIG.capitalWallRadius;
-    if (dx * dx + dy * dy > R * R) return 1;
-    return MECH.capital.wallMult + MECH.capital.wallMultPerLevel * (cap.ind + cap.pop);
+    if (d2 <= R * R) return 2;
+    const O = CONFIG.capitalOuterRadius;
+    return d2 <= O * O ? 1 : 0;
   }
 
-  /** Precio del siguiente nivel de una mejora de la capital ('ind' o 'pop'). */
-  capitalCost(p, track) {
-    const lvl = p.capital ? p.capital[track] || 0 : 0;
+  /**
+   * Defensa de la capital de `p` en la casilla `t` (1 = fuera): murallas
+   * ×6 (+0,4 por nivel, y hasta ×1,5 con el banco lleno) y afueras ×2,5
+   * (+0,1 por nivel) (doc-1.7).
+   */
+  wallMultiplier(p, t) {
+    const zone = this.capitalZone(p, t);
+    if (!zone) return 1;
+    const C = MECH.capital;
+    const cap = p.capital;
+    if (zone === 1) return C.outerMult + C.outerMultPerLevel * cap.up;
+    const full = Math.min(1, cap.bank / Math.max(1, this.bankCap(p)));
+    return (C.wallMult + C.wallMultPerLevel * cap.up) * (1 + C.wallBankBonus * full);
+  }
+
+  /** Precio del siguiente nivel de la capital. */
+  capitalCost(p) {
+    const lvl = p.capital ? p.capital.up || 0 : 0;
     return Math.round(capitalPrice(lvl) * this.rules.priceMult);
   }
 
-  _canUpgradeCapital(p, track) {
+  _canUpgradeCapital(p) {
     const b = p.capital;
     if (!b || this.buildingAt.get(b.tile) !== b) return { ok: false, reason: 'No tienes capital' };
     if (b.work) return { ok: false, reason: 'Tu capital ya tiene una obra en marcha' };
-    if ((b[track] || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Esa mejora de la capital ya está al máximo' };
-    const cost = this.capitalCost(p, track);
+    if ((b.up || 0) >= MECH.capital.maxLevel) return { ok: false, reason: 'Tu capital ya está al máximo' };
+    const cost = this.capitalCost(p);
     if (p.gold < cost) return { ok: false, reason: `Te falta oro: la mejora cuesta ${formatNumber(cost)}` };
     return { ok: true, reason: '', cost, capital: b };
   }
 
-  _startCapitalWork(p, track) {
+  _startCapitalWork(p) {
     const b = p.capital;
-    const cost = this.capitalCost(p, track);
+    const cost = this.capitalCost(p);
     p.gold -= cost;
     p.spent.buildings += cost;
     p.stats.built++;
     const C = MECH.capital;
-    const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b[track] || 0)) * (1 - p.mods.buildSpeed)));
-    b.work = { track, end: this.ticks + time, time };
-    if (p === this.human) this._emit(`🏰 Obras en la capital: ${track === 'ind' ? 'industria' : 'población'} a nivel ${(b[track] || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
+    const time = Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * (b.up || 0)) * (1 - p.mods.buildSpeed)));
+    b.work = { track: 'up', end: this.ticks + time, time };
+    if (p === this.human) this._emit(`🏰 Obras en la capital: nivel ${(b.up || 0) + 1} (${Math.round(time / 10)} s)`, 'info');
     return true;
   }
 
   _finishCapitalWork(b) {
-    const track = b.work.track;
     b.work = null;
-    b[track] = (b[track] || 0) + 1;
+    b.up = (b.up || 0) + 1;
     const p = this.players[b.owner];
     if (!p) return;
     this._refreshMods(p);
     p.stats.finished = (p.stats.finished || 0) + 1;
-    p.stats.lastFinished = track === 'ind' ? 'factory' : 'city';
+    p.stats.lastFinished = 'city';
     if (p === this.human) {
       const C = MECH.capital;
-      const text = track === 'ind' ? `+${Math.round(C.indGold * b.ind * 100)} % de oro pasivo` : `+${Math.round(C.popCap * b.pop * 100)} % de techo de tropas y +${Math.round(C.popGrowth * b.pop * 100)} % de crecimiento`;
-      this._emit(`🏰 Capital: ${track === 'ind' ? 'industria' : 'población'} a nivel ${b[track]} (${text})`, 'good');
+      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco de tropas para ${fmtTroops(this.bankCap(p))}`, 'good');
     }
+  }
+
+  // ------------------------------------------------- banco de tropas (doc-1.7)
+
+  /** Tropas que caben en el banco de la capital de `p`. */
+  bankCap(p) {
+    const cap = p && p.capital;
+    if (!cap) return 0;
+    const C = MECH.capital;
+    return p.maxTroops() * (C.bankBase + C.bankPerLevel * (cap.up || 0));
+  }
+
+  /** Guarda en la capital la parte `ratio` de sus soldados (lo que quepa). Devuelve cuántos. */
+  bankDeposit(p, ratio = 1) {
+    const cap = p.capital;
+    if (!cap || this.buildingAt.get(cap.tile) !== cap) return 0;
+    const room = Math.max(0, this.bankCap(p) - cap.bank);
+    const amount = Math.min(room, Math.floor(p.troops * clamp(ratio, 0, 1)));
+    if (amount < 1) {
+      if (room < 1) this._notify(p, 'El banco de la capital está lleno: mejórala para que quepan más', 'warn');
+      return 0;
+    }
+    p.troops -= amount;
+    cap.bank += amount;
+    return amount;
+  }
+
+  /** Saca del banco la parte `ratio` de lo guardado (vuelven a sus soldados). Devuelve cuántos. */
+  bankWithdraw(p, ratio = 1) {
+    const cap = p.capital;
+    if (!cap) return 0;
+    const amount = Math.floor(cap.bank * clamp(ratio, 0, 1));
+    if (amount < 1) return 0;
+    cap.bank -= amount;
+    p.troops += amount;
+    return amount;
+  }
+
+  /** Con sus tropas al tope, la capital sigue reclutando hacia el banco (a la mitad del ritmo máximo). */
+  _bankRecruit(p) {
+    const cap = p.capital;
+    if (!cap || cap.owner !== p.id) return;
+    const C = MECH.capital;
+    const max = p.maxTroops();
+    const P = p.economy === 'workers' ? p.troops + p.workers : p.troops;
+    if (P < max * C.bankFull) return;
+    const room = this.bankCap(p) - cap.bank;
+    if (room <= 0) return;
+    const peak = regenPerTick(max * 0.42, max) * p.paceRegen * p.regenMult * p.troopMult * Math.max(0.1, 1 + p.mods.growth);
+    cap.bank += Math.min(room, peak * C.bankRecruit);
   }
 
   /** Obra en marcha de la capital, de 0 a 1 (o null). */
@@ -10352,7 +10521,7 @@ class Game {
     if (victim) {
       this._recount(victim);
       this._refreshMods(victim);
-      this._capitalMoves.push({ id: victim.id, from: b.tile, ind: b.ind, pop: b.pop });
+      this._capitalMoves.push({ id: victim.id, from: b.tile, up: b.up || 0 });
     }
     const map = this.map;
     this.effects.push({ kind: 'capitalFall', x: map.x(b.tile) + 0.5, y: map.y(b.tile) + 0.5, owner: newId, tick: this.ticks });
@@ -10362,9 +10531,14 @@ class Game {
     const loot = share + Math.round(MECH.capital.lootBase * winner.goldMult);
     winner.gold += loot;
     winner.income.loot += loot;
+    // Y la mitad de las tropas de su banco (el resto se pierde)
+    const troops = Math.floor((b.bank || 0) * MECH.capital.bankLoot);
+    winner.troops += troops;
+    b.bank = 0;
     winner.stats.capitals = (winner.stats.capitals || 0) + 1;
-    if (winner === this.human) this._emit(`🏰 Has tomado la capital de ${victim.name}: +${formatNumber(loot)} de oro`, 'good', { sfx: 'conquerColony' });
-    else if (victim === this.human) this._emit(`🏰 ${winner.name} ha tomado tu capital y se lleva ${formatNumber(share)} de oro: la corte se traslada`, 'danger', { sfx: 'fall' });
+    const extra = troops >= 1 ? ` y ${fmtTroops(troops)} tropas de su banco` : '';
+    if (winner === this.human) this._emit(`🏰 Has tomado la capital de ${victim.name}: +${formatNumber(loot)} de oro${extra}`, 'good', { sfx: 'conquerColony' });
+    else if (victim === this.human) this._emit(`🏰 ${winner.name} ha tomado tu capital y se lleva ${formatNumber(share)} de oro${extra}: la corte se traslada`, 'danger', { sfx: 'fall' });
   }
 
   /** Refunda las capitales caídas (al final del turno, con la mitad de sus mejoras). */
@@ -10383,8 +10557,8 @@ class Game {
         this.buildings = this.buildings.filter((x) => x !== old);
         this.buildingAt.delete(t);
       }
-      const b = this._newCapital(p, t, Math.floor(mv.ind * C.keepShare), Math.floor(mv.pop * C.keepShare));
-      if (p === this.human) this._emit(`🏰 Nueva capital: industria ${b.ind} y población ${b.pop} (la mitad de las mejoras)`, 'info', { tile: t });
+      const b = this._newCapital(p, t, Math.floor(mv.up * C.keepShare));
+      if (p === this.human) this._emit(`🏰 Nueva capital a nivel ${b.up} (la mitad de las mejoras) y con el banco vacío`, 'info', { tile: t });
     }
   }
 
@@ -10821,6 +10995,11 @@ class Game {
         }
       } else if (it.type === 'share') {
         this.setSoldierShare(p, it.share);
+      } else if (it.type === 'bank') {
+        // Banco de tropas de la capital (doc-1.7): guardar o sacar
+        if (this.phase !== 'playing') continue;
+        if (it.op === 'out') this.bankWithdraw(p, it.ratio ?? 1);
+        else this.bankDeposit(p, it.ratio ?? 1);
       } else if (it.type === 'build') {
         if (this.phase !== 'playing') continue;
         const tile = this.snapBuildTile(p, it.kind, it.tile);
@@ -11341,6 +11520,18 @@ class Game {
   }
 
   /** Radio de intercepción de unos antimisiles de nivel `lvl`. */
+  /** Interceptores por salva de una batería (o del escudo de una capital). */
+  samShots(b) {
+    if (b.kind === 'capital') return CONFIG.capitalSamShots + Math.floor((b.up || 0) / CONFIG.capitalSamShotsEvery);
+    return CONFIG.samShots + CONFIG.samShotsPerLevel * (b.level - 1);
+  }
+
+  /** Probabilidad de derribar un misil con cada disparo. */
+  samHitChance(b, owner) {
+    const base = b.kind === 'capital' ? CONFIG.capitalSamHit : CONFIG.samHitChance + CONFIG.samHitPerLevel * (b.level - 1);
+    return Math.min(CONFIG.samHitMax, base + (owner?.mods.samHit || 0));
+  }
+
   samRange(lvl = 1) {
     return CONFIG.samRange + CONFIG.samRangePerLevel * (lvl - 1);
   }
@@ -11671,7 +11862,7 @@ class Game {
    */
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
-    if (def && def.unit === 'capital') return this.capitalCost(p, def.track);
+    if (def && def.unit === 'capital') return this.capitalCost(p);
     const n = p.owned;
     n.warship = 0;
     for (const ws of this.warships) if (ws.owner === p.id && !ws.dead) n.warship++;
@@ -11712,7 +11903,7 @@ class Game {
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
     if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
     if (def.unique) return { ok: false, reason: `${def.name}: no se construye` };
-    if (def.unit === 'capital') return this._canUpgradeCapital(p, def.track);
+    if (def.unit === 'capital') return this._canUpgradeCapital(p);
     if (def.unit === 'ship') return this._canBuildWarship(p, tile);
     if (def.unit === 'missile') return this._canLaunchMissile(p, tile, kind);
     if (tile < 0 || tile >= map.size || this.owner[tile] !== p.id) {
@@ -11771,7 +11962,7 @@ class Game {
     const check = this.canBuild(p, kind, tile);
     if (!check.ok) return false;
     const def = BUILDINGS[kind];
-    if (def.unit === 'capital') return this._startCapitalWork(p, def.track);
+    if (def.unit === 'capital') return this._startCapitalWork(p);
     if (check.upgrade) return this._startUpgrade(p, check.upgrade);
     const price = this.buildCost(p, kind);
     p.gold -= price;
@@ -12247,23 +12438,31 @@ class Game {
     for (const m of this.missiles) {
       m.progress = Math.min(1, m.progress + CONFIG.missileSpeed / m.dist);
       const [mx, my] = this.missilePos(m);
-      // Baterías antimisiles enemigas del lanzador que estén listas y a tiro
+      // Baterías antimisiles (y escudos de las capitales) enemigas del
+      // lanzador que estén listas y a tiro (doc-1.7: salvas de varios
+      // interceptores; si uno falla, el siguiente vuelve a intentarlo)
       for (const b of this.buildings) {
-        if (b.kind !== 'sam' || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
+        const shield = b.kind === 'capital';
+        if ((b.kind !== 'sam' && !shield) || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
         const dx = (b.tile % W) + 0.5 - mx;
         const dy = Math.floor(b.tile / W) + 0.5 - my;
-        const range = this.samRange(b.level);
+        const range = shield ? CONFIG.capitalSamRange : this.samRange(b.level);
         if (dx * dx + dy * dy > range * range) continue;
-        // La batería dispara (y recarga) acierte o no
-        b.readyAt = this.ticks + Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (b.level - 1)));
+        const shooter = this.players[b.owner];
+        const shots = this.samShots(b);
+        if (!(b.ammo > 0)) b.ammo = shots; // salva recargada
+        b.ammo--;
+        // Entre dos disparos de la salva, una pausa corta; al vaciarla, la recarga entera
+        const reload = Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (Math.min(b.level, CONFIG.maxLevel) - 1)));
+        b.readyAt = this.ticks + (b.ammo > 0 ? CONFIG.samGap : Math.max(CONFIG.samGap, reload));
         b.reloadFrom = this.ticks;
-        const hit = this.rng.float() < Math.min(0.95, CONFIG.samHitChance + CONFIG.samHitPerLevel * (b.level - 1) + (this.players[b.owner]?.mods.samHit || 0));
+        const hit = this.rng.float() < this.samHitChance(b, shooter);
         this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
         if (!hit) continue;
         m.dead = true;
-        const shooter = this.players[b.owner];
         const launcher = this.players[m.owner];
-        if (shooter === this.human) this._emit(`🛡 Tu antimisiles ha derribado un misil de ${launcher.name}`, 'good');
+        const what = shield ? 'el escudo de tu capital' : 'tu antimisiles';
+        if (shooter === this.human) this._emit(`🛡 ${what[0].toUpperCase()}${what.slice(1)} ha derribado un misil de ${launcher.name}`, 'good');
         else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
         else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
         break;
@@ -12298,7 +12497,7 @@ class Game {
         lost.set(o, (lost.get(o) || 0) + 1);
         // Dentro de las murallas de su capital: mueren tropas, pero la casilla
         // y lo que hay en ella aguantan (doc-1.6)
-        if (this.wallMultiplier(this.players[o], t) > 1) {
+        if (this.capitalZone(this.players[o], t) === 2) {
           walled++;
           continue;
         }
@@ -13086,6 +13285,7 @@ class Game {
       p.income.workers += gb.workers;
       p.income.bonus += gb.bonus;
       this._growPopulation(p);
+      if (p.capital) this._bankRecruit(p);
       if (p.research && this.ticks >= p.research.end) this._finishResearch(p);
       if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
     }
@@ -13788,7 +13988,7 @@ const TABS = [
       ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z industria y X población de tu capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
+      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
       ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
     ],
   },
@@ -13797,7 +13997,8 @@ const TABS = [
     name: 'Economía',
     items: [
       ['moneda', 'Oro', 'Ganas 100 de oro por turno pase lo que pase y, además, tu territorio produce: cuanto más grande, más (medio mundo da unas diez veces el oro base). Suman también pueblos, pesqueros, mercantes, trenes, regalos de aliados y el botín de quien elimines.'],
-      ['corona', 'Tu capital', 'Naces con tu capital amurallada: cerca de ella conquistarte cuesta cuatro veces más y las bombas no arrasan lo que hay dentro. Mejórala desde la barra, sin elegir sitio: Industria (Z) +25 % de oro por nivel y Población (X) +10 % de techo de tropas y +8 % de crecimiento. Si cae, quien la toma se lleva botín y la refundas con la mitad de las mejoras.'],
+      ['corona', 'Tu capital', 'Naces con tu capital amurallada: dentro de las murallas conquistarte cuesta seis veces más, en las afueras dos veces y media, las bombas no arrasan lo que hay dentro y su escudo derriba los misiles que se acercan. Mejórala desde la barra (Z), sin elegir sitio: cada nivel da +25 % de oro y más sitio en su banco de tropas.'],
+      ['corona', 'Banco de tropas', 'Guarda soldados en tu capital (Guardar o X: la fuerza de ataque elegida) y sácalos cuando los necesites (Sacar o Mayús + X). Lo guardado no ataca ni frena tu regeneración; con tus tropas al tope, la capital sigue reclutando hacia el banco, y lleno refuerza las murallas. Si cae, quien la toma se lleva botín y la mitad del banco, y la refundas con la mitad de las mejoras.'],
       ['tropas', 'Trabajadores', 'Con la regla «Economía con trabajadores», el deslizador «Reparto» divide tu población entre soldados (atacan y defienden) y trabajadores (dan oro).'],
       ['ciudad', 'Edificios', 'Pueblos (B): baratos, +300 de oro/s y +6 000 de techo por nivel. Ciudades: +25 000 de techo de tropas por nivel. Puertos: pesqueros que vuelven con oro (tantos como su nivel) y mercantes a puertos de otros países que os pagan a los dos. Fábricas: vías y trenes que dan oro en cada estación. Las obras tardan unos segundos.'],
       ['bandera', 'Lugares de interés', 'Los discos dorados del mapa (tesoros, mercenarios, graneros, forjas, ruinas y fortalezas) dan un premio a quien los conquiste: oro o tropas al momento, un bono de unos segundos o una pequeña mejora para siempre. Luego aparece otro en otro sitio.'],
@@ -13815,7 +14016,7 @@ const TABS = [
       ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya enseguida (en menos de medio segundo) y sin bajas. Un río la cierra igual que tu frontera.'],
       ['mapa', 'Ríos', 'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar se navegan: puedes poner puertos en sus orillas y los barcos pasan por ellos, también para desembarcar en la otra orilla. Pasa el ratón por encima para ver si es navegable.'],
       ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
-      ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban y recargan 20 s.'],
+      ['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban: disparan salvas de 2 interceptores (+1 por nivel) con un 85 % de acierto cada uno y recargan en 7 s. Tu capital tiene su propio escudo.'],
       ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas; cerca de tu capital, el cuádruple. Las fronteras donde se lucha se ponen rojas (más intenso en tus combates) y, si el borde de la pantalla se pone rojo, te atacan.'],
     ],
   },
@@ -14033,6 +14234,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
   { tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
   { tag: 'Mapa', title: 'Frentes en rojo', text: 'Las fronteras donde se lucha se ponen rojas, los barcos marcan dónde van a desembarcar y el tooltip es más pequeño y claro.', art: 2 },
   { tag: 'Mapa', title: 'Colores y banderas', text: 'Cada país se distingue de sus vecinos, los barcos llevan su bandera y los territorios sueltos de una nación, también.', art: 2 },
@@ -17528,18 +17730,15 @@ function glyphs() {
   // Corona pequeña (las mejoras de la capital)
   const crown = new Path2D();
   polyTo(crown, [-5, -5.4, -5, -9.6, -2.6, -7.4, 0, -10.4, 2.6, -7.4, 5, -9.6, 5, -5.4]);
-  const capInd = new Path2D();
-  capInd.addPath(factory, new DOMMatrix().translate(0, 2.4).scale(0.8));
-  capInd.addPath(crown);
-  const capPop = new Path2D();
-  capPop.addPath(city, new DOMMatrix().translate(0, 2.4).scale(0.8));
-  capPop.addPath(crown);
+  // Mejorar la capital (doc-1.7): el castillo con una corona encima
+  const capUp = new Path2D();
+  capUp.addPath(capital, new DOMMatrix().translate(0, 2.2).scale(0.82));
+  capUp.addPath(crown, new DOMMatrix().translate(0, -0.6));
 
   GLYPHS = {
     village: { fill: village, rule: 'evenodd' },
     capital: { fill: capital, rule: 'evenodd', stroke: capFlag, lw: 1.4 },
-    capInd: { fill: capInd, rule: 'evenodd' },
-    capPop: { fill: capPop, rule: 'evenodd' },
+    capUp: { fill: capUp, rule: 'evenodd' },
     city: { fill: city, rule: 'evenodd' },
     factory: { fill: factory, rule: 'evenodd' },
     port: { fill: port, rule: 'nonzero', stroke: anchor, lw: 2.2 },
@@ -20266,6 +20465,8 @@ function toggleMute() {
 document.getElementById('btn-sonido')?.addEventListener('click', toggleMute);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyN' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) toggleMute();
+  // X: guardar tropas en la capital; Mayús+X: sacarlas
+  if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey && !e.repeat && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) bankTroops(e.shiftKey ? 'out' : 'in');
 });
 
 function applySettings() {
@@ -21379,7 +21580,7 @@ function coopGroups(n, coop) {
 
 /** Con roles en el cooperativo: qué decide cada uno (para evitar compras o ataques por accidente). */
 const ROLE_TYPES = {
-  militar: new Set(['action', 'cancelAttack']),
+  militar: new Set(['action', 'cancelAttack', 'bank']),
   economia: new Set(['share', 'research', 'spec', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']),
 };
 const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'hbomb', 'mirv', 'silo', 'sam']);
@@ -21406,6 +21607,13 @@ function humanIntent(intent) {
     return;
   }
   game.queueIntent({ ...intent, playerId: human.id });
+}
+
+/** Banco de tropas de la capital (doc-1.7): 'in' guarda la fuerza de ataque elegida; 'out' lo saca todo. */
+function bankTroops(op) {
+  const { game, human } = state;
+  if (state.demo || !human || !human.alive || game.phase !== 'playing' || !human.capital) return;
+  humanIntent({ type: 'bank', op, ratio: op === 'in' ? state.ratio : 1 });
 }
 
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
@@ -21499,6 +21707,8 @@ const input = new Input(canvas, camera, {
 ui.on({
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
+  // Banco de tropas de la capital: guarda la fuerza de ataque elegida o lo saca todo
+  onBank: bankTroops,
   // Desarrollo y diplomacia ampliada
   onSpec: (spec) => humanIntent({ type: 'spec', spec }),
   onResearch: (tech) => humanIntent({ type: 'research', tech }),
@@ -22871,7 +23081,7 @@ __define('mecanicas', function () {
  * industria y población, pueblos, pesqueros, comercio más frecuente y
  * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-const MECH_VERSION = 'doc-1.6';
+const MECH_VERSION = 'doc-1.7';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -22884,7 +23094,7 @@ const MECH_VERSION = 'doc-1.6';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -22894,8 +23104,8 @@ const MECH_VERSION = 'doc-1.6';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 const PROFILES = {
-  clasico: { id: 'clasico-7', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-6', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-8', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-7', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -22954,9 +23164,11 @@ const MECH = {
   // neutralTimeMin, con rendimiento decreciente (raíz) y hasta este suelo
   neutralTimeFloor: 1.25,
   // PROPUESTA (doc-1.2): las colonias ocupan tierra libre rápido y barato
-  // (doc-1.4: bajas ×0,38, antes ×0,5)
-  colonyNeutralLoss: 0.38,
-  colonyNeutralSpeed: 1,
+  // (doc-1.4: bajas ×0,38, antes ×0,5; doc-1.7: ×0,2 y mandan menos cada vez,
+  // para que no se queden sin tropas al expandirse; ritmo ×0,85 para que no
+  // crezcan más que las naciones)
+  colonyNeutralLoss: 0.2,
+  colonyNeutralSpeed: 0.85,
   // PROPUESTA (doc-1.4): su velocidad en tierra libre no depende de cuánto
   // mandan: como una nación con este envío (y su ritmo propio, ver bot.js)
   colonyRefTroops: 6600,
@@ -23035,25 +23247,37 @@ const MECH = {
   // 2000×1000): 1.000 casillas → +44; 20.000 → +232; medio mundo (~300.000)
   // → +1.030 por turno (10 veces el oro base). Las colonias, la mitad
   tax: { k: 1, exp: 0.55, colonyShare: 0.5 },
-  // Capital (doc-1.6): cada nación nace con la suya, amurallada. Sus mejoras
-  // (sin ocupar más mapa): Industria +25 % del oro pasivo por nivel y
-  // Población +10 % de techo de tropas y +8 % de crecimiento por nivel. Precio
-  // de cada nivel: 150k × 1,75^nivel. Murallas: defensa ×4 (+0,15 por nivel
-  // de mejora) hasta wallRadius casillas del documento. Si cae, el
-  // conquistador se lleva botín y la capital se traslada con la mitad de sus
-  // niveles. Las bombas no destruyen lo que hay dentro de las murallas
+  // Capital (doc-1.6, rehecha en doc-1.7): cada nación nace con la suya,
+  // amurallada. Una sola mejora (sin ocupar más mapa), de nivel 0 a 10: +25 %
+  // del oro pasivo, +15 % de capacidad del banco de tropas y murallas más
+  // fuertes por nivel. Precio de cada nivel: 150k × 1,75^nivel.
+  // Murallas (CONFIG.capitalWallRadius): defensa ×6 (+0,4 por nivel, y hasta
+  // ×1,5 más con el banco lleno); afueras (CONFIG.capitalOuterRadius): ×2,5
+  // (+0,1 por nivel). Las bombas no destruyen lo que hay dentro de las murallas.
+  // Banco de tropas: guardas soldados en la capital (no atacan, no cuentan
+  // para el techo ni frenan la regeneración) y los sacas cuando quieras. Cabe
+  // el 30 % del techo de tropas (+15 % por nivel). Si tus tropas están al
+  // tope, la capital sigue reclutando hacia el banco a la mitad del ritmo
+  // máximo de regeneración. Si cae, el conquistador se lleva botín (oro y la
+  // mitad del banco en tropas) y la capital se traslada con la mitad de sus
+  // niveles y el banco vacío
   capital: {
     maxLevel: 10,
-    indGold: 0.25,
-    popCap: 0.1,
-    popGrowth: 0.08,
+    gold: 0.25,
     priceBase: 150000,
     priceGrowth: 1.75,
     buildTicks: 50,
     buildTicksPerLevel: 10,
-    wallRadius: 7,
-    wallMult: 4,
-    wallMultPerLevel: 0.15,
+    wallMult: 6,
+    wallMultPerLevel: 0.4,
+    wallBankBonus: 0.5,
+    outerMult: 2.5,
+    outerMultPerLevel: 0.1,
+    bankBase: 0.3,
+    bankPerLevel: 0.15,
+    bankRecruit: 0.5,
+    bankFull: 0.97, // tropas/techo a partir del cual la capital recluta hacia el banco
+    bankLoot: 0.5,
     lootBase: 250000,
     lootShare: 0.2,
     keepShare: 0.5,
@@ -24763,7 +24987,7 @@ class Sala {
 
 // ------------------------------------------------------------- lockstep
 
-const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp']);
+const INTENT_TYPES = new Set(['action', 'build', 'cancelAttack', 'proposeAlliance', 'respondAlliance', 'breakAlliance', 'donate', 'emoji', 'share', 'research', 'spec', 'proposePact', 'respondPact', 'offerPeace', 'respondPeace', 'askHelp', 'bank']);
 const SAFE_ID = /^[a-z]{2,16}$/;
 
 /** Solo deja pasar campos conocidos y con tipos válidos. */
@@ -24781,6 +25005,7 @@ function cleanIntent(raw) {
   if (typeof raw.on === 'boolean') out.on = raw.on;
   if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
+  if (raw.op === 'in' || raw.op === 'out') out.op = raw.op; // banco de tropas de la capital
   // Lo que se puede pedir desde la barra (la tabla de edificios; la capital nace con la nación)
   if (typeof raw.kind === 'string' && BUILDING_KINDS.includes(raw.kind)) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
@@ -29711,7 +29936,7 @@ class Renderer {
       const friend = mine || (human && human.allies.has(p.id));
       if (zr < 0.6 && !friend) continue;
       const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
-      const m = Math.max(size, wallR) + 4;
+      const m = Math.max(size, CONFIG.capitalOuterRadius * camera.zoom) + 4;
       if (sx < -m || sy < -m || sx > camera.viewW + m || sy > camera.viewH + m) continue;
       // Muralla: un anillo almenado. La tuya, en cuanto se distingue; las
       // demás, solo de cerca (con decenas de capitales a la vista recargaban)
@@ -29728,6 +29953,15 @@ class Renderer {
         ctx.beginPath();
         ctx.arc(sx, sy, wallR + ctx.lineWidth * 2.5, 0, Math.PI * 2);
         ctx.stroke();
+        // Afueras (doc-1.7): un anillo fino y discontinuo, más fuera
+        const outR = CONFIG.capitalOuterRadius * camera.zoom;
+        ctx.beginPath();
+        ctx.arc(sx, sy, outR, 0, Math.PI * 2);
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 5]);
+        ctx.strokeStyle = `rgba(${prgb(p)}, ${mine ? 0.45 : 0.3})`;
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
       if (mine && this.anim) {
         const k = 0.5 + 0.5 * Math.sin(now / 520);
@@ -29741,7 +29975,7 @@ class Renderer {
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
       const prog = game.capitalProgress ? game.capitalProgress(b) : null;
       if (prog !== null) this._drawConstruction(sx, sy, size, prog, now);
-      else if (b.ind + b.pop > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.ind + b.pop);
+      else if (b.up > 0 && (mine ? zr >= 1.1 : zr >= 2.4)) this._drawLevel(sx, sy, size, b.up);
     }
   }
 
@@ -33471,6 +33705,9 @@ class UI {
       if (!(performance.now() - (this._shareSentAt || 0) < 250)) sendShare();
     });
     reparto.addEventListener('change', sendShare);
+    // Banco de tropas de la capital (doc-1.7)
+    $('banco-guardar').addEventListener('click', () => this.handlers.onBank?.('in'));
+    $('banco-sacar').addEventListener('click', () => this.handlers.onBank?.('out'));
 
     $('btn-salir').addEventListener('click', () => this.handlers.onExit?.());
     $('fin-seguir').addEventListener('click', () => this.hideEnd());
@@ -33707,7 +33944,7 @@ class UI {
     // abajo en el centro y el resto del panel abajo a la izquierda. En el
     // móvil y las pantallas estrechas, todo junto como siempre.
     const obras = panel.querySelector('.pj-obras');
-    const wide = window.matchMedia?.('(min-width: 1100px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
+    const wide = window.matchMedia?.('(min-width: 1240px) and (min-height: 620px) and (hover: hover) and (pointer: fine)');
     const layout = () => {
       const desk = !!wide?.matches;
       if (desk) this.openGroup(null);
@@ -34381,6 +34618,19 @@ class UI {
     txt('pj-terr', formatShare(human.tiles, landCount));
     txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
     txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
+    // Banco de la capital: cuánto hay guardado y cuánto cabe
+    const capB = human.capital && game.buildingAt.get(human.capital.tile) === human.capital ? human.capital : null;
+    const bankBox = $('pj-banco');
+    if (bankBox.hidden !== !capB) bankBox.hidden = !capB;
+    if (capB) {
+      const bankMax = game.bankCap(human);
+      const stored = capB.bank || 0;
+      txt('banco-tropas', fmtTroops(stored));
+      txt('banco-max', fmtTroops(bankMax));
+      cssProp($('banco-relleno'), 'width', `${(Math.min(1, stored / Math.max(1, bankMax)) * 100).toFixed(1)}%`);
+      $('banco-guardar').disabled = !playing || stored >= bankMax - 1 || human.troops < 2;
+      $('banco-sacar').disabled = !playing || stored < 1;
+    }
     txt('ratio-valor', `${Math.round(ratio * 100)}%`);
     cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
 
@@ -34393,11 +34643,10 @@ class UI {
       btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
       btn.classList.toggle('en-obras', !!works[kind]);
       if (BUILDINGS[kind].unit === 'capital') {
-        // Mejoras de la capital: su nivel y si están en obras
+        // Mejora de la capital: su nivel y si está en obras
         const cap = human.capital;
-        const track = BUILDINGS[kind].track;
-        const lvl = cap ? cap[track] || 0 : 0;
-        const working = !!(cap && cap.work && cap.work.track === track);
+        const lvl = cap ? cap.up || 0 : 0;
+        const working = !!(cap && cap.work);
         btn.classList.toggle('en-obras', working);
         btn.querySelector('.b-coste').textContent = lvl >= MECH.capital.maxLevel ? 'Máx.' : formatNumber(cost);
         // Nivel en estrellas (corto: va en la esquina del botón; la obra ya se marca con su clase)
@@ -34591,7 +34840,7 @@ class UI {
         ['Oro base (pasivo, cada turno)', inc.base],
         ['Territorio (cuanto más grande, más)', inc.tax],
         ['Pueblos', inc.villages],
-        [game.profile.points || techs ? 'Bonos (industria de la capital, puntos, tecnologías…)' : 'Industria de la capital', inc.bonus],
+        [game.profile.points || techs ? 'Bonos (capital, puntos, tecnologías…)' : 'Mejoras de la capital', inc.bonus],
         ['Pesqueros', inc.fishing],
         h.economy === 'workers' ? ['Trabajadores', inc.workers] : null,
         ['Trenes y mercantes', inc.trade],
@@ -35281,11 +35530,15 @@ class UI {
       const b = game.buildingNear(tile, 2 * RES);
       const extra = [];
       if (b) {
-        if (b.kind === 'capital') extra.push(`🏰 Capital${b.ind + b.pop ? ` · ind. ${b.ind} · pob. ${b.pop}` : ''}`);
+        if (b.kind === 'capital') extra.push(`🏰 Capital${b.up ? ` ★${b.up}` : ''}${b.bank >= 1 ? ` · banco ${fmtTroops(b.bank)}` : ''}`);
         else extra.push(`${BUILDINGS[b.kind].name}${b.level > 1 ? ` ${b.level}` : ''}${b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : ''}`);
       }
       const def = game.fortMultiplier(p, tile);
-      if (def > 1 && !(b && b.kind === 'capital')) extra.push(game.wallMultiplier(p, tile) > 1 ? `murallas ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
+      if (def > 1 && !(b && b.kind === 'capital')) {
+        const zone = game.capitalZone ? game.capitalZone(p, tile) : 0;
+        const wall = game.wallMultiplier(p, tile);
+        extra.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
+      }
       const human = game.human;
       const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
       return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
