@@ -13,10 +13,30 @@ Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 
 ## Pantallas
 
+**Al abrir el juego**, una pantalla de carga (ya en el HTML, se ve desde el
+primer pintado) cubre todo mientras se preparan las fuentes, las banderas, el
+mapa del mundo (que se va descubriendo con un escáner dorado), su terreno, la
+cuenta, el menú y la partida de fondo; la barra avanza con `transform` aunque
+un paso ocupe el hilo principal. Luego se desvanece y el menú entra escalonado.
+Lo que salía al abrir (un reto `?reto`, una clasificatoria que quedó a medias)
+espera a que acabe.
+
 El inicio tiene cuatro modos en tarjetas ilustradas: **Partida rápida** (mundo
 real contra 90 países y cientos de colonias, un clic), **Contra la IA**,
 **Multijugador** y **Partida personalizada**. Antes de cada partida hay una
 pantalla de carga con los pasos reales y un consejo.
+
+**Cuenta** (en la web, con `api/cuentas.php`): «Entrar» en la cabecera abre
+un diálogo con las pestañas Entrar y Crear cuenta (correo y contraseña de 8
+caracteres como mínimo). La cuenta guarda **todo el perfil** (nivel, logros,
+monedas, compras, aspecto, rango, historial y ajustes) y lo une con el de cada
+dispositivo al entrar, al arrancar, al cambiar algo y al acabar una partida;
+la fila de la tabla de rangos es la misma en todos tus dispositivos. Con
+sesión, una nube verde en tu ficha y el bloque «Cuenta» del perfil
+(sincronizar ahora, cerrar sesión). A los jugadores sin cuenta, una tarjeta en
+Jugar les invita a guardar su progreso (se puede descartar). Google y Apple:
+la API ya tiene la tabla de proveedores y dirá cuáles están activos. En el
+enlace de Claude no hay cuentas: sigue la nube de Claude.
 
 Las pestañas cambian con una transición corta (sale la vista y entra la nueva)
 y un subrayado que se desliza; se manejan también con el teclado (flechas,
@@ -94,9 +114,18 @@ también en tu cuenta.
   por país) y aparecen cerca de su ubicación, en el mejor hueco. Cordilleras y mesetas reales hacen más lento y
   caro avanzar.
 - **Aleatorios:** pequeño, mediano y grande, generados con la semilla.
-- **Ríos:** en todos los mapas (los reales, con los ríos de verdad; en los
-  aleatorios nacen en las montañas y bajan hasta el mar). Cruzar un río cuesta
-  ×1,6 tropas y tiempo: son fronteras naturales y la expansión los toma al final.
+- **Ríos** (`doc-1.4`): en todos los mapas (los reales, con los ríos de
+  verdad; en los aleatorios nacen en las montañas y bajan hasta el mar). Son
+  **agua**: fronteras que no se cruzan por tierra (al otro lado se llega en
+  barco). Si llegan al mar o a un lago son **navegables**: puertos en sus
+  orillas, y desembarcos, mercantes y buques navegan por ellos; si no, son solo
+  frontera (el tooltip lo dice). Al cargar, los tramos sueltos se unen por el
+  camino más corto (hasta 24 casillas) al agua o a otro río, sin cerrar
+  anillos; el Nilo y el Rin llevan su desembocadura marcada (si no, el Nilo
+  acababa en Suez y el Rin se unía al Danubio). La tierra que queda aislada
+  entre ríos con menos de 12 casillas pasa a río, y los puntos reales que caen
+  en uno pasan a la tierra más cercana. Un río cierra un cerco como una
+  frontera (el mar no) y la zona inicial no cruza ríos.
 
 En todos los mapas se eliminan las islas de menos de 40 casillas y los lagos de
 menos de 12, para no perder el tiempo conquistando islotes.
@@ -197,9 +226,11 @@ funciona: los módulos ES necesitan HTTP; para eso está `dist/dominia.html`.
 
 ## Publicarlo en la web (Hostinger u otro hosting)
 
-El juego son ficheros estáticos. La **tabla global de rangos** de la web usa
-además un PHP pequeño (`api/rangos.php`, PHP 8 + PDO con MySQL); sin él, el
-juego funciona igual y el rango se guarda en cada navegador.
+El juego son ficheros estáticos. La **tabla global de rangos** y las
+**cuentas** de la web usan además un PHP pequeño (`api/rangos.php`,
+`api/cuentas.php` y sus piezas comunes en `api/comun.php`; PHP 8 + PDO con
+SQLite o MySQL); sin él, el juego funciona igual, sin cuentas, y el rango se
+guarda en cada navegador.
 
 **Con Git (Hostinger), en dos pasos.** Se sirve el juego **empaquetado en un
 solo archivo** (`index.html` con su JavaScript y su CSS dentro): no puede
@@ -274,9 +305,21 @@ las partidas jugadas. Para probarla en local:
 `TRINCHERA_DSN=sqlite:/tmp/rangos.db php -S localhost:8000` (los tests lo hacen
 solos si hay PHP).
 
-Fuera del enlace de Claude, el perfil y la clasificación general se guardan en
-cada navegador; el multijugador entre ordenadores va por el servidor de salas
-público.
+**Cuentas** (`api/cuentas.php`, misma base de datos y misma configuración):
+tablas `cuentas`, `cuenta_proveedores` (Google y Apple, cuando se activen),
+`sesiones` y `perfiles` (con versión). Contraseñas con `password_hash`; el
+token de sesión es aleatorio y el servidor guarda solo su sha-256 con la sal;
+las sesiones caducan a los 180 días sin uso; límites de 10 cuentas nuevas por
+hora y conexión, y de intentos de entrar por conexión y por correo; perfiles de
+64 KB como mucho; mismo mensaje si el correo no existe o la contraseña no es.
+El token va en el cuerpo JSON (Hostinger quita la cabecera `Authorization`).
+Recuperar la contraseña por correo llegará más adelante. Para comprobarla:
+`curl -X POST -d '{"accion":"proveedores"}' https://tu-web/api/cuentas.php`
+debe responder `{"proveedores":[]}`.
+
+Fuera del enlace de Claude y sin cuenta, el perfil y la clasificación general
+se guardan en cada navegador; el multijugador entre ordenadores va por el
+servidor de salas público.
 
 ## Reglas
 
@@ -292,18 +335,18 @@ público.
 | Contraataque | Si dos naciones se atacan a la vez, las tropas de ambos ataques se anulan primero. |
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Velocidad de conquista | Cuantas más tropas mandas, más rápido avanzas: en tierra libre según las tropas por casilla de frente, contra una nación según tu superioridad sobre su densidad (hasta ×3,5). |
-| Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). **Hace falta al menos un puerto terminado** (si no, «Necesitas un puerto para mandar barcos»); los bots que quieren cruzar el mar se hacen primero uno. Todos los barcos (desembarcos, buques y mercantes) van un 40 % más lentos que antes (`doc-1.3`). Las rutas cruzan los estrechos: si la búsqueda por el pasillo de la ruta gruesa no llega (Ormuz, donde la ruta gruesa cruzaba la península de Musandam), se repite sin pasillo; el Bósforo y los Dardanelos se abren al cargar el mapa (con ~13 km por casilla desaparecían y el Mar Negro quedaba aislado). |
+| Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). **Hace falta al menos un puerto terminado** (si no, «Necesitas un puerto para mandar barcos»); los bots que quieren cruzar el mar se hacen primero uno. Todos los barcos (desembarcos, buques y mercantes) van un 40 % más lentos que antes (`doc-1.3`). Navegan también por los ríos que llegan al mar (`doc-1.4`): un río sirve para desembarcar en la otra orilla, pero uno que no llega al mar no se navega. Las rutas cruzan los estrechos: si la búsqueda por el pasillo de la ruta gruesa no llega (Ormuz, donde la ruta gruesa cruzaba la península de Musandam), se repite sin pasillo; el Bósforo y los Dardanelos se abren al cargar el mapa (con ~13 km por casilla desaparecían y el Mar Negro quedaba aislado). |
 | Naciones | Hasta 200 rivales en cualquier mapa (partida rápida: 90). En los mapas reales primero salen los países de verdad, con su bandera y cerca de su sitio real (a menos de 10·RES casillas, en el mejor hueco: con la zona inicial entera, tierra adentro, en llano y separados de los demás; de media a 2-3 casillas de su punto) (mundo 156, Europa 52, África 72, Asia 74, Sudamérica 20, Norteamérica 17); si pides más, el resto son naciones inventadas repartidas por el mapa. La IA mantiene sus tropas hacia el 42 % del techo (donde más rápido se regeneran) y ataca con lo que sobra: elige al vecino que mejor puede ganar (pocas tropas por casilla, colonias, naciones ya en guerra con otros, traidores, rencores y el líder si se escapa), remata refuerzando un ataque que se agota, contraataca para anular tus ofensivas grandes (más en difícil e imposible) y los más agresivos pelean mientras se expanden. |
-| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): crecen a menos de la mitad, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. Hay muchísimas: una por cada 500 casillas de tierra de la rejilla original, hasta 300 (las 300 en el mundo); con menos de 20 rivales, proporcionalmente menos. Se reparten por superficie real (en el mapa del mundo, de proyección Miller, el norte sale estirado: antes ~125 de 300 caían al norte de 60°N y solo ~17 en África, tapada por las zonas de sus 34 países; ahora ~84 y ~43), pueden quedar más cerca de las naciones (24 casillas) que entre ellas y empiezan con su zona inicial entera. |
-| Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; min(1M, 250k × (buques + 1))). Van solos y su zona **se elige al botarlos y ya no se cambia**: con la T, clic en el mar (sale del puerto propio más cercano que dé a ese mar y la vista previa muestra el círculo que patrullará) o en tu costa (patrulla junto al puerto). La zona se ve como un círculo discontinuo. A tiro disparan a buques enemigos, hunden transportes de tropas y **capturan** mercantes rivales (pasan a ser tuyos); si un intruso entra en su zona, lo persiguen. No atacan puertos. |
+| Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): tienen menos tropas, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. En tierra libre se expanden casi al ritmo de una nación (`doc-1.4`): mandan el 30-45 % de sus tropas en cuanto no tienen expansión en marcha (o la que tienen se queda sin tropas), avanzan como una nación con un envío normal (6.600 tropas) aunque manden menos y pagan ×0,38 de bajas. Cada una es distinta (sale de la semilla y su id, sin gastar el azar de la partida): su ritmo va de ×0,8 a ×1,3 y su forma, de redonda a irregular. A los 60 s de juego, una colonia lleva de media ~85 % de las casillas de una nación. Hay muchísimas: una por cada 500 casillas de tierra de la rejilla original, hasta 300 (las 300 en el mundo); con menos de 20 rivales, proporcionalmente menos. Se reparten por superficie real (en el mapa del mundo, de proyección Miller, el norte sale estirado: antes ~125 de 300 caían al norte de 60°N y solo ~17 en África, tapada por las zonas de sus 34 países; ahora ~84 y ~43), pueden quedar más cerca de las naciones (24 casillas) que entre ellas y empiezan con su zona inicial entera. |
+| Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; min(1M, 250k × (buques + 1))). Van solos y su zona **se elige al botarlos y ya no se cambia**: con la T, clic en el mar (sale del puerto propio más cercano que dé a ese mar y la vista previa muestra el círculo que patrullará) o en tu costa (patrulla junto al puerto). La zona solo se ve al colocarlo (en la vista previa); en el mapa el buque es un casco con la cubierta del color de su dueño (filo blanco si es tuyo), su estela y su barra de vida, sin aro ni círculo alrededor. A tiro disparan a buques enemigos, hunden transportes de tropas y **capturan** mercantes rivales (pasan a ser tuyos); si un intruso entra en su zona, lo persiguen. No atacan puertos. |
 | Barcos de tropas | Con al menos un puerto, salen de cualquier costa tuya. La casilla de desembarco se toma con las mismas bajas que cualquier otra. Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |
 | Alerta | Si te atacan por tierra, mar o con un misil, el borde de la pantalla se pone rojo: más rojo y con latido más rápido cuanto más te atacan (tropas frente a las tuyas, número de atacantes, misiles). Desactivable en Ajustes. |
-| Tropas a la vista | Cada combate tuyo tiene una tarjeta debajo de la clasificación: quién ataca a quién, tropas del atacante **VS** tropas del defensor, con una leyenda bajo cada cifra («te ataca con» / «tus tropas», «atacas con» / «sus tropas») y una barra de fuerzas. **Roja** si te atacan (van primero) y **verde** si atacas tú; los marcadores del mapa usan los mismos colores. También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas. |
+| Tropas a la vista | Cada combate tuyo tiene una tarjeta debajo de la clasificación: quién ataca a quién, tropas del atacante **VS** tropas del defensor, con una leyenda bajo cada cifra («te ataca con» / «tus tropas», «atacas con» / «sus tropas») y una barra de fuerzas. **Roja** si te atacan (van primero) y **verde** si atacas tú; los marcadores del mapa usan los mismos colores. También para desembarcos y misiles (con la cuenta atrás del impacto). Clic en la tarjeta: la cámara vuela al frente y lo marca. En el mapa, cada frente lleva además su marcador de tropas: una pastilla pequeña (15 px de alto, algo translúcida) del lado del atacante, detrás del frente, para que se vea lo que se ataca; las flechas del frente son discretas. |
 | Avisos | En un recuadro abajo a la derecha, solo lo importante: alianzas y traiciones (de todos), jugadores derrotados (la muerte de los bots no se avisa), las naciones que conquistas tú, barcos y misiles que vienen hacia ti, tu puerto destruido, logros e inicio de partida. Con icono según el tipo; los repetidos se agrupan (×N). Las respuestas a tus acciones («Te falta oro», «Buque botado»…) salen como una pista breve encima del panel. |
 | Paneles plegables | Clasificación, combates y avisos se pliegan desde su cabecera (se recuerda). Plegados, la clasificación muestra tu puesto, los combates cuántos te atacan y cuántos ataques tuyos hay, y los avisos cuántos nuevos tienes. |
 | Clasificación | Tus aliados salen en verde; las colonias, en gris cursiva; tu nombre, en tu color de nombre. |
 | Interfaz en el ordenador | Con pantalla ancha y ratón: arriba a la izquierda, la clasificación en tabla (puesto, nación, tierra, oro y tropas; tu fila siempre, y menos filas si falta altura); abajo a la izquierda, tus cifras y el ataque (con el minimapa encima); abajo en el centro, la barra de edificios (tecla, icono, precio y cuántos tienes); abajo a la derecha, los avisos. Al empezar la conquista, la cámara vuela a tu región. |
-| Panel de abajo | En el móvil y en pantallas estrechas, centrado y compacto: tropas y su techo (con su regeneración por segundo), oro, territorio y barcos; la fuerza de ataque (y el reparto, con la economía de trabajadores); y los 10 edificios y bombas en dos filas, con su icono y su precio (el nombre sale al pasar el ratón; en gris los que no puedes pagar, con una barra de cuánto oro te falta y un martillo si hay obras). Se minimiza con su botón o la tecla **V**. |
+| Panel de abajo | En el móvil y en pantallas estrechas, centrado y compacto: tropas y su techo (con su regeneración por segundo), oro, territorio y barcos; la fuerza de ataque (y el reparto, con la economía de trabajadores); y los edificios en **tres grupos: Economía** (ciudad, puerto, fábrica), **Defensa** (puesto, antimisiles, buque) y **Ataque** (silo y bombas). En el móvil se ven solo los tres grupos (40 px, con un punto si hay algo que puedas pagar); al tocar uno sube una bandeja con sus edificios, nombre y precio, y al elegir uno se cierra (el grupo queda resaltado con su icono). En el ordenador, los tres grupos a la vista con su título de color, icono y precio (el nombre sale al pasar el ratón; en gris los que no puedes pagar, con una barra de cuánto oro te falta y un martillo si hay obras). Las teclas no cambian. Se minimiza con su botón o la tecla **V**. |
 | Gráficos | Mapa en píxeles nítidos con zonas de color planas y limpias (sin moteado): llanura verde oliva, llanura seca, desierto tostado con claros de arena, montaña parda y cumbres claras, según la altura y el clima (en la franja de desiertos las tierras bajas tiran a arena); el relieve apenas se insinúa. En los mapas reales la altura es la de verdad (ETOPO5 de NOAA); en los aleatorios, la del generador. Costa con un contorno oscuro de una casilla y mar azul marino liso, algo más claro junto a la costa. Naciones en tonos pálidos y semitransparentes (se ve el terreno debajo), con una frontera fina y opaca en su mismo tono más oscuro: la capa del territorio lleva 2×2 píxeles por casilla y la frontera solo ocupa la mitad que da al vecino (media casilla; entre dos países, una casilla en total). Nombres y tropas en gris oscuro. Tu nación se resalta: frontera blanca por fuera y tu color por dentro, y nombre en color vivo. Las casillas recién conquistadas brillan un instante (se pintan en el propio territorio, sin coste por fotograma), saltan chispas y humo en los frentes y unas flechas marcan hacia dónde avanza cada ataque. Barcos dibujados con su rumbo y estela; misiles con humo y sombra; explosión con fogonazo, onda expansiva, hongo de humo y cráter; los antimisiles lanzan un interceptor visible (estela continua y rótulo «¡DERRIBADO!» / «FALLO»). Todo se desactiva con «Animaciones» en Ajustes. |
 | Edificios en el mapa | Pictogramas lisos (bloque de edificios, ancla, fábrica, torre, misil, lanzador, barco), pequeños y discretos: en el mapa, en claro sobre un disco oscuro semitransparente (un triángulo para silo y antimisiles) con un anillo fino del color del dueño (y filo blanco si son tuyos). En el panel, el pictograma blanco con su tecla arriba a la izquierda y el precio. |
 | Territorio y nombres | Cada nación se pinta en un tono suave y semitransparente de su color (el relieve se ve debajo), sin franja interior, con un borde fino de su tono oscuro; el tuyo con borde blanco y tus aliados con franjas y borde verdes. Los nombres van en texto oscuro con un halo claro y las tropas de los rivales en blanco con un contorno oscuro suave (lo tuyo, en tu color vivo). Al alejar la cámara los nombres no encogen con el país: tienen un tamaño mínimo legible (las colonias, algo menor); los de los bots solo salen con la cámara cerca o si el país se ve grande, y, si dos se pisan, se ve el del país más grande (antes tú, tus aliados y los demás jugadores; las colonias, al final). Los **jugadores de verdad** llevan delante del nombre una insignia redonda de su color con una silueta de persona, para distinguirlos de los bots.|
@@ -372,6 +415,8 @@ CONQUISTAMUNDIAL/
 ├── css/estilo.css
 ├── servidor.js         Servidor estático para desarrollo (npm start)
 ├── api/rangos.php      Tabla global de rangos para la web (PHP 8 + PDO; configuración fuera de public_html)
+├── api/cuentas.php     Cuentas: registro, entrar, sesiones y perfil con versiones
+├── api/comun.php       Piezas comunes de la API (base de datos, respuesta, límites; no se sirve)
 ├── herramientas/
 │   ├── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
 │   ├── mapas.js        Genera src/mapas-reales.js desde Natural Earth
@@ -397,6 +442,8 @@ CONQUISTAMUNDIAL/
 │   ├── fin.js          Pantalla de fin: resumen, gráficas, momentos clave, repetición y compartir
 │   ├── rangos.js       Ligas, PL, MMR, colocación, escudo, temporadas e insignias
 │   ├── ladder.js       Tabla global de rangos (base de datos de Claude o api/rangos.php)
+│   ├── cuenta.js       Cuenta en la web: sesión, entrar, crear cuenta y sincronizar el perfil
+│   ├── cuenta-ui.js    Interfaz de la cuenta: botón Entrar, diálogo, bloque del perfil y tarjeta
 │   ├── identidad.js    Identidad firmada (ECDSA P-256) para las salas clasificatorias
 │   ├── reto.js         Retos por enlace («Supera mi partida»)
 │   ├── portada.js      Portada animada del inicio
