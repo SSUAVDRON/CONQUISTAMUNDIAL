@@ -18,7 +18,7 @@ import { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, rod
 import { abrirGuia } from './guia.js';
 import { errorReport } from './errores.js';
 import { drawChart, drawSparkline } from './resumen.js';
-import { PLACEMENT_GAMES, RANKED_ROOM, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } from './rangos.js';
+import { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName, seasonReward } from './rangos.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly,
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
@@ -466,6 +466,40 @@ function emptyState(icon, title, text, ...actions) {
     actions.length ? el('span', { class: 'ev-botones' }, ...actions) : null);
 }
 
+// ------------------------------------------------------------ navegación
+
+/** Páginas del menú (se abren encima de su sección, con «← Volver»). */
+const PAGES = new Set(['competitivo', 'crear', 'multijugador', 'clasificacion']);
+/** A dónde vuelve cada página si no hay historial (y qué pestaña se marca mientras tanto). */
+const PARENT = { competitivo: 'jugar', crear: 'jugar', multijugador: 'jugar', clasificacion: 'competitivo' };
+/** Dirección de cada sección o página (#/competitivo…; el inicio, sin nada). */
+const SLUG = { jugar: '', logros: 'progreso', perfil: 'perfil', arsenal: 'arsenal', ajustes: 'ajustes', competitivo: 'competitivo', crear: 'crear', multijugador: 'multijugador', clasificacion: 'clasificacion' };
+
+/** Sección o página de una dirección (#/competitivo → 'competitivo'), o null. */
+export function viewFromHash(hash = typeof location !== 'undefined' ? location.hash : '') {
+  const slug = String(hash || '').replace(/^#\/?/, '').split('/')[0];
+  if (!slug) return null;
+  for (const [view, sl] of Object.entries(SLUG)) if (sl === slug) return view;
+  return null;
+}
+
+/** Entrada del historial del navegador; si no se puede cambiar la dirección (marcos aislados), sin ella. */
+function histOp(op, state, slug) {
+  const url = slug == null ? null : `${location.pathname}${location.search}${slug ? `#/${slug}` : ''}`;
+  try {
+    if (url === null) history[op](state, '');
+    else history[op](state, '', url);
+    return true;
+  } catch {
+    try {
+      history[op](state, '');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export class Home {
   /**
    * handlers: onProfileChange(), onQuickPlay(opts), onCreateRoom(), onJoinRoom(code),
@@ -483,7 +517,7 @@ export class Home {
     const nav = document.querySelector('.ini-pestanas');
     for (const tab of nav.querySelectorAll('[data-vista]')) {
       tab.setAttribute('aria-controls', `vista-${tab.dataset.vista}`);
-      tab.addEventListener('click', () => this.setView(tab.dataset.vista));
+      tab.addEventListener('click', () => this.go(tab.dataset.vista));
     }
     for (const sec of document.querySelectorAll('.vista[data-vista]')) sec.id ||= `vista-${sec.dataset.vista}`;
     teclasGrupo(nav, '[role="tab"]');
@@ -494,13 +528,28 @@ export class Home {
     requestAnimationFrame(() => this._moveUnderline(false));
     document.fonts?.ready.then(() => this._moveUnderline(false));
     window.addEventListener('resize', () => this._moveUnderline(false));
-    $('chip-perfil').addEventListener('click', () => this.setView('perfil'));
+    $('chip-perfil').addEventListener('click', () => this.go('perfil'));
+    // Páginas: «← Volver», enlaces a otras páginas y el botón atrás del navegador o del móvil
+    for (const b of document.querySelectorAll('#inicio [data-volver]')) b.addEventListener('click', () => this.back());
+    for (const b of document.querySelectorAll('#inicio [data-pagina]')) b.addEventListener('click', () => this.go(b.dataset.pagina));
+    window.addEventListener('popstate', (e) => this._onPop(e.state));
+    // Escape en una página: atrás (si no hay un diálogo abierto, que se cierra antes)
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || !PAGES.has(this.view) || !this.menuVisible()) return;
+      if (document.querySelector('[aria-modal="true"]:not([hidden])')) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      this.back();
+    });
+    // Dirección de entrada (#/competitivo…): esa página; la entrada actual del historial es la base
+    const first = viewFromHash();
+    if (first && first !== 'jugar') this.view = first;
+    histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.view] ?? '');
 
     // Tarjetas de modo
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
       card.addEventListener('click', () => this._mode(card.dataset.modo));
     }
-    for (const btn of document.querySelectorAll('.cerrar-panel')) btn.addEventListener('click', () => this._openPanel(null));
 
     // Partida contra la IA
     const a = this.profile.ajustes;
@@ -616,13 +665,20 @@ export class Home {
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
-    $('btn-clasif-ia').addEventListener('click', () => this.h.onRanked?.('ia'));
-    $('btn-clasif-sala').addEventListener('click', () => this.h.onRanked?.('sala'));
+    // Competitivo: cola (contra la IA o en línea) y «Buscar partida»
+    this.queue = this.profile.ajustes.colaClasif === 'sala' ? 'sala' : 'ia';
+    segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => {
+      this.queue = v;
+      this.profile.ajustes.colaClasif = v;
+      this.h.onProfileChange?.(false);
+      this.renderQueue();
+    });
+    $('cp-buscar').addEventListener('click', () => this._findMatch());
     $('btn-repetir').addEventListener('click', () => this._replay());
     $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
     $('novedades-todas').addEventListener('click', () => this._allNews());
     for (const b of document.querySelectorAll('[data-ir]')) {
-      if (b.id !== 'chip-perfil') b.addEventListener('click', () => this.setView(b.dataset.ir));
+      if (b.id !== 'chip-perfil') b.addEventListener('click', () => this.go(b.dataset.ir));
     }
     this._buildArsenal();
     this._buildNews();
@@ -723,22 +779,71 @@ export class Home {
     this._syncBots();
   }
 
-  /** Clic en una tarjeta de modo. */
+  /** Clic en una tarjeta de modo: la partida rápida empieza ya; el resto abre su página. */
   _mode(mode) {
     if (mode === 'rapida') {
       // Partida rápida: el perfil Clásico, siempre (elegido aquí, no por los valores por defecto)
       this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
-    } else if (mode === 'personalizada') {
-      // El mismo panel que «Contra IA», con las reglas avanzadas desplegadas
-      $('ia-avanzadas').open = true;
-      this._openPanel('ia', false);
-      setTimeout(() => $('ia-avanzadas').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }), 30);
-    } else {
-      if (mode === 'ia' && this.panel !== 'ia') $('ia-avanzadas').open = false;
-      this._openPanel(this.panel === mode ? null : mode);
+    } else if (mode === 'online') {
+      this.go('multijugador');
+    } else if (mode === 'personalizada' || mode === 'ia') {
+      this.go('crear');
+    } else this.go(mode);
+  }
+
+  // ------------------------------------------------------------ historial
+
+  /**
+   * Va a una sección o página del menú con su entrada en el historial: el
+   * botón atrás (del navegador, del móvil o «← Volver») vuelve a la anterior.
+   */
+  go(view, { replace = false } = {}) {
+    if (view === 'apariencia') {
+      this._profileTab('aspecto', false);
+      view = 'perfil';
     }
+    if (view === 'online') view = 'multijugador';
+    if (!document.querySelector(`.vista[data-vista="${view}"]`)) view = 'jugar';
+    const cur = history.state && history.state.trinchera ? history.state : null;
+    const same = !replace && cur && cur.vista === view && !cur.capa;
+    const n = cur ? cur.n || 0 : 0;
+    histOp(replace || same ? 'replaceState' : 'pushState', { trinchera: true, vista: view, n: replace || same ? n : n + 1 }, SLUG[view]);
+    this.setView(view);
+  }
+
+  /** «← Volver»: atrás en el historial si se llegó desde otra pantalla; si no, a la sección de la que cuelga. */
+  back() {
+    const cur = history.state;
+    if (cur && cur.trinchera && cur.n > 0) history.back();
+    else this.go(PARENT[this.view] || 'jugar', { replace: true });
+  }
+
+  /** Capa sobre el menú (crear sala, sala, partida) con su propia entrada: atrás la cierra. */
+  pushLayer(capa, slug = capa) {
+    const cur = history.state && history.state.trinchera ? history.state : { n: 0 };
+    if (cur.capa === capa) return;
+    // Una capa sustituye a otra (crear sala → sala → partida): atrás vuelve al menú, no a la anterior
+    const op = cur.capa ? 'replaceState' : 'pushState';
+    histOp(op, { trinchera: true, vista: this.view, capa, n: cur.capa ? cur.n : (cur.n || 0) + 1 }, slug);
+  }
+
+  /** Cierra la capa `capa` del historial (al salir con un botón): vuelve a la entrada de debajo. */
+  closeLayer(capa) {
+    const cur = history.state;
+    if (!cur || cur.capa !== capa) return;
+    if (cur.n > 0) history.back();
+    else histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.view]);
+  }
+
+  /** El navegador ha ido atrás o adelante. */
+  _onPop(st) {
+    if (this.h.onHistory?.(st)) return; // la partida o la sala lo resuelven
+    if (!$('crear-sala').hidden && st?.capa !== 'crear-sala') this._closeCreate();
+    if (!this.menuVisible()) return;
+    const view = (st && st.vista) || viewFromHash() || 'jugar';
+    if (view !== this.view) this.setView(view);
   }
 
   /** «Volver a jugar»: la última partida contra la IA, con el mismo mapa, rivales y reglas. */
@@ -753,7 +858,7 @@ export class Home {
   _paintArt() {
     this._paintHero();
     this._paintBackdrop();
-    const data = { world: realPreviewData('mundo'), europe: realPreviewData('europa') };
+    const data = { world: realPreviewData('mundo'), europe: realPreviewData('europa'), badge: this._badgePainter() };
     // A la densidad de la pantalla (tope 2): nítidas en móviles y pantallas retina
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
@@ -818,19 +923,6 @@ export class Home {
     c._painted = true;
   }
 
-  _openPanel(name, scroll = true) {
-    this.panel = name;
-    for (const p of document.querySelectorAll('.panel-modo')) {
-      if (p.dataset.panel === name) mostrar(p, { y: 12, scale: 1, ms: 260 });
-      else p.hidden = true;
-    }
-    for (const card of document.querySelectorAll('.modo[data-modo]')) {
-      if (card.dataset.modo === 'ia' || card.dataset.modo === 'online') card.setAttribute('aria-expanded', String(card.dataset.modo === name));
-    }
-    const panel = name && document.querySelector(`.panel-modo[data-panel="${name}"]`);
-    if (panel && scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
   /** Resumen de la partida contra la IA (barra de abajo) y de sus reglas (cabecera de «Reglas avanzadas»). */
   _syncSummaryIA() {
     const c = this.choice;
@@ -843,10 +935,10 @@ export class Home {
     $('ia-reglas-resumen').textContent = rulesSummary(c.rules);
   }
 
-  /** Abre directamente un panel (por ejemplo, el multijugador al volver de una sala). */
+  /** Abre directamente una página (por ejemplo, Multijugador al volver de una sala). */
   openPanel(name) {
-    this.setView('jugar');
-    this._openPanel(name);
+    const view = name === 'online' ? 'multijugador' : name;
+    if (this.view !== view) this.go(view);
   }
 
   _profileChanged() {
@@ -1063,7 +1155,7 @@ export class Home {
       if (short) return k || 'Clic';
       return k ? `Tecla ${k} en la partida` : 'Clic en otra costa';
     };
-    $('arsenal-cats').replaceChildren(
+    $('arsenal-cats')?.replaceChildren(
       ...ARSENAL_CATS.map((cat, i) =>
         el(
           'article',
@@ -1288,13 +1380,19 @@ export class Home {
     const prev = this.view;
     this.view = view;
     const nav = document.querySelector('.ini-pestanas');
+    // En una página se marca la sección de la que cuelga (Competitivo y Crear partida: Jugar)
+    let tabView = view;
+    while (PARENT[tabView]) tabView = PARENT[tabView];
     for (const tab of nav.querySelectorAll('[data-vista]')) {
-      tab.setAttribute('aria-selected', String(tab.dataset.vista === view));
+      tab.setAttribute('aria-selected', String(tab.dataset.vista === tabView));
     }
+    $('inicio').classList.toggle('en-pagina', PAGES.has(view));
+    $('inicio').dataset.seccion = view;
     rodar(nav);
     this._moveUnderline(true);
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
+    if (view === 'competitivo') this.renderCompetitive();
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
     else this.cover?.stop();
@@ -1303,10 +1401,12 @@ export class Home {
     const next = secs.find((sec) => sec.dataset.vista === view);
     const leaving = secs.filter((sec) => sec !== next && !sec.hidden && !sec._salida);
     clearTimeout(this._viewTimer);
+    // Las páginas entran desde la derecha y, al volver, la sección llega desde la izquierda
+    const dir = PAGES.has(view) && !PAGES.has(prev) ? 1 : PAGES.has(prev) && !PAGES.has(view) ? -1 : PAGES.has(view) ? 1 : 0;
     const enter = () => {
       for (const sec of secs) if (sec !== next && !sec._salida) sec.hidden = true;
       $('inicio').scrollTo?.({ top: 0 });
-      mostrar(next, { y: 10, scale: 1, ms: 240 });
+      mostrar(next, dir ? { x: dir * 30, y: 0, scale: 1, ms: 280 } : { y: 10, scale: 1, ms: 240 });
       if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
       if (view === 'perfil' && this.profileTab === 'resumen') this.renderProgress(true);
       for (const nav of next.querySelectorAll('.sub-pestanas')) underline(nav, false);
@@ -1317,7 +1417,7 @@ export class Home {
       enter();
       return;
     }
-    for (const sec of leaving) ocultar(sec, { y: -4, scale: 1, ms: 110 });
+    for (const sec of leaving) ocultar(sec, dir ? { x: -dir * 18, y: 0, scale: 1, ms: 110 } : { y: -4, scale: 1, ms: 110 });
     this._viewTimer = setTimeout(enter, 110);
   }
 
@@ -1371,36 +1471,277 @@ export class Home {
 
   // ------------------------------------------------------------ rangos
 
-  /** Tarjeta «Clasificatoria» de Jugar: insignia, rango, PL de la división y temporada. */
+  /** Tarjeta «Competitivo» del inicio: tu rango en una línea y tu insignia en el dibujo. */
   renderRanked() {
     const r = this.profile.rango;
-    if (!r || !$('clasificatoria')) return;
-    const box = $('cl-insignia');
-    let c = box.querySelector('canvas');
-    if (!c) {
-      c = badgeCanvas(r, 64);
-      box.replaceChildren(c);
-    } else paintBadge(c, r);
+    if (!r) return;
+    const corto = $('modo-corto-competitivo');
+    if (corto) corto.textContent = rankText(r);
+    const key = inPlacement(r) ? 'col' : String(rankOf(r.puntos).index * 10 + rankOf(r.puntos).div);
+    if (this._artBadge !== key) {
+      this._artBadge = key;
+      const card = document.querySelector('.modo[data-modo="competitivo"] .modo-arte');
+      if (card && card._escala) drawModeArt('competitivo', card, { badge: this._badgePainter() });
+    }
+    if (this.view === 'competitivo') this.renderCompetitive();
+  }
+
+  /** Dibuja tu insignia (para las ilustraciones): (ctx, cx, cy, alto). */
+  _badgePainter() {
+    const r = this.profile.rango;
     const placing = inPlacement(r);
     const k = rankOf(r.puntos);
-    $('cl-temporada').textContent = seasonName(r.temporada);
-    $('cl-rango').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.label;
-    $('cl-rango').style.color = placing ? '' : `rgb(${k.league.color.join(',')})`;
-    const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
-    $('cl-barra').style.setProperty('--p', frac.toFixed(3));
-    $('cl-barra').parentElement.classList.add('llena-al-ver');
-    llenarAlVer($('clasificatoria'));
+    return (ctx, cx, cy, size) => drawBadge(ctx, cx, cy, size, placing ? null : k.league, placing ? 0 : k.div);
+  }
+
+  // ------------------------------------------------------- competitivo
+
+  /** Página Competitivo entera (se llama al abrirla y cuando cambia el rango). */
+  renderCompetitive() {
+    const r = this.profile.rango;
+    if (!r || !$('cp-insignia')) return;
+    const p = this.profile;
+    const placing = inPlacement(r);
+    const k = rankOf(r.puntos);
     const days = Math.max(0, Math.ceil((seasonEnd(r.temporada) - Date.now()) / 86400000));
+    $('cp-temporada').textContent = seasonName(r.temporada);
+    $('cp-fin').textContent = `Acaba en ${days} día${days === 1 ? '' : 's'}`;
+    // Tu comandante: estandarte, emblema y marco, nombre, título y nivel
+    $('cp-comandante').className = `cp-comandante est-${p.estandarte}`;
+    const ec = $('cp-emblema');
+    const ectx = ec.getContext('2d');
+    ectx.clearRect(0, 0, ec.width, ec.height);
+    drawEmblem(ectx, p.emblema, ec.width / 2, ec.height / 2, ec.width * 0.62);
+    drawFrame(ectx, p.marco, ec.width / 2, ec.height / 2, ec.width * 0.62);
+    $('cp-nombre').textContent = p.nombre || 'Sin nombre';
+    $('cp-nombre').style.color = nameColorOf(p);
+    $('cp-titulo').textContent = titleName(p) || 'Recluta';
+    $('cp-nivel').textContent = `Nivel ${levelInfo(p.xp).level}`;
+    // El rango: insignia grande con su luz, liga, PL y victorias
+    paintBadge($('cp-insignia'), r);
+    const col = placing ? [196, 170, 120] : k.league.color;
+    const band = document.querySelector('.cp-portada');
+    band.style.setProperty('--liga', col.join(', '));
+    band.classList.toggle('en-colocacion', placing);
+    $('cp-liga').textContent = placing ? 'Sin clasificar' : k.label;
+    $('cp-pl').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.league.apex ? `${k.pl} PL` : `${k.pl} / 100 PL`;
+    const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
+    $('cp-barra').style.setProperty('--p', frac.toFixed(3));
+    const losses = Math.max(0, r.partidas - r.victorias);
+    const pct = r.partidas ? Math.round((r.victorias / r.partidas) * 100) : 0;
+    $('cp-vd').replaceChildren(
+      el('span', { class: 'cp-v', text: `${r.victorias} V` }),
+      ' · ',
+      el('span', { class: 'cp-d', text: `${losses} D` }),
+      ` · ${pct} % de victorias`,
+      r.escudo ? el('span', { class: 'cp-escudo', title: 'No bajas de división en estas partidas', text: ` · 🛡 escudo ${r.escudo}` }) : '',
+    );
+    this.renderQueue();
+    this._renderLeagues(r);
+    this._renderSeasonStats(r);
+    this._renderRankedHistory(r);
+    this._renderTop(r);
+    this._renderRewards(r);
+  }
+
+  /** La cola elegida y qué hará «Buscar partida». */
+  renderQueue() {
+    if (!$('cp-buscar')) return;
+    const r = this.profile.rango;
     const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
-    $('cl-nota').textContent = placing
-      ? `Tras ${PLACEMENT_GAMES} partidas de colocación sabrás tu liga. El mundo, 90 naciones, perfil Clásico; IA ${dif}. Abandonar cuenta como derrota.`
-      : `${k.pl} PL${k.league.apex ? '' : ' / 100'}${r.escudo ? ` · 🛡 escudo ${r.escudo}` : ''} · ${r.victorias}/${r.partidas} victorias · IA ${dif} · la temporada acaba en ${days} día${days === 1 ? '' : 's'}`;
+    const btn = $('cp-buscar');
+    if (this.queue === 'ia') {
+      $('cp-cola-nota').textContent = `${mapLabel(RANKED_AI.mapSize)}, ${RANKED_AI.bots} naciones, perfil Clásico, contra la IA ${dif}. Cuenta tu puesto final; abandonar cuenta como derrota.`;
+      $('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
+      btn.disabled = false;
+      btn.textContent = 'Buscar partida';
+      return;
+    }
+    const net = this.netKind;
+    const open = this._rankedRooms();
+    $('cp-cola-nota').textContent = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores.`;
+    if (!net || net === 'none') {
+      btn.disabled = true;
+      $('cp-cola-extra').textContent = 'Sin conexión con el servidor de salas.';
+    } else if (net === 'connecting') {
+      btn.disabled = true;
+      $('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
+    } else {
+      btn.disabled = false;
+      $('cp-cola-extra').textContent = open.length
+        ? `${open.length} sala${open.length === 1 ? '' : 's'} clasificatoria${open.length === 1 ? '' : 's'} esperando jugadores: entrarás en la más llena.`
+        : 'No hay salas clasificatorias abiertas: se creará una pública para que entren otros.';
+    }
+    btn.textContent = 'Buscar partida';
+  }
+
+  /** Salas clasificatorias públicas con sitio y de esta versión, la más llena primero. */
+  _rankedRooms() {
+    return this.rooms.filter((x) => x.clasificatoria && !x.otraVersion && (x.jugadores || 1) < (x.plazas || 8)).sort((a, b) => (b.jugadores || 1) - (a.jugadores || 1));
+  }
+
+  /** «Buscar partida»: contra la IA, al momento; en línea, a la sala clasificatoria más llena (o se crea una). */
+  _findMatch() {
+    if (this.queue === 'ia') {
+      this.h.onRanked?.('ia');
+      return;
+    }
+    const open = this._rankedRooms();
+    if (open.length) this.h.onJoinRoom?.(open[0].code);
+    else this.h.onRanked?.('sala');
+  }
+
+  /** Escalera de las nueve ligas: las superadas iluminadas, la tuya destacada y la mejor de la temporada marcada. */
+  _renderLeagues(r) {
+    const placing = inPlacement(r);
+    const cur = placing ? -1 : rankOf(r.puntos).index;
+    const best = r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).index : -1;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    $('cp-ligas').replaceChildren(
+      ...LEAGUES.map((L, i) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = Math.round(58 * dpr);
+        c.setAttribute('aria-hidden', 'true');
+        drawBadge(c.getContext('2d'), c.width / 2, c.height * 0.54, c.height * 0.72, L, 0);
+        const state = i === cur ? 'actual' : i < cur ? 'superada' : 'pendiente';
+        return el('li', { class: `cp-liga-item ${state}${i === best && !placing ? ' mejor' : ''}`, style: `--liga: ${L.color.join(', ')}`, title: `${L.name}: desde ${formatNumber(L.base)} puntos` },
+          i === cur ? el('span', { class: 'cp-tu', text: 'TÚ' }) : null,
+          c,
+          el('strong', { text: L.name }),
+          el('small', { text: L.apex ? `${formatNumber(L.base)}+` : `IV → I` }));
+      }),
+    );
+  }
+
+  /** Cifras de la temporada y la gráfica de tus PL. */
+  _renderSeasonStats(r) {
+    const hist = r.historial || [];
+    const games = hist.filter((h) => !h.abandono && h.de > 0);
+    const avg = games.length ? games.reduce((a, h) => a + h.puesto, 0) / games.length : 0;
+    // Racha: del último resultado hacia atrás, mientras sea del mismo signo
+    let streak = 0;
+    let sign = 0;
+    for (const h of hist) {
+      const sg = h.delta > 0 || (h.delta === 0 && h.puesto === 1) ? 1 : h.delta < 0 || h.abandono ? -1 : 0;
+      if (!sg) break;
+      if (!sign) sign = sg;
+      if (sg !== sign) break;
+      streak++;
+    }
+    const pct = r.partidas ? Math.round((r.victorias / r.partidas) * 100) : 0;
+    const ring = el('span', { class: 'cp-anillo', style: `--p: ${pct / 100}`, 'aria-hidden': 'true' }, el('span', { text: `${pct}%` }));
+    const card = (label, value, extra = null) => el('div', { class: 'cp-cifra' }, extra, el('strong', { text: value }), el('small', { text: label }));
+    $('cp-stats').replaceChildren(
+      card('% de victorias', `${r.victorias}/${r.partidas}`, ring),
+      card('Partidas', String(r.partidas)),
+      card('Puesto medio', avg ? avg.toFixed(1).replace('.', ',') : '—'),
+      card('Racha', streak ? `${streak} ${sign > 0 ? (streak === 1 ? 'buena' : 'buenas') : streak === 1 ? 'mala' : 'malas'}` : '—'),
+      card('Mejor rango', r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).label : '—'),
+    );
+    // Gráfica: tus puntos tras cada partida (de la más antigua a la última)
+    const pts = hist.slice(0, 20).map((h) => h.puntos).reverse();
+    const box = $('cp-grafica');
+    if (pts.length < 2) {
+      box.replaceChildren(el('p', { class: 'nota', text: 'Juega un par de clasificatorias para ver cómo evolucionan tus puntos.' }));
+      return;
+    }
+    const W = 320;
+    const H = 90;
+    const lo = Math.min(...pts);
+    const hi = Math.max(...pts);
+    const span = Math.max(40, hi - lo);
+    const y = (v) => H - 8 - ((v - lo) / span) * (H - 18);
+    const x = (i) => 6 + (i / (pts.length - 1)) * (W - 12);
+    const line = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('class', 'cp-curva');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', `Tus puntos en las últimas ${pts.length} partidas: de ${pts[0]} a ${pts[pts.length - 1]}`);
+    // Estirada a todo el ancho; el trazo, del mismo grosor
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.innerHTML = `<defs><linearGradient id="cp-relleno" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(242,179,61,0.35)"/><stop offset="1" stop-color="rgba(242,179,61,0)"/></linearGradient></defs>
+      <polygon points="${x(0)},${H} ${line} ${x(pts.length - 1)},${H}" fill="url(#cp-relleno)"/>
+      <polyline points="${line}" fill="none" stroke="#f2b33d" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    box.replaceChildren(el('div', { class: 'cp-curva-cab' }, el('small', { text: 'Tus puntos' }), el('small', { text: `${pts[pts.length - 1] - pts[0] >= 0 ? '+' : '−'}${Math.abs(pts[pts.length - 1] - pts[0])} en ${pts.length - 1} partidas` })), svg);
+  }
+
+  /** Historial de clasificatorias: franja de color por resultado, puesto, cola y ±PL. */
+  _renderRankedHistory(r) {
+    const hist = (r.historial || []).slice(0, 10);
+    const list = $('cp-historial');
+    if (!hist.length) {
+      list.replaceChildren(el('li', { class: 'cp-vacio' }, emptyState('⚔', 'Aún no hay clasificatorias esta temporada', 'Tus partidas aparecerán aquí con el puesto y los puntos que ganes o pierdas.')));
+      return;
+    }
+    const ago = (t) => {
+      const m = Math.round((Date.now() - t) / 60000);
+      if (m < 60) return `hace ${Math.max(1, m)} min`;
+      const h = Math.round(m / 60);
+      if (h < 24) return `hace ${h} h`;
+      const d = Math.round(h / 24);
+      return `hace ${d} día${d === 1 ? '' : 's'}`;
+    };
+    list.replaceChildren(
+      ...hist.map((h) => {
+        const won = !h.abandono && h.puesto === 1;
+        const good = won || h.delta > 0;
+        const cls = h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
+        const title = h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
+        const delta = h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
+        return el('li', { class: `cp-partida ${cls}` },
+          el('span', { class: 'cp-res' }, el('strong', { text: title }), el('small', { text: h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA' })),
+          el('span', { class: 'cp-tras' }, badgeCanvas(h.puntos, 18), el('small', { text: rankOf(h.puntos).label })),
+          el('span', { class: 'cp-delta', text: delta }),
+          el('small', { class: 'cp-cuando', text: ago(h.fecha) }));
+      }),
+    );
+  }
+
+  /** Los mejores de la temporada (de la tabla global) con tu fila marcada. */
+  _renderTop(r) {
+    const box = $('cp-top');
+    const L = this.ladder;
+    const rows = L.available ? L.rows.filter((x) => x.temporada === r.temporada).slice(0, 8) : [];
+    if (!rows.length) {
+      box.replaceChildren(emptyState('🏅', L.available ? 'Nadie tiene rango todavía esta temporada' : 'La tabla de la temporada aún no está disponible', L.available ? 'Juega una clasificatoria para estrenarla.' : L.error || 'Tu rango se guarda y sube a la tabla en cuanto haya conexión.'));
+      return;
+    }
+    box.replaceChildren(
+      el('ol', { class: 'cp-mejores' },
+        ...rows.map((row, i) => {
+          const rk = rankOf(row.puntos);
+          return el('li', { class: row.id === L.myId ? 'yo' : '' },
+            el('span', { class: 'cp-puesto', text: String(i + 1) }),
+            el('button', { type: 'button', class: 'celda-nacion celda-boton', title: 'Ver su ficha', onclick: () => this.openPlayerCard(row, 'rango') }, emblemCanvas(row.emblema, 22), el('strong', { text: row.nombre })),
+            el('span', { class: 'celda-rango' }, badgeCanvas(row.puntos, 18), el('span', { text: rk.label, style: `color: rgb(${rk.league.color.join(',')})` })),
+            el('span', { class: 'num', text: `${rk.pl} PL` }));
+        })),
+    );
+  }
+
+  /** Recompensas por la mejor liga de la temporada y temporadas anteriores. */
+  _renderRewards(r) {
+    const best = r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).index : -1;
+    $('cp-rec-nota').textContent = best >= 0 ? `Al acabar la temporada recibirás 🪙 ${formatNumber(seasonReward(Math.max(r.mejor, r.puntos)).coins)} por haber llegado a ${LEAGUES[best].name}. Cuanto más alto llegues, más.` : 'Al acabar la temporada recibes monedas según la mejor liga que alcances.';
+    $('cp-recompensas').replaceChildren(
+      ...LEAGUES.map((L, i) => el('li', { class: `cp-premio${i === best ? ' actual' : i < best ? ' conseguida' : ''}`, style: `--liga: ${L.color.join(', ')}` },
+        el('strong', { text: L.name }),
+        el('span', { text: `🪙 ${formatNumber(seasonReward(L.base).coins)}` }))),
+    );
+    const prev = r.anteriores || [];
+    $('cp-anteriores').replaceChildren(
+      ...(prev.length
+        ? [el('h3', { text: 'Temporadas anteriores' }), el('ul', {}, ...prev.slice(0, 6).map((a) => el('li', {}, badgeCanvas(a.mejor ?? a.puntos ?? 0, 20), el('span', { text: seasonName(a.temporada) }), el('strong', { text: a.liga || rankOf(a.mejor ?? a.puntos ?? 0).label }))))]
+        : []),
+    );
   }
 
   /** Clasificación global de rangos: { available, rows, error, myId, source }. */
   setLadder(state) {
     this.ladder = { ...this.ladder, ...state };
     if (this.view === 'clasificacion' && this.table === 'rangos') this.renderTable();
+    if (this.view === 'competitivo') this._renderTop(this.profile.rango);
   }
 
   _ranksTable() {
@@ -1413,7 +1754,7 @@ export class Home {
         el('small', { text: seasonName(r.temporada) }),
         el('strong', { text: placing ? `Colocación ${r.colocacion}/${PLACEMENT_GAMES}` : k.label, style: placing ? '' : `color: rgb(${k.league.color.join(',')})` }),
         el('span', { text: placing ? 'Juega las partidas de colocación para tener liga.' : `${k.pl} PL · ${r.victorias} victorias en ${r.partidas} partidas · mejor: ${rankOf(Math.max(r.mejor, r.puntos)).label}` })),
-      el('button', { type: 'button', class: 'principal', onclick: () => this.h.onRanked?.('ia'), text: 'Jugar clasificatoria' }));
+      el('button', { type: 'button', class: 'principal', onclick: () => this.go('competitivo'), text: 'Buscar partida' }));
     const out = [me];
     const L = this.ladder;
     if (!L.available) {
@@ -2153,11 +2494,13 @@ export class Home {
               ? ''
               : 'Este navegador no permite el modo multijugador.');
     this.renderRooms();
+    if (this.view === 'competitivo') this.renderQueue();
   }
 
   setRooms(rooms) {
     this.rooms = rooms;
     this.renderRooms();
+    if (this.view === 'competitivo') this.renderQueue();
   }
 
   /** Vestíbulo público: tarjetas con miniatura, mapa, modo y plazas libres (o un estado vacío con diseño). */
@@ -2284,13 +2627,26 @@ export class Home {
     $('crear-error').textContent = '';
     this._busyCreate(false);
     this._renderCreate();
+    this.pushLayer('crear-sala', 'multijugador/crear-sala');
   }
 
+  /** «Atrás» en Crear sala: vuelve a la página de la que vino (Multijugador o Competitivo). */
   hideCreate() {
+    const below = history.state?.capa === 'crear-sala' && history.state.n > 0;
+    if (below) {
+      history.back(); // el historial la cierra (ver _onPop)
+      return;
+    }
+    this.closeLayer('crear-sala');
+    this._closeCreate();
+    if (!PAGES.has(this.view)) this.go('multijugador');
+  }
+
+  _closeCreate() {
+    if ($('crear-sala').hidden) return;
     $('crear-sala').hidden = true;
     $('inicio').hidden = false;
     this._slideIn($('inicio'), -1);
-    this.openPanel('online');
   }
 
   _renderCreate() {
@@ -2396,6 +2752,7 @@ export class Home {
     $('btn-editar-reglas').textContent = 'Editar reglas';
     $('sala-copia').hidden = true;
     delete $('sala-ajustes').dataset.host;
+    this.pushLayer('sala');
   }
 
   hideLobby() {

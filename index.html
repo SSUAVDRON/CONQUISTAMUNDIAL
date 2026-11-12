@@ -29,14 +29,14 @@
       "./src/game.js": "./src/game.js?v=58a8bf7973",
       "./src/guia.js": "./src/guia.js?v=58c673b977",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=2aee4bc9a4",
+      "./src/home.js": "./src/home.js?v=ed3a582f13",
       "./src/icons.js": "./src/icons.js?v=f9f7cb7823",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
-      "./src/ilustraciones.js": "./src/ilustraciones.js?v=370e36db66",
+      "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=41a1d9c9f5",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=fe46470b15",
-      "./src/main.js": "./src/main.js?v=dad70df19f",
+      "./src/main.js": "./src/main.js?v=53a0f97c4f",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=eebaf66b1d",
       "./src/mecanicas.js": "./src/mecanicas.js?v=f4edbe2914",
@@ -67,7 +67,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=ab5a3bd2e2">
+  <link rel="stylesheet" href="css/estilo.css?v=082ce14a78">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -169,7 +169,6 @@
           <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5 V9 M6.5 13.5 V5 M10 13.5 V7.5 M13.5 13.5 V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Progreso</span> <span id="cuenta-logros" class="cuenta"></span></button>
           <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span></button>
           <button type="button" role="tab" id="tab-arsenal" data-vista="arsenal" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></button>
-          <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clasificación</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
         <button type="button" id="btn-cuenta" class="btn-cuenta" title="Entrar o crear una cuenta" aria-label="Entrar o crear una cuenta" hidden>
@@ -227,20 +226,6 @@
           <button type="button" class="tcu-cerrar" id="tcu-cerrar" aria-label="Ahora no">✕</button>
         </section>
 
-        <section class="clasificatoria" id="clasificatoria" aria-labelledby="cl-titulo">
-          <div class="cl-insignia" id="cl-insignia"></div>
-          <div class="cl-datos">
-            <span class="cl-temporada" id="cl-temporada"></span>
-            <h2 class="cl-titulo" id="cl-titulo">Clasificatoria</h2>
-            <strong class="cl-rango" id="cl-rango"></strong>
-            <div class="cl-barra" aria-hidden="true"><span id="cl-barra"></span></div>
-            <small class="cl-nota" id="cl-nota"></small>
-          </div>
-          <div class="cl-botones">
-            <button type="button" class="principal" id="btn-clasif-ia">Jugar clasificatoria</button>
-            <button type="button" class="btn-sec" id="btn-clasif-sala">Sala clasificatoria</button>
-          </div>
-        </section>
         <h2 class="titulo-seccion"><span>Elige cómo jugar</span></h2>
         <div class="modos">
           <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
@@ -249,79 +234,36 @@
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M9 1.5 L3.5 9 H7.5 L6.5 14.5 L12.5 6.5 H8.5 Z" fill="currentColor"/></svg>
             <span class="modo-titulo">Partida rápida</span>
             <span class="modo-texto">Una partida equilibrada en el mundo, lista para jugar.</span>
-            <span class="modo-corto">El mundo, 90 naciones</span>
+            <span class="modo-corto" id="modo-corto-rapida">El mundo, 90 naciones</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="modo " data-modo="ia" style="--i:1">
+          <button type="button" class="modo " data-modo="competitivo" style="--i:1">
             <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
+            <span class="modo-etiqueta">🏆 Temporada</span>
             
-            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="5" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 5 V2.5 M6 9 h0.01 M10 9 h0.01 M6 11.5 h4 M1.5 8 v3 M14.5 8 v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="2" r="1" fill="currentColor"/></svg>
-            <span class="modo-titulo">Contra IA</span>
-            <span class="modo-texto">Enfréntate a la inteligencia artificial y perfecciona tu estrategia.</span>
-            <span class="modo-corto">Tú eliges mapa y rivales</span>
+            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="modo-titulo">Competitivo</span>
+            <span class="modo-texto">Sube de liga en la temporada y demuestra quién manda.</span>
+            <span class="modo-corto" id="modo-corto-competitivo">Tu rango y buscar partida</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="modo " data-modo="online" style="--i:2">
+          <button type="button" class="modo " data-modo="crear" style="--i:2">
+            <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
+            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="modo-titulo">Crear partida</span>
+            <span class="modo-texto">Contra la IA: tú eliges mapa, rivales, dificultad y reglas.</span>
+            <span class="modo-corto" id="modo-corto-crear">Mapa, rivales y reglas</span>
+            <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="modo " data-modo="online" style="--i:3">
             <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
             <span class="modo-etiqueta">🔥 Popular</span>
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.2" fill="currentColor"/><circle cx="3.5" cy="6" r="1.7" fill="currentColor"/><circle cx="12.5" cy="6" r="1.7" fill="currentColor"/><path d="M4.5 13.5 c0 -2.5 1.6 -4 3.5 -4 s3.5 1.5 3.5 4 Z M0.8 13 c0 -2 1.2 -3.2 2.7 -3.2 c0.6 0 1 0.1 1.4 0.3 M15.2 13 c0 -2 -1.2 -3.2 -2.7 -3.2 c-0.6 0 -1 0.1 -1.4 0.3" fill="currentColor"/></svg>
             <span class="modo-titulo">Multijugador</span>
             <span class="modo-texto">Compite con otros jugadores en tiempo real.</span>
-            <span class="modo-corto">Juega con tus amigos</span>
+            <span class="modo-corto" id="modo-corto-online">Salas y amigos</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="modo " data-modo="personalizada" style="--i:3">
-            <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
-            <span class="modo-etiqueta">🧭 A tu medida</span>
-            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="modo-titulo">Partida personalizada</span>
-            <span class="modo-texto">Define las reglas, el mapa y la duración a tu medida.</span>
-            <span class="modo-corto">Todas las reglas</span>
-            <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-
-        <form id="form-rapida" class="bloque panel-modo" data-panel="ia" autocomplete="off" hidden>
-          <div class="panel-cabecera">
-            <h2>Partida contra la IA</h2>
-            <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
-          </div>
-          <h3 id="ia-mapa-tit">Mapa</h3>
-          <div id="galeria-mapas" aria-labelledby="ia-mapa-tit"></div>
-          <div class="opciones ia-basico">
-            <label class="campo"><span>Naciones rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
-              <input id="in-bots" type="range" min="1" max="200" value="70">
-            </label>
-            <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
-            <label class="campo" id="campo-semilla"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
-              <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
-            </label>
-          </div>
-          <details class="reglas-avanzadas" id="ia-avanzadas">
-            <summary><span class="ra-tit">Reglas avanzadas</span><small class="ra-resumen" id="ia-reglas-resumen"></small></summary>
-            <div id="reglas-ia" class="reglas"></div>
-          </details>
-          <div class="form-pie">
-            <p class="form-resumen" id="ia-resumen"></p>
-            <button type="submit" class="principal grande">Empezar partida</button>
-          </div>
-        </form>
-
-        <div id="bloque-online" class="bloque panel-modo" data-panel="online" hidden>
-          <div class="panel-cabecera">
-            <h2>Multijugador <span id="estado-red" class="chip">Conectando…</span></h2>
-            <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
-          </div>
-          <div class="online-acciones">
-            <button type="button" id="btn-crear-sala" class="principal" disabled>＋ Crear sala</button>
-            <form id="form-unirse" class="unirse" autocomplete="off">
-              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false" autocapitalize="characters">
-              <button type="submit" disabled>Unirse con código</button>
-            </form>
-          </div>
-          <h3>Salas públicas</h3>
-          <ul id="lista-salas" class="lista-salas salas-publicas" aria-live="polite"></ul>
-          <p id="nota-red" class="nota"></p>
         </div>
 
         <div class="ini-fila">
@@ -350,8 +292,117 @@
             <div class="novedades-puntos" id="novedades-puntos" role="tablist" aria-label="Novedades"></div>
           </section>
         </div>
-        <h2 class="titulo-seccion titulo-arsenal"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></h2>
-        <div class="arsenal-cats" id="arsenal-cats"></div>
+      </section>
+
+
+      <!-- Competitivo: tu rango de la temporada, buscar partida, historial, ligas y recompensas -->
+      <section class="vista pagina pagina-competitivo" data-vista="competitivo" aria-labelledby="pg-comp-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small id="cp-temporada"></small><h1 id="pg-comp-h1">Competitivo</h1></div>
+          <span class="pagina-extra" id="cp-fin"></span>
+        </header>
+        <div class="cp-portada">
+          <div class="cp-comandante" id="cp-comandante">
+            <canvas id="cp-emblema" width="200" height="200" aria-hidden="true"></canvas>
+            <strong id="cp-nombre"></strong>
+            <span id="cp-titulo" class="cp-titulo"></span>
+            <span id="cp-nivel" class="cp-nivel"></span>
+          </div>
+          <div class="cp-rango">
+            <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><canvas id="cp-insignia" width="300" height="300"></canvas></div>
+            <strong id="cp-liga" class="cp-liga"></strong>
+            <span id="cp-pl" class="cp-pl"></span>
+            <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
+            <small id="cp-vd" class="cp-vd"></small>
+          </div>
+          <div class="cp-cola">
+            <h2>Buscar partida</h2>
+            <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
+            <p id="cp-cola-nota" class="cp-cola-nota"></p>
+            <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
+            <small id="cp-cola-extra" class="cp-cola-extra"></small>
+          </div>
+        </div>
+        <section class="bloque cp-escalera" aria-labelledby="cp-ligas-tit">
+          <h2 id="cp-ligas-tit">Ligas</h2>
+          <ol id="cp-ligas" class="cp-ligas"></ol>
+        </section>
+        <div class="cp-rejilla">
+          <section class="bloque cp-temporada" aria-labelledby="cp-stats-tit">
+            <h2 id="cp-stats-tit">Esta temporada</h2>
+            <div id="cp-stats" class="cp-cifras"></div>
+            <div id="cp-grafica" class="cp-grafica"></div>
+          </section>
+          <section class="bloque cp-historial" aria-labelledby="cp-hist-tit">
+            <h2 id="cp-hist-tit">Historial</h2>
+            <ol id="cp-historial" class="cp-partidas"></ol>
+          </section>
+        </div>
+        <div class="cp-rejilla">
+          <section class="bloque cp-top" aria-labelledby="cp-top-tit">
+            <div class="cp-bloque-cab"><h2 id="cp-top-tit">Mejores de la temporada</h2><button type="button" class="enlace-ini" data-pagina="clasificacion">Clasificación completa <span aria-hidden="true">›</span></button></div>
+            <div id="cp-top"></div>
+          </section>
+          <section class="bloque cp-recompensas" aria-labelledby="cp-rec-tit">
+            <h2 id="cp-rec-tit">Recompensas de la temporada</h2>
+            <p class="nota" id="cp-rec-nota"></p>
+            <ol id="cp-recompensas" class="cp-premios"></ol>
+            <div id="cp-anteriores" class="cp-anteriores"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- Crear partida (contra la IA, a tu medida): mapa, rivales y reglas -->
+      <section class="vista pagina pagina-crear" data-vista="crear" aria-labelledby="pg-crear-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small>Contra la IA · a tu medida</small><h1 id="pg-crear-h1">Crear partida</h1></div>
+        </header>
+        <form id="form-rapida" class="crear-pagina" autocomplete="off">
+          <section class="bloque crear-bloque crear-mapa"><h2 id="ia-mapa-tit">Mapa</h2>
+          <div id="galeria-mapas" aria-labelledby="ia-mapa-tit"></div>
+          </section>
+          <section class="bloque crear-bloque crear-rivales"><h2>Rivales</h2>
+          <div class="opciones ia-basico">
+            <label class="campo"><span>Naciones rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
+              <input id="in-bots" type="range" min="1" max="200" value="70">
+            </label>
+            <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
+            <label class="campo" id="campo-semilla"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
+              <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
+            </label>
+          </div>
+          </section>
+          <section class="bloque crear-bloque crear-reglas" aria-labelledby="crear-reglas-tit"><h2 id="crear-reglas-tit">Reglas <small class="ra-resumen" id="ia-reglas-resumen"></small></h2>
+            <div id="reglas-ia" class="reglas"></div>
+          </section>
+          <div class="form-pie crear-pie">
+            <p class="form-resumen" id="ia-resumen"></p>
+            <button type="submit" class="principal grande">Empezar partida</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Multijugador: crear sala, unirse con código y salas públicas -->
+      <section class="vista pagina pagina-online" data-vista="multijugador" aria-labelledby="pg-online-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small>En tiempo real</small><h1 id="pg-online-h1">Multijugador</h1></div>
+          <span class="pagina-extra"><span id="estado-red" class="chip">Conectando…</span></span>
+        </header>
+        <div id="bloque-online" class="bloque">
+          <div class="online-acciones">
+            <button type="button" id="btn-crear-sala" class="principal" disabled>＋ Crear sala</button>
+            <form id="form-unirse" class="unirse" autocomplete="off">
+              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false" autocapitalize="characters">
+              <button type="submit" disabled>Unirse con código</button>
+            </form>
+          </div>
+          <h3>Salas públicas</h3>
+          <ul id="lista-salas" class="lista-salas salas-publicas" aria-live="polite"></ul>
+          <p id="nota-red" class="nota"></p>
+        </div>
       </section>
 
       <!-- Arsenal: edificios, unidades y bombas por categoría -->
@@ -495,7 +546,11 @@
       </section>
 
       <!-- Clasificación -->
-      <section class="vista" data-vista="clasificacion" role="tabpanel" aria-labelledby="tab-clasificacion" hidden>
+      <section class="vista pagina" data-vista="clasificacion" aria-labelledby="pg-clas-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small>Rangos, récords e historial</small><h1 id="pg-clas-h1">Clasificación</h1></div>
+        </header>
         <div class="bloque">
           <div class="sub-pestanas" id="tabla-pestanas" role="tablist" aria-label="Tabla">
             <button type="button" role="tab" data-tabla="rangos" aria-selected="true" aria-controls="tabla-clasificacion">Rangos</button>

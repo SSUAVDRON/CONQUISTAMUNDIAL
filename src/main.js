@@ -265,7 +265,11 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
  * tapar la ficha de una invitación o la sala que estén a la vista.
  */
 function startDemo({ background = false } = {}) {
-  if (!background) leaveOnline();
+  if (!background) {
+    leaveOnline();
+    // Fuera de la partida: se vuelve a la página desde la que se empezó (Competitivo, Crear partida…)
+    home.closeLayer('partida');
+  }
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
   // La partida de fondo del menú va a velocidad normal (gasta menos)
@@ -312,6 +316,8 @@ function enterGame(game) {
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
+  // La partida tiene su entrada en el historial: el botón atrás abre su menú en vez de sacarte
+  home.pushLayer('partida');
   // Resumen de partida: graba cómo va (sin tocar la simulación)
   state.rec = game.human ? new Grabador(game, game.human) : null;
   // Se llama en mitad del turno: un fallo de la interfaz no debe dejar el
@@ -395,7 +401,7 @@ for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => s
 document.addEventListener('click', (e) => {
   const el = e.target instanceof Element ? e.target.closest('button') : null;
   if (!el || el.disabled) return;
-  if (el.matches('[role="tab"], .sub-pestanas button')) sound.play('pagina', 0.8, 60);
+  if (el.matches('[role="tab"], .sub-pestanas button, [data-volver], [data-pagina]')) sound.play('pagina', 0.8, 60);
   else if (el.matches('.modo')) sound.play('elegir', 0.8, 120);
   else sound.play('click', 0.6, 40);
 });
@@ -1095,8 +1101,36 @@ const home = new Home(profile, {
       for (const k of ['sala', 'b']) url.searchParams.delete(k);
       history.replaceState(null, '', url);
     }
+    // La sala tenía su entrada en el historial: se cierra y se vuelve a la página de antes
+    const below = history.state?.capa === 'sala' && history.state.n > 0;
+    home.closeLayer('sala');
     home.show();
-    home.openPanel('online');
+    if (!below) home.openPanel('online');
+  },
+  /** Atrás o adelante en el navegador (o el botón atrás del móvil). true = resuelto aquí. */
+  onHistory(st) {
+    // En partida, atrás no te saca de golpe: abre (o cierra) el menú de la partida
+    if (state.game && !state.demo) {
+      const menu = document.getElementById('menu-partida');
+      if (st?.capa !== 'partida') home.pushLayer('partida');
+      if (menu && !menu.hidden) cerrarDialogo(menu);
+      else openGameMenu();
+      return true;
+    }
+    // En una sala (o su ficha de entrada): atrás es salir de ella
+    if ((state.sala || state.pendingEntry) && !document.getElementById('sala').hidden && st?.capa !== 'sala') {
+      leaveOnline();
+      if (state.pendingEntry) {
+        state.pendingEntry = null;
+        const url = new URL(location.href);
+        for (const k of ['sala', 'b']) url.searchParams.delete(k);
+        history.replaceState(history.state, '', url);
+      }
+      home.show();
+      home.setView(st?.vista && st.vista !== 'jugar' ? st.vista : 'multijugador');
+      return true;
+    }
+    return false;
   },
   onEntryRetry() {
     if (!state.pendingEntry && state.sala) state.pendingEntry = state.sala.code;

@@ -33,10 +33,46 @@ El menú va fluido también en móviles: la partida de fondo se dibuja a ~20 fps
 completa (obligaba a recomponer toda la pantalla) y el brillo de los botones se
 mueve con `transform`.
 
-El inicio tiene cuatro modos en tarjetas ilustradas: **Partida rápida** (mundo
-real contra 90 países y cientos de colonias, un clic), **Contra la IA**,
-**Multijugador** y **Partida personalizada**. Antes de cada partida hay una
-pantalla de carga con los pasos reales y un consejo.
+El inicio tiene cuatro tarjetas ilustradas: **Partida rápida** (mundo real
+contra 90 países y cientos de colonias, un clic) y tres que abren **su propia
+página**, sin desplegables en el menú: **Competitivo**, **Crear partida** y
+**Multijugador**. Cada página tiene arriba «← Volver»; el botón atrás del
+navegador o del móvil y la tecla Escape también vuelven, y cada una tiene su
+dirección (`#/competitivo`, `#/crear`, `#/multijugador`, `#/clasificacion`) para
+abrirla directamente. Las secciones (Jugar, Progreso, Perfil, Arsenal y Ajustes)
+van en la barra de arriba; **en el móvil, en una barra de iconos abajo** (en
+las páginas se oculta: tienen «Volver» y su propio pie). El historial también
+cubre lo que va encima del menú: «atrás» en Crear sala vuelve a la página de la
+que vino, en una sala te saca de ella y **en partida abre el menú de la partida
+en vez de sacarte** (otra vez, lo cierra); al terminar una partida se vuelve a
+la página desde la que empezó (Crear partida, Competitivo o Multijugador).
+Antes de cada partida hay una pantalla de carga con los pasos reales y un
+consejo.
+
+- **Competitivo** (al estilo de los clientes de juegos competitivos, con el arte
+  de Trinchera): una franja con **tu comandante** (estandarte, emblema, marco,
+  título y nivel), **tu insignia de rango en grande** con rayos de luz que giran,
+  la liga y división, la barra de PL, victorias, derrotas y escudo, y **Buscar
+  partida** con dos colas: **Contra la IA** (el mundo, 90 naciones, la IA según
+  tu liga) y **En línea** (entra en la sala clasificatoria pública más llena con
+  sitio o, si no hay, crea una para que entren otros). Debajo: la **escalera de
+  las nueve ligas** (las superadas iluminadas, la tuya con «TÚ» y la mejor de la
+  temporada con ★), **esta temporada** (porcentaje de victorias en un anillo,
+  partidas, puesto medio, racha y mejor rango, con la gráfica de tus puntos en
+  las últimas partidas), el **historial** de clasificatorias (franja dorada si
+  ganas, verde si sumas, roja si restas; puesto, cola, rango tras la partida y
+  ±PL), **los mejores de la temporada** (con enlace a la clasificación
+  completa) y las **recompensas** de cada liga con la tuya marcada, más tus
+  temporadas anteriores. La tarjeta del inicio lleva tu insignia dibujada sobre
+  una fortaleza y tu rango en una línea.
+- **Crear partida** (antes «Contra la IA» y «Partida personalizada»): mapa con
+  la galería, rivales y dificultad, y las **reglas siempre a la vista** en su
+  propio bloque (sin el desplegable «Reglas avanzadas»), con un pie fijo que
+  resume la partida y «Empezar partida».
+- **Multijugador**: crear sala, unirse con código y las salas públicas, con el
+  estado de la conexión en la cabecera.
+- **Clasificación** (Rangos, Global, Tus récords e Historial) es ahora una página
+  a la que se llega desde Competitivo.
 
 **Cuenta** (en la web, con `api/cuentas.php`): «Entrar» en la cabecera abre
 un diálogo con las pestañas Entrar y Crear cuenta (correo y contraseña de 8
@@ -463,7 +499,7 @@ CONQUISTAMUNDIAL/
 │   ├── camera.js       Zoom y desplazamiento
 │   ├── input.js        Ratón, táctil y teclado
 │   ├── ui.js           Interfaz de la partida: panel, construcción, diplomacia, avisos
-│   ├── home.js         Pantallas de inicio (modos, selector de mapa, perfil y aspecto, tienda, progreso, ajustes) y sala
+│   ├── home.js         Pantallas de inicio: navegación por páginas con historial, Competitivo, Crear partida, Multijugador, perfil y aspecto, tienda, progreso, ajustes y sala
 │   ├── movimiento.js   Transiciones de la interfaz: mostrar/ocultar, diálogos, cifras que suben, barras, teclado en pestañas
 │   ├── guia.js         Guía del juego (diálogo con pestañas)
 │   ├── resumen.js      Grabación de la partida (muestras, momentos, fotos del mapa), puesto final y gráficas

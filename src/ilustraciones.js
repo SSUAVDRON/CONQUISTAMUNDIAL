@@ -426,6 +426,65 @@ function artOnline(ctx, W, H) {
   vignette(ctx, W, H, 0.5);
 }
 
+/**
+ * Competitivo: una fortaleza al anochecer con estandartes y, sobre ella, tu
+ * insignia de rango con su luz (`badge(ctx, cx, cy, alto)`).
+ */
+function artRanked(ctx, W, H, badge) {
+  sunsetSky(ctx, W, H, { glowX: 0.5, glowY: 0.4, warm: 0.7, top: '#120b24' });
+  // Rayos de luz detrás de la insignia
+  const cx = W * 0.5;
+  const cy = H * 0.36;
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * TAU;
+    const g = ctx.createLinearGradient(0, 0, Math.cos(a) * W * 0.6, Math.sin(a) * W * 0.6);
+    g.addColorStop(0, 'rgba(255, 220, 150, 0.32)');
+    g.addColorStop(1, 'rgba(255, 220, 150, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, W * 0.6, a - 0.07, a + 0.07);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  clouds(ctx, W, H, 58, { y0: 0.45, y1: 0.7, n: 8, color: '170, 120, 200', alpha: 0.22 });
+  hills(ctx, W, H, 12, 0.7, 0.8, 'rgba(36, 24, 48, 0.95)', 2);
+  // Fortaleza: muralla almenada con dos torres y una puerta
+  const base = H * 0.86;
+  const wall = (x, w, h) => {
+    ctx.fillRect(x, base - h, w, h);
+    const m = Math.max(4, w / 9);
+    for (let u = x; u < x + w - 1; u += m * 2) ctx.fillRect(u, base - h - m * 0.9, m, m * 0.9);
+  };
+  ctx.fillStyle = '#0b0912';
+  wall(W * 0.3, W * 0.4, H * 0.16);
+  wall(W * 0.24, W * 0.1, H * 0.3);
+  wall(W * 0.66, W * 0.1, H * 0.3);
+  wall(W * 0.45, W * 0.1, H * 0.22);
+  ctx.fillStyle = 'rgba(255, 190, 100, 0.55)';
+  ctx.beginPath();
+  ctx.arc(W * 0.5, base - H * 0.05, W * 0.02, Math.PI, 0);
+  ctx.lineTo(W * 0.52, base);
+  ctx.lineTo(W * 0.48, base);
+  ctx.closePath();
+  ctx.fill();
+  hills(ctx, W, H, 31, 0.86, 0.92, '#07060c', 3);
+  flag(ctx, W * 0.29, H * 0.56, H * 0.3, 0.4, { cloth: '#3a1d55', withEmblem: false, w: 0.5 });
+  flag(ctx, W * 0.71, H * 0.56, H * 0.3, 1.3, { cloth: '#3a1d55', withEmblem: false, w: 0.5 });
+  if (badge) {
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, H * 0.42);
+    glow.addColorStop(0, 'rgba(255, 228, 160, 0.55)');
+    glow.addColorStop(1, 'rgba(255, 228, 160, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+    badge(ctx, cx, cy + H * 0.02, H * 0.5);
+  }
+  vignette(ctx, W, H, 0.45);
+}
+
 /** Partida personalizada: mapa de papel con compás, regla y un avión. */
 function artCustom(ctx, W, H, europeData) {
   const g = ctx.createLinearGradient(0, 0, W, H);
@@ -518,6 +577,7 @@ export function drawModeArt(kind, canvas, data = {}) {
   const W = canvas.width / k;
   const H = canvas.height / k;
   if (kind === 'rapida') artQuick(ctx, W, H);
+  else if (kind === 'competitivo') artRanked(ctx, W, H, data.badge);
   else if (kind === 'ia') artAI(ctx, W, H, data.world);
   else if (kind === 'online') artOnline(ctx, W, H);
   else artCustom(ctx, W, H, data.europe);
