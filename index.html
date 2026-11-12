@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="84c8db2 2026-11-12 16:01 UTC">
+<meta name="trinchera-build" content="db54d1a 2026-11-12 16:26 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -2722,7 +2722,7 @@ body.sin-animaciones .novedad { transition: none; }
   border: 1px solid rgba(233, 185, 85, 0.24);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
 }
-#inicio .vista > .bloque > h2, #inicio .bloque > h2, #sala .bloque h2, #fin h2, #inicio .panel-cabecera h2 {
+#inicio .vista > .bloque > h2, #inicio .bloque > h2, #inicio .cp-bloque-cab h2, #sala .bloque h2, #fin h2, #inicio .panel-cabecera h2 {
   font-family: var(--serif);
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -4144,6 +4144,268 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 }
 #nota-nube:empty { display: none; }
 
+/* =====================================================================
+   Páginas del menú: Competitivo, Crear partida, Multijugador y
+   Clasificación. Se abren con su cabecera («← Volver» y título); el botón
+   atrás del navegador o del móvil vuelve a la anterior.
+   ===================================================================== */
+.pagina-cab { display: flex; align-items: center; gap: 16px; padding: 2px 0; }
+.volver {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 15px 9px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--oro-linea);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--oro-claro);
+  font-weight: 700;
+  font-size: 14px;
+}
+.volver svg { width: 16px; height: 16px; transition: transform var(--dur-2) var(--ease-out); }
+.volver:hover { border-color: var(--oro); background: rgba(233, 185, 85, 0.12); }
+.volver:hover svg { transform: translateX(-3px); }
+.pagina-titulos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pagina-titulos small { color: var(--oro); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.pagina-titulos h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.05;
+  background: linear-gradient(180deg, #fff6d8, #f2b33d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.pagina-extra { flex: none; color: var(--texto-2); font-size: 13px; font-weight: 700; }
+.vista.pagina { display: flex; flex-direction: column; gap: 18px; }
+.vista.pagina[hidden] { display: none; }
+
+/* ---------- Competitivo ---------- */
+.cp-portada {
+  --liga: 244, 196, 78;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(200px, 0.9fr) minmax(260px, 1.2fr) minmax(260px, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding: 26px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--liga), 0.45);
+  background:
+    radial-gradient(ellipse 45% 70% at 50% 42%, rgba(var(--liga), 0.2), transparent 70%),
+    linear-gradient(160deg, #170d29, #0b1222 55%, #140a20);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.cp-portada::before { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(var(--liga), 0.16); border-radius: 13px; pointer-events: none; }
+.cp-portada.en-colocacion { --liga: 196, 170, 120; }
+/* Tu comandante: un estandarte con tu emblema */
+.cp-comandante {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 22px 14px 40px;
+  text-align: center;
+  clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.cp-comandante::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.45)); pointer-events: none; }
+.cp-comandante > * { position: relative; z-index: 1; }
+.cp-comandante canvas { width: 108px; height: 108px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55)); }
+#cp-nombre { max-width: 100%; font-family: var(--serif); font-size: 22px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+.cp-titulo { color: rgba(255, 255, 255, 0.78); font-size: 13px; }
+.cp-nivel { margin-top: 6px; padding: 3px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.5); color: var(--oro-claro); font-size: 12px; font-weight: 800; }
+/* El rango: insignia grande con su luz */
+.cp-rango { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
+.cp-halo { position: relative; width: 210px; height: 210px; display: grid; place-items: center; }
+.cp-halo::before { content: ""; position: absolute; inset: 12%; border-radius: 50%; background: radial-gradient(circle, rgba(var(--liga), 0.5), rgba(var(--liga), 0) 70%); }
+.cp-rayos {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(var(--liga), 0.24) 0deg 4deg, transparent 4deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 28%, transparent 68%);
+  mask: radial-gradient(circle, #000 28%, transparent 68%);
+  animation: cpGira 48s linear infinite;
+}
+@keyframes cpGira { to { transform: rotate(1turn); } }
+.cp-halo canvas { position: relative; width: 210px; height: 210px; filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.55)); animation: cpFlota 5s ease-in-out infinite; }
+@keyframes cpFlota { 50% { transform: translateY(-5px); } }
+.cp-liga { font-family: var(--serif); font-size: 30px; font-weight: 800; letter-spacing: 0.03em; color: rgb(var(--liga)); text-shadow: 0 0 18px rgba(var(--liga), 0.45); }
+.cp-pl { font-weight: 700; color: var(--texto-1); font-variant-numeric: tabular-nums; }
+.cp-barra { width: min(280px, 90%); height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.cp-barra span { display: block; height: 100%; width: calc(var(--p, 0) * 100%); border-radius: inherit; background: linear-gradient(90deg, rgba(var(--liga), 0.55), rgb(var(--liga))); box-shadow: 0 0 10px rgba(var(--liga), 0.6); transition: width 0.6s var(--ease-out); }
+.cp-vd { color: var(--texto-2); font-size: 13px; }
+.cp-v { color: var(--ok); font-weight: 800; }
+.cp-d { color: var(--peligro); font-weight: 800; }
+/* Cola y «Buscar partida» */
+.cp-cola { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 18px; border-radius: 14px; background: rgba(0, 0, 0, 0.32); border: 1px solid var(--oro-linea); }
+.cp-cola h2 { margin: 0; font-family: var(--serif); font-size: 19px; color: var(--oro-claro); }
+.cp-colas button { flex: 1; }
+.cp-cola-nota { margin: 0; min-height: 3.9em; color: var(--texto-2); font-size: 13px; line-height: 1.45; }
+.cp-buscar { width: 100%; padding: 16px 18px; font-family: var(--serif); font-size: 19px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.cp-cola-extra { color: var(--texto-3); font-size: 12px; line-height: 1.4; }
+/* Escalera de ligas */
+.cp-ligas { position: relative; list-style: none; margin: 4px 0 0; padding: 10px 0 0; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.cp-ligas::before { content: ""; position: absolute; left: 5%; right: 5%; top: 46px; height: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(233, 185, 85, 0.35), rgba(255, 255, 255, 0.04)); }
+.cp-liga-item { --liga: 244, 196, 78; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 12px; text-align: center; }
+.cp-liga-item canvas { position: relative; width: 58px; height: 58px; transition: transform var(--dur-3) var(--ease-spring); }
+.cp-liga-item strong { font-size: 12px; color: rgb(var(--liga)); }
+.cp-liga-item small { font-size: 10px; color: var(--texto-3); }
+.cp-liga-item.pendiente canvas { filter: grayscale(0.85) brightness(0.55); }
+.cp-liga-item.pendiente strong { color: var(--texto-3); }
+.cp-liga-item.actual { background: radial-gradient(circle at 50% 35%, rgba(var(--liga), 0.26), transparent 70%); box-shadow: inset 0 0 0 1px rgba(var(--liga), 0.55); }
+.cp-liga-item.actual canvas { transform: scale(1.2); }
+.cp-liga-item:hover canvas { transform: scale(1.12); }
+.cp-liga-item.actual:hover canvas { transform: scale(1.26); }
+.cp-tu { position: absolute; top: -7px; left: 50%; z-index: 1; transform: translateX(-50%); padding: 1px 8px; border-radius: 999px; background: rgb(var(--liga)); color: #1b1405; font-size: 10px; font-weight: 900; letter-spacing: 0.06em; box-shadow: 0 0 10px rgba(var(--liga), 0.6); }
+.cp-liga-item.mejor::after { content: "★"; position: absolute; top: 3px; right: 8px; color: var(--oro); font-size: 11px; }
+/* Temporada, historial, mejores y recompensas */
+.cp-rejilla { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.cp-rejilla > .bloque { margin: 0; }
+.cp-cifras { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.cp-cifra { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; padding: 12px 6px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); text-align: center; }
+.cp-cifra strong { font-size: 17px; color: var(--texto-1); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.cp-cifra small { font-size: 11px; color: var(--texto-3); }
+.cp-anillo { --p: 0; position: relative; width: 52px; height: 52px; display: grid; place-items: center; }
+.cp-anillo::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--ok) calc(var(--p) * 1turn), rgba(255, 107, 107, 0.55) 0); -webkit-mask: radial-gradient(circle, transparent 57%, #000 59%); mask: radial-gradient(circle, transparent 57%, #000 59%); }
+.cp-anillo span { position: relative; font-size: 12px; font-weight: 800; color: var(--texto-1); }
+.cp-grafica { margin-top: 14px; }
+.cp-curva-cab { display: flex; justify-content: space-between; gap: 8px; color: var(--texto-3); }
+.cp-curva { display: block; width: 100%; height: 90px; margin-top: 4px; }
+.cp-partidas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cp-partida {
+  --c: 140, 150, 170;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border-left: 4px solid rgb(var(--c));
+  background: linear-gradient(90deg, rgba(var(--c), 0.2), rgba(var(--c), 0.04) 55%, rgba(255, 255, 255, 0.02));
+}
+.cp-partida.victoria { --c: 242, 179, 61; }
+.cp-partida.buena { --c: 95, 211, 141; }
+.cp-partida.derrota { --c: 255, 107, 107; }
+.cp-res { display: flex; flex-direction: column; min-width: 0; }
+.cp-res strong { color: rgb(var(--c)); font-size: 15px; }
+.cp-res small { color: var(--texto-3); font-size: 12px; }
+.cp-tras { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--texto-2); }
+.cp-tras small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-delta { font-weight: 800; color: rgb(var(--c)); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cp-cuando { min-width: 74px; color: var(--texto-3); font-size: 12px; text-align: right; white-space: nowrap; }
+.cp-vacio { list-style: none; }
+.cp-bloque-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.cp-bloque-cab h2 { margin: 0; }
+.cp-mejores { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cp-mejores li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); }
+.cp-mejores li.yo { background: rgba(233, 185, 85, 0.12); box-shadow: inset 0 0 0 1px var(--oro-linea); }
+.cp-puesto { text-align: center; font-weight: 900; color: var(--oro); }
+.cp-mejores li:nth-child(-n + 3) .cp-puesto { color: #ffe2a1; text-shadow: 0 0 8px rgba(242, 179, 61, 0.6); }
+.cp-premios { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.cp-premio { --liga: 244, 196, 78; display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; }
+.cp-premio strong { color: rgb(var(--liga)); }
+.cp-premio span { color: var(--texto-2); white-space: nowrap; }
+.cp-premio.conseguida { opacity: 0.7; }
+.cp-premio.actual { background: rgba(var(--liga), 0.14); border-color: rgba(var(--liga), 0.5); box-shadow: 0 0 14px rgba(var(--liga), 0.2); }
+.cp-anteriores h3 { margin: 16px 0 6px; font-size: 13px; }
+.cp-anteriores ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cp-anteriores li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-2); }
+.cp-anteriores li strong { margin-left: auto; color: var(--texto-1); }
+@media (prefers-reduced-motion: reduce) { .cp-rayos, .cp-halo canvas { animation: none; } }
+
+/* ---------- Crear partida ---------- */
+.crear-pagina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.crear-pagina > .bloque { margin: 0; }
+.crear-pagina .crear-mapa { grid-column: 1 / -1; }
+.crear-pagina .crear-bloque > h2 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.crear-reglas .ra-resumen { color: var(--texto-3); font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.crear-pagina .crear-pie { grid-column: 1 / -1; margin: 0; border: 1px solid var(--oro-linea); border-radius: 14px; }
+
+/* ---------- Tarjetas del inicio: cuatro, del mismo tamaño ---------- */
+#inicio .modos .modo-corto { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1100px) {
+  .cp-portada { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .cp-cola { grid-column: 1 / -1; }
+  .cp-rejilla { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .crear-pagina { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Móvil: barra de navegación abajo; las páginas, a pantalla completa ---------- */
+@media (max-width: 720px) {
+  .pagina-cab { gap: 10px; }
+  .volver { padding: 9px; }
+  .volver span { display: none; }
+  .volver svg { width: 18px; height: 18px; }
+  .pagina-titulos h1 { font-size: 24px; }
+  .pagina-titulos small { font-size: 10px; }
+  .pagina-extra { font-size: 12px; }
+  .vista.pagina { gap: 14px; }
+  .cp-portada { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 18px 14px; }
+  .cp-comandante { display: grid; grid-template-columns: 56px minmax(0, 1fr); grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 1px; align-items: center; padding: 10px 14px; text-align: left; clip-path: none; border-radius: 12px; }
+  .cp-comandante canvas { grid-row: 1 / 4; width: 56px; height: 56px; }
+  .cp-comandante #cp-nombre { font-size: 18px; }
+  .cp-nivel { margin: 2px 0 0; justify-self: start; }
+  .cp-halo, .cp-halo canvas { width: 170px; height: 170px; }
+  .cp-liga { font-size: 25px; }
+  .cp-ligas { grid-template-columns: repeat(9, 66px); overflow-x: auto; padding: 12px 2px 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .cp-ligas::-webkit-scrollbar { display: none; }
+  .cp-ligas::before { left: 0; right: 0; }
+  .cp-liga-item { scroll-snap-align: center; }
+  .cp-cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cp-partida { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; padding: 8px 12px; }
+  .cp-tras { display: none; }
+  .cp-cuando { grid-column: 1 / -1; min-width: 0; text-align: left; }
+  .cp-premios { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cp-mejores li { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .cp-mejores li .num { display: none; }
+
+  /* Barra de abajo con iconos (Jugar, Progreso, Perfil, Arsenal y Ajustes) */
+  .ini-barra { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(8, 13, 26, 0.98); }
+  .ini-barra-dentro { padding-bottom: 8px; }
+  #inicio.entrada .ini-barra { animation: none; }
+  #inicio .ini-pestanas {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7;
+    order: 0;
+    flex: none;
+    margin: 0;
+    padding: 4px max(6px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    overflow: visible;
+    background: linear-gradient(180deg, rgba(16, 22, 38, 0.98), rgba(6, 10, 20, 0.995));
+    border-top: 1px solid var(--oro-linea);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+  }
+  #inicio .ini-pestanas > button:first-of-type, #inicio .ini-pestanas > button:last-of-type { margin: 0; }
+  #inicio .ini-pestanas button { flex-direction: column; justify-content: center; gap: 3px; min-width: 0; padding: 8px 2px 6px; font-size: 11px; }
+  #inicio .ini-pestanas button > span:not(.cuenta) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #inicio .ini-pestanas button .tab-icono { width: 20px; height: 20px; }
+  #inicio .ini-pestanas .cuenta { position: absolute; top: 3px; left: calc(50% + 8px); font-size: 9px; padding: 0 4px; }
+  #inicio .ini-pestanas button[aria-selected="true"]::after { content: ""; top: 0; bottom: auto; left: 28%; right: 28%; border-radius: 0 0 3px 3px; }
+  #inicio .ini-pestanas.con-subrayado button[aria-selected="true"]::after { content: ""; }
+  .ini-subrayado { display: none; }
+  #inicio .ini-marco { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+  /* En una página no hay barra de abajo: tiene «Volver» y, si hace falta, su propio pie */
+  #inicio.en-pagina .ini-pestanas { display: none; }
+  #inicio.en-pagina .ini-marco { padding-bottom: 16px; }
+}
+
 </style>
 </head>
 <body>
@@ -4246,7 +4508,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
           <button type="button" role="tab" id="tab-logros" data-vista="logros" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13.5 V9 M6.5 13.5 V5 M10 13.5 V7.5 M13.5 13.5 V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Progreso</span> <span id="cuenta-logros" class="cuenta"></span></button>
           <button type="button" role="tab" id="tab-perfil" data-vista="perfil" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 14.5 c0.6 -3.2 2.8 -5 5.5 -5 s4.9 1.8 5.5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Perfil</span></button>
           <button type="button" role="tab" id="tab-arsenal" data-vista="arsenal" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></button>
-          <button type="button" role="tab" id="tab-clasificacion" data-vista="clasificacion" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clasificación</span></button>
           <button type="button" role="tab" id="tab-ajustes" data-vista="ajustes" aria-selected="false"><svg class="tab-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ajustes</span></button>
         </nav>
         <button type="button" id="btn-cuenta" class="btn-cuenta" title="Entrar o crear una cuenta" aria-label="Entrar o crear una cuenta" hidden>
@@ -4304,20 +4565,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
           <button type="button" class="tcu-cerrar" id="tcu-cerrar" aria-label="Ahora no">✕</button>
         </section>
 
-        <section class="clasificatoria" id="clasificatoria" aria-labelledby="cl-titulo">
-          <div class="cl-insignia" id="cl-insignia"></div>
-          <div class="cl-datos">
-            <span class="cl-temporada" id="cl-temporada"></span>
-            <h2 class="cl-titulo" id="cl-titulo">Clasificatoria</h2>
-            <strong class="cl-rango" id="cl-rango"></strong>
-            <div class="cl-barra" aria-hidden="true"><span id="cl-barra"></span></div>
-            <small class="cl-nota" id="cl-nota"></small>
-          </div>
-          <div class="cl-botones">
-            <button type="button" class="principal" id="btn-clasif-ia">Jugar clasificatoria</button>
-            <button type="button" class="btn-sec" id="btn-clasif-sala">Sala clasificatoria</button>
-          </div>
-        </section>
         <h2 class="titulo-seccion"><span>Elige cómo jugar</span></h2>
         <div class="modos">
           <button type="button" class="modo modo-destacado" data-modo="rapida" style="--i:0">
@@ -4326,79 +4573,36 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M9 1.5 L3.5 9 H7.5 L6.5 14.5 L12.5 6.5 H8.5 Z" fill="currentColor"/></svg>
             <span class="modo-titulo">Partida rápida</span>
             <span class="modo-texto">Una partida equilibrada en el mundo, lista para jugar.</span>
-            <span class="modo-corto">El mundo, 90 naciones</span>
+            <span class="modo-corto" id="modo-corto-rapida">El mundo, 90 naciones</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="modo " data-modo="ia" style="--i:1">
+          <button type="button" class="modo " data-modo="competitivo" style="--i:1">
             <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
+            <span class="modo-etiqueta">🏆 Temporada</span>
             
-            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="5" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 5 V2.5 M6 9 h0.01 M10 9 h0.01 M6 11.5 h4 M1.5 8 v3 M14.5 8 v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="2" r="1" fill="currentColor"/></svg>
-            <span class="modo-titulo">Contra IA</span>
-            <span class="modo-texto">Enfréntate a la inteligencia artificial y perfecciona tu estrategia.</span>
-            <span class="modo-corto">Tú eliges mapa y rivales</span>
+            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5 h7 v3 a3.5 3.5 0 0 1 -7 0 z M4.5 3.5 H2.5 a2 2 0 0 0 2.4 2.6 M11.5 3.5 h2 a2 2 0 0 1 -2.4 2.6 M8 9 v3 M5.5 13.5 h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="modo-titulo">Competitivo</span>
+            <span class="modo-texto">Sube de liga en la temporada y demuestra quién manda.</span>
+            <span class="modo-corto" id="modo-corto-competitivo">Tu rango y buscar partida</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="modo " data-modo="online" style="--i:2">
+          <button type="button" class="modo " data-modo="crear" style="--i:2">
+            <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
+            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="modo-titulo">Crear partida</span>
+            <span class="modo-texto">Contra la IA: tú eliges mapa, rivales, dificultad y reglas.</span>
+            <span class="modo-corto" id="modo-corto-crear">Mapa, rivales y reglas</span>
+            <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="modo " data-modo="online" style="--i:3">
             <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
             <span class="modo-etiqueta">🔥 Popular</span>
             <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.2" fill="currentColor"/><circle cx="3.5" cy="6" r="1.7" fill="currentColor"/><circle cx="12.5" cy="6" r="1.7" fill="currentColor"/><path d="M4.5 13.5 c0 -2.5 1.6 -4 3.5 -4 s3.5 1.5 3.5 4 Z M0.8 13 c0 -2 1.2 -3.2 2.7 -3.2 c0.6 0 1 0.1 1.4 0.3 M15.2 13 c0 -2 -1.2 -3.2 -2.7 -3.2 c-0.6 0 -1 0.1 -1.4 0.3" fill="currentColor"/></svg>
             <span class="modo-titulo">Multijugador</span>
             <span class="modo-texto">Compite con otros jugadores en tiempo real.</span>
-            <span class="modo-corto">Juega con tus amigos</span>
+            <span class="modo-corto" id="modo-corto-online">Salas y amigos</span>
             <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="modo " data-modo="personalizada" style="--i:3">
-            <canvas class="modo-arte" width="360" height="200" aria-hidden="true"></canvas>
-            <span class="modo-etiqueta">🧭 A tu medida</span>
-            <svg class="modo-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10 a2 2 0 1 0 0 -4 a2 2 0 1 0 0 4 M8 1.5 v2 M8 12.5 v2 M1.5 8 h2 M12.5 8 h2 M3.4 3.4 l1.4 1.4 M11.2 11.2 l1.4 1.4 M3.4 12.6 l1.4 -1.4 M11.2 4.8 l1.4 -1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="modo-titulo">Partida personalizada</span>
-            <span class="modo-texto">Define las reglas, el mapa y la duración a tu medida.</span>
-            <span class="modo-corto">Todas las reglas</span>
-            <svg class="modo-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 L10.5 8 L6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-
-        <form id="form-rapida" class="bloque panel-modo" data-panel="ia" autocomplete="off" hidden>
-          <div class="panel-cabecera">
-            <h2>Partida contra la IA</h2>
-            <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
-          </div>
-          <h3 id="ia-mapa-tit">Mapa</h3>
-          <div id="galeria-mapas" aria-labelledby="ia-mapa-tit"></div>
-          <div class="opciones ia-basico">
-            <label class="campo"><span>Naciones rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
-              <input id="in-bots" type="range" min="1" max="200" value="70">
-            </label>
-            <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
-            <label class="campo" id="campo-semilla"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
-              <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
-            </label>
-          </div>
-          <details class="reglas-avanzadas" id="ia-avanzadas">
-            <summary><span class="ra-tit">Reglas avanzadas</span><small class="ra-resumen" id="ia-reglas-resumen"></small></summary>
-            <div id="reglas-ia" class="reglas"></div>
-          </details>
-          <div class="form-pie">
-            <p class="form-resumen" id="ia-resumen"></p>
-            <button type="submit" class="principal grande">Empezar partida</button>
-          </div>
-        </form>
-
-        <div id="bloque-online" class="bloque panel-modo" data-panel="online" hidden>
-          <div class="panel-cabecera">
-            <h2>Multijugador <span id="estado-red" class="chip">Conectando…</span></h2>
-            <button type="button" class="cerrar-panel" aria-label="Cerrar">✕</button>
-          </div>
-          <div class="online-acciones">
-            <button type="button" id="btn-crear-sala" class="principal" disabled>＋ Crear sala</button>
-            <form id="form-unirse" class="unirse" autocomplete="off">
-              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false" autocapitalize="characters">
-              <button type="submit" disabled>Unirse con código</button>
-            </form>
-          </div>
-          <h3>Salas públicas</h3>
-          <ul id="lista-salas" class="lista-salas salas-publicas" aria-live="polite"></ul>
-          <p id="nota-red" class="nota"></p>
         </div>
 
         <div class="ini-fila">
@@ -4427,8 +4631,117 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
             <div class="novedades-puntos" id="novedades-puntos" role="tablist" aria-label="Novedades"></div>
           </section>
         </div>
-        <h2 class="titulo-seccion titulo-arsenal"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13 M2.5 10.5 L5.5 13.5 M10.5 13.5 L13.5 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Arsenal</span></h2>
-        <div class="arsenal-cats" id="arsenal-cats"></div>
+      </section>
+
+
+      <!-- Competitivo: tu rango de la temporada, buscar partida, historial, ligas y recompensas -->
+      <section class="vista pagina pagina-competitivo" data-vista="competitivo" aria-labelledby="pg-comp-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small id="cp-temporada"></small><h1 id="pg-comp-h1">Competitivo</h1></div>
+          <span class="pagina-extra" id="cp-fin"></span>
+        </header>
+        <div class="cp-portada">
+          <div class="cp-comandante" id="cp-comandante">
+            <canvas id="cp-emblema" width="200" height="200" aria-hidden="true"></canvas>
+            <strong id="cp-nombre"></strong>
+            <span id="cp-titulo" class="cp-titulo"></span>
+            <span id="cp-nivel" class="cp-nivel"></span>
+          </div>
+          <div class="cp-rango">
+            <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><canvas id="cp-insignia" width="300" height="300"></canvas></div>
+            <strong id="cp-liga" class="cp-liga"></strong>
+            <span id="cp-pl" class="cp-pl"></span>
+            <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
+            <small id="cp-vd" class="cp-vd"></small>
+          </div>
+          <div class="cp-cola">
+            <h2>Buscar partida</h2>
+            <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
+            <p id="cp-cola-nota" class="cp-cola-nota"></p>
+            <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
+            <small id="cp-cola-extra" class="cp-cola-extra"></small>
+          </div>
+        </div>
+        <section class="bloque cp-escalera" aria-labelledby="cp-ligas-tit">
+          <h2 id="cp-ligas-tit">Ligas</h2>
+          <ol id="cp-ligas" class="cp-ligas"></ol>
+        </section>
+        <div class="cp-rejilla">
+          <section class="bloque cp-temporada" aria-labelledby="cp-stats-tit">
+            <h2 id="cp-stats-tit">Esta temporada</h2>
+            <div id="cp-stats" class="cp-cifras"></div>
+            <div id="cp-grafica" class="cp-grafica"></div>
+          </section>
+          <section class="bloque cp-historial" aria-labelledby="cp-hist-tit">
+            <h2 id="cp-hist-tit">Historial</h2>
+            <ol id="cp-historial" class="cp-partidas"></ol>
+          </section>
+        </div>
+        <div class="cp-rejilla">
+          <section class="bloque cp-top" aria-labelledby="cp-top-tit">
+            <div class="cp-bloque-cab"><h2 id="cp-top-tit">Mejores de la temporada</h2><button type="button" class="enlace-ini" data-pagina="clasificacion">Clasificación completa <span aria-hidden="true">›</span></button></div>
+            <div id="cp-top"></div>
+          </section>
+          <section class="bloque cp-recompensas" aria-labelledby="cp-rec-tit">
+            <h2 id="cp-rec-tit">Recompensas de la temporada</h2>
+            <p class="nota" id="cp-rec-nota"></p>
+            <ol id="cp-recompensas" class="cp-premios"></ol>
+            <div id="cp-anteriores" class="cp-anteriores"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- Crear partida (contra la IA, a tu medida): mapa, rivales y reglas -->
+      <section class="vista pagina pagina-crear" data-vista="crear" aria-labelledby="pg-crear-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small>Contra la IA · a tu medida</small><h1 id="pg-crear-h1">Crear partida</h1></div>
+        </header>
+        <form id="form-rapida" class="crear-pagina" autocomplete="off">
+          <section class="bloque crear-bloque crear-mapa"><h2 id="ia-mapa-tit">Mapa</h2>
+          <div id="galeria-mapas" aria-labelledby="ia-mapa-tit"></div>
+          </section>
+          <section class="bloque crear-bloque crear-rivales"><h2>Rivales</h2>
+          <div class="opciones ia-basico">
+            <label class="campo"><span>Naciones rivales <strong id="out-bots">70</strong> <small id="nota-rivales"></small></span>
+              <input id="in-bots" type="range" min="1" max="200" value="70">
+            </label>
+            <div class="campo"><span>Dificultad</span><div class="segmentos" id="seg-dificultad" role="radiogroup" aria-label="Dificultad"></div></div>
+            <label class="campo" id="campo-semilla"><span>Semilla <small>(mapas aleatorios: misma semilla, mismo mundo)</small></span>
+              <input id="in-semilla" maxlength="24" placeholder="p. ej. atlantis">
+            </label>
+          </div>
+          </section>
+          <section class="bloque crear-bloque crear-reglas" aria-labelledby="crear-reglas-tit"><h2 id="crear-reglas-tit">Reglas <small class="ra-resumen" id="ia-reglas-resumen"></small></h2>
+            <div id="reglas-ia" class="reglas"></div>
+          </section>
+          <div class="form-pie crear-pie">
+            <p class="form-resumen" id="ia-resumen"></p>
+            <button type="submit" class="principal grande">Empezar partida</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Multijugador: crear sala, unirse con código y salas públicas -->
+      <section class="vista pagina pagina-online" data-vista="multijugador" aria-labelledby="pg-online-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small>En tiempo real</small><h1 id="pg-online-h1">Multijugador</h1></div>
+          <span class="pagina-extra"><span id="estado-red" class="chip">Conectando…</span></span>
+        </header>
+        <div id="bloque-online" class="bloque">
+          <div class="online-acciones">
+            <button type="button" id="btn-crear-sala" class="principal" disabled>＋ Crear sala</button>
+            <form id="form-unirse" class="unirse" autocomplete="off">
+              <input id="in-codigo" maxlength="5" placeholder="Código" aria-label="Código de sala" spellcheck="false" autocapitalize="characters">
+              <button type="submit" disabled>Unirse con código</button>
+            </form>
+          </div>
+          <h3>Salas públicas</h3>
+          <ul id="lista-salas" class="lista-salas salas-publicas" aria-live="polite"></ul>
+          <p id="nota-red" class="nota"></p>
+        </div>
       </section>
 
       <!-- Arsenal: edificios, unidades y bombas por categoría -->
@@ -4572,7 +4885,11 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </section>
 
       <!-- Clasificación -->
-      <section class="vista" data-vista="clasificacion" role="tabpanel" aria-labelledby="tab-clasificacion" hidden>
+      <section class="vista pagina" data-vista="clasificacion" aria-labelledby="pg-clas-h1" hidden>
+        <header class="pagina-cab">
+          <button type="button" class="volver" data-volver><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver</span></button>
+          <div class="pagina-titulos"><small>Rangos, récords e historial</small><h1 id="pg-clas-h1">Clasificación</h1></div>
+        </header>
         <div class="bloque">
           <div class="sub-pestanas" id="tabla-pestanas" role="tablist" aria-label="Tabla">
             <button type="button" role="tab" data-tabla="rangos" aria-selected="true" aria-controls="tabla-clasificacion">Rangos</button>
@@ -5159,7 +5476,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "84c8db2 2026-11-12 16:01 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "db54d1a 2026-11-12 16:26 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -12523,7 +12840,7 @@ const { abrirDialogo, cerrarDialogo, contar, llenarAlVer, mostrar, ocultar, roda
 const { abrirGuia } = __require('guia');
 const { errorReport } = __require('errores');
 const { drawChart, drawSparkline } = __require('resumen');
-const { PLACEMENT_GAMES, RANKED_ROOM, aiDifficultyFor, badgeCanvas, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName } = __require('rangos');
+const { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, rankOf, rankText, seasonEnd, seasonName, seasonReward } = __require('rangos');
 const { ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly, achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText } = __require('profile');
 
 /** Colores rápidos para el territorio y el emblema. */
@@ -12968,6 +13285,40 @@ function emptyState(icon, title, text, ...actions) {
     actions.length ? el('span', { class: 'ev-botones' }, ...actions) : null);
 }
 
+// ------------------------------------------------------------ navegación
+
+/** Páginas del menú (se abren encima de su sección, con «← Volver»). */
+const PAGES = new Set(['competitivo', 'crear', 'multijugador', 'clasificacion']);
+/** A dónde vuelve cada página si no hay historial (y qué pestaña se marca mientras tanto). */
+const PARENT = { competitivo: 'jugar', crear: 'jugar', multijugador: 'jugar', clasificacion: 'competitivo' };
+/** Dirección de cada sección o página (#/competitivo…; el inicio, sin nada). */
+const SLUG = { jugar: '', logros: 'progreso', perfil: 'perfil', arsenal: 'arsenal', ajustes: 'ajustes', competitivo: 'competitivo', crear: 'crear', multijugador: 'multijugador', clasificacion: 'clasificacion' };
+
+/** Sección o página de una dirección (#/competitivo → 'competitivo'), o null. */
+function viewFromHash(hash = typeof location !== 'undefined' ? location.hash : '') {
+  const slug = String(hash || '').replace(/^#\/?/, '').split('/')[0];
+  if (!slug) return null;
+  for (const [view, sl] of Object.entries(SLUG)) if (sl === slug) return view;
+  return null;
+}
+
+/** Entrada del historial del navegador; si no se puede cambiar la dirección (marcos aislados), sin ella. */
+function histOp(op, state, slug) {
+  const url = slug == null ? null : `${location.pathname}${location.search}${slug ? `#/${slug}` : ''}`;
+  try {
+    if (url === null) history[op](state, '');
+    else history[op](state, '', url);
+    return true;
+  } catch {
+    try {
+      history[op](state, '');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
 class Home {
   /**
    * handlers: onProfileChange(), onQuickPlay(opts), onCreateRoom(), onJoinRoom(code),
@@ -12985,7 +13336,7 @@ class Home {
     const nav = document.querySelector('.ini-pestanas');
     for (const tab of nav.querySelectorAll('[data-vista]')) {
       tab.setAttribute('aria-controls', `vista-${tab.dataset.vista}`);
-      tab.addEventListener('click', () => this.setView(tab.dataset.vista));
+      tab.addEventListener('click', () => this.go(tab.dataset.vista));
     }
     for (const sec of document.querySelectorAll('.vista[data-vista]')) sec.id ||= `vista-${sec.dataset.vista}`;
     teclasGrupo(nav, '[role="tab"]');
@@ -12996,13 +13347,28 @@ class Home {
     requestAnimationFrame(() => this._moveUnderline(false));
     document.fonts?.ready.then(() => this._moveUnderline(false));
     window.addEventListener('resize', () => this._moveUnderline(false));
-    $('chip-perfil').addEventListener('click', () => this.setView('perfil'));
+    $('chip-perfil').addEventListener('click', () => this.go('perfil'));
+    // Páginas: «← Volver», enlaces a otras páginas y el botón atrás del navegador o del móvil
+    for (const b of document.querySelectorAll('#inicio [data-volver]')) b.addEventListener('click', () => this.back());
+    for (const b of document.querySelectorAll('#inicio [data-pagina]')) b.addEventListener('click', () => this.go(b.dataset.pagina));
+    window.addEventListener('popstate', (e) => this._onPop(e.state));
+    // Escape en una página: atrás (si no hay un diálogo abierto, que se cierra antes)
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || !PAGES.has(this.view) || !this.menuVisible()) return;
+      if (document.querySelector('[aria-modal="true"]:not([hidden])')) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      this.back();
+    });
+    // Dirección de entrada (#/competitivo…): esa página; la entrada actual del historial es la base
+    const first = viewFromHash();
+    if (first && first !== 'jugar') this.view = first;
+    histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.view] ?? '');
 
     // Tarjetas de modo
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
       card.addEventListener('click', () => this._mode(card.dataset.modo));
     }
-    for (const btn of document.querySelectorAll('.cerrar-panel')) btn.addEventListener('click', () => this._openPanel(null));
 
     // Partida contra la IA
     const a = this.profile.ajustes;
@@ -13118,13 +13484,20 @@ class Home {
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
-    $('btn-clasif-ia').addEventListener('click', () => this.h.onRanked?.('ia'));
-    $('btn-clasif-sala').addEventListener('click', () => this.h.onRanked?.('sala'));
+    // Competitivo: cola (contra la IA o en línea) y «Buscar partida»
+    this.queue = this.profile.ajustes.colaClasif === 'sala' ? 'sala' : 'ia';
+    segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => {
+      this.queue = v;
+      this.profile.ajustes.colaClasif = v;
+      this.h.onProfileChange?.(false);
+      this.renderQueue();
+    });
+    $('cp-buscar').addEventListener('click', () => this._findMatch());
     $('btn-repetir').addEventListener('click', () => this._replay());
     $('btn-tutorial').addEventListener('click', () => this.h.onTutorial?.());
     $('novedades-todas').addEventListener('click', () => this._allNews());
     for (const b of document.querySelectorAll('[data-ir]')) {
-      if (b.id !== 'chip-perfil') b.addEventListener('click', () => this.setView(b.dataset.ir));
+      if (b.id !== 'chip-perfil') b.addEventListener('click', () => this.go(b.dataset.ir));
     }
     this._buildArsenal();
     this._buildNews();
@@ -13225,22 +13598,71 @@ class Home {
     this._syncBots();
   }
 
-  /** Clic en una tarjeta de modo. */
+  /** Clic en una tarjeta de modo: la partida rápida empieza ya; el resto abre su página. */
   _mode(mode) {
     if (mode === 'rapida') {
       // Partida rápida: el perfil Clásico, siempre (elegido aquí, no por los valores por defecto)
       this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
-    } else if (mode === 'personalizada') {
-      // El mismo panel que «Contra IA», con las reglas avanzadas desplegadas
-      $('ia-avanzadas').open = true;
-      this._openPanel('ia', false);
-      setTimeout(() => $('ia-avanzadas').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }), 30);
-    } else {
-      if (mode === 'ia' && this.panel !== 'ia') $('ia-avanzadas').open = false;
-      this._openPanel(this.panel === mode ? null : mode);
+    } else if (mode === 'online') {
+      this.go('multijugador');
+    } else if (mode === 'personalizada' || mode === 'ia') {
+      this.go('crear');
+    } else this.go(mode);
+  }
+
+  // ------------------------------------------------------------ historial
+
+  /**
+   * Va a una sección o página del menú con su entrada en el historial: el
+   * botón atrás (del navegador, del móvil o «← Volver») vuelve a la anterior.
+   */
+  go(view, { replace = false } = {}) {
+    if (view === 'apariencia') {
+      this._profileTab('aspecto', false);
+      view = 'perfil';
     }
+    if (view === 'online') view = 'multijugador';
+    if (!document.querySelector(`.vista[data-vista="${view}"]`)) view = 'jugar';
+    const cur = history.state && history.state.trinchera ? history.state : null;
+    const same = !replace && cur && cur.vista === view && !cur.capa;
+    const n = cur ? cur.n || 0 : 0;
+    histOp(replace || same ? 'replaceState' : 'pushState', { trinchera: true, vista: view, n: replace || same ? n : n + 1 }, SLUG[view]);
+    this.setView(view);
+  }
+
+  /** «← Volver»: atrás en el historial si se llegó desde otra pantalla; si no, a la sección de la que cuelga. */
+  back() {
+    const cur = history.state;
+    if (cur && cur.trinchera && cur.n > 0) history.back();
+    else this.go(PARENT[this.view] || 'jugar', { replace: true });
+  }
+
+  /** Capa sobre el menú (crear sala, sala, partida) con su propia entrada: atrás la cierra. */
+  pushLayer(capa, slug = capa) {
+    const cur = history.state && history.state.trinchera ? history.state : { n: 0 };
+    if (cur.capa === capa) return;
+    // Una capa sustituye a otra (crear sala → sala → partida): atrás vuelve al menú, no a la anterior
+    const op = cur.capa ? 'replaceState' : 'pushState';
+    histOp(op, { trinchera: true, vista: this.view, capa, n: cur.capa ? cur.n : (cur.n || 0) + 1 }, slug);
+  }
+
+  /** Cierra la capa `capa` del historial (al salir con un botón): vuelve a la entrada de debajo. */
+  closeLayer(capa) {
+    const cur = history.state;
+    if (!cur || cur.capa !== capa) return;
+    if (cur.n > 0) history.back();
+    else histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.view]);
+  }
+
+  /** El navegador ha ido atrás o adelante. */
+  _onPop(st) {
+    if (this.h.onHistory?.(st)) return; // la partida o la sala lo resuelven
+    if (!$('crear-sala').hidden && st?.capa !== 'crear-sala') this._closeCreate();
+    if (!this.menuVisible()) return;
+    const view = (st && st.vista) || viewFromHash() || 'jugar';
+    if (view !== this.view) this.setView(view);
   }
 
   /** «Volver a jugar»: la última partida contra la IA, con el mismo mapa, rivales y reglas. */
@@ -13255,7 +13677,7 @@ class Home {
   _paintArt() {
     this._paintHero();
     this._paintBackdrop();
-    const data = { world: realPreviewData('mundo'), europe: realPreviewData('europa') };
+    const data = { world: realPreviewData('mundo'), europe: realPreviewData('europa'), badge: this._badgePainter() };
     // A la densidad de la pantalla (tope 2): nítidas en móviles y pantallas retina
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     for (const card of document.querySelectorAll('.modo[data-modo]')) {
@@ -13320,19 +13742,6 @@ class Home {
     c._painted = true;
   }
 
-  _openPanel(name, scroll = true) {
-    this.panel = name;
-    for (const p of document.querySelectorAll('.panel-modo')) {
-      if (p.dataset.panel === name) mostrar(p, { y: 12, scale: 1, ms: 260 });
-      else p.hidden = true;
-    }
-    for (const card of document.querySelectorAll('.modo[data-modo]')) {
-      if (card.dataset.modo === 'ia' || card.dataset.modo === 'online') card.setAttribute('aria-expanded', String(card.dataset.modo === name));
-    }
-    const panel = name && document.querySelector(`.panel-modo[data-panel="${name}"]`);
-    if (panel && scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
   /** Resumen de la partida contra la IA (barra de abajo) y de sus reglas (cabecera de «Reglas avanzadas»). */
   _syncSummaryIA() {
     const c = this.choice;
@@ -13345,10 +13754,10 @@ class Home {
     $('ia-reglas-resumen').textContent = rulesSummary(c.rules);
   }
 
-  /** Abre directamente un panel (por ejemplo, el multijugador al volver de una sala). */
+  /** Abre directamente una página (por ejemplo, Multijugador al volver de una sala). */
   openPanel(name) {
-    this.setView('jugar');
-    this._openPanel(name);
+    const view = name === 'online' ? 'multijugador' : name;
+    if (this.view !== view) this.go(view);
   }
 
   _profileChanged() {
@@ -13565,7 +13974,7 @@ class Home {
       if (short) return k || 'Clic';
       return k ? `Tecla ${k} en la partida` : 'Clic en otra costa';
     };
-    $('arsenal-cats').replaceChildren(
+    $('arsenal-cats')?.replaceChildren(
       ...ARSENAL_CATS.map((cat, i) =>
         el(
           'article',
@@ -13790,13 +14199,19 @@ class Home {
     const prev = this.view;
     this.view = view;
     const nav = document.querySelector('.ini-pestanas');
+    // En una página se marca la sección de la que cuelga (Competitivo y Crear partida: Jugar)
+    let tabView = view;
+    while (PARENT[tabView]) tabView = PARENT[tabView];
     for (const tab of nav.querySelectorAll('[data-vista]')) {
-      tab.setAttribute('aria-selected', String(tab.dataset.vista === view));
+      tab.setAttribute('aria-selected', String(tab.dataset.vista === tabView));
     }
+    $('inicio').classList.toggle('en-pagina', PAGES.has(view));
+    $('inicio').dataset.seccion = view;
     rodar(nav);
     this._moveUnderline(true);
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
     if (view === 'clasificacion') this.renderTable();
+    if (view === 'competitivo') this.renderCompetitive();
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
     else this.cover?.stop();
@@ -13805,10 +14220,12 @@ class Home {
     const next = secs.find((sec) => sec.dataset.vista === view);
     const leaving = secs.filter((sec) => sec !== next && !sec.hidden && !sec._salida);
     clearTimeout(this._viewTimer);
+    // Las páginas entran desde la derecha y, al volver, la sección llega desde la izquierda
+    const dir = PAGES.has(view) && !PAGES.has(prev) ? 1 : PAGES.has(prev) && !PAGES.has(view) ? -1 : PAGES.has(view) ? 1 : 0;
     const enter = () => {
       for (const sec of secs) if (sec !== next && !sec._salida) sec.hidden = true;
       $('inicio').scrollTo?.({ top: 0 });
-      mostrar(next, { y: 10, scale: 1, ms: 240 });
+      mostrar(next, dir ? { x: dir * 30, y: 0, scale: 1, ms: 280 } : { y: 10, scale: 1, ms: 240 });
       if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
       if (view === 'perfil' && this.profileTab === 'resumen') this.renderProgress(true);
       for (const nav of next.querySelectorAll('.sub-pestanas')) underline(nav, false);
@@ -13819,7 +14236,7 @@ class Home {
       enter();
       return;
     }
-    for (const sec of leaving) ocultar(sec, { y: -4, scale: 1, ms: 110 });
+    for (const sec of leaving) ocultar(sec, dir ? { x: -dir * 18, y: 0, scale: 1, ms: 110 } : { y: -4, scale: 1, ms: 110 });
     this._viewTimer = setTimeout(enter, 110);
   }
 
@@ -13873,36 +14290,277 @@ class Home {
 
   // ------------------------------------------------------------ rangos
 
-  /** Tarjeta «Clasificatoria» de Jugar: insignia, rango, PL de la división y temporada. */
+  /** Tarjeta «Competitivo» del inicio: tu rango en una línea y tu insignia en el dibujo. */
   renderRanked() {
     const r = this.profile.rango;
-    if (!r || !$('clasificatoria')) return;
-    const box = $('cl-insignia');
-    let c = box.querySelector('canvas');
-    if (!c) {
-      c = badgeCanvas(r, 64);
-      box.replaceChildren(c);
-    } else paintBadge(c, r);
+    if (!r) return;
+    const corto = $('modo-corto-competitivo');
+    if (corto) corto.textContent = rankText(r);
+    const key = inPlacement(r) ? 'col' : String(rankOf(r.puntos).index * 10 + rankOf(r.puntos).div);
+    if (this._artBadge !== key) {
+      this._artBadge = key;
+      const card = document.querySelector('.modo[data-modo="competitivo"] .modo-arte');
+      if (card && card._escala) drawModeArt('competitivo', card, { badge: this._badgePainter() });
+    }
+    if (this.view === 'competitivo') this.renderCompetitive();
+  }
+
+  /** Dibuja tu insignia (para las ilustraciones): (ctx, cx, cy, alto). */
+  _badgePainter() {
+    const r = this.profile.rango;
     const placing = inPlacement(r);
     const k = rankOf(r.puntos);
-    $('cl-temporada').textContent = seasonName(r.temporada);
-    $('cl-rango').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.label;
-    $('cl-rango').style.color = placing ? '' : `rgb(${k.league.color.join(',')})`;
-    const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
-    $('cl-barra').style.setProperty('--p', frac.toFixed(3));
-    $('cl-barra').parentElement.classList.add('llena-al-ver');
-    llenarAlVer($('clasificatoria'));
+    return (ctx, cx, cy, size) => drawBadge(ctx, cx, cy, size, placing ? null : k.league, placing ? 0 : k.div);
+  }
+
+  // ------------------------------------------------------- competitivo
+
+  /** Página Competitivo entera (se llama al abrirla y cuando cambia el rango). */
+  renderCompetitive() {
+    const r = this.profile.rango;
+    if (!r || !$('cp-insignia')) return;
+    const p = this.profile;
+    const placing = inPlacement(r);
+    const k = rankOf(r.puntos);
     const days = Math.max(0, Math.ceil((seasonEnd(r.temporada) - Date.now()) / 86400000));
+    $('cp-temporada').textContent = seasonName(r.temporada);
+    $('cp-fin').textContent = `Acaba en ${days} día${days === 1 ? '' : 's'}`;
+    // Tu comandante: estandarte, emblema y marco, nombre, título y nivel
+    $('cp-comandante').className = `cp-comandante est-${p.estandarte}`;
+    const ec = $('cp-emblema');
+    const ectx = ec.getContext('2d');
+    ectx.clearRect(0, 0, ec.width, ec.height);
+    drawEmblem(ectx, p.emblema, ec.width / 2, ec.height / 2, ec.width * 0.62);
+    drawFrame(ectx, p.marco, ec.width / 2, ec.height / 2, ec.width * 0.62);
+    $('cp-nombre').textContent = p.nombre || 'Sin nombre';
+    $('cp-nombre').style.color = nameColorOf(p);
+    $('cp-titulo').textContent = titleName(p) || 'Recluta';
+    $('cp-nivel').textContent = `Nivel ${levelInfo(p.xp).level}`;
+    // El rango: insignia grande con su luz, liga, PL y victorias
+    paintBadge($('cp-insignia'), r);
+    const col = placing ? [196, 170, 120] : k.league.color;
+    const band = document.querySelector('.cp-portada');
+    band.style.setProperty('--liga', col.join(', '));
+    band.classList.toggle('en-colocacion', placing);
+    $('cp-liga').textContent = placing ? 'Sin clasificar' : k.label;
+    $('cp-pl').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.league.apex ? `${k.pl} PL` : `${k.pl} / 100 PL`;
+    const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
+    $('cp-barra').style.setProperty('--p', frac.toFixed(3));
+    const losses = Math.max(0, r.partidas - r.victorias);
+    const pct = r.partidas ? Math.round((r.victorias / r.partidas) * 100) : 0;
+    $('cp-vd').replaceChildren(
+      el('span', { class: 'cp-v', text: `${r.victorias} V` }),
+      ' · ',
+      el('span', { class: 'cp-d', text: `${losses} D` }),
+      ` · ${pct} % de victorias`,
+      r.escudo ? el('span', { class: 'cp-escudo', title: 'No bajas de división en estas partidas', text: ` · 🛡 escudo ${r.escudo}` }) : '',
+    );
+    this.renderQueue();
+    this._renderLeagues(r);
+    this._renderSeasonStats(r);
+    this._renderRankedHistory(r);
+    this._renderTop(r);
+    this._renderRewards(r);
+  }
+
+  /** La cola elegida y qué hará «Buscar partida». */
+  renderQueue() {
+    if (!$('cp-buscar')) return;
+    const r = this.profile.rango;
     const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
-    $('cl-nota').textContent = placing
-      ? `Tras ${PLACEMENT_GAMES} partidas de colocación sabrás tu liga. El mundo, 90 naciones, perfil Clásico; IA ${dif}. Abandonar cuenta como derrota.`
-      : `${k.pl} PL${k.league.apex ? '' : ' / 100'}${r.escudo ? ` · 🛡 escudo ${r.escudo}` : ''} · ${r.victorias}/${r.partidas} victorias · IA ${dif} · la temporada acaba en ${days} día${days === 1 ? '' : 's'}`;
+    const btn = $('cp-buscar');
+    if (this.queue === 'ia') {
+      $('cp-cola-nota').textContent = `${mapLabel(RANKED_AI.mapSize)}, ${RANKED_AI.bots} naciones, perfil Clásico, contra la IA ${dif}. Cuenta tu puesto final; abandonar cuenta como derrota.`;
+      $('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
+      btn.disabled = false;
+      btn.textContent = 'Buscar partida';
+      return;
+    }
+    const net = this.netKind;
+    const open = this._rankedRooms();
+    $('cp-cola-nota').textContent = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores.`;
+    if (!net || net === 'none') {
+      btn.disabled = true;
+      $('cp-cola-extra').textContent = 'Sin conexión con el servidor de salas.';
+    } else if (net === 'connecting') {
+      btn.disabled = true;
+      $('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
+    } else {
+      btn.disabled = false;
+      $('cp-cola-extra').textContent = open.length
+        ? `${open.length} sala${open.length === 1 ? '' : 's'} clasificatoria${open.length === 1 ? '' : 's'} esperando jugadores: entrarás en la más llena.`
+        : 'No hay salas clasificatorias abiertas: se creará una pública para que entren otros.';
+    }
+    btn.textContent = 'Buscar partida';
+  }
+
+  /** Salas clasificatorias públicas con sitio y de esta versión, la más llena primero. */
+  _rankedRooms() {
+    return this.rooms.filter((x) => x.clasificatoria && !x.otraVersion && (x.jugadores || 1) < (x.plazas || 8)).sort((a, b) => (b.jugadores || 1) - (a.jugadores || 1));
+  }
+
+  /** «Buscar partida»: contra la IA, al momento; en línea, a la sala clasificatoria más llena (o se crea una). */
+  _findMatch() {
+    if (this.queue === 'ia') {
+      this.h.onRanked?.('ia');
+      return;
+    }
+    const open = this._rankedRooms();
+    if (open.length) this.h.onJoinRoom?.(open[0].code);
+    else this.h.onRanked?.('sala');
+  }
+
+  /** Escalera de las nueve ligas: las superadas iluminadas, la tuya destacada y la mejor de la temporada marcada. */
+  _renderLeagues(r) {
+    const placing = inPlacement(r);
+    const cur = placing ? -1 : rankOf(r.puntos).index;
+    const best = r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).index : -1;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    $('cp-ligas').replaceChildren(
+      ...LEAGUES.map((L, i) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = Math.round(58 * dpr);
+        c.setAttribute('aria-hidden', 'true');
+        drawBadge(c.getContext('2d'), c.width / 2, c.height * 0.54, c.height * 0.72, L, 0);
+        const state = i === cur ? 'actual' : i < cur ? 'superada' : 'pendiente';
+        return el('li', { class: `cp-liga-item ${state}${i === best && !placing ? ' mejor' : ''}`, style: `--liga: ${L.color.join(', ')}`, title: `${L.name}: desde ${formatNumber(L.base)} puntos` },
+          i === cur ? el('span', { class: 'cp-tu', text: 'TÚ' }) : null,
+          c,
+          el('strong', { text: L.name }),
+          el('small', { text: L.apex ? `${formatNumber(L.base)}+` : `IV → I` }));
+      }),
+    );
+  }
+
+  /** Cifras de la temporada y la gráfica de tus PL. */
+  _renderSeasonStats(r) {
+    const hist = r.historial || [];
+    const games = hist.filter((h) => !h.abandono && h.de > 0);
+    const avg = games.length ? games.reduce((a, h) => a + h.puesto, 0) / games.length : 0;
+    // Racha: del último resultado hacia atrás, mientras sea del mismo signo
+    let streak = 0;
+    let sign = 0;
+    for (const h of hist) {
+      const sg = h.delta > 0 || (h.delta === 0 && h.puesto === 1) ? 1 : h.delta < 0 || h.abandono ? -1 : 0;
+      if (!sg) break;
+      if (!sign) sign = sg;
+      if (sg !== sign) break;
+      streak++;
+    }
+    const pct = r.partidas ? Math.round((r.victorias / r.partidas) * 100) : 0;
+    const ring = el('span', { class: 'cp-anillo', style: `--p: ${pct / 100}`, 'aria-hidden': 'true' }, el('span', { text: `${pct}%` }));
+    const card = (label, value, extra = null) => el('div', { class: 'cp-cifra' }, extra, el('strong', { text: value }), el('small', { text: label }));
+    $('cp-stats').replaceChildren(
+      card('% de victorias', `${r.victorias}/${r.partidas}`, ring),
+      card('Partidas', String(r.partidas)),
+      card('Puesto medio', avg ? avg.toFixed(1).replace('.', ',') : '—'),
+      card('Racha', streak ? `${streak} ${sign > 0 ? (streak === 1 ? 'buena' : 'buenas') : streak === 1 ? 'mala' : 'malas'}` : '—'),
+      card('Mejor rango', r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).label : '—'),
+    );
+    // Gráfica: tus puntos tras cada partida (de la más antigua a la última)
+    const pts = hist.slice(0, 20).map((h) => h.puntos).reverse();
+    const box = $('cp-grafica');
+    if (pts.length < 2) {
+      box.replaceChildren(el('p', { class: 'nota', text: 'Juega un par de clasificatorias para ver cómo evolucionan tus puntos.' }));
+      return;
+    }
+    const W = 320;
+    const H = 90;
+    const lo = Math.min(...pts);
+    const hi = Math.max(...pts);
+    const span = Math.max(40, hi - lo);
+    const y = (v) => H - 8 - ((v - lo) / span) * (H - 18);
+    const x = (i) => 6 + (i / (pts.length - 1)) * (W - 12);
+    const line = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('class', 'cp-curva');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', `Tus puntos en las últimas ${pts.length} partidas: de ${pts[0]} a ${pts[pts.length - 1]}`);
+    // Estirada a todo el ancho; el trazo, del mismo grosor
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.innerHTML = `<defs><linearGradient id="cp-relleno" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(242,179,61,0.35)"/><stop offset="1" stop-color="rgba(242,179,61,0)"/></linearGradient></defs>
+      <polygon points="${x(0)},${H} ${line} ${x(pts.length - 1)},${H}" fill="url(#cp-relleno)"/>
+      <polyline points="${line}" fill="none" stroke="#f2b33d" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    box.replaceChildren(el('div', { class: 'cp-curva-cab' }, el('small', { text: 'Tus puntos' }), el('small', { text: `${pts[pts.length - 1] - pts[0] >= 0 ? '+' : '−'}${Math.abs(pts[pts.length - 1] - pts[0])} en ${pts.length - 1} partidas` })), svg);
+  }
+
+  /** Historial de clasificatorias: franja de color por resultado, puesto, cola y ±PL. */
+  _renderRankedHistory(r) {
+    const hist = (r.historial || []).slice(0, 10);
+    const list = $('cp-historial');
+    if (!hist.length) {
+      list.replaceChildren(el('li', { class: 'cp-vacio' }, emptyState('⚔', 'Aún no hay clasificatorias esta temporada', 'Tus partidas aparecerán aquí con el puesto y los puntos que ganes o pierdas.')));
+      return;
+    }
+    const ago = (t) => {
+      const m = Math.round((Date.now() - t) / 60000);
+      if (m < 60) return `hace ${Math.max(1, m)} min`;
+      const h = Math.round(m / 60);
+      if (h < 24) return `hace ${h} h`;
+      const d = Math.round(h / 24);
+      return `hace ${d} día${d === 1 ? '' : 's'}`;
+    };
+    list.replaceChildren(
+      ...hist.map((h) => {
+        const won = !h.abandono && h.puesto === 1;
+        const good = won || h.delta > 0;
+        const cls = h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
+        const title = h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
+        const delta = h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
+        return el('li', { class: `cp-partida ${cls}` },
+          el('span', { class: 'cp-res' }, el('strong', { text: title }), el('small', { text: h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA' })),
+          el('span', { class: 'cp-tras' }, badgeCanvas(h.puntos, 18), el('small', { text: rankOf(h.puntos).label })),
+          el('span', { class: 'cp-delta', text: delta }),
+          el('small', { class: 'cp-cuando', text: ago(h.fecha) }));
+      }),
+    );
+  }
+
+  /** Los mejores de la temporada (de la tabla global) con tu fila marcada. */
+  _renderTop(r) {
+    const box = $('cp-top');
+    const L = this.ladder;
+    const rows = L.available ? L.rows.filter((x) => x.temporada === r.temporada).slice(0, 8) : [];
+    if (!rows.length) {
+      box.replaceChildren(emptyState('🏅', L.available ? 'Nadie tiene rango todavía esta temporada' : 'La tabla de la temporada aún no está disponible', L.available ? 'Juega una clasificatoria para estrenarla.' : L.error || 'Tu rango se guarda y sube a la tabla en cuanto haya conexión.'));
+      return;
+    }
+    box.replaceChildren(
+      el('ol', { class: 'cp-mejores' },
+        ...rows.map((row, i) => {
+          const rk = rankOf(row.puntos);
+          return el('li', { class: row.id === L.myId ? 'yo' : '' },
+            el('span', { class: 'cp-puesto', text: String(i + 1) }),
+            el('button', { type: 'button', class: 'celda-nacion celda-boton', title: 'Ver su ficha', onclick: () => this.openPlayerCard(row, 'rango') }, emblemCanvas(row.emblema, 22), el('strong', { text: row.nombre })),
+            el('span', { class: 'celda-rango' }, badgeCanvas(row.puntos, 18), el('span', { text: rk.label, style: `color: rgb(${rk.league.color.join(',')})` })),
+            el('span', { class: 'num', text: `${rk.pl} PL` }));
+        })),
+    );
+  }
+
+  /** Recompensas por la mejor liga de la temporada y temporadas anteriores. */
+  _renderRewards(r) {
+    const best = r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).index : -1;
+    $('cp-rec-nota').textContent = best >= 0 ? `Al acabar la temporada recibirás 🪙 ${formatNumber(seasonReward(Math.max(r.mejor, r.puntos)).coins)} por haber llegado a ${LEAGUES[best].name}. Cuanto más alto llegues, más.` : 'Al acabar la temporada recibes monedas según la mejor liga que alcances.';
+    $('cp-recompensas').replaceChildren(
+      ...LEAGUES.map((L, i) => el('li', { class: `cp-premio${i === best ? ' actual' : i < best ? ' conseguida' : ''}`, style: `--liga: ${L.color.join(', ')}` },
+        el('strong', { text: L.name }),
+        el('span', { text: `🪙 ${formatNumber(seasonReward(L.base).coins)}` }))),
+    );
+    const prev = r.anteriores || [];
+    $('cp-anteriores').replaceChildren(
+      ...(prev.length
+        ? [el('h3', { text: 'Temporadas anteriores' }), el('ul', {}, ...prev.slice(0, 6).map((a) => el('li', {}, badgeCanvas(a.mejor ?? a.puntos ?? 0, 20), el('span', { text: seasonName(a.temporada) }), el('strong', { text: a.liga || rankOf(a.mejor ?? a.puntos ?? 0).label }))))]
+        : []),
+    );
   }
 
   /** Clasificación global de rangos: { available, rows, error, myId, source }. */
   setLadder(state) {
     this.ladder = { ...this.ladder, ...state };
     if (this.view === 'clasificacion' && this.table === 'rangos') this.renderTable();
+    if (this.view === 'competitivo') this._renderTop(this.profile.rango);
   }
 
   _ranksTable() {
@@ -13915,7 +14573,7 @@ class Home {
         el('small', { text: seasonName(r.temporada) }),
         el('strong', { text: placing ? `Colocación ${r.colocacion}/${PLACEMENT_GAMES}` : k.label, style: placing ? '' : `color: rgb(${k.league.color.join(',')})` }),
         el('span', { text: placing ? 'Juega las partidas de colocación para tener liga.' : `${k.pl} PL · ${r.victorias} victorias en ${r.partidas} partidas · mejor: ${rankOf(Math.max(r.mejor, r.puntos)).label}` })),
-      el('button', { type: 'button', class: 'principal', onclick: () => this.h.onRanked?.('ia'), text: 'Jugar clasificatoria' }));
+      el('button', { type: 'button', class: 'principal', onclick: () => this.go('competitivo'), text: 'Buscar partida' }));
     const out = [me];
     const L = this.ladder;
     if (!L.available) {
@@ -14655,11 +15313,13 @@ class Home {
               ? ''
               : 'Este navegador no permite el modo multijugador.');
     this.renderRooms();
+    if (this.view === 'competitivo') this.renderQueue();
   }
 
   setRooms(rooms) {
     this.rooms = rooms;
     this.renderRooms();
+    if (this.view === 'competitivo') this.renderQueue();
   }
 
   /** Vestíbulo público: tarjetas con miniatura, mapa, modo y plazas libres (o un estado vacío con diseño). */
@@ -14786,13 +15446,26 @@ class Home {
     $('crear-error').textContent = '';
     this._busyCreate(false);
     this._renderCreate();
+    this.pushLayer('crear-sala', 'multijugador/crear-sala');
   }
 
+  /** «Atrás» en Crear sala: vuelve a la página de la que vino (Multijugador o Competitivo). */
   hideCreate() {
+    const below = history.state?.capa === 'crear-sala' && history.state.n > 0;
+    if (below) {
+      history.back(); // el historial la cierra (ver _onPop)
+      return;
+    }
+    this.closeLayer('crear-sala');
+    this._closeCreate();
+    if (!PAGES.has(this.view)) this.go('multijugador');
+  }
+
+  _closeCreate() {
+    if ($('crear-sala').hidden) return;
     $('crear-sala').hidden = true;
     $('inicio').hidden = false;
     this._slideIn($('inicio'), -1);
-    this.openPanel('online');
   }
 
   _renderCreate() {
@@ -14898,6 +15571,7 @@ class Home {
     $('btn-editar-reglas').textContent = 'Editar reglas';
     $('sala-copia').hidden = true;
     delete $('sala-ajustes').dataset.host;
+    this.pushLayer('sala');
   }
 
   hideLobby() {
@@ -15173,7 +15847,7 @@ class Home {
   }
 }
 
-return { rulesSummary, Home };
+return { rulesSummary, viewFromHash, Home };
 });
 __define('icons', function () {
 // Iconos de edificios dibujados con primitivas de canvas. Se usan igual en el
@@ -16970,6 +17644,65 @@ function artOnline(ctx, W, H) {
   vignette(ctx, W, H, 0.5);
 }
 
+/**
+ * Competitivo: una fortaleza al anochecer con estandartes y, sobre ella, tu
+ * insignia de rango con su luz (`badge(ctx, cx, cy, alto)`).
+ */
+function artRanked(ctx, W, H, badge) {
+  sunsetSky(ctx, W, H, { glowX: 0.5, glowY: 0.4, warm: 0.7, top: '#120b24' });
+  // Rayos de luz detrás de la insignia
+  const cx = W * 0.5;
+  const cy = H * 0.36;
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * TAU;
+    const g = ctx.createLinearGradient(0, 0, Math.cos(a) * W * 0.6, Math.sin(a) * W * 0.6);
+    g.addColorStop(0, 'rgba(255, 220, 150, 0.32)');
+    g.addColorStop(1, 'rgba(255, 220, 150, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, W * 0.6, a - 0.07, a + 0.07);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  clouds(ctx, W, H, 58, { y0: 0.45, y1: 0.7, n: 8, color: '170, 120, 200', alpha: 0.22 });
+  hills(ctx, W, H, 12, 0.7, 0.8, 'rgba(36, 24, 48, 0.95)', 2);
+  // Fortaleza: muralla almenada con dos torres y una puerta
+  const base = H * 0.86;
+  const wall = (x, w, h) => {
+    ctx.fillRect(x, base - h, w, h);
+    const m = Math.max(4, w / 9);
+    for (let u = x; u < x + w - 1; u += m * 2) ctx.fillRect(u, base - h - m * 0.9, m, m * 0.9);
+  };
+  ctx.fillStyle = '#0b0912';
+  wall(W * 0.3, W * 0.4, H * 0.16);
+  wall(W * 0.24, W * 0.1, H * 0.3);
+  wall(W * 0.66, W * 0.1, H * 0.3);
+  wall(W * 0.45, W * 0.1, H * 0.22);
+  ctx.fillStyle = 'rgba(255, 190, 100, 0.55)';
+  ctx.beginPath();
+  ctx.arc(W * 0.5, base - H * 0.05, W * 0.02, Math.PI, 0);
+  ctx.lineTo(W * 0.52, base);
+  ctx.lineTo(W * 0.48, base);
+  ctx.closePath();
+  ctx.fill();
+  hills(ctx, W, H, 31, 0.86, 0.92, '#07060c', 3);
+  flag(ctx, W * 0.29, H * 0.56, H * 0.3, 0.4, { cloth: '#3a1d55', withEmblem: false, w: 0.5 });
+  flag(ctx, W * 0.71, H * 0.56, H * 0.3, 1.3, { cloth: '#3a1d55', withEmblem: false, w: 0.5 });
+  if (badge) {
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, H * 0.42);
+    glow.addColorStop(0, 'rgba(255, 228, 160, 0.55)');
+    glow.addColorStop(1, 'rgba(255, 228, 160, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+    badge(ctx, cx, cy + H * 0.02, H * 0.5);
+  }
+  vignette(ctx, W, H, 0.45);
+}
+
 /** Partida personalizada: mapa de papel con compás, regla y un avión. */
 function artCustom(ctx, W, H, europeData) {
   const g = ctx.createLinearGradient(0, 0, W, H);
@@ -17062,6 +17795,7 @@ function drawModeArt(kind, canvas, data = {}) {
   const W = canvas.width / k;
   const H = canvas.height / k;
   if (kind === 'rapida') artQuick(ctx, W, H);
+  else if (kind === 'competitivo') artRanked(ctx, W, H, data.badge);
   else if (kind === 'ia') artAI(ctx, W, H, data.world);
   else if (kind === 'online') artOnline(ctx, W, H);
   else artCustom(ctx, W, H, data.europe);
@@ -17939,7 +18673,11 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
  * tapar la ficha de una invitación o la sala que estén a la vista.
  */
 function startDemo({ background = false } = {}) {
-  if (!background) leaveOnline();
+  if (!background) {
+    leaveOnline();
+    // Fuera de la partida: se vuelve a la página desde la que se empezó (Competitivo, Crear partida…)
+    home.closeLayer('partida');
+  }
   state.demo = true;
   newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
   // La partida de fondo del menú va a velocidad normal (gasta menos)
@@ -17986,6 +18724,8 @@ function enterGame(game) {
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
+  // La partida tiene su entrada en el historial: el botón atrás abre su menú en vez de sacarte
+  home.pushLayer('partida');
   // Resumen de partida: graba cómo va (sin tocar la simulación)
   state.rec = game.human ? new Grabador(game, game.human) : null;
   // Se llama en mitad del turno: un fallo de la interfaz no debe dejar el
@@ -18069,7 +18809,7 @@ for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => s
 document.addEventListener('click', (e) => {
   const el = e.target instanceof Element ? e.target.closest('button') : null;
   if (!el || el.disabled) return;
-  if (el.matches('[role="tab"], .sub-pestanas button')) sound.play('pagina', 0.8, 60);
+  if (el.matches('[role="tab"], .sub-pestanas button, [data-volver], [data-pagina]')) sound.play('pagina', 0.8, 60);
   else if (el.matches('.modo')) sound.play('elegir', 0.8, 120);
   else sound.play('click', 0.6, 40);
 });
@@ -18769,8 +19509,36 @@ const home = new Home(profile, {
       for (const k of ['sala', 'b']) url.searchParams.delete(k);
       history.replaceState(null, '', url);
     }
+    // La sala tenía su entrada en el historial: se cierra y se vuelve a la página de antes
+    const below = history.state?.capa === 'sala' && history.state.n > 0;
+    home.closeLayer('sala');
     home.show();
-    home.openPanel('online');
+    if (!below) home.openPanel('online');
+  },
+  /** Atrás o adelante en el navegador (o el botón atrás del móvil). true = resuelto aquí. */
+  onHistory(st) {
+    // En partida, atrás no te saca de golpe: abre (o cierra) el menú de la partida
+    if (state.game && !state.demo) {
+      const menu = document.getElementById('menu-partida');
+      if (st?.capa !== 'partida') home.pushLayer('partida');
+      if (menu && !menu.hidden) cerrarDialogo(menu);
+      else openGameMenu();
+      return true;
+    }
+    // En una sala (o su ficha de entrada): atrás es salir de ella
+    if ((state.sala || state.pendingEntry) && !document.getElementById('sala').hidden && st?.capa !== 'sala') {
+      leaveOnline();
+      if (state.pendingEntry) {
+        state.pendingEntry = null;
+        const url = new URL(location.href);
+        for (const k of ['sala', 'b']) url.searchParams.delete(k);
+        history.replaceState(history.state, '', url);
+      }
+      home.show();
+      home.setView(st?.vista && st.vista !== 'jugar' ? st.vista : 'multijugador');
+      return true;
+    }
+    return false;
   },
   onEntryRetry() {
     if (!state.pendingEntry && state.sala) state.pendingEntry = state.sala.code;
