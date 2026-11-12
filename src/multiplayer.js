@@ -17,7 +17,8 @@ export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash', 'cargad
  * dos clientes tienen versiones distintas del juego, no coincide.
  */
 const FINGERPRINT = (() => {
-  const s = JSON.stringify([MECH, PROFILES, CONFIG, BUILDINGS]);
+  // Con la lista de mapas: una versión sin los mapas nuevos no puede jugar con esta
+  const s = JSON.stringify([MECH, PROFILES, CONFIG, BUILDINGS, MAP_IDS]);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);
@@ -41,6 +42,8 @@ export function checkStartPayload(d) {
   const rules = cleanRules(d.settings.rules);
   const mine = roomRuleset(rules);
   if (d.ruleset !== mine) return { ok: false, reason: 'version', theirs: String(d.ruleset || 'desconocida'), mine };
+  // Un mapa que esta versión no tiene: no se juega en otro (cada uno simularía uno distinto)
+  if (d.settings.mapSize != null && !MAP_IDS.includes(d.settings.mapSize)) return { ok: false, reason: 'version', theirs: `mapa ${String(d.settings.mapSize).slice(0, 24)}`, mine };
   return {
     ok: true,
     payload: {

@@ -278,6 +278,13 @@ export const REAL_MAPS = {
   sudamerica: 'Sudamérica',
   africa: 'África',
   asia: 'Asia',
+  // Regiones de cerca: más detalle por país y partidas más cortas
+  mediterraneo: 'Mediterráneo',
+  orientemedio: 'Oriente Medio',
+  caribe: 'Centroamérica',
+  sudesteasiatico: 'Sudeste Asiático',
+  extremooriente: 'Extremo Oriente',
+  asiasur: 'Asia del Sur',
 };
 
 export const MAP_IDS = [...Object.keys(REAL_MAPS), ...Object.keys(MAP_SIZES)];

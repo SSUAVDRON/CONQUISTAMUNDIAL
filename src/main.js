@@ -1798,10 +1798,11 @@ function frame(now) {
   }
   // La partida de fondo del menú se ve atenuada y tapada: se dibuja a 20 fps
   // (15 en el móvil). Cada dibujo hace recomponer la pantalla entera, y a 60
-  // fps era casi la mitad del trabajo del menú
+  // fps era casi la mitad del trabajo del menú. Y si el menú la tapa del todo
+  // (fondo opaco y quieto), ni se dibuja
   state.frameNo = (state.frameNo || 0) + 1;
   const demoGap = TOUCH ? 62 : 46;
-  if (!state.demo || now - (state.lastDemoDraw || 0) >= demoGap) {
+  if (!state.demo || (now - (state.lastDemoDraw || 0) >= demoGap && !home.menuCovers())) {
     if (state.demo) state.lastDemoDraw = now;
     try {
       state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });

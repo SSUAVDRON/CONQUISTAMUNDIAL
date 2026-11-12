@@ -24,6 +24,12 @@ const DEFS = [
   { id: 'sudamerica', lon: [-92, -30], lat: [-56, 14], w: 480 * RES, maxRank: 6 },
   { id: 'africa', lon: [-20, 55], lat: [-36, 38], w: 560 * RES, maxRank: 6 },
   { id: 'asia', lon: [25, 150], lat: [-11, 62], w: 760 * RES, maxRank: 5 },
+  { id: 'mediterraneo', lon: [-10, 37], lat: [29, 47], w: 600 * RES, maxRank: 6 },
+  { id: 'orientemedio', lon: [24, 64], lat: [11, 43], w: 560 * RES, maxRank: 6 },
+  { id: 'caribe', lon: [-118, -58], lat: [5, 33], w: 640 * RES, maxRank: 6 },
+  { id: 'sudesteasiatico', lon: [90, 142], lat: [-11, 28], w: 600 * RES, maxRank: 6 },
+  { id: 'extremooriente', lon: [100, 150], lat: [18, 54], w: 560 * RES, maxRank: 6 },
+  { id: 'asiasur', lon: [58, 100], lat: [5, 40], w: 560 * RES, maxRank: 6 },
 ];
 // Ríos grandes (dos casillas de ancho): los de rango 1-2 de Natural Earth
 const MAJOR_RANK = 2;

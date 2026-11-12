@@ -28,10 +28,30 @@ menú, que entra escalonado: cabecera, pestañas y tarjetas. Dura lo justo
 reducido, sin animaciones. Lo que salía al abrir (un reto `?reto`, una
 clasificatoria que quedó a medias) espera a que acabe.
 
-El menú va fluido también en móviles: la partida de fondo se dibuja a ~20 fps
-(~16 en táctiles) en vez de en cada fotograma, sin radar giratorio a pantalla
-completa (obligaba a recomponer toda la pantalla) y el brillo de los botones se
-mueve con `transform`.
+El menú va fluido también en móviles. Medido con Playwright en un Pixel 7 con
+la CPU ×4 (15 cambios de pestaña y de página seguidos), los
+fotogramas lentos al navegar bajaron de 51–66 a ~23 y las tareas largas a la
+mitad; en el ordenador, de 541 a 74 ms. Lo que lo hace:
+
+- **La partida de fondo no se dibuja mientras el menú la tapa** (sus pantallas
+  tienen fondo opaco); solo mientras entra o sale una pantalla
+  (`home.menuCovers()`). Antes se dibujaba a ~20 fps detrás, sin verse, y era
+  casi todo el trabajo del menú en reposo.
+- **La portada animada** pinta una vez lo fijo (puntos estratégicos, banderas,
+  nombres y capitales) y los buques ya dibujados (un sprite girado por buque);
+  en cada fotograma solo se mueven las flechas y los barcos.
+- **La vista que entra empieza su animación cuando ya está pintada**
+  (`mostrar(…, { diferir: true })`): el fotograma en que aparece es largo y la
+  animación se saltaba su primer tramo. Lo que hay que rehacer de una página
+  (Competitivo, Clasificación) se hace mientras sale la anterior, no en el
+  clic.
+- **La bandera del logo** de la barra ondea dos veces y luego solo al pasar por
+  encima (animar un trazo SVG obliga a repintar en cada fotograma).
+- **La escena de la portada** se repinta solo si cambia de tamaño
+  (`ResizeObserver`): antes salía estirada y se repintaba al volver a «Jugar».
+- **Las miniaturas de los mapas** se pintan de una en una en tiempo libre (la
+  elegida primero) y los mapas decodificados para ellas no se guardan en
+  memoria (solo el mundo y Europa, que usan la portada y los dibujos).
 
 El inicio tiene cuatro tarjetas ilustradas: **Partida rápida** (mundo real
 contra 90 países y cientos de colonias, un clic) y tres que abren **su propia
@@ -182,10 +202,17 @@ también en tu cuenta.
 
 ## Mapas
 
-- **Mundo real:** Mundo, Europa, Norteamérica, Sudamérica, África y Asia. Los
-  bots son países reales con su bandera (los más grandes del mapa, hasta uno
-  por país) y aparecen cerca de su ubicación, en el mejor hueco. Cordilleras y mesetas reales hacen más lento y
-  caro avanzar.
+- **Mundo real:** Mundo, Europa, Norteamérica, Sudamérica, África y Asia, y
+  seis regiones de cerca, con más detalle por país y partidas más cortas:
+  **Mediterráneo** (35 países), **Oriente Medio** (36), **Centroamérica** con el
+  Caribe (19), **Sudeste Asiático** (17), **Extremo Oriente** (12) y **Asia del
+  Sur** (17). Los bots son países reales con su bandera (los más grandes del
+  mapa, hasta uno por país) y aparecen cerca de su ubicación, en el mejor
+  hueco. Cordilleras y mesetas reales hacen más lento y caro avanzar. En
+  «Crear partida» los quince mapas se ven en rejilla en el ordenador y en una
+  tira de dos filas en el móvil. La lista de mapas entra en la huella de
+  versión del multijugador, y una sala con un mapa que tu versión no tiene no
+  empieza (antes se habría jugado en otro mapa y desincronizado).
 - **Aleatorios:** pequeño, mediano y grande, generados con la semilla.
 - **Ríos** (`doc-1.4`): en todos los mapas (los reales, con los ríos de
   verdad; en los aleatorios nacen en las montañas y bajan hasta el mar). Son
@@ -213,6 +240,11 @@ regenerarlos o añadir regiones (`DEFS` en el script):
 ```bash
 node herramientas/mapas.js <carpeta con los .geojson de Natural Earth> <ETOPO5.DOS>
 ```
+
+Una región nueva va en `DEFS` de `herramientas/mapas.js` y de
+`herramientas/rios.js` (el mismo recorte) y en `REAL_MAPS` de `config.js`; los
+mapas que ya había salen idénticos al regenerar. `NOT_COUNTRIES` deja fuera
+unidades de Natural Earth que no son una nación (el glaciar de Siachen).
 
 Necesita `ne_50m_admin_0_countries` y `ne_50m_lakes` (GeoJSON, en
 github.com/nvkelso/natural-earth-vector) y el fichero `ETOPO5.DOS` de NOAA.
@@ -425,7 +457,7 @@ servidor de salas público.
 | Retirada | El botón ✕ de un ataque lo cancela; vuelve la mitad de sus tropas. |
 | Velocidad de conquista | Cuantas más tropas mandas, más rápido avanzas: en tierra libre según las tropas por casilla de frente, contra una nación según tu superioridad sobre su densidad (hasta ×3,5). |
 | Barcos | Clic en una costa sin frontera terrestre: sale un barco de transporte desde tu costa más cercana (máx. 3 a la vez; los puertos no suman). **Hace falta al menos un puerto terminado** (si no, «Necesitas un puerto para mandar barcos»); los bots que quieren cruzar el mar se hacen primero uno. Todos los barcos (desembarcos, buques y mercantes) van un 40 % más lentos que antes (`doc-1.3`). Navegan también por los ríos que llegan al mar (`doc-1.4`): un río sirve para desembarcar en la otra orilla, pero uno que no llega al mar no se navega. Las rutas cruzan los estrechos: si la búsqueda por el pasillo de la ruta gruesa no llega (Ormuz, donde la ruta gruesa cruzaba la península de Musandam), se repite con un pasillo más ancho y, solo si tampoco, sin pasillo (con un tope menor); la ruta gruesa solo une dos celdas si su agua se toca de verdad por el borde (`doc-1.5`; antes podía «saltar» un istmo y obligar a la búsqueda cara). Los mercantes calculan como mucho una ruta nueva por turno (las ya calculadas se reutilizan) y un bot que no encuentra ruta para un desembarco espera 20 s antes de volver a intentarlo; el Bósforo y los Dardanelos se abren al cargar el mapa (con ~13 km por casilla desaparecían y el Mar Negro quedaba aislado). |
-| Naciones | Hasta 200 rivales en cualquier mapa (partida rápida: 90). En los mapas reales primero salen los países de verdad, con su bandera y cerca de su sitio real (a menos de 10·RES casillas, en el mejor hueco: con la zona inicial entera, tierra adentro, en llano y separados de los demás; de media a 2-3 casillas de su punto) (mundo 156, Europa 52, África 72, Asia 74, Sudamérica 20, Norteamérica 17); si pides más, el resto son naciones inventadas repartidas por el mapa. La IA mantiene sus tropas hacia el 42 % del techo (donde más rápido se regeneran) y ataca con lo que sobra: elige al vecino que mejor puede ganar (pocas tropas por casilla, colonias, naciones ya en guerra con otros, traidores, rencores y el líder si se escapa), remata refuerzando un ataque que se agota, contraataca para anular tus ofensivas grandes (más en difícil e imposible) y los más agresivos pelean mientras se expanden. |
+| Naciones | Hasta 200 rivales en cualquier mapa (partida rápida: 90). En los mapas reales primero salen los países de verdad, con su bandera y cerca de su sitio real (a menos de 10·RES casillas, en el mejor hueco: con la zona inicial entera, tierra adentro, en llano y separados de los demás; de media a 2-3 casillas de su punto) (mundo 156, Europa 52, África 72, Asia 74, Sudamérica 20, Norteamérica 17, Mediterráneo 35, Oriente Medio 36, Centroamérica 19, Sudeste Asiático 17, Extremo Oriente 12, Asia del Sur 17); si pides más, el resto son naciones inventadas repartidas por el mapa. La IA mantiene sus tropas hacia el 42 % del techo (donde más rápido se regeneran) y ataca con lo que sobra: elige al vecino que mejor puede ganar (pocas tropas por casilla, colonias, naciones ya en guerra con otros, traidores, rencores y el líder si se escapa), remata refuerzando un ataque que se agota, contraataca para anular tus ofensivas grandes (más en difícil e imposible) y los más agresivos pelean mientras se expanden. |
 | Colonias | Además de las naciones aparecen colonias («Colonia de…», «Aldea de…», «Misión de…»): tienen menos tropas, cuesta menos conquistarlas, no construyen ni firman alianzas y guardan su oro. Presa fácil al empezar. En tierra libre se expanden casi al ritmo de una nación (`doc-1.4`): mandan el 30-45 % de sus tropas en cuanto no tienen expansión en marcha (o la que tienen se queda sin tropas), avanzan como una nación con un envío normal (6.600 tropas) aunque manden menos y pagan ×0,38 de bajas. Cada una es distinta (sale de la semilla y su id, sin gastar el azar de la partida): su ritmo va de ×0,8 a ×1,3 y su forma, de redonda a irregular. A los 60 s de juego, una colonia lleva de media ~85 % de las casillas de una nación. Hay muchísimas: una por cada 500 casillas de tierra de la rejilla original, hasta 300 (las 300 en el mundo); con menos de 20 rivales, proporcionalmente menos. Se reparten por superficie real (en el mapa del mundo, de proyección Miller, el norte sale estirado: antes ~125 de 300 caían al norte de 60°N y solo ~17 en África, tapada por las zonas de sus 34 países; ahora ~84 y ~43), pueden quedar más cerca de las naciones (24 casillas) que entre ellas y empiezan con su zona inicial entera. |
 | Buques de guerra | Se botan desde un puerto propio terminado (máx. 3 por puerto y 1 más por cada nivel extra de puerto; min(1M, 250k × (buques + 1))). Van solos y su zona **se elige al botarlos y ya no se cambia**: con la T, clic en el mar (sale del puerto propio más cercano que dé a ese mar y la vista previa muestra el círculo que patrullará) o en tu costa (patrulla junto al puerto). La zona solo se ve al colocarlo (en la vista previa); en el mapa el buque es un casco con la cubierta del color de su dueño (filo blanco si es tuyo), su estela y su barra de vida, sin aro ni círculo alrededor. A tiro disparan a buques enemigos, hunden transportes de tropas y **capturan** mercantes rivales (pasan a ser tuyos); si un intruso entra en su zona, lo persiguen. No atacan puertos. |
 | Barcos de tropas | Con al menos un puerto, salen de cualquier costa tuya. La casilla de desembarco se toma con las mismas bajas que cualquier otra. Dejan una línea fina desde donde salieron (y punteada hasta donde van): todos ven de dónde viene un desembarco. |

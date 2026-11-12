@@ -15,6 +15,9 @@ function hslRgb(h, s, l) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
+/** Radio de los buques de la portada (px del lienzo). */
+const SHIP_R = 13;
+
 export class CoverArt {
   /**
    * `data`: mapa real decodificado ({ w, h, terrain, relief, countries }).
@@ -247,21 +250,46 @@ export class CoverArt {
         ctx.fill();
       }
     }
-    // Buques de guerra patrullando
+    // Buques de guerra patrullando (de su sprite ya dibujado, girado con su rumbo)
     for (const s of this.ships) {
       const a = t * 0.35 + s.phase;
       const x = s.x + Math.cos(a) * 10;
       const y = s.y + Math.sin(a) * 4;
-      drawWarship(ctx, x, y, a + Math.PI / 2, 13, s.phase > 2 ? '#e0483f' : '#2f7dff', false, null, 1);
+      const sp = this._shipSprite(s.phase > 2 ? '#e0483f' : '#2f7dff');
+      const ang = a + Math.PI / 2;
+      ctx.save();
+      ctx.translate(x + SHIP_R * 0.08, y + SHIP_R * 0.14);
+      ctx.rotate(ang);
+      ctx.drawImage(sp.shadow, -sp.half, -sp.half);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+      ctx.drawImage(sp.ship, -sp.half, -sp.half);
+      ctx.restore();
     }
-    // Puntos estratégicos
+    // Lo fijo (puntos estratégicos, banderas, nombres y capitales), ya pintado encima
+    if (!this.over || (!this.overFlags && flagReady())) this._paintOver();
+    ctx.drawImage(this.over, 0, 0);
+  }
+
+  /**
+   * La capa de encima, que no cambia: puntos estratégicos, rótulos de las
+   * naciones (con su bandera en cuanto están cargadas) y sus capitales. Antes
+   * se dibujaba todo en cada fotograma (banderas incluidas) y era lo que más
+   * pesaba de la portada.
+   */
+  _paintOver() {
+    const over = this.over || document.createElement('canvas');
+    over.width = this.canvas.width;
+    over.height = this.canvas.height;
+    const ctx = over.getContext('2d');
     for (const [kind, [x, y]] of this.points) drawPointIcon(ctx, kind, x, y, 22);
-    // Naciones: bandera, nombre y su capital
     ctx.font = '600 15px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
+    this.overFlags = flagReady();
     for (const n of this.labels) {
-      const flag = flagReady() && n.iso;
+      const flag = this.overFlags && n.iso;
       const tw = ctx.measureText(n.name).width;
       const x = n.x - (tw + (flag ? 26 : 0)) / 2;
       if (flag) drawFlag(ctx, n.iso, x + 10, n.y, 13);
@@ -274,5 +302,30 @@ export class CoverArt {
     for (const n of this.labels.slice(0, 5)) {
       drawPointIcon(ctx, 'capital', n.x, n.y + 20, 16, { ring: `rgb(${n.e.join(',')})` });
     }
+    this.over = over;
+  }
+
+  /**
+   * Buque de la portada ya dibujado (rumbo 0): la silueta con su estela y,
+   * aparte, su sombra (que se desplaza en pantalla, no con el rumbo). Cada
+   * fotograma solo se giran y se pegan.
+   */
+  _shipSprite(color) {
+    this._ships ??= new Map();
+    let sp = this._ships.get(color);
+    if (sp) return sp;
+    const half = Math.ceil(SHIP_R * 2.8);
+    const make = () => {
+      const c = document.createElement('canvas');
+      c.width = c.height = half * 2;
+      return c;
+    };
+    const ship = make();
+    drawWarship(ship.getContext('2d'), half, half, 0, SHIP_R, color, false, null, 1, { shadow: false });
+    const shadow = make();
+    drawWarship(shadow.getContext('2d'), half, half, 0, SHIP_R, color, false, null, 0, { only: 'shadow' });
+    sp = { ship, shadow, half };
+    this._ships.set(color, sp);
+    return sp;
   }
 }

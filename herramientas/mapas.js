@@ -47,6 +47,13 @@ export const DEFS = [
   { id: 'sudamerica', name: 'Sudamérica', lon: [-92, -30], lat: [-56, 14], w: 480 * RES },
   { id: 'africa', name: 'África', lon: [-20, 55], lat: [-36, 38], w: 560 * RES },
   { id: 'asia', name: 'Asia', lon: [25, 150], lat: [-11, 62], w: 760 * RES },
+  // Regiones de cerca: menos casillas que un continente y más detalle por país
+  { id: 'mediterraneo', name: 'Mediterráneo', lon: [-10, 37], lat: [29, 47], w: 600 * RES },
+  { id: 'orientemedio', name: 'Oriente Medio', lon: [24, 64], lat: [11, 43], w: 560 * RES },
+  { id: 'caribe', name: 'Centroamérica', lon: [-118, -58], lat: [5, 33], w: 640 * RES },
+  { id: 'sudesteasiatico', name: 'Sudeste Asiático', lon: [90, 142], lat: [-11, 28], w: 600 * RES },
+  { id: 'extremooriente', name: 'Extremo Oriente', lon: [100, 150], lat: [18, 54], w: 560 * RES },
+  { id: 'asiasur', name: 'Asia del Sur', lon: [58, 100], lat: [5, 40], w: 560 * RES },
 ];
 
 // Nombres demasiado largos para la etiqueta de una nación
@@ -61,7 +68,11 @@ const SHORT_NAMES = {
   'Islas Malvinas': 'Malvinas',
   'Tierras Australes y Antárticas Francesas': 'Tierras Australes',
   'Islas Georgias del Sur y Sandwich del Sur': 'Georgias del Sur',
+  'República Turca del Norte de Chipre': 'Chipre del Norte',
 };
+
+// Unidades de Natural Earth que no son un país para una nación del juego
+const NOT_COUNTRIES = new Set(['Siachen Glacier']);
 
 /** Nombre corto para la etiqueta: tabla propia o recorte por palabras. */
 function shortName(name) {
@@ -352,7 +363,7 @@ function buildMap(def, countries, lakes, etopo) {
     }
   }
   const list = [...stats.entries()]
-    .filter(([, s]) => s.area >= MIN_COUNTRY_TILES)
+    .filter(([o, s]) => s.area >= MIN_COUNTRY_TILES && !NOT_COUNTRIES.has(countries[o - 1].properties.NAME))
     .sort((a, b) => b[1].area - a[1].area)
     .slice(0, MAX_COUNTRIES)
     .map(([o, s]) => {

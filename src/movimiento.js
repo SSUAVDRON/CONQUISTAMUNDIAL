@@ -27,7 +27,13 @@ function frames(o) {
 
 /**
  * Muestra `el` (quita `hidden`) con una entrada suave. Si estaba saliendo,
- * la salida se cancela. `o`: { x, y, scale, ms, base }.
+ * la salida se cancela. `o`: { x, y, scale, ms, base, diferir }.
+ *
+ * `diferir`: para lo grande (una vista entera del menú). El fotograma en que
+ * aparece es largo (estilos, maquetación y pintado de todo lo nuevo) y la
+ * animación, que ya contaba, se saltaba su primer tramo: daba un tirón. Así
+ * se queda quieta en su primer fotograma (invisible) hasta que la vista ya
+ * está pintada y luego se reproduce entera.
  */
 export function mostrar(el, o = {}) {
   if (!el) return;
@@ -38,7 +44,14 @@ export function mostrar(el, o = {}) {
   if (!el.hidden) return;
   el.hidden = false;
   if (sinMovimiento() || !el.animate) return;
-  el.animate(frames(o), { duration: o.ms ?? 200, easing: EASE_OUT });
+  const a = el.animate(frames(o), { duration: o.ms ?? 200, easing: EASE_OUT });
+  if (o.diferir && typeof requestAnimationFrame === 'function') {
+    a.pause();
+    requestAnimationFrame(() => {
+      if (a.playState === 'paused') a.play();
+    });
+  }
+  return a;
 }
 
 /** Oculta `el` (pone `hidden` al terminar) con una salida suave. */

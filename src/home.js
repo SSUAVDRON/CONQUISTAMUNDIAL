@@ -53,6 +53,8 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Mapas', title: 'Seis regiones nuevas', text: 'Mediterráneo, Oriente Medio, Centroamérica y el Caribe, Sudeste Asiático, Extremo Oriente y Asia del Sur: más detalle por país y partidas más cortas.', art: 2 },
+  { tag: 'Menús', title: 'Menú más fluido', text: 'Pestañas y páginas cambian sin tirones y el menú gasta mucho menos mientras lo miras, también en el móvil.', art: 0 },
   { tag: 'Mapa', title: 'Cámara fluida', text: 'El zoom y el desplazamiento se deslizan con suavidad, con inercia al soltar, y la cámara vuela hasta cada frente.', art: 2 },
   { tag: 'Partida', title: 'Fin de partida y revancha', text: 'Al acabar, la cámara enseña el mapa entero y puedes jugar la revancha con las mismas reglas.', art: 1 },
   { tag: 'Menús', title: 'Menús renovados', text: 'Transiciones suaves, Perfil y Aspecto juntos, guía de juego y un menú en partida con ajustes rápidos.', art: 0 },
@@ -80,11 +82,14 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-/** Datos de un mapa real ya decodificados (terreno y relieve), para miniaturas y portada. */
+/**
+ * Datos de un mapa real ya decodificados (terreno, relieve y ríos). Los que
+ * se usan sin parar (el mundo y Europa, en la portada y los dibujos) se
+ * guardan; para una miniatura se decodifica, se pinta y se suelta: con doce
+ * mapas reales, guardarlos todos eran decenas de MB en el móvil.
+ */
 const realCache = new Map();
-function realPreviewData(id) {
-  let d = realCache.get(id);
-  if (d) return d;
+function decodePreview(id) {
   const data = REAL_MAP_DATA[id];
   const { w, h } = data;
   const terrain = new Uint8Array(w * h);
@@ -96,8 +101,11 @@ function realPreviewData(id) {
   }
   const mid = data.lat ? (((data.lat[0] + data.lat[1]) / 2) * Math.PI) / 180 : 0;
   const tileKm = data.lon ? ((data.lon[1] - data.lon[0]) * 111 * Math.max(0.3, Math.cos(mid))) / w : 5;
-  d = { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries, lat: data.lat || null, river: markRivers(w, h, terrain, RIVERS[id] || []) };
-  realCache.set(id, d);
+  return { w, h, terrain, relief: data.relief ? decodeRelief(data.relief) : null, tileKm, countries: data.countries, lat: data.lat || null, river: markRivers(w, h, terrain, RIVERS[id] || []) };
+}
+function realPreviewData(id) {
+  let d = realCache.get(id);
+  if (!d) realCache.set(id, (d = decodePreview(id)));
   return d;
 }
 
@@ -105,11 +113,14 @@ function realPreviewData(id) {
 const landCache = new Map();
 function landTilesOf(id) {
   if (landCache.has(id)) return landCache.get(id);
-  let n;
+  let n = 0;
   if (REAL_MAP_DATA[id]) {
-    const t = realPreviewData(id).terrain;
-    n = 0;
-    for (let i = 0; i < t.length; i++) if (t[i]) n++;
+    // Se cuentan los tramos de tierra del terreno codificado, sin decodificarlo entero
+    const bin = atob(REAL_MAP_DATA[id].rle);
+    for (let k = 0; k < bin.length; k++) {
+      const b = bin.charCodeAt(k);
+      if (b >> 6) n += (b & 63) + 1;
+    }
   } else {
     const size = MAP_SIZES[id] || MAP_SIZES.mediano;
     n = Math.round(size.w * size.h * 0.42);
@@ -121,7 +132,7 @@ function landTilesOf(id) {
 /** Miniatura de un mapa (real o aleatorio con semilla fija) con el mismo estilo que la partida. */
 function mapThumb(id, width = 168) {
   let data;
-  if (REAL_MAP_DATA[id]) data = realPreviewData(id);
+  if (REAL_MAP_DATA[id]) data = realCache.get(id) || decodePreview(id);
   else {
     const size = MAP_SIZES[id];
     const map = generateMap(Math.round(size.w / (3 * RES)), Math.round(size.h / (3 * RES)), 7 + Object.keys(MAP_SIZES).indexOf(id));
@@ -135,16 +146,65 @@ function mapThumb(id, width = 168) {
 
 /** Miniaturas ya pintadas (una por mapa y ancho): se copian en vez de rehacerlas. */
 const thumbCache = new Map();
-function thumbCopy(id, width) {
+function thumbSource(id, width) {
   const key = `${id}:${width}`;
   let src = thumbCache.get(key);
   if (!src) {
     src = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', width);
     thumbCache.set(key, src);
   }
+  return src;
+}
+function thumbCopy(id, width) {
+  const src = thumbSource(id, width);
   const c = el('canvas', { width: src.width, height: src.height, 'aria-hidden': 'true' });
   c.getContext('2d').drawImage(src, 0, 0);
   return c;
+}
+
+/** Proporción (alto / ancho) de la miniatura de un mapa, sin pintarla. */
+function thumbRatio(id) {
+  if (REAL_MAP_DATA[id]) return REAL_MAP_DATA[id].h / REAL_MAP_DATA[id].w;
+  const size = MAP_SIZES[id] || MAP_SIZES.mediano;
+  return Math.round(size.h / (3 * RES)) / Math.round(size.w / (3 * RES));
+}
+
+/**
+ * Miniatura que se pinta cuando haya un rato libre (una por vez, la elegida
+ * antes): el lienzo, ya con su tamaño, sale al momento y se rellena después.
+ * Antes se pintaban todas al arrancar, de golpe, y con quince mapas era lo
+ * que más tardaba en abrirse el menú.
+ */
+const thumbQueue = [];
+let thumbPumping = false;
+function lazyThumb(id, width, first = false) {
+  if (thumbCache.has(`${id}:${width}`)) return thumbCopy(id, width);
+  const c = el('canvas', { width, height: Math.round(width * thumbRatio(id)), 'aria-hidden': 'true', class: 'por-pintar' });
+  const job = { id, width, c };
+  if (first) thumbQueue.unshift(job);
+  else thumbQueue.push(job);
+  pumpThumbs();
+  return c;
+}
+function pumpThumbs() {
+  if (thumbPumping || !thumbQueue.length) return;
+  thumbPumping = true;
+  const idle = typeof requestIdleCallback === 'function' ? (fn) => requestIdleCallback(fn, { timeout: 1200 }) : (fn) => setTimeout(fn, 40);
+  idle(() => {
+    thumbPumping = false;
+    const job = thumbQueue.shift();
+    if (job) {
+      try {
+        const src = thumbSource(job.id, job.width);
+        if (job.c.height !== src.height) job.c.height = src.height;
+        job.c.getContext('2d').drawImage(src, 0, 0);
+        job.c.classList.remove('por-pintar');
+      } catch (err) {
+        console.warn('Miniatura de mapa', job.id, err);
+      }
+    }
+    pumpThumbs();
+  });
 }
 
 /** Todos los mapas: [id, nombre, detalle]. */
@@ -177,7 +237,7 @@ function mapPicker(box, value, onChange) {
   };
   box.replaceChildren(
     ...mapEntries().map(([id, name, sub]) => {
-      const thumb = thumbCopy(id, Math.round(168 * dpr));
+      const thumb = lazyThumb(id, Math.round(168 * dpr), id === value);
       return el(
         'button',
         {
@@ -569,11 +629,17 @@ export class Home {
     }
     // Ilustraciones de la portada y de las tarjetas de modo (después del primer pintado)
     setTimeout(() => this._paintArt(), 30);
+    // La escena de la portada se repinta solo si cambia de tamaño (antes se
+    // pintaba al arrancar con una altura provisional, se quedaba estirada y se
+    // repintaba, con su tirón, cada vez que se volvía a «Jugar»)
+    const hero = $('heroe-escena');
     let resizeTimer = 0;
-    window.addEventListener('resize', () => {
+    const repaint = () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => this._paintHero(), 150);
-    });
+      resizeTimer = setTimeout(() => this._paintHero(), 120);
+    };
+    if (hero && typeof ResizeObserver === 'function') new ResizeObserver(repaint).observe(hero);
+    else window.addEventListener('resize', repaint);
     segmented($('seg-dificultad'), Object.entries(DIFFICULTY), this.choice.difficulty, (v) => {
       this.choice.difficulty = v;
       this._syncSummaryIA();
@@ -1053,7 +1119,7 @@ export class Home {
     const key = `${g.mapa}|${g.fecha}`;
     if (box.dataset.clave === key) return;
     box.dataset.clave = key;
-    const thumb = el('div', { class: 'ultima-mapa' }, mapThumb(REAL_MAP_DATA[g.mapa] || MAP_SIZES[g.mapa] ? g.mapa : 'mundo', 260));
+    const thumb = el('div', { class: 'ultima-mapa' }, thumbCopy(g.mapa, 260));
     thumb.append(el('span', { class: `ultima-resultado${win ? ' gana' : ''}`, text: g.resultado }));
     box.replaceChildren(
       thumb,
@@ -1351,10 +1417,22 @@ export class Home {
     return !$('inicio').hidden && $('sala').hidden && $('crear-sala').hidden;
   }
 
+  /**
+   * ¿Tapa el menú del todo la partida de fondo? Sus pantallas tienen fondo
+   * opaco: mientras se ven quietas (sin entrar ni salir), dibujarla detrás
+   * era trabajo tirado y quitaba fluidez a las pestañas y a las páginas.
+   */
+  menuCovers() {
+    // (Sin getAnimations: obliga a recalcular estilos y, en cada fotograma, salía caro)
+    const a = this._screenAnim;
+    if (a && a.playState === 'running') return false;
+    return !$('inicio').hidden || !$('sala').hidden || !$('crear-sala').hidden;
+  }
+
   /** Entrada de una pantalla: se desliza desde un lado (`dir` 1 derecha, -1 izquierda, 0 fundido). */
   _slideIn(screen, dir) {
     if (!screen || sinMovimiento() || !screen.animate) return;
-    screen.animate([{ opacity: 0, transform: `translateX(${dir * 32}px)` }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+    this._screenAnim = screen.animate([{ opacity: 0, transform: `translateX(${dir * 32}px)` }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
   }
 
   show() {
@@ -1394,8 +1472,16 @@ export class Home {
     rodar(nav);
     this._moveUnderline(true);
     $('chip-perfil').classList.toggle('activo', view === 'perfil');
-    if (view === 'clasificacion') this.renderTable();
-    if (view === 'competitivo') this.renderCompetitive();
+    // Lo que hay que rehacer de la página que entra (lienzos de rangos, tabla…).
+    // Se hace mientras sale la vista anterior (esa animación la mueve la
+    // gráfica sola), no en el clic: así la salida empieza al instante
+    let prepared = false;
+    const prepare = () => {
+      if (prepared || this.view !== view) return;
+      prepared = true;
+      if (view === 'clasificacion') this.renderTable();
+      if (view === 'competitivo') this.renderCompetitive();
+    };
     if (this.search) this.setSearch(this.search);
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
@@ -1408,10 +1494,10 @@ export class Home {
     // Las páginas entran desde la derecha y, al volver, la sección llega desde la izquierda
     const dir = PAGES.has(view) && !PAGES.has(prev) ? 1 : PAGES.has(prev) && !PAGES.has(view) ? -1 : PAGES.has(view) ? 1 : 0;
     const enter = () => {
+      prepare();
       for (const sec of secs) if (sec !== next && !sec._salida) sec.hidden = true;
       $('inicio').scrollTo?.({ top: 0 });
-      mostrar(next, dir ? { x: dir * 30, y: 0, scale: 1, ms: 280 } : { y: 10, scale: 1, ms: 240 });
-      if (view === 'jugar') requestAnimationFrame(() => this._paintHero());
+      mostrar(next, dir ? { x: dir * 30, y: 0, scale: 1, ms: 280, diferir: true } : { y: 10, scale: 1, ms: 240, diferir: true });
       if (view === 'perfil' && this.profileTab === 'resumen') this.renderProgress(true);
       for (const nav of next.querySelectorAll('.sub-pestanas')) underline(nav, false);
       llenarAlVer(next);
@@ -1422,6 +1508,8 @@ export class Home {
       return;
     }
     for (const sec of leaving) ocultar(sec, dir ? { x: -dir * 18, y: 0, scale: 1, ms: 110 } : { y: -4, scale: 1, ms: 110 });
+    // Tras pintar el fotograma en que empieza la salida
+    requestAnimationFrame(() => setTimeout(prepare, 0));
     this._viewTimer = setTimeout(enter, 110);
   }
 

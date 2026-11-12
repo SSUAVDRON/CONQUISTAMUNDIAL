@@ -126,12 +126,15 @@ export function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1) {
  * anillo del color del dueño, fondo oscuro y la silueta del buque dentro,
  * girada según su rumbo, con las torretas apuntando al blanco si dispara.
  * `r` es el radio en píxeles; `aim`, el ángulo de tiro (o null).
+ * `opts.shadow: false` lo dibuja sin sombra y `opts.only: 'shadow'`, solo la
+ * sombra (sin desplazar): así la portada guarda las dos piezas ya pintadas.
  */
-export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving = 1) {
+export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving = 1, opts = {}) {
   ctx.save();
   ctx.translate(x, y);
+  const onlyShadow = opts.only === 'shadow';
   // Estela corta detrás de la insignia
-  if (moving > 0.05) {
+  if (moving > 0.05 && !onlyShadow) {
     ctx.save();
     ctx.rotate(ang);
     ctx.lineCap = 'round';
@@ -165,13 +168,19 @@ export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving =
     ctx.closePath();
   };
   // Sombra con la forma del casco (desplazada en pantalla, no con el rumbo)
-  ctx.save();
-  ctx.translate(r * 0.08, r * 0.14);
-  ctx.rotate(ang);
-  hull();
-  ctx.fillStyle = 'rgba(0, 10, 25, 0.38)';
-  ctx.fill();
-  ctx.restore();
+  if (opts.shadow !== false) {
+    ctx.save();
+    if (!onlyShadow) ctx.translate(r * 0.08, r * 0.14);
+    ctx.rotate(ang);
+    hull();
+    ctx.fillStyle = 'rgba(0, 10, 25, 0.38)';
+    ctx.fill();
+    ctx.restore();
+  }
+  if (onlyShadow) {
+    ctx.restore();
+    return;
+  }
   // Silueta del buque, girada con su rumbo
   ctx.save();
   ctx.rotate(ang);

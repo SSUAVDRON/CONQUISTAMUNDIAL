@@ -81,6 +81,9 @@ test('multijugador: la sala no empieza si el anfitrión simula con otra versión
   assert.equal(checkStartPayload({ ...good, ruleset: 'doc-0.9/clasico-1#xyz' }).reason, 'version');
   assert.equal(checkStartPayload({ ...good, ruleset: undefined }).reason, 'version');
   assert.equal(checkStartPayload({ ...good, seed: 'x' }).reason, 'datos');
+  // Un mapa que este cliente no tiene: no se juega en otro en su lugar
+  assert.equal(checkStartPayload({ ...good, settings: { ...settings, mapSize: 'atlantida' } }).reason, 'version');
+  assert.equal(checkStartPayload({ ...good, settings: { ...settings, mapSize: 'caribe' } }).payload.settings.mapSize, 'caribe');
 });
 
 test('diagnóstico (?diag=1): registra turnos, envíos, frentes y reembolsos con cifras internas y visibles', async () => {
