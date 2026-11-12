@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="3e87b63 2026-11-12 21:35 UTC">
+<meta name="trinchera-build" content="0eeaf58 2026-11-12 22:09 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -4704,6 +4704,119 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
   #hud:not(.escritorio) .banco-btn + .banco-btn { margin-left: 0; }
 }
 
+/* ---------- Ficha de lo que da cada cosa (doc-1.7) ---------- */
+.ficha[data-grupo="economia"] { --g-color: #f2b33d; --g-glow: rgba(242, 179, 61, 0.35); }
+.ficha[data-grupo="defensa"] { --g-color: #6cc0ff; --g-glow: rgba(108, 192, 255, 0.35); }
+.ficha[data-grupo="ataque"] { --g-color: #ff7a6b; --g-glow: rgba(255, 122, 107, 0.35); }
+.ficha[data-grupo="bono"] { --g-color: #9be38f; --g-glow: rgba(155, 227, 143, 0.35); }
+.ficha {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  top: 0;
+  width: 304px;
+  max-width: calc(100vw - 16px);
+  padding: 12px 13px 11px;
+  border-radius: 15px;
+  background: linear-gradient(180deg, rgba(27, 36, 58, 0.98), rgba(11, 15, 25, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--texto-1);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transform-origin: var(--flecha, 50%) 100%;
+  transition: opacity 0.14s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.ficha[hidden] { display: none; }
+.ficha.visible { opacity: 1; transform: none; }
+.ficha.debajo { transform-origin: var(--flecha, 50%) 0; }
+/* Franja del color del grupo, arriba, y flechita hacia el botón */
+.ficha::before { content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--g-color), transparent); box-shadow: 0 0 10px var(--g-glow); }
+.ficha::after { content: ""; position: absolute; left: calc(var(--flecha, 50%) - 6px); bottom: -7px; width: 12px; height: 12px; background: #0c101b; border-right: 1px solid rgba(255, 255, 255, 0.1); border-bottom: 1px solid rgba(255, 255, 255, 0.1); transform: rotate(45deg); }
+.ficha.debajo::after { bottom: auto; top: -7px; background: #1b243a; transform: rotate(225deg); }
+.ficha.ficha-dock::after { display: none; }
+
+.ficha-cab { display: flex; align-items: center; gap: 10px; }
+.ficha-icono { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--g-color) 32%, transparent), rgba(0, 0, 0, 0.35)); border: 1px solid color-mix(in srgb, var(--g-color) 42%, transparent); }
+.ficha-icono img { width: 30px; height: 30px; }
+.ficha-icono.emoji { font-size: 22px; line-height: 1; }
+.ficha-titulos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ficha-titulos small { font-size: 9.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--g-color); }
+.ficha-titulos strong { font-size: 15.5px; font-weight: 800; line-height: 1.15; color: #fff; }
+.ficha-precio { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.ficha-precio b { font-size: 16px; font-weight: 800; color: var(--acento); font-variant-numeric: tabular-nums; }
+.ficha-precio small { font-size: 10px; color: var(--texto-suave); white-space: nowrap; }
+.ficha-precio.caro b { color: #aab4c4; }
+.ficha-precio.caro small { color: #ff9f8f; }
+.ficha-precio.bono b { font-size: 13px; color: #9be38f; text-align: right; }
+.ficha-meta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 10.5px; color: var(--texto-suave); }
+.ficha-meta svg { width: 12px; height: 12px; flex: none; }
+.ficha kbd { display: inline-grid; place-items: center; min-width: 19px; height: 19px; margin-left: auto; padding: 0 5px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-bottom-width: 2px; font: 700 10px/1 system-ui, sans-serif; color: #fff; }
+.ficha-resumen { margin: 7px 0 0; font-size: 12px; color: #cdd6e4; }
+.ficha-sec { margin-top: 10px; }
+.ficha-sec h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-suave); }
+.ficha-sec h4::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+.ficha-da { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ficha-da li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.045); }
+.ficha-da .fi { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: color-mix(in srgb, var(--g-color) 16%, transparent); color: var(--g-color); }
+.ficha-da .fi svg { width: 14px; height: 14px; }
+.fd-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding-top: 3px; }
+.fd-l { font-weight: 700; color: #e9eef6; }
+.fd-txt small { font-size: 10.5px; line-height: 1.3; color: var(--texto-suave); }
+.fd-v { flex: none; max-width: 52%; padding-top: 3px; font-size: 13px; font-weight: 800; text-align: right; color: var(--acento); font-variant-numeric: tabular-nums; }
+.ficha-niv { display: flex; flex-direction: column; gap: 4px; padding: 7px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1); }
+.fn-fila { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; }
+.fn-l { flex: 1; min-width: 0; color: #cdd6e4; }
+.fn-de { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.fn-a { font-style: normal; font-weight: 800; color: var(--g-color); }
+.fn-fila b { font-weight: 800; color: #9be38f; font-variant-numeric: tabular-nums; }
+.ficha-tienes { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; font-size: 11px; color: #cdd6e4; }
+.ficha-tienes .fi { flex: none; display: grid; place-items: center; width: 16px; height: 16px; color: #5fd38d; }
+.ficha-tienes .fi svg { width: 13px; height: 13px; }
+.ficha-como { margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 11px; color: var(--texto-suave); }
+.ficha-tiempo { height: 4px; margin-top: 9px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.ficha-tiempo span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f2b33d, #ffe3a1); transition: width 0.5s linear; }
+.ficha-cancelar { display: block; width: 100%; height: 36px; margin-top: 9px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.07); color: var(--texto-1); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ficha-cancelar:active { transform: scale(0.98); }
+/* Al pasar el ratón no estorba al ratón */
+#hud.escritorio .ficha:not(.ficha-dock) { pointer-events: none; }
+/* Móvil, mientras colocas: fija encima del panel y más compacta (lo que da, en dos columnas) */
+.ficha.ficha-dock { left: calc(8px + env(safe-area-inset-left, 0px)) !important; right: calc(8px + env(safe-area-inset-right, 0px)); top: auto !important; bottom: calc(var(--pj-alto, 200px) + 16px + env(safe-area-inset-bottom, 0px)); width: auto; max-width: 520px; margin: 0 auto; padding: 10px 11px; transform-origin: 50% 100%; }
+.ficha.ficha-dock .ficha-sec { margin-top: 8px; }
+.ficha.ficha-dock .ficha-da { flex-direction: row; flex-wrap: wrap; }
+.ficha.ficha-dock .ficha-da li { flex: 1 1 calc(50% - 5px); min-width: 0; }
+.ficha.ficha-dock .fd-txt small { display: none; }
+@media (prefers-reduced-motion: reduce) { .ficha { transition: opacity 0.1s; transform: none; } }
+
+/* Lo principal que da cada edificio, en la bandeja del móvil */
+#hud .obra .b-efecto { display: none; }
+#hud .bandeja-obras .obra .b-efecto { display: -webkit-box; max-width: 100%; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 9.5px; font-weight: 700; line-height: 1.15; text-align: center; color: #9be38f; }
+
+/* Bonos activos, en la cabecera del panel */
+.pj-bonos { display: inline-flex; align-items: center; gap: 4px; min-width: 0; margin-left: auto; overflow: hidden; }
+.pj-bonos:empty { display: none; }
+.bono { display: inline-flex; align-items: center; gap: 3px; flex: none; height: 20px; padding: 0 7px 0 5px; border-radius: 999px; border: 1px solid rgba(155, 227, 143, 0.38); background: rgba(155, 227, 143, 0.1); color: #cdf3c6; font: 700 10.5px/1 system-ui, sans-serif; white-space: nowrap; cursor: help; -webkit-tap-highlight-color: transparent; }
+.bono.temporal { border-color: rgba(242, 179, 61, 0.5); background: rgba(242, 179, 61, 0.13); color: #ffe3a1; }
+.bono-ic { font-size: 11px; }
+.bono-t { font-weight: 600; opacity: 0.8; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .bono .bono-v { display: none; } }
+/* Ajustes de la ficha y la bandeja (doc-1.7) */
+.ficha { z-index: 90; }
+.ficha-tienes.falta { color: #ffc9a8; }
+.ficha-tienes.falta .fi { color: #ff9f6b; }
+.ficha.ficha-dock .ficha-meta { display: none; }
+.ficha.ficha-dock .ficha-resumen { font-size: 11.5px; margin-top: 5px; }
+.ficha.ficha-dock .ficha-cancelar { height: 32px; margin-top: 8px; }
+#hud .bandeja-obras .obra { height: auto; min-height: 0; padding: 7px 3px 7px; gap: 2px; }
+/* Bonos activos: una fila propia bajo el nombre (no le quitan sitio) */
+#panel-jugador .cabecera { flex-wrap: wrap; row-gap: 4px; }
+.pj-bonos { order: 9; flex: 1 1 100%; margin-left: 0; flex-wrap: wrap; }
+.ficha { background: linear-gradient(180deg, #1b243a, #0b0f19); }
+
 </style>
 </head>
 <body>
@@ -5473,6 +5586,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
         <span id="pj-color" class="muestra"></span>
         <strong id="pj-nombre"></strong>
         <span id="pj-estado"></span>
+        <span id="pj-bonos" class="pj-bonos" aria-label="Bonos activos"></span>
       </div>
       <div class="barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido en la franja marcada, hacia el 42 % del techo"><div id="pj-barra"></div></div>
       <div class="cifras">
@@ -5792,7 +5906,7 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "3e87b63 2026-11-12 21:35 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "0eeaf58 2026-11-12 22:09 UTC";</script>
 <script>
 (function () {
 'use strict';
@@ -8656,6 +8770,516 @@ function placePoints(map, seed) {
 }
 
 return { POI_TYPES, POI, placePoints };
+});
+__define('ficha-ui', function () {
+// Ficha visual de lo que da cada cosa (doc-1.7): la tarjeta que sale al
+// pasar el ratón por un edificio de la barra, al mantenerlo pulsado en el
+// móvil, mientras colocas uno (en el móvil, encima del panel) y al tocar un
+// bono activo. Las cifras salen de fichas.js; aquí solo se pinta y se coloca.
+
+const { BUILD_GROUPS, TICK_MS } = __require('config');
+const { formatNumber } = __require('format');
+const { buildingCard } = __require('fichas');
+
+const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
+
+const svg = (body, fill = false) =>
+  `<svg viewBox="0 0 16 16" aria-hidden="true" ${fill ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"'}>${body}</svg>`;
+const ICONS = {
+  oro: svg('<ellipse cx="8" cy="5" rx="5" ry="2.2"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8"/>'),
+  tropas: svg('<circle cx="5.5" cy="5" r="2"/><circle cx="11" cy="5.5" r="1.7"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5"/>'),
+  techo: svg('<path d="M2.5 14h11M8 11.5V3M4.8 6.2 8 3l3.2 3.2"/>'),
+  escudo: svg('<path d="M8 1.8 13 4v3.8c0 3-2.2 5.2-5 6.4-2.8-1.2-5-3.4-5-6.4V4z"/>'),
+  alcance: svg('<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.3"/>'),
+  diana: svg('<circle cx="8" cy="8" r="5"/><path d="M8 1v3.5M8 11.5V15M1 8h3.5M11.5 8H15"/>'),
+  reloj: svg('<circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/>'),
+  barco: svg('<path d="M1.8 10.2h12.4l-2.2 3.3H4zM8 2.5v7.7M8 3.4l4 4.6H8"/>'),
+  tren: svg('<rect x="4" y="2" width="8" height="9" rx="2"/><path d="M4 7h8M5.2 14l1.4-3M10.8 14l-1.4-3"/>'),
+  bomba: svg('<path d="M8 1.5 9.3 5l3.5-1.4L11.4 7l3.4 1.3-3.4 1.3 1.4 3.4-3.5-1.4L8 14.5l-1.3-3.4-3.5 1.4L4.6 9.6 1.2 8.3 4.6 7 3.2 3.6 6.7 5z"/>'),
+  banco: svg('<path d="M2 14V6h2v2h2V6h1.5V3.5h1V6H10v2h2V6h2v8h-4v-3a2 2 0 0 0-4 0v3z"/>', true),
+  muralla: svg('<path d="M2 14V6h2.4v2h2.4V6h2.4v2h2.4V6H14v8z"/>', true),
+  tienes: svg('<path d="M3 8.5 6.4 12 13 4.5"/>'),
+  falta: svg('<path d="M8 2.2 14.5 13.5h-13zM8 6.5v3.2M8 11.6v.1"/>'),
+};
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const seconds = (ticks) => {
+  const s = Math.round((ticks * TICK_MS) / 100) / 10;
+  return `${String(s).replace('.', ',')} s`;
+};
+
+class FichaUI {
+  /**
+   * @param host     donde vive la tarjeta (el HUD)
+   * @param iconFor  kind → url de su icono (los de la barra)
+   * @param onCancel al pulsar «Cancelar» en la tarjeta del móvil mientras colocas
+   */
+  constructor(host, { iconFor, onCancel }) {
+    const el = document.createElement('div');
+    el.className = 'ficha';
+    el.setAttribute('role', 'tooltip');
+    el.hidden = true;
+    host.append(el);
+    this.el = el;
+    this.iconFor = iconFor;
+    this.cur = null; // { type: 'obra' | 'bono', kind, bonus, anchor, mode: 'hover' | 'press' | 'dock' | 'bono' }
+    this._html = '';
+    this._at = 0;
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-cancelar]')) onCancel?.(this.cur && this.cur.kind);
+      else if (this.cur && this.cur.mode !== 'dock') this.hide();
+    });
+  }
+
+  get open() {
+    return !!this.cur;
+  }
+
+  showBuilding(game, p, kind, anchor, mode) {
+    this.cur = { type: 'obra', kind, anchor, mode };
+    this.refresh(game, p, true);
+  }
+
+  showBonus(bonus, anchor) {
+    this.cur = { type: 'bono', bonus, anchor, mode: 'bono' };
+    this._render(this._bonusHtml(bonus));
+  }
+
+  hide() {
+    if (!this.cur) return;
+    this.cur = null;
+    this.el.classList.remove('visible');
+    clearTimeout(this._hideTimer);
+    this._hideTimer = setTimeout(() => {
+      if (!this.cur) this.el.hidden = true;
+    }, 160);
+  }
+
+  /** Vuelve a calcular las cifras (como mucho 3 veces por segundo salvo `force`). */
+  refresh(game, p, force = false) {
+    const cur = this.cur;
+    if (!cur || cur.type !== 'obra' || !game || !p) return;
+    const now = performance.now();
+    if (!force && now - this._at < 330) return;
+    this._at = now;
+    this._render(this._buildingHtml(buildingCard(game, p, cur.kind), p, cur.mode));
+  }
+
+  _render(html) {
+    const el = this.el;
+    const cur = this.cur;
+    if (html !== this._html) {
+      el.innerHTML = html;
+      this._html = html;
+    }
+    el.classList.toggle('ficha-dock', cur.mode === 'dock');
+    el.dataset.grupo = cur.type === 'obra' ? this._group(cur.kind) : 'bono';
+    clearTimeout(this._hideTimer);
+    if (el.hidden) {
+      el.hidden = false;
+      el.classList.remove('visible');
+      void el.offsetWidth; // para que entre con su animación
+    }
+    this._place();
+    el.classList.add('visible');
+  }
+
+  _group(kind) {
+    const g = BUILD_GROUPS.find((x) => x.kinds.includes(kind));
+    return g ? g.id : 'economia';
+  }
+
+  /** Encima del botón (o del bono), centrada y sin salirse de la pantalla; en el móvil al colocar, fija encima del panel. */
+  _place() {
+    const el = this.el;
+    const cur = this.cur;
+    if (cur.mode === 'dock' || !cur.anchor) {
+      el.style.left = '';
+      el.style.top = '';
+      return;
+    }
+    const r = cur.anchor.getBoundingClientRect();
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const vw = window.innerWidth;
+    let left = r.left + r.width / 2 - w / 2;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    let top = r.top - h - 10;
+    if (top < 8) top = Math.min(window.innerHeight - h - 8, r.bottom + 10);
+    el.style.left = `${Math.round(left)}px`;
+    el.style.top = `${Math.round(top)}px`;
+    // La flechita apunta al botón
+    el.style.setProperty('--flecha', `${Math.round(Math.max(14, Math.min(w - 14, r.left + r.width / 2 - left)))}px`);
+    el.classList.toggle('debajo', top > r.top);
+  }
+
+  _buildingHtml(c, p, mode) {
+    const group = this._group(c.kind);
+    const icon = this.iconFor ? this.iconFor(c.kind) : '';
+    const short = p.gold < c.cost && !c.maxed;
+    const price = c.maxed
+      ? '<b>Máx.</b>'
+      : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>`;
+    const meta = [c.time ? `${ICONS.reloj}${seconds(c.time)} de obra` : '', c.key ? `<kbd>${esc(c.key)}</kbd>` : ''].filter(Boolean).join('');
+    const gives = c.gives
+      .map(
+        (g) => `<li><i class="fi">${ICONS[g.icon] || ''}</i><span class="fd-txt"><span class="fd-l">${esc(g.label)}</span>${g.note ? `<small>${esc(g.note)}</small>` : ''}</span>${g.value ? `<b class="fd-v">${esc(g.value)}</b>` : ''}</li>`,
+      )
+      .join('');
+    const next =
+      c.next && c.next.rows.length && mode !== 'dock'
+        ? `<section class="ficha-sec"><h4>${esc(c.next.title)}</h4><div class="ficha-niv">${c.next.rows
+            .map((r) => `<div class="fn-fila"><span class="fn-l">${esc(r.label)}</span>${r.from ? `<span class="fn-de">${esc(r.from)}</span><i class="fn-a">→</i>` : ''}<b>${esc(r.to)}</b></div>`)
+            .join('')}</div></section>`
+        : '';
+    const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : ''}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
+    const how = c.how ? `<div class="ficha-como">${esc(c.how)}</div>` : '';
+    const cancel = mode === 'dock' ? '<button type="button" class="ficha-cancelar" data-cancelar>Cancelar</button>' : '';
+    return `
+      <div class="ficha-cab">
+        <span class="ficha-icono">${icon ? `<img src="${icon}" alt="">` : ''}</span>
+        <span class="ficha-titulos"><small>${esc(GROUP_NAMES[group] || '')} · ${esc(c.tag)}</small><strong>${esc(c.name)}</strong></span>
+        <span class="ficha-precio${short ? ' caro' : ''}">${price}</span>
+      </div>
+      ${meta ? `<div class="ficha-meta">${meta}</div>` : ''}
+      <p class="ficha-resumen">${esc(c.summary)}</p>
+      <section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>
+      ${next}
+      ${have}
+      ${how}
+      ${cancel}`;
+  }
+
+  _bonusHtml(b) {
+    const bar = b.left != null && b.total ? `<div class="ficha-tiempo"><span style="width:${Math.round(Math.min(1, b.left / b.total) * 100)}%"></span></div><div class="ficha-meta">${ICONS.reloj}Te quedan ${b.left} s</div>` : b.left == null ? '<div class="ficha-meta">Para siempre</div>' : '';
+    return `
+      <div class="ficha-cab">
+        <span class="ficha-icono emoji">${esc(b.icon)}</span>
+        <span class="ficha-titulos"><small>Bono activo</small><strong>${esc(b.title)}</strong></span>
+        <span class="ficha-precio bono"><b>${esc(b.value)}</b></span>
+      </div>
+      <p class="ficha-resumen">${esc(b.text)}</p>
+      ${bar}`;
+  }
+}
+
+return { FichaUI };
+});
+__define('fichas', function () {
+// Fichas de lo que da cada cosa (doc-1.7): qué te da un edificio, una mejora
+// de la capital o una bomba, con las cifras de tu partida (tu oro, tu techo,
+// tus tecnologías…), qué tienes ya, qué cambia al subir de nivel y cómo se
+// usa. Solo lee el estado: no toca la simulación.
+//
+// Las tropas van a la escala de la pantalla (fmtTroops: ÷10) y el oro por
+// segundo (10 turnos), igual que el resto del panel.
+
+const { BUILDINGS, CONFIG, RES, TICK_MS, BUILD_GROUPS } = __require('config');
+const { MECH, regenPerTick, tradeGold } = __require('mecanicas');
+const { fmtTroops, formatNumber } = __require('format');
+const { LUGARES } = __require('lugares');
+
+const PER_SEC = 1000 / TICK_MS;
+const pct = (x) => `${Math.round(x * 100)} %`;
+const dec = (x) => {
+  const s = (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+  return s.endsWith(',0') ? s.slice(0, -2) : s;
+};
+const secs = (ticks) => `${dec((ticks * TICK_MS) / 1000)} s`;
+const dist = (tiles) => `${Math.round(tiles / RES)}`;
+
+/** Grupo de la barra al que pertenece `kind` (para el color de la ficha). */
+function groupOf(kind) {
+  const g = BUILD_GROUPS.find((x) => x.kinds.includes(kind));
+  return g ? g.id : 'economia';
+}
+
+/** Tiempo de obra de un edificio nuevo (o de su siguiente nivel) en turnos. */
+function buildTicks(p, kind, upgrade = false) {
+  const def = BUILDINGS[kind];
+  if (!def.build) return 0;
+  return Math.max(1, Math.round(def.build * (upgrade ? CONFIG.upgradeTimeMult : 1) * (1 - (p.mods.buildSpeed || 0))));
+}
+
+const capFactor = (p) => p.capMult * (1 + p.mods.cap);
+const goldFactor = (p) => p.goldMult * (1 + p.mods.gold);
+
+/** Tropas por segundo de más que daría subir el techo en `extra` (con las tropas de ahora). */
+function regenGain(p, extra) {
+  const cap = p.maxTroops();
+  const P = p.economy === 'workers' ? p.troops + p.workers : p.troops;
+  const k = p.paceRegen * p.regenMult * p.troopMult * Math.max(0.1, 1 + p.mods.growth) * PER_SEC;
+  return Math.max(0, (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k);
+}
+
+/**
+ * Ficha de `kind` para el jugador `p`:
+ * { kind, name, group, tag, cost, time, summary, gives: [{icon, label, value, note}],
+ *   have, next: {title, rows: [{label, from, to}]} | null, how, key, maxed }
+ * Iconos: oro, tropas, techo, escudo, alcance, reloj, barco, tren, bomba, banco, muralla, diana.
+ */
+function buildingCard(game, p, kind) {
+  const def = BUILDINGS[kind];
+  const key = def.key ? def.key.slice(3) : '';
+  const cost = game.buildCost(p, kind);
+  const count = p.buildings[kind] || 0;
+  const levels = p.levels[kind] || 0;
+  const card = { kind, name: def.name, group: groupOf(kind), tag: 'Edificio', cost, time: 0, summary: '', gives: [], have: '', next: null, how: '', key, maxed: false };
+  const where = def.coastal ? 'en tu costa' : 'en tu territorio';
+  const upHow = `Sobre ${def.fem ? 'una tuya' : 'uno tuyo'}: sube de nivel (hasta ${CONFIG.maxLevel}).`;
+  card.time = buildTicks(p, kind);
+
+  switch (kind) {
+    case 'capUp': {
+      const C = MECH.capital;
+      const cap = p.capital;
+      const up = cap ? cap.up || 0 : 0;
+      card.tag = 'Mejora';
+      card.givesTitle = 'Cada nivel te da';
+      card.name = 'Mejorar la capital';
+      card.time = cap ? Math.max(1, Math.round((C.buildTicks + C.buildTicksPerLevel * up) * (1 - (p.mods.buildSpeed || 0)))) : 0;
+      card.summary = 'Tu capital da más oro, guarda más tropas en su banco y se defiende mejor. Se mejora al momento, sin elegir sitio.';
+      const b = p.goldBreakdown();
+      const passive = (b.base + b.tax + b.villages + b.workers) * PER_SEC;
+      const bank = (lvl) => p.maxTroops() * (C.bankBase + C.bankPerLevel * lvl);
+      const wall = (lvl) => C.wallMult + C.wallMultPerLevel * lvl;
+      const outer = (lvl) => C.outerMult + C.outerMultPerLevel * lvl;
+      const shots = (lvl) => CONFIG.capitalSamShots + Math.floor(lvl / CONFIG.capitalSamShotsEvery);
+      card.gives = [
+        { icon: 'oro', label: 'Oro pasivo', value: `+${pct(C.gold)}`, note: `≈ +${formatNumber(passive * C.gold)}/s más` },
+        { icon: 'banco', label: 'Banco de tropas', value: `+${pct(C.bankPerLevel)} del techo`, note: `+${fmtTroops(p.maxTroops() * C.bankPerLevel)} de sitio` },
+        { icon: 'muralla', label: 'Murallas', value: `+${dec(C.wallMultPerLevel)} de defensa` },
+      ];
+      if (!cap) {
+        card.have = 'No tienes capital.';
+        card.haveWarn = true;
+        card.maxed = true;
+      } else if (up >= C.maxLevel) {
+        card.maxed = true;
+        card.have = `Nivel ${up} (el máximo): +${pct(C.gold * up)} de oro, banco de ${fmtTroops(bank(up))} tropas, murallas ×${dec(wall(up))}.`;
+      } else {
+        card.have = `Nivel ${up} de ${C.maxLevel}${up ? `: +${pct(C.gold * up)} de oro` : ''} · banco ${fmtTroops(cap.bank || 0)} / ${fmtTroops(bank(up))}.`;
+        card.next = {
+          title: `Nivel ${up} → ${up + 1}`,
+          rows: [
+            { label: 'Oro pasivo', from: `+${pct(C.gold * up)}`, to: `+${pct(C.gold * (up + 1))}` },
+            { label: 'Banco de tropas', from: fmtTroops(bank(up)), to: fmtTroops(bank(up + 1)) },
+            { label: 'Murallas', from: `×${dec(wall(up))}`, to: `×${dec(wall(up + 1))}` },
+            { label: 'Afueras', from: `×${dec(outer(up))}`, to: `×${dec(outer(up + 1))}` },
+            { label: 'Escudo antimisiles', from: `${shots(up)} por salva`, to: `${shots(up + 1)} por salva` },
+          ].filter((r) => r.from !== r.to),
+        };
+      }
+      card.how = cap && cap.work ? 'Ya tiene una obra en marcha: espera a que acabe.' : 'Clic y empieza la obra. Una obra a la vez, hasta el nivel 10.';
+      break;
+    }
+    case 'village': {
+      const gold = MECH.village.gold * goldFactor(p) * PER_SEC;
+      const capT = MECH.village.cap * capFactor(p);
+      card.summary = 'Pequeño y barato: da oro y tropas sin ocupar casi sitio.';
+      card.gives = [
+        { icon: 'oro', label: 'Oro', value: `+${formatNumber(gold)}/s` },
+        { icon: 'techo', label: 'Techo de tropas', value: `+${fmtTroops(capT)}` },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'pueblo' : 'pueblos'}${levels > count ? ` (${levels} niveles)` : ''}: +${formatNumber(gold * levels)}/s de oro y +${fmtTroops(capT * levels)} de techo.` : 'Ningún pueblo todavía.';
+      card.givesTitle = 'Qué te da (y otra vez cada nivel)';
+      card.how = `Clic ${where}. ${upHow}`;
+      break;
+    }
+    case 'city': {
+      const extra = MECH.cityCapBonus * capFactor(p);
+      card.summary = 'Sube tu techo de tropas: cabe más ejército y se regenera más rápido.';
+      card.gives = [
+        { icon: 'techo', label: 'Techo de tropas', value: `+${fmtTroops(extra)}` },
+        { icon: 'tropas', label: 'Regeneración', value: `≈ +${fmtTroops(regenGain(p, extra))}/s`, note: 'con tus tropas de ahora' },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'ciudad' : 'ciudades'}${levels > count ? ` (${levels} niveles)` : ''}: +${fmtTroops(extra * levels)} de techo.` : 'Ninguna ciudad todavía.';
+      card.givesTitle = 'Qué te da (y otra vez cada nivel)';
+      card.how = `Clic ${where}. ${upHow}`;
+      break;
+    }
+    case 'port': {
+      const F = MECH.fishing;
+      card.summary = 'Abre el mar: mercantes que comercian, pesqueros y barcos para desembarcar.';
+      card.gives = [
+        { icon: 'oro', label: 'Mercantes', value: `${formatNumber(tradeGold(100))}–${formatNumber(tradeGold(300))}`, note: 'por viaje; también cobra el puerto de destino' },
+        { icon: 'barco', label: 'Pesqueros', value: `hasta ${F.maxPerPort}`, note: `≈ ${formatNumber(F.base * 1.4)} de oro por viaje (una barca por nivel)` },
+        { icon: 'barco', label: 'Desembarcos y buques', value: 'Permite', note: 'sin puerto no salen barcos' },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'puerto' : 'puertos'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ningún puerto todavía.';
+      card.next = { title: 'Cada nivel', rows: [
+        { label: 'Mercantes', from: '', to: 'salen más a menudo' },
+        { label: 'Pesca', from: '', to: `+1 barca y +${pct(F.levelBonus)} por viaje` },
+      ] };
+      card.how = `Clic en tu costa (se pone en la orilla más cercana). ${upHow} Comparte precio con las fábricas.`;
+      break;
+    }
+    case 'factory': {
+      card.summary = 'Tiende vías de tren hasta tus ciudades, puertos y otras fábricas cercanas.';
+      card.gives = [
+        { icon: 'tren', label: 'Cada tren', value: `+${formatNumber(MECH.trainRewards.self)}`, note: `de oro al llegar (${formatNumber(MECH.trainRewards.ally)} en una estación aliada)` },
+        { icon: 'alcance', label: 'Alcance de las vías', value: `${dist(game.railRange(1))} casillas` },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'fábrica' : 'fábricas'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ninguna fábrica todavía: hacen falta ciudades o puertos cerca.';
+      card.next = { title: 'Cada nivel', rows: [{ label: 'Alcance de las vías', from: '', to: `+${dist(CONFIG.railRangePerLevel)} casillas` }] };
+      card.how = `Clic ${where}, cerca de tus ciudades y puertos. ${upHow} Comparte precio con los puertos.`;
+      break;
+    }
+    case 'fort': {
+      const r = game.fortRadius(1) * (1 + (p.mods.fortRadius || 0));
+      card.summary = 'Protege una zona: quien te ataque ahí tarda y pierde mucho más.';
+      card.gives = [
+        { icon: 'escudo', label: 'Defensa', value: `×${dec(CONFIG.fortDefenseMult)}`, note: 'tiempo y bajas del atacante' },
+        { icon: 'alcance', label: 'Radio', value: `${dist(r)} casillas` },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'puesto' : 'puestos'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ningún puesto todavía.';
+      card.next = { title: 'Cada nivel', rows: [
+        { label: 'Defensa', from: '', to: `+${dec(CONFIG.fortMultPerLevel)}` },
+        { label: 'Radio', from: '', to: `+${dist(CONFIG.fortRadiusPerLevel)} casillas` },
+      ] };
+      card.how = `Clic ${where}, en la frontera que quieras guardar. ${upHow}`;
+      break;
+    }
+    case 'sam': {
+      const hit = (lvl) => Math.min(CONFIG.samHitMax, CONFIG.samHitChance + CONFIG.samHitPerLevel * (lvl - 1) + (p.mods.samHit || 0));
+      const shots = (lvl) => CONFIG.samShots + CONFIG.samShotsPerLevel * (lvl - 1);
+      const reload = (lvl) => Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (lvl - 1)));
+      card.summary = 'Derriba las bombas enemigas que pasan cerca, también las que van a por tus vecinos.';
+      card.gives = [
+        { icon: 'alcance', label: 'Alcance', value: `${dist(game.samRange(1))} casillas` },
+        { icon: 'diana', label: 'Salva', value: `${shots(1)} disparos`, note: `${pct(hit(1))} de acierto cada uno: si el primero falla, el segundo lo intenta` },
+        { icon: 'reloj', label: 'Recarga', value: secs(reload(1)) },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'batería' : 'baterías'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ninguna batería todavía.';
+      card.next = { title: 'Nivel 1 → 2', rows: [
+        { label: 'Alcance', from: dist(game.samRange(1)), to: dist(game.samRange(2)) },
+        { label: 'Disparos por salva', from: `${shots(1)}`, to: `${shots(2)}` },
+        { label: 'Acierto', from: pct(hit(1)), to: pct(hit(2)) },
+        { label: 'Recarga', from: secs(reload(1)), to: secs(reload(2)) },
+      ] };
+      card.how = `Clic ${where}, cerca de lo que quieras proteger. ${upHow}`;
+      break;
+    }
+    case 'warship': {
+      card.tag = 'Unidad';
+      card.summary = 'Un buque de guerra que vigila una zona del mar para siempre.';
+      card.gives = [
+        { icon: 'barco', label: 'Hunde', value: 'barcos y buques', note: 'enemigos que entren en su zona' },
+        { icon: 'oro', label: 'Captura', value: 'mercantes', note: 'enemigos: su oro es tuyo' },
+        { icon: 'escudo', label: 'Vida', value: `${CONFIG.warshipHp}` },
+      ];
+      card.have = !p.active.port ? 'Necesitas un puerto terminado.' : count ? `${count} ${count === 1 ? 'buque' : 'buques'} (hasta ${CONFIG.warshipsPerPort} por puerto).` : `Ningún buque todavía (hasta ${CONFIG.warshipsPerPort} por puerto).`;
+      card.haveWarn = !p.active.port;
+      card.how = 'Necesita un puerto. Clic en el mar donde patrullará: la zona ya no se puede cambiar.';
+      break;
+    }
+    case 'silo': {
+      card.summary = 'La lanzadera de las bombas.';
+      card.gives = [
+        { icon: 'bomba', label: 'Permite lanzar', value: 'bombas', note: 'atómicas, H y MIRV' },
+        { icon: 'reloj', label: 'Recarga', value: secs(CONFIG.siloReload) },
+      ];
+      card.have = count ? `${count} ${count === 1 ? 'silo' : 'silos'}.` : 'Ningún silo todavía.';
+      card.next = { title: 'Cada nivel', rows: [{ label: 'Recarga', from: '', to: `−${pct(CONFIG.siloReloadPerLevel)}` }] };
+      card.how = `Clic ${where}. ${upHow}`;
+      break;
+    }
+    case 'missile':
+    case 'hbomb':
+    case 'mirv': {
+      card.tag = 'Bomba';
+      const R = CONFIG.missileRadius;
+      const silos = game.buildings.filter((b) => b.owner === p.id && b.kind === 'silo' && b.level > 0);
+      const ready = silos.filter((b) => b.readyAt <= game.ticks).length;
+      if (kind === 'missile') {
+        card.summary = 'Arrasa una zona enemiga: las casillas quedan libres y el defensor pierde tropas.';
+        card.gives = [{ icon: 'bomba', label: 'Radio', value: `${dist(R)} casillas` }];
+      } else if (kind === 'hbomb') {
+        card.summary = 'Como la atómica, pero arrasa una zona mucho mayor.';
+        card.gives = [{ icon: 'bomba', label: 'Radio', value: `${dist(R * CONFIG.hbombRadius)} casillas`, note: `${dec(CONFIG.hbombRadius)} veces la atómica` }];
+      } else {
+        card.summary = 'Se divide en muchas cabezas que caen por todo el país enemigo.';
+        card.gives = [{ icon: 'bomba', label: 'Cabezas', value: `${CONFIG.mirvWarheads}`, note: `de radio ${dist(R * CONFIG.mirvRadius)} cada una` }];
+      }
+      card.gives.push({ icon: 'tropas', label: 'Tropas del defensor', value: 'mueren', note: 'según las que tenga por casilla' });
+      card.gives.push({ icon: 'escudo', label: 'Pueden derribarla', value: '', note: 'los antimisiles y el escudo de las capitales; dentro de las murallas de una capital no arrasa' });
+      card.have = silos.length ? `${ready} de ${silos.length} ${silos.length === 1 ? 'silo listo' : 'silos listos'}.` : 'Necesitas un silo (Ataque · tecla G).';
+      card.haveWarn = !ready;
+      card.how = 'Clic en el objetivo enemigo, al alcance de un silo listo.';
+      break;
+    }
+    default:
+      card.summary = def.desc || '';
+      card.how = `Clic ${where}.`;
+  }
+  return card;
+}
+
+/** Una línea corta con lo principal (la bandeja del móvil). */
+function shortEffect(game, p, kind) {
+  switch (kind) {
+    case 'capUp': {
+      const cap = p.capital;
+      if (cap && cap.up >= MECH.capital.maxLevel) return 'Al máximo';
+      return `+${pct(MECH.capital.gold)} oro`;
+    }
+    case 'village':
+      return `+${formatNumber(MECH.village.gold * goldFactor(p) * PER_SEC)}/s · +${fmtTroops(MECH.village.cap * capFactor(p))}`;
+    case 'city':
+      return `+${fmtTroops(MECH.cityCapBonus * capFactor(p))} tropas`;
+    case 'port':
+      return 'Comercio';
+    case 'factory':
+      return `Trenes +${formatNumber(MECH.trainRewards.self)}`;
+    case 'fort':
+      return `Defensa ×${dec(CONFIG.fortDefenseMult)}`;
+    case 'sam':
+      return `Derriba bombas`;
+    case 'warship':
+      return 'Patrulla el mar';
+    case 'silo':
+      return 'Lanza bombas';
+    case 'missile':
+      return `Radio ${dist(CONFIG.missileRadius)}`;
+    case 'hbomb':
+      return `Radio ${dist(CONFIG.missileRadius * CONFIG.hbombRadius)}`;
+    case 'mirv':
+      return `${CONFIG.mirvWarheads} cabezas`;
+    default:
+      return '';
+  }
+}
+
+/**
+ * Bonos que tiene `p` ahora: los de los lugares de interés (los de un rato,
+ * con lo que les queda, y los de para siempre, sumados) y los de su capital.
+ * [{ id, icon, title, value, text, left }] (left: segundos, o null).
+ */
+function activeBonuses(game, p) {
+  const out = [];
+  const cap = p.capital;
+  if (cap && cap.up > 0 && game.buildingAt.get(cap.tile) === cap) {
+    out.push({ id: 'capital', icon: '🏰', title: `Capital nivel ${cap.up}`, value: `+${pct(MECH.capital.gold * cap.up)} oro`, text: `Tu capital a nivel ${cap.up}: +${pct(MECH.capital.gold * cap.up)} de oro pasivo, banco de tropas del ${pct(MECH.capital.bankBase + MECH.capital.bankPerLevel * cap.up)} de tu techo y murallas ×${dec(MECH.capital.wallMult + MECH.capital.wallMultPerLevel * cap.up)}.`, left: null });
+  }
+  for (const b of p.buffs || []) {
+    const left = Math.max(0, Math.ceil(((b.until - game.ticks) * TICK_MS) / 1000));
+    if (left <= 0) continue;
+    const def = LUGARES[b.kind];
+    out.push({ id: `buff-${b.kind}-${b.until}`, icon: def.icon, title: def.name, value: def.short || '', text: `${def.desc}.`, left, total: Math.round(((def.ticks || 0) * TICK_MS) / 1000) });
+  }
+  const perm = p.permMods || {};
+  const permNames = { gold: 'de oro', cap: 'de techo de tropas', growth: 'de crecimiento' };
+  const permShort = { gold: 'oro', cap: 'techo', growth: 'crecim.' };
+  for (const [k, v] of Object.entries(perm)) {
+    if (!v) continue;
+    const src = Object.values(LUGARES).filter((d) => d.perm && d.perm[k]);
+    const icon = src[0] ? src[0].icon : '⭐';
+    out.push({ id: `perm-${k}`, icon, title: 'Para siempre', value: `+${pct(v)} ${permShort[k] || k}`, text: `Lugares de interés tomados: +${pct(v)} ${permNames[k] || k} para el resto de la partida.`, left: null });
+  }
+  return out;
+}
+
+return { groupOf, buildingCard, shortEffect, activeBonuses };
 });
 __define('fin', function () {
 // Pantalla de fin de partida: resumen (puesto, cifras, recompensas y rango),
@@ -13988,7 +14612,7 @@ const TABS = [
       ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
       ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos.'],
+      ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
       ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
     ],
   },
@@ -19944,15 +20568,16 @@ __define('lugares', function () {
 /**
  * Tipos. `weight`: lo frecuente que sale. `instant`: premio al momento;
  * `buff`: modificadores durante `ticks` turnos; `perm`: modificadores para
- * siempre (los mismos nombres que en tecnologias.js, emptyMods).
+ * siempre (los mismos nombres que en tecnologias.js, emptyMods). `short`: lo
+ * que da en pocas palabras (el rótulo del mapa y los bonos del panel).
  */
 const LUGARES = {
-  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)' },
-  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)' },
-  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s' },
-  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s' },
-  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre' },
-  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre' },
+  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)', short: 'Oro al momento' },
+  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)', short: '+20 % tropas' },
+  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s', short: '+60 % crecimiento' },
+  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s', short: 'Ataques −30 %' },
+  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre', short: '+4 % oro siempre' },
+  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre', short: '+5 % techo siempre' },
 };
 const LUGAR_IDS = Object.keys(LUGARES);
 
@@ -29987,7 +30612,7 @@ class Renderer {
     const { ctx, game, camera } = this;
     if (!game.lugares || !game.lugares.length) return;
     const size = clamp(camera.zoom * RES * 4, 15, 30);
-    const named = camera.zoom * RES >= 2.6;
+    const named = camera.zoom * RES >= 1.8;
     const k = this.anim ? 0.5 + 0.5 * Math.sin(now / 360) : 0.5;
     for (const l of game.lugares) {
       const [sx, sy] = camera.worldToScreen(l.x + 0.5, l.y + 0.5);
@@ -30011,6 +30636,13 @@ class Renderer {
         ctx.fillStyle = '#ffe3a1';
         ctx.strokeText(def.name, sx, sy + size * 0.62);
         ctx.fillText(def.name, sx, sy + size * 0.62);
+        // Debajo, lo que da (doc-1.7: antes solo el nombre y no se sabía)
+        if (def.short) {
+          ctx.font = '600 9.5px system-ui, sans-serif';
+          ctx.fillStyle = '#9be38f';
+          ctx.strokeText(def.short, sx, sy + size * 0.62 + 12);
+          ctx.fillText(def.short, sx, sy + size * 0.62 + 12);
+        }
       }
     }
   }
@@ -33560,6 +34192,8 @@ const { POI_TYPES } = __require('estrategia');
 const { BRANCHES, SPECS, SPEC_IDS, TECHS, TECH_IDS, techAvailable } = __require('tecnologias');
 const { MECH, regenPerTick, tradeGold } = __require('mecanicas');
 const { LUGARES } = __require('lugares');
+const { FichaUI } = __require('ficha-ui');
+const { activeBonuses, shortEffect } = __require('fichas');
 const { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } = __require('movimiento');
 const { PantallaFin, abrirFin } = __require('fin');
 
@@ -33837,11 +34471,8 @@ class UI {
         btn.type = 'button';
         btn.className = 'obra';
         btn.dataset.kind = kind;
-        btn.title = def.unit === 'capital'
-          ? `${def.name}: ${def.desc}. Se aplica al momento, sin elegir sitio (tecla ${def.key.slice(3)})`
-          : def.unit
-          ? `${def.name}: ${def.desc} (tecla ${def.key.slice(3)})`
-          : `${def.name}: ${def.desc}. Sobre uno tuyo: subir de nivel (tecla ${def.key.slice(3)})`;
+        // Lo que da cada uno: una ficha al pasar el ratón (o al mantenerlo
+        // pulsado en el móvil), no el título del navegador (doc-1.7)
         const icon = document.createElement('canvas');
         icon.width = 48;
         icon.height = 48;
@@ -33862,11 +34493,39 @@ class UI {
         const key = document.createElement('span');
         key.className = 'b-tecla';
         key.textContent = def.key.slice(3);
-        btn.append(key, icon, name, text, count);
+        // Lo principal que da, en una línea (se ve en la bandeja del móvil)
+        const effect = document.createElement('span');
+        effect.className = 'b-efecto';
+        btn.append(key, icon, name, text, effect, count);
         btn.addEventListener('click', () => {
+          // Tras mantenerlo pulsado (para ver su ficha) no se elige
+          if (this._pressedKind === kind) {
+            this._pressedKind = null;
+            return;
+          }
+          this._ficha?.hide();
           this.handlers.onBuildMode?.(kind);
           this.openGroup(null);
         });
+        btn.addEventListener('pointerenter', (e) => {
+          if (e.pointerType === 'mouse' && this._game && this._human) this._ficha.showBuilding(this._game, this._human, kind, btn, 'hover');
+        });
+        btn.addEventListener('pointerleave', (e) => {
+          clearTimeout(this._pressTimer);
+          if (e.pointerType === 'mouse' && this._ficha.cur?.mode === 'hover') this._ficha.hide();
+        });
+        btn.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse') return;
+          clearTimeout(this._pressTimer);
+          this._pressedKind = null;
+          this._pressTimer = setTimeout(() => {
+            if (!this._game || !this._human) return;
+            this._pressedKind = kind;
+            this._ficha.showBuilding(this._game, this._human, kind, btn, 'press');
+          }, 420);
+        });
+        for (const ev of ['pointerup', 'pointercancel']) btn.addEventListener(ev, () => clearTimeout(this._pressTimer));
+        btn.addEventListener('contextmenu', (e) => e.preventDefault());
         list.append(btn);
         this._buildButtons.set(kind, btn);
       }
@@ -33874,6 +34533,40 @@ class UI {
       bar.append(box);
       this._groups.push({ group, box, tab, list, icon: gIcon, shown: group.icon });
     }
+    // Ficha de lo que da cada cosa (doc-1.7)
+    this._ficha = new FichaUI($('hud'), {
+      iconFor: (k) => {
+        this._iconUrls ??= new Map();
+        if (!this._iconUrls.has(k)) {
+          const c = this._buildIcons.get(k);
+          this._iconUrls.set(k, c ? c.toDataURL() : '');
+        }
+        return this._iconUrls.get(k);
+      },
+      onCancel: (k) => k && this.handlers.onBuildMode?.(k),
+    });
+    // Tocar fuera cierra la ficha que se abrió al mantener pulsado o al tocar un bono
+    document.addEventListener('pointerdown', (e) => {
+      const f = this._ficha;
+      if (!f.cur || f.cur.mode === 'hover' || f.cur.mode === 'dock') return;
+      if (f.el.contains(e.target) || (f.cur.anchor && f.cur.anchor.contains(e.target))) return;
+      f.hide();
+    });
+    // Bonos activos (lugares de interés, capital): en la cabecera del panel
+    $('pj-bonos').addEventListener('pointerover', (e) => {
+      const chip = e.target.closest('.bono');
+      if (e.pointerType === 'mouse' && chip) this._showBonus(chip);
+    });
+    $('pj-bonos').addEventListener('pointerout', (e) => {
+      if (e.pointerType === 'mouse' && this._ficha.cur?.mode === 'bono' && !e.relatedTarget?.closest?.('.bono')) this._ficha.hide();
+    });
+    $('pj-bonos').addEventListener('click', (e) => {
+      const chip = e.target.closest('.bono');
+      if (!chip) return;
+      if (this._ficha.cur?.mode === 'bono' && this._ficha.cur.anchor === chip) this._ficha.hide();
+      else this._showBonus(chip);
+    });
+
     // Bandeja del móvil: flota encima del panel (que recorta lo que sobresale)
     const tray = document.createElement('div');
     tray.id = 'bandeja-obras';
@@ -34527,6 +35220,8 @@ class UI {
 
   update(game, human, ratio, buildMode) {
     this._ratio = ratio;
+    this._game = game;
+    this._human = human;
     const landCount = game.map.landCount;
 
     // Aviso central: despliegue o construcción en curso
@@ -34545,9 +35240,13 @@ class UI {
       // el estado de la red tiene prioridad
     } else if (game.phase === 'spawn') {
       ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
+    } else if (buildMode && !$('hud').classList.contains('escritorio') && BUILDINGS[buildMode].unit !== 'capital') {
+      // Móvil y pantallas estrechas: la ficha del edificio, encima del panel, hace de aviso
+      ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (buildMode) {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));
+      const what = shortEffect(game, human, buildMode);
       if (def.unit === 'missile') {
         setAviso(`Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`);
       } else if (def.unit === 'ship') {
@@ -34555,7 +35254,7 @@ class UI {
       } else {
         const where = def.coastal ? 'en tu costa' : 'en tu territorio';
         const up = ` · Sobre ${def.fem ? 'una' : 'uno'} tuy${def.fem ? 'a' : 'o'}: subir de nivel`;
-        setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro)${up}. Esc para cancelar`);
+        setAviso(`Toca ${where} para construir: ${def.name} (${cost} de oro${what ? ` · ${what}` : ''})${up}. Esc para cancelar`);
       }
       mostrar(aviso, { y: -6, base: 'translateX(-50%)' });
     } else if (game.inTruce?.()) {
@@ -34696,11 +35395,55 @@ class UI {
     this._sampleEconomy(game, human);
     if (!$('panel-desarrollo').hidden) this._renderDev(game, human);
     this._advise(game, human);
-    if (buildMode !== this._lastBuildMode) {
-      this._lastBuildMode = buildMode;
-      const roi = buildMode && this._roi(game, human)[buildMode];
-      if (roi) this._hint(roi, 'info');
+    this._updateFichas(game, human, buildMode);
+  }
+
+  /**
+   * Fichas de lo que da cada cosa (doc-1.7): la del edificio que colocas (en
+   * el móvil, encima del panel), las que están abiertas, la línea corta de
+   * cada botón de la bandeja y los bonos activos de la cabecera del panel.
+   */
+  _updateFichas(game, human, buildMode) {
+    const f = this._ficha;
+    const desk = $('hud').classList.contains('escritorio');
+    const dock = buildMode && !desk && BUILDINGS[buildMode].unit !== 'capital' && game.phase === 'playing' && human.alive;
+    if (dock && !(f.cur && f.cur.mode === 'dock' && f.cur.kind === buildMode) && !(f.cur && f.cur.mode === 'press')) {
+      f.showBuilding(game, human, buildMode, null, 'dock');
+    } else if (!dock && f.cur && f.cur.mode === 'dock') {
+      f.hide();
     }
+    if (f.cur) {
+      if (f.cur.type === 'obra') f.refresh(game, human);
+      else if (f.cur.type === 'bono') {
+        const b = activeBonuses(game, human).find((x) => x.id === f.cur.bonus.id);
+        if (b && b.left !== f.cur.bonus.left) f.showBonus(b, f.cur.anchor);
+        else if (!b) f.hide();
+      }
+    }
+    const now = performance.now();
+    if (now - (this._fichasAt || 0) < 500) return;
+    this._fichasAt = now;
+    for (const [kind, btn] of this._buildButtons) {
+      const el = btn.querySelector('.b-efecto');
+      const t = shortEffect(game, human, kind);
+      if (el.textContent !== t) el.textContent = t;
+    }
+    // Bonos activos: una pastilla por bono (los de un rato, con su cuenta atrás)
+    const box = $('pj-bonos');
+    const list = activeBonuses(game, human);
+    this._bonuses = list;
+    const html = list
+      .map((b) => `<button type="button" class="bono${b.left != null ? ' temporal' : ''}" data-id="${b.id}" aria-label="${escapeHtml(`${b.title}: ${b.value}`)}"><span class="bono-ic">${b.icon}</span><span class="bono-v">${escapeHtml(b.value)}</span>${b.left != null ? `<span class="bono-t">${b.left}s</span>` : ''}</button>`)
+      .join('');
+    if (this._bonusHtml !== html) {
+      this._bonusHtml = html;
+      actualizarHtml(box, html);
+    }
+  }
+
+  _showBonus(chip) {
+    const b = (this._bonuses || []).find((x) => x.id === chip.dataset.id);
+    if (b) this._ficha.showBonus(b, chip);
   }
 
   /**
