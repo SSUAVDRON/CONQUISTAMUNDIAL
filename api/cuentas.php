@@ -75,7 +75,7 @@ switch ($accion) {
         if (!dentro_del_limite($pdo, 'reg:' . $ip, 3600, REGISTROS_IP_HORA)) responder(429, ['error' => 'Demasiadas cuentas nuevas desde esta conexión. Prueba más tarde.']);
         $st = $pdo->prepare('SELECT id FROM cuentas WHERE email = ?');
         $st->execute([$email]);
-        if ($st->fetch()) responder(409, ['error' => 'Ya hay una cuenta con ese correo. ¿Quieres entrar?', 'campo' => 'email']);
+        if (una($st)) responder(409, ['error' => 'Ya hay una cuenta con ese correo. ¿Quieres entrar?', 'campo' => 'email']);
         $pdo->beginTransaction();
         try {
             $pdo->prepare('INSERT INTO cuentas (email, nombre, hash, creado) VALUES (?, ?, ?, ?)')
@@ -98,7 +98,7 @@ switch ($accion) {
         if (!dentro_del_limite($pdo, 'entc:' . substr(hash('sha256', $email), 0, 40), 900, ENTRADAS_CORREO_15MIN)) responder(429, ['error' => 'Demasiados intentos con este correo. Espera unos minutos.']);
         $st = $pdo->prepare('SELECT id, email, nombre, hash FROM cuentas WHERE email = ?');
         $st->execute([$email]);
-        $f = $st->fetch();
+        $f = una($st);
         // Mismo trabajo si el correo no existe (no se distingue por el tiempo)
         $ok = password_verify($password, $f ? $f['hash'] : DUMMY_HASH);
         if (!$f || !$ok) responder(401, ['error' => 'Correo o contraseña incorrectos.']);
@@ -124,7 +124,7 @@ switch ($accion) {
         $cuenta = cuenta_de($pdo, $c, $cuerpo['token'] ?? null);
         $st = $pdo->prepare('SELECT perfil, version FROM perfiles WHERE cuenta_id = ?');
         $st->execute([$cuenta['id']]);
-        $f = $st->fetch();
+        $f = una($st);
         responder(200, ['perfil' => $f ? json_decode($f['perfil'], true) : null, 'version' => $f ? (int) $f['version'] : 0, 'cuenta' => publica($cuenta)]);
     }
 
@@ -139,7 +139,7 @@ switch ($accion) {
         $pdo->beginTransaction();
         $st = $pdo->prepare('SELECT perfil, version FROM perfiles WHERE cuenta_id = ?');
         $st->execute([$cuenta['id']]);
-        $f = $st->fetch();
+        $f = una($st);
         $actual = $f ? (int) $f['version'] : 0;
         if ($actual !== $version) {
             // Otro dispositivo guardó antes: el cliente une los dos y vuelve a guardar
@@ -164,12 +164,14 @@ switch ($accion) {
         if (!dentro_del_limite($pdo, 'ent:' . $ip, 3600, ENTRADAS_IP_HORA)) responder(429, ['error' => 'Demasiados intentos desde esta conexión. Prueba más tarde.']);
         $st = $pdo->prepare('SELECT hash FROM cuentas WHERE id = ?');
         $st->execute([$cuenta['id']]);
-        $f = $st->fetch();
+        $f = una($st);
         if (!$f || !password_verify($password, $f['hash'])) responder(401, ['error' => 'La contraseña no es correcta.', 'campo' => 'password']);
+        // Las tablas sociales se crean fuera de la transacción: en MySQL un
+        // CREATE TABLE la confirma por su cuenta y el commit fallaría
+        preparar_social($pdo);
         $pdo->beginTransaction();
         foreach (['perfiles', 'sesiones', 'cuenta_proveedores'] as $tabla) $pdo->prepare("DELETE FROM $tabla WHERE cuenta_id = ?")->execute([$cuenta['id']]);
         // Y lo social: amigos, invitaciones, su ficha y su clan (que pasa a otro o se disuelve)
-        preparar_social($pdo);
         borrar_social($pdo, $cuenta['id']);
         $pdo->prepare('DELETE FROM cuentas WHERE id = ?')->execute([$cuenta['id']]);
         $pdo->commit();

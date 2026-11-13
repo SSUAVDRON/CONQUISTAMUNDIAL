@@ -103,11 +103,12 @@ function emblema_limpio($e): array {
 
 /**
  * Ficha pública que manda el cliente (lo que ven tus amigos y tu clan): solo
- * campos conocidos, recortados. Nada privado (ni correo ni monedas).
+ * campos conocidos, recortados. Nada privado (ni correo ni monedas). Sin
+ * nombre, «Jugador»: nunca el de la cuenta, que puede salir del correo.
  */
-function ficha_limpia($f, string $nombreCuenta): array {
+function ficha_limpia($f): array {
     $f = is_array($f) ? $f : [];
-    $nombre = texto($f['nombre'] ?? '', 18) ?: ($nombreCuenta ?: 'Jugador');
+    $nombre = texto($f['nombre'] ?? '', 18) ?: 'Jugador';
     $out = [
         'nombre' => $nombre,
         'nivel' => entero($f['nivel'] ?? 1, 1, 999, 1),
@@ -142,9 +143,9 @@ function codigo_de($v): string {
 function publico_de(PDO $pdo, array $cuenta): array {
     $st = $pdo->prepare('SELECT codigo, nombre, datos, estado, visto FROM publicos WHERE cuenta_id = ?');
     $st->execute([$cuenta['id']]);
-    $f = $st->fetch();
+    $f = una($st);
     if ($f) return $f;
-    $ficha = ficha_limpia([], $cuenta['nombre']);
+    $ficha = ficha_limpia([]);
     for ($i = 0; $i < 5; $i++) {
         $codigo = nuevo_codigo();
         try {
@@ -154,7 +155,7 @@ function publico_de(PDO $pdo, array $cuenta): array {
         } catch (Throwable $e) {
             // Código repetido (muy raro) o fila creada a la vez: otra vuelta
             $st->execute([$cuenta['id']]);
-            $f = $st->fetch();
+            $f = una($st);
             if ($f) return $f;
         }
     }
@@ -191,7 +192,7 @@ function fichas_de(PDO $pdo, array $ids): array {
 function clan_de(PDO $pdo, int $cuentaId): ?array {
     $st = $pdo->prepare('SELECT clan_id, rol FROM clan_miembros WHERE cuenta_id = ?');
     $st->execute([$cuentaId]);
-    $f = $st->fetch();
+    $f = una($st);
     return $f ? ['id' => (int) $f['clan_id'], 'rol' => $f['rol']] : null;
 }
 
@@ -207,7 +208,7 @@ function salir_del_clan(PDO $pdo, int $cuentaId): void {
     if ($mio['rol'] !== 'lider') return;
     $st = $pdo->prepare("SELECT cuenta_id FROM clan_miembros WHERE clan_id = ? ORDER BY CASE rol WHEN 'oficial' THEN 0 ELSE 1 END, unido ASC, cuenta_id ASC LIMIT 1");
     $st->execute([$mio['id']]);
-    $f = $st->fetch();
+    $f = una($st);
     if ($f) {
         $pdo->prepare("UPDATE clan_miembros SET rol = 'lider' WHERE cuenta_id = ?")->execute([(int) $f['cuenta_id']]);
     } else {

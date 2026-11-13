@@ -139,7 +139,7 @@ if ($nueva['victorias'] > $nueva['partidas']) $nueva['victorias'] = $nueva['part
 $pdo->beginTransaction();
 $st = $pdo->prepare('SELECT secreto, temporada, puntos, partidas, colocado FROM rangos WHERE id = ?');
 $st->execute([$id]);
-$vieja = $st->fetch();
+$vieja = una($st);
 if ($vieja) {
     if (!hash_equals($vieja['secreto'], $hash)) {
         $pdo->rollBack();

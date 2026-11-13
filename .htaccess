@@ -6,14 +6,19 @@ DirectoryIndex index.html
 RedirectMatch 404 /\.git
 
 # El juego cambia a menudo: el navegador y la CDN comprueban siempre si hay
-# versión nueva (es un único archivo con todo dentro: no puede mezclar versiones)
+# versión nueva (es un único archivo con todo dentro: no puede mezclar versiones).
+# Los mapas llevan su huella en el nombre (mapas-<huella>.json): si cambian,
+# cambia el nombre, así que se guardan para siempre
 <IfModule mod_headers.c>
   <FilesMatch "\.html$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
+  <FilesMatch "^mapas-[0-9a-f]+\.json$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>
 
-# Comprimido viaja mucho menos (el juego es un único HTML de ~2,6 MB)
+# Comprimido viaja mucho menos (el juego ~1,9 MB y los mapas ~3,3 MB)
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
 </IfModule>
