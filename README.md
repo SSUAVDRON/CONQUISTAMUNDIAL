@@ -437,7 +437,11 @@ siempre la última versión. Para que la CDN no mezcle módulos de versiones
 distintas, `index.html` lleva un *import map* con la huella del contenido de
 cada módulo (`src/render.js?v=…`): cada archivo cambia de dirección solo cuando
 cambia. Tras tocar `src/` o `css/`: `node herramientas/versionar.js` (un test
-falla si se olvida).
+falla si se olvida). Como la huella va en la dirección, el `.htaccess` deja que
+el **navegador** guarde esos módulos y la hoja de estilos 7 días sin volver a
+preguntar (`private, max-age=604800, immutable`; la CDN no los guarda):
+`index.html` se comprueba siempre y, si un módulo cambia, cambia su dirección.
+Es lo que sirve hoy la web (la raíz despliega `main`).
 
 **A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras
 (todo en uno), o el contenido de `dist/web/` (más ligero en cada versión).

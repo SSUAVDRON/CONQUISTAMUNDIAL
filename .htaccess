@@ -11,10 +11,21 @@ RedirectMatch 404 ^/(tests|herramientas|docs|node_modules)(/|$)
 RedirectMatch 404 ^/(package\.json|package-lock\.json|servidor\.js|README\.md)$
 RedirectMatch 404 \.md$
 
-# El juego cambia a menudo: el navegador comprueba siempre si hay versión nueva
+# El juego cambia a menudo: el navegador comprueba siempre si hay versión
+# nueva de index.html. Los módulos y la hoja de estilos, en cambio, llevan la
+# huella de su contenido en la dirección (?v=…, herramientas/versionar.js): si
+# cambian, cambia la dirección, así que el navegador los guarda 7 días sin
+# volver a preguntar (antes revalidaba ~65 archivos en cada visita). «private»:
+# solo el navegador, que distingue cada ?v=; la CDN sigue preguntando siempre
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{QUERY_STRING} ^v=[0-9a-f]{6,}$
+  RewriteRule \.(js|css)$ - [E=TRINCHERA_HUELLA:1]
+</IfModule>
 <IfModule mod_headers.c>
   <FilesMatch "\.(html|js|css)$">
     Header set Cache-Control "no-cache, must-revalidate"
+    Header set Cache-Control "private, max-age=604800, immutable" env=TRINCHERA_HUELLA
   </FilesMatch>
 </IfModule>
 
