@@ -50,11 +50,38 @@ function limite(PDO $pdo, string $clave, int $seg, int $max, string $msg = 'Vas 
     if (!dentro_del_limite($pdo, $clave, $seg, $max)) responder(429, ['error' => $msg]);
 }
 
+/**
+ * Mete a `cuenta` en el clan si cabe, en una transacción (dos entradas a la
+ * vez no pasan del máximo) y borra sus otras solicitudes.
+ */
+function entrar_en_clan(PDO $pdo, int $cuenta, int $clan, int $ahora, string $lleno): void {
+    $pdo->beginTransaction();
+    if (miembros_de($pdo, $clan) >= CLAN_MAX_MIEMBROS) {
+        $pdo->rollBack();
+        responder(409, ['error' => $lleno]);
+    }
+    $pdo->prepare("INSERT INTO clan_miembros (cuenta_id, clan_id, rol, unido) VALUES (?, ?, 'miembro', ?)")->execute([$cuenta, $clan, $ahora]);
+    $pdo->prepare('DELETE FROM clan_solicitudes WHERE cuenta_id = ?')->execute([$cuenta]);
+    $pdo->commit();
+}
+
+/** Corta con 409 si alguna de las cuentas ya tiene el máximo de amigos. */
+function tope_amigos(PDO $pdo, int $yo, int $otro = 0): void {
+    foreach ([$yo, $otro] as $id) {
+        if (!$id) continue;
+        $st = $pdo->prepare('SELECT COUNT(*) AS n FROM amistades WHERE (a = ? OR b = ?) AND estado = 1');
+        $st->execute([$id, $id]);
+        if ((int) una($st)['n'] >= AMIGOS_MAX) {
+            responder(409, ['error' => $id === $yo ? 'Ya tienes ' . AMIGOS_MAX . ' amigos.' : 'Esa persona ya tiene ' . AMIGOS_MAX . ' amigos.']);
+        }
+    }
+}
+
 /** Estado entre dos cuentas: 'amigos', 'enviada' (yo pedí), 'recibida' (me pidió) o ''. */
 function relacion(PDO $pdo, int $yo, int $otro): string {
     $st = $pdo->prepare('SELECT a, estado FROM amistades WHERE (a = ? AND b = ?) OR (a = ? AND b = ?)');
     $st->execute([$yo, $otro, $otro, $yo]);
-    $f = $st->fetch();
+    $f = una($st);
     if (!$f) return '';
     if ((int) $f['estado'] === 1) return 'amigos';
     return (int) $f['a'] === $yo ? 'enviada' : 'recibida';
@@ -90,13 +117,13 @@ function resumen_clan(PDO $pdo, array $f): array {
 function clan_fila(PDO $pdo, int $id): ?array {
     $st = $pdo->prepare('SELECT * FROM clanes WHERE id = ?');
     $st->execute([$id]);
-    return $st->fetch() ?: null;
+    return una($st) ?: null;
 }
 
 function miembros_de(PDO $pdo, int $clanId): int {
     $st = $pdo->prepare('SELECT COUNT(*) AS n FROM clan_miembros WHERE clan_id = ?');
     $st->execute([$clanId]);
-    return (int) $st->fetch()['n'];
+    return (int) una($st)['n'];
 }
 
 /** Mi clan y mi rol, o 403 con `msg`. `roles`: los que valen. */
@@ -113,7 +140,7 @@ function insignia_de($v): string {
 switch ($accion) {
     case 'ficha_guardar': {
         limite($pdo, "ficha:$yo", 3600, 240);
-        $ficha = ficha_limpia($cuerpo['ficha'] ?? null, $cuenta['nombre']);
+        $ficha = ficha_limpia($cuerpo['ficha'] ?? null);
         $json = json_encode($ficha, JSON_UNESCAPED_UNICODE);
         if (strlen($json) > FICHA_MAX) responder(413, ['error' => 'Ficha demasiado grande.']);
         $pub = publico_de($pdo, $cuenta);
@@ -164,7 +191,7 @@ switch ($accion) {
             if (in_array($m['rol'], ['lider', 'oficial'], true)) {
                 $st = $pdo->prepare('SELECT COUNT(*) AS n FROM clan_solicitudes WHERE clan_id = ?');
                 $st->execute([$m['id']]);
-                $clan['solicitudes'] = (int) $st->fetch()['n'];
+                $clan['solicitudes'] = (int) una($st)['n'];
             }
         }
         $st = $pdo->prepare('SELECT clan_id FROM clan_solicitudes WHERE cuenta_id = ?');
@@ -187,16 +214,21 @@ switch ($accion) {
         limite($pdo, "buscar:$yo", 3600, 120, 'Demasiadas búsquedas seguidas: espera un poco.');
         $texto = texto($cuerpo['texto'] ?? '', 30);
         $codigo = codigo_de($texto);
+        $ids = [];
         if ($codigo) {
             $st = $pdo->prepare('SELECT cuenta_id FROM publicos WHERE codigo = ? AND cuenta_id <> ?');
             $st->execute([$codigo, $yo]);
-        } else {
+            $ids = array_map(fn($f) => (int) $f['cuenta_id'], $st->fetchAll());
+        }
+        // Un nombre de 8 letras puede parecer un código: si no hay nadie con
+        // ese código, se busca también por nombre
+        if (!$ids) {
             if (mb_strlen($texto) < 2) responder(200, ['jugadores' => []]);
             $patron = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($texto)) . '%';
             $st = $pdo->prepare("SELECT cuenta_id FROM publicos WHERE busca LIKE ? ESCAPE '!' AND cuenta_id <> ? ORDER BY visto DESC LIMIT 12");
             $st->execute([$patron, $yo]);
+            $ids = array_map(fn($f) => (int) $f['cuenta_id'], $st->fetchAll());
         }
-        $ids = array_map(fn($f) => (int) $f['cuenta_id'], $st->fetchAll());
         $fichas = fichas_de($pdo, $ids);
         $out = [];
         foreach ($ids as $id) {
@@ -212,7 +244,7 @@ switch ($accion) {
         if (!$codigo) responder(400, ['error' => 'Ese código no es válido: son 8 letras y números, como ABCD-2345.']);
         $st = $pdo->prepare('SELECT cuenta_id FROM publicos WHERE codigo = ?');
         $st->execute([$codigo]);
-        $f = $st->fetch();
+        $f = una($st);
         if (!$f) responder(404, ['error' => 'No hay nadie con ese código.']);
         $otro = (int) $f['cuenta_id'];
         if ($otro === $yo) responder(400, ['error' => 'Ese es tu propio código.']);
@@ -221,15 +253,14 @@ switch ($accion) {
         if ($rel === 'enviada') responder(200, ['ok' => true, 'estado' => 'enviada']);
         if ($rel === 'recibida') {
             // Ya te lo había pedido: sois amigos
+            tope_amigos($pdo, $yo, $otro);
             $pdo->prepare('UPDATE amistades SET estado = 1, creado = ? WHERE a = ? AND b = ?')->execute([$ahora, $otro, $yo]);
             responder(200, ['ok' => true, 'estado' => 'amigos']);
         }
-        $st = $pdo->prepare('SELECT COUNT(*) AS n FROM amistades WHERE (a = ? OR b = ?) AND estado = 1');
-        $st->execute([$yo, $yo]);
-        if ((int) $st->fetch()['n'] >= AMIGOS_MAX) responder(409, ['error' => 'Ya tienes ' . AMIGOS_MAX . ' amigos.']);
+        tope_amigos($pdo, $yo);
         $st = $pdo->prepare('SELECT COUNT(*) AS n FROM amistades WHERE a = ? AND estado = 0');
         $st->execute([$yo]);
-        if ((int) $st->fetch()['n'] >= ENVIADAS_MAX) responder(409, ['error' => 'Tienes demasiadas solicitudes sin responder.']);
+        if ((int) una($st)['n'] >= ENVIADAS_MAX) responder(409, ['error' => 'Tienes demasiadas solicitudes sin responder.']);
         publico_de($pdo, $cuenta);
         $pdo->prepare('INSERT INTO amistades (a, b, estado, creado) VALUES (?, ?, 0, ?)')->execute([$yo, $otro, $ahora]);
         responder(200, ['ok' => true, 'estado' => 'enviada']);
@@ -238,6 +269,7 @@ switch ($accion) {
     case 'amigo_responder': {
         $otro = entero($cuerpo['id'] ?? 0, 0, PHP_INT_MAX);
         if (relacion($pdo, $yo, $otro) !== 'recibida') responder(404, ['error' => 'Esa solicitud ya no existe.']);
+        if (!empty($cuerpo['aceptar'])) tope_amigos($pdo, $yo, $otro);
         if (!empty($cuerpo['aceptar'])) $pdo->prepare('UPDATE amistades SET estado = 1, creado = ? WHERE a = ? AND b = ?')->execute([$ahora, $otro, $yo]);
         else $pdo->prepare('DELETE FROM amistades WHERE a = ? AND b = ?')->execute([$otro, $yo]);
         responder(200, ['ok' => true]);
@@ -254,7 +286,8 @@ switch ($accion) {
         limite($pdo, "invitar:$yo", 3600, 60, 'Demasiadas invitaciones seguidas: espera un poco.');
         $otro = entero($cuerpo['id'] ?? 0, 0, PHP_INT_MAX);
         $sala = is_string($cuerpo['sala'] ?? null) && preg_match('/^[a-z0-9]{5}$/', $cuerpo['sala']) ? $cuerpo['sala'] : '';
-        $red = is_string($cuerpo['red'] ?? null) && preg_match('/^[a-z0-9=&._:-]{0,24}$/i', $cuerpo['red']) ? $cuerpo['red'] : '';
+        // El servidor de salas, solo por su número («b=1»): nada más viaja al enlace
+        $red = is_string($cuerpo['red'] ?? null) && preg_match('/^b=\d{1,2}$/', $cuerpo['red']) ? $cuerpo['red'] : '';
         if (!$sala) responder(400, ['error' => 'Crea una sala antes de invitar.']);
         if (relacion($pdo, $yo, $otro) !== 'amigos') responder(403, ['error' => 'Solo puedes invitar a tus amigos.']);
         $pdo->prepare('DELETE FROM invitaciones WHERE de = ? AND para = ?')->execute([$yo, $otro]);
@@ -311,12 +344,11 @@ switch ($accion) {
         }
         $st = $pdo->prepare('SELECT 1 FROM clan_solicitudes WHERE clan_id = ? AND cuenta_id = ?');
         $st->execute([$clan['id'], $yo]);
-        $out['pedido'] = (bool) $st->fetch();
+        $out['pedido'] = (bool) una($st);
         responder(200, $out);
     }
 
     case 'clan_crear': {
-        limite($pdo, "clancrear:$yo", 86400, 5, 'Ya has creado varios clanes hoy: prueba mañana.');
         if (clan_de($pdo, $yo)) responder(409, ['error' => 'Ya estás en un clan: sal de él para crear otro.']);
         $nombre = texto($cuerpo['nombre'] ?? '', 24);
         if (mb_strlen($nombre) < 3) responder(400, ['error' => 'El nombre del clan tiene que tener al menos 3 letras.', 'campo' => 'nombre']);
@@ -324,6 +356,16 @@ switch ($accion) {
         if (strlen($tag) < 2 || strlen($tag) > 5) responder(400, ['error' => 'La etiqueta son de 2 a 5 letras o números.', 'campo' => 'tag']);
         $desc = texto($cuerpo['descripcion'] ?? '', 160);
         $abierto = !empty($cuerpo['abierto']) ? 1 : 0;
+        // Nombre o etiqueta repetidos: se avisa sin gastar el límite diario
+        $choque = function () use ($pdo, $tag, $nombre) {
+            $st = $pdo->prepare('SELECT tag, nombre_busca FROM clanes WHERE tag = ? OR nombre_busca = ?');
+            $st->execute([$tag, mb_strtolower($nombre)]);
+            $dup = una($st);
+            if ($dup && $dup['tag'] === $tag) responder(409, ['error' => "La etiqueta [$tag] ya es de otro clan.", 'campo' => 'tag']);
+            if ($dup) responder(409, ['error' => 'Ya hay un clan con ese nombre.', 'campo' => 'nombre']);
+        };
+        $choque();
+        limite($pdo, "clancrear:$yo", 86400, 5, 'Ya has creado varios clanes hoy: prueba mañana.');
         $pdo->beginTransaction();
         try {
             $pdo->prepare('INSERT INTO clanes (nombre, nombre_busca, tag, descripcion, insignia, abierto, creado) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -334,11 +376,7 @@ switch ($accion) {
             $pdo->commit();
         } catch (Throwable $e) {
             $pdo->rollBack();
-            $st = $pdo->prepare('SELECT tag, nombre_busca FROM clanes WHERE tag = ? OR nombre_busca = ?');
-            $st->execute([$tag, mb_strtolower($nombre)]);
-            $dup = $st->fetch();
-            if ($dup && $dup['tag'] === $tag) responder(409, ['error' => "La etiqueta [$tag] ya es de otro clan.", 'campo' => 'tag']);
-            if ($dup) responder(409, ['error' => 'Ya hay un clan con ese nombre.', 'campo' => 'nombre']);
+            $choque();
             responder(409, ['error' => 'No se ha podido crear el clan: inténtalo de nuevo.']);
         }
         publico_de($pdo, $cuenta);
@@ -353,16 +391,15 @@ switch ($accion) {
         if (miembros_de($pdo, (int) $f['id']) >= CLAN_MAX_MIEMBROS) responder(409, ['error' => 'Ese clan está lleno (' . CLAN_MAX_MIEMBROS . ' miembros).']);
         publico_de($pdo, $cuenta);
         if ((int) $f['abierto']) {
-            $pdo->prepare("INSERT INTO clan_miembros (cuenta_id, clan_id, rol, unido) VALUES (?, ?, 'miembro', ?)")->execute([$yo, (int) $f['id'], $ahora]);
-            $pdo->prepare('DELETE FROM clan_solicitudes WHERE cuenta_id = ?')->execute([$yo]);
+            entrar_en_clan($pdo, $yo, (int) $f['id'], $ahora, 'Ese clan está lleno (' . CLAN_MAX_MIEMBROS . ' miembros).');
             responder(200, ['ok' => true, 'estado' => 'dentro']);
         }
         $st = $pdo->prepare('SELECT COUNT(*) AS n FROM clan_solicitudes WHERE cuenta_id = ?');
         $st->execute([$yo]);
-        if ((int) $st->fetch()['n'] >= 5) responder(409, ['error' => 'Ya has pedido entrar en 5 clanes: espera a que te respondan.']);
+        if ((int) una($st)['n'] >= 5) responder(409, ['error' => 'Ya has pedido entrar en 5 clanes: espera a que te respondan.']);
         $st = $pdo->prepare('SELECT 1 FROM clan_solicitudes WHERE clan_id = ? AND cuenta_id = ?');
         $st->execute([(int) $f['id'], $yo]);
-        if (!$st->fetch()) $pdo->prepare('INSERT INTO clan_solicitudes (clan_id, cuenta_id, creado) VALUES (?, ?, ?)')->execute([(int) $f['id'], $yo, $ahora]);
+        if (!una($st)) $pdo->prepare('INSERT INTO clan_solicitudes (clan_id, cuenta_id, creado) VALUES (?, ?, ?)')->execute([(int) $f['id'], $yo, $ahora]);
         responder(200, ['ok' => true, 'estado' => 'pedido']);
     }
 
@@ -376,15 +413,13 @@ switch ($accion) {
         $otro = entero($cuerpo['cuenta'] ?? 0, 0, PHP_INT_MAX);
         $st = $pdo->prepare('SELECT 1 FROM clan_solicitudes WHERE clan_id = ? AND cuenta_id = ?');
         $st->execute([$m['id'], $otro]);
-        if (!$st->fetch()) responder(404, ['error' => 'Esa solicitud ya no existe.']);
+        if (!una($st)) responder(404, ['error' => 'Esa solicitud ya no existe.']);
         if (!empty($cuerpo['aceptar'])) {
             if (clan_de($pdo, $otro)) {
                 $pdo->prepare('DELETE FROM clan_solicitudes WHERE cuenta_id = ?')->execute([$otro]);
                 responder(409, ['error' => 'Ya se ha unido a otro clan.']);
             }
-            if (miembros_de($pdo, $m['id']) >= CLAN_MAX_MIEMBROS) responder(409, ['error' => 'El clan está lleno.']);
-            $pdo->prepare("INSERT INTO clan_miembros (cuenta_id, clan_id, rol, unido) VALUES (?, ?, 'miembro', ?)")->execute([$otro, $m['id'], $ahora]);
-            $pdo->prepare('DELETE FROM clan_solicitudes WHERE cuenta_id = ?')->execute([$otro]);
+            entrar_en_clan($pdo, $otro, (int) $m['id'], $ahora, 'El clan está lleno.');
         } else {
             $pdo->prepare('DELETE FROM clan_solicitudes WHERE clan_id = ? AND cuenta_id = ?')->execute([$m['id'], $otro]);
         }

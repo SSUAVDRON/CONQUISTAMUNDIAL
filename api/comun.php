@@ -21,6 +21,16 @@ function responder(int $codigo, array $cuerpo): void {
     exit;
 }
 
+// Cualquier fallo sin capturar responde JSON (el cliente siempre lee un
+// mensaje): un duplicado por dos peticiones a la vez es un 409, lo demás un 500
+set_exception_handler(function (Throwable $e): void {
+    if ($e instanceof PDOException && str_starts_with((string) $e->getCode(), '23')) {
+        responder(409, ['error' => 'Eso acaba de cambiar: vuelve a intentarlo.']);
+    }
+    error_log('[trinchera] ' . $e->getMessage());
+    responder(500, ['error' => 'Algo ha fallado en el servidor. Inténtalo de nuevo.']);
+});
+
 function configuracion(): array {
     $dsn = getenv('TRINCHERA_DSN');
     if ($dsn) {
@@ -74,9 +84,47 @@ function sal_local(string $dir): string {
     return $sal;
 }
 
+/**
+ * SQLite: las transacciones empiezan con BEGIN IMMEDIATE, que toma el cerrojo
+ * de escritura al principio y espera (busy_timeout) si otro escribe. Una
+ * transacción diferida que lee y después escribe falla al momento («database
+ * is locked») si otra petición ha escrito entre medias.
+ */
+final class BdSqlite extends PDO {
+    private bool $enTx = false;
+    public function beginTransaction(): bool {
+        $this->exec('BEGIN IMMEDIATE');
+        return $this->enTx = true;
+    }
+    public function commit(): bool {
+        $this->exec('COMMIT');
+        $this->enTx = false;
+        return true;
+    }
+    public function rollBack(): bool {
+        $this->exec('ROLLBACK');
+        $this->enTx = false;
+        return true;
+    }
+    public function inTransaction(): bool {
+        return $this->enTx;
+    }
+}
+
+/**
+ * La primera fila de una consulta (o false), cerrando el cursor: en SQLite un
+ * cursor abierto mantiene la lectura y la siguiente escritura fallaría.
+ */
+function una(PDOStatement $st) {
+    $f = $st->fetch();
+    $st->closeCursor();
+    return $f;
+}
+
 function conectar(array $c): PDO {
     try {
-        $pdo = new PDO($c['dsn'], $c['user'], $c['pass'], [
+        $clase = str_starts_with((string) $c['dsn'], 'sqlite:') ? BdSqlite::class : PDO::class;
+        $pdo = new $clase($c['dsn'], $c['user'], $c['pass'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
@@ -130,7 +178,7 @@ function tras_espera(PDO $pdo, string $clave, int $segundos): bool {
     $ahora = time();
     $st = $pdo->prepare('SELECT ventana FROM rangos_limite WHERE clave = ?');
     $st->execute([$clave]);
-    $fila = $st->fetch();
+    $fila = una($st);
     if ($fila && $ahora - (int) $fila['ventana'] < $segundos) return false;
     if ($fila) $pdo->prepare('UPDATE rangos_limite SET ventana = ?, n = 1 WHERE clave = ?')->execute([$ahora, $clave]);
     else $pdo->prepare('INSERT INTO rangos_limite (clave, ventana, n) VALUES (?, ?, 1)')->execute([$clave, $ahora]);
@@ -143,7 +191,7 @@ function dentro_del_limite(PDO $pdo, string $clave, int $segundos, int $maximo):
     $ventana = intdiv($ahora, $segundos);
     $st = $pdo->prepare('SELECT ventana, n FROM rangos_limite WHERE clave = ?');
     $st->execute([$clave]);
-    $fila = $st->fetch();
+    $fila = una($st);
     if (!$fila) {
         $pdo->prepare('INSERT INTO rangos_limite (clave, ventana, n) VALUES (?, ?, 1)')->execute([$clave, $ventana]);
         return true;
