@@ -1186,7 +1186,8 @@ export class UI {
         btn.querySelector('.b-coste').textContent = lvl >= MECH.capital.maxLevel ? 'Máx.' : formatNumber(cost);
         // Nivel en estrellas (corto: va en la esquina del botón; la obra ya se marca con su clase)
         btn.querySelector('.b-num').textContent = cap && lvl ? `★${lvl}` : '';
-        unavailable = unavailable || !cap || !!cap.work || lvl >= MECH.capital.maxLevel;
+        // (también cuesta tropas: canBuild lo mira todo)
+        unavailable = unavailable || !cap || !!cap.work || lvl >= MECH.capital.maxLevel || !game.canBuild(human, kind).ok;
       } else if (BUILDINGS[kind].unit === 'missile') {
         // Coste y silos listos
         const silos = game.buildings.filter((b) => b.owner === human.id && b.kind === 'silo');
@@ -1198,11 +1199,20 @@ export class UI {
         btn.querySelector('.b-coste').textContent = formatNumber(cost);
         btn.querySelector('.b-num').textContent = human.buildings[kind] ? `×${human.buildings[kind]}${works[kind] ? ' 🔨' : ''}` : '';
       }
+      // Recién asequible: un destello para que se note (no en el primer repaso)
+      if (this._buildSeen && playing && !unavailable && btn.classList.contains('caro') && !btn.hidden) {
+        btn.classList.remove('ya-puedes');
+        void btn.offsetWidth;
+        btn.classList.add('ya-puedes');
+        clearTimeout(btn._yaT);
+        btn._yaT = setTimeout(() => btn.classList.remove('ya-puedes'), 1000);
+      }
       btn.classList.toggle('caro', unavailable);
       btn.hidden = !game.isAllowed(kind);
       btn.classList.toggle('activo', buildMode === kind);
       btn.disabled = !playing || !human.alive;
     }
+    this._buildSeen = playing; // (el primer repaso de la partida solo anota)
     // Grupos: un punto si hay algo que puedas pagar; el del edificio elegido,
     // resaltado y con su icono
     for (const g of this._groups) {

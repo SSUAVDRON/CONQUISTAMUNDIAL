@@ -8,7 +8,7 @@ Options -Indexes
 # también código de desarrollo: nada de eso se sirve
 RedirectMatch 404 /\.git
 RedirectMatch 404 ^/(tests|herramientas|docs|node_modules)(/|$)
-RedirectMatch 404 ^/(package\.json|package-lock\.json|servidor\.js|ROADMAP\.md|README\.md)$
+RedirectMatch 404 ^/(package\.json|package-lock\.json|servidor\.js|README\.md)$
 RedirectMatch 404 \.md$
 
 # El juego cambia a menudo: el navegador comprueba siempre si hay versión nueva

@@ -58,11 +58,6 @@ export function reportError(err, where = 'desconocido') {
   return e;
 }
 
-/** Fallos de esta sesión (los más recientes al final). */
-export function sessionErrors() {
-  return ring.slice();
-}
-
 /** El último fallo registrado (de esta sesión o de una anterior), o null. */
 export function lastError() {
   if (ring.length) return ring[ring.length - 1];

@@ -6,15 +6,6 @@ import { MECH, maxTroopsFor, regenPerTick, territoryGold } from './mecanicas.js'
 /** Casillas actuales por cada casilla del documento (mundo de 2000×1000, RES 2). */
 const DOC_AREA = (RES / 2) * (RES / 2);
 
-/**
- * x^0,75 solo con raíces cuadradas: a diferencia de Math.pow, da el mismo
- * resultado en todos los navegadores, requisito del multijugador.
- */
-export function pow34(x) {
-  const s = Math.sqrt(x);
-  return s * Math.sqrt(s);
-}
-
 export class Player {
   constructor(id, name, color, isHuman) {
     this.id = id;

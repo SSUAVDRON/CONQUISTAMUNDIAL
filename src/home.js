@@ -4,6 +4,7 @@ import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES
 import { PROFILES } from './mecanicas.js';
 import { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } from './multiplayer.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
+import { loadMapData } from './mapas-carga.js';
 import { decodeRelief, generateMap, markRivers } from './map.js';
 import { RIVERS } from './rios.js';
 import { paintMapPreview } from './terreno.js';
@@ -53,6 +54,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Mejoras', title: 'Más ligero y más pulido', text: 'Cada versión nueva se descarga en una quinta parte (los mapas se guardan en tu navegador), arreglos en amigos y clanes, colonias que ya no encabezan la clasificación, Arsenal y Progreso mejor colocados y nuevas animaciones al pulsar y al poder construir.', art: 0 },
   { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
   { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
   { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
@@ -115,6 +117,10 @@ function el(tag, attrs = {}, ...children) {
  * mapas reales, guardarlos todos eran decenas de MB en el móvil.
  */
 const realCache = new Map();
+/** Llama a `fn` cuando estén los mapas (en la web llegan aparte; si falla la descarga, se reintenta). */
+function whenMaps(fn) {
+  loadMapData().then(fn, () => setTimeout(() => whenMaps(fn), 2000));
+}
 function decodePreview(id) {
   const data = REAL_MAP_DATA[id];
   const { w, h } = data;
@@ -140,6 +146,10 @@ const landCache = new Map();
 function landTilesOf(id) {
   if (landCache.has(id)) return landCache.get(id);
   let n = 0;
+  if (REAL_MAP_DATA[id] && !REAL_MAP_DATA[id].rle) {
+    // (en la web, antes de que llegue el terreno: una estimación, sin guardarla)
+    return Math.round(REAL_MAP_DATA[id].w * REAL_MAP_DATA[id].h * 0.3);
+  }
   if (REAL_MAP_DATA[id]) {
     // Se cuentan los tramos de tierra del terreno codificado, sin decodificarlo entero
     const bin = atob(REAL_MAP_DATA[id].rle);
@@ -176,6 +186,8 @@ function thumbSource(id, width) {
   const key = `${id}:${width}`;
   let src = thumbCache.get(key);
   if (!src) {
+    // (en la web, si los mapas aún no han llegado, un mapa aleatorio de momento, sin guardarlo)
+    if (REAL_MAP_DATA[id] ? !REAL_MAP_DATA[id].rle : !MAP_SIZES[id] && !REAL_MAP_DATA.mundo?.rle) return mapThumb('mediano', width);
     src = mapThumb(REAL_MAP_DATA[id] || MAP_SIZES[id] ? id : 'mundo', width);
     thumbCache.set(key, src);
   }
@@ -647,14 +659,16 @@ export class Home {
     // Portada con nuestro mapa (un poco después, para que el menú salga al instante)
     const cover = $('portada-mapa');
     if (cover) {
-      setTimeout(() => {
-        // Europa, el Mediterráneo y Oriente Próximo (a la derecha de la portada, tras la línea dorada)
-        this.cover = new CoverArt(cover, realPreviewData('mundo'), { crop: { x0: 0.415, x1: 0.655, y0: 0.085 }, labelFrom: 0.2 });
-        if (!$('inicio').hidden) this.cover.start();
-      }, 60);
+      whenMaps(() =>
+        setTimeout(() => {
+          // Europa, el Mediterráneo y Oriente Próximo (a la derecha de la portada, tras la línea dorada)
+          this.cover = new CoverArt(cover, realPreviewData('mundo'), { crop: { x0: 0.415, x1: 0.655, y0: 0.085 }, labelFrom: 0.2 });
+          if (!$('inicio').hidden) this.cover.start();
+        }, 60),
+      );
     }
     // Ilustraciones de la portada y de las tarjetas de modo (después del primer pintado)
-    setTimeout(() => this._paintArt(), 30);
+    whenMaps(() => setTimeout(() => this._paintArt(), 30));
     // La escena de la portada se repinta solo si cambia de tamaño (antes se
     // pintaba al arrancar con una altura provisional, se quedaba estirada y se
     // repintaba, con su tirón, cada vez que se volvía a «Jugar»)
@@ -1274,26 +1288,31 @@ export class Home {
     $('arsenal').replaceChildren(
       el('h2', { class: 'titulo-seccion' }, el('span', { text: 'Arsenal' })),
       el('p', { class: 'arsenal-intro', text: 'Todo lo que puedes construir y lanzar en una partida, con su precio inicial. Subir de nivel cuesta lo mismo que uno nuevo.' }),
-      ...ARSENAL_CATS.flatMap((cat) => [
-        el('h3', { class: `arsenal-grupo cat-${cat.id}` }, el('span', { class: 'arsenal-cat-icono' }, this._weaponArt(cat.icon, 56)), el('span', { text: cat.name }), el('small', { text: cat.text })),
+      // Cada familia en su bloque: Economía y Defensa lado a lado, Ataque a lo ancho
+      ...ARSENAL_CATS.map((cat) =>
         el(
-          'div',
-          { class: 'arsenal' },
-          ...cat.items.map((kind) =>
-            el(
-              'div',
-              { class: 'arma', style: `--i:${n++}`, tabindex: '0', 'aria-label': `${nameOf(kind)}: ${ARSENAL[kind].text}. ${priceOf(kind)}. ${keyOf(kind)}` },
-              el('span', { class: 'arma-tecla', title: 'Tecla en la partida', text: keyOf(kind, true) }),
-              el('div', { class: 'arma-dibujo' }, this._weaponArt(kind)),
-              el('strong', { text: nameOf(kind) }),
-              el('span', { class: 'arma-texto', text: ARSENAL[kind].text }),
-              el('span', { class: 'arma-precio', text: priceOf(kind) }),
-              // Detalle al pasar el ratón o al tocar (enfocar) la tarjeta
-              el('span', { class: 'arma-detalle', 'aria-hidden': 'true' }, el('strong', { text: nameOf(kind) }), el('span', { text: BUILDINGS[kind]?.desc || 'Haz clic en una costa enemiga o libre sin frontera por tierra: sale un barco con tropas desde tu costa (máximo 3 a la vez).' }), el('small', { text: keyOf(kind) })),
+          'section',
+          { class: `arsenal-familia cat-${cat.id}`, style: `--n:${cat.items.length}` },
+          el('h3', { class: `arsenal-grupo cat-${cat.id}` }, el('span', { class: 'arsenal-cat-icono' }, this._weaponArt(cat.icon, 56)), el('span', { text: cat.name }), el('small', { text: cat.text })),
+          el(
+            'div',
+            { class: 'arsenal' },
+            ...cat.items.map((kind) =>
+              el(
+                'div',
+                { class: 'arma', style: `--i:${n++}`, tabindex: '0', 'aria-label': `${nameOf(kind)}: ${ARSENAL[kind].text}. ${priceOf(kind)}. ${keyOf(kind)}` },
+                el('span', { class: 'arma-tecla', title: 'Tecla en la partida', text: keyOf(kind, true) }),
+                el('div', { class: 'arma-dibujo' }, this._weaponArt(kind)),
+                el('strong', { text: nameOf(kind) }),
+                el('span', { class: 'arma-texto', text: ARSENAL[kind].text }),
+                el('span', { class: 'arma-precio', text: priceOf(kind) }),
+                // Detalle al pasar el ratón o al tocar (enfocar) la tarjeta
+                el('span', { class: 'arma-detalle', 'aria-hidden': 'true' }, el('strong', { text: nameOf(kind) }), el('span', { text: BUILDINGS[kind]?.desc || 'Haz clic en una costa enemiga o libre sin frontera por tierra: sale un barco con tropas desde tu costa (máximo 3 a la vez).' }), el('small', { text: keyOf(kind) })),
+              ),
             ),
           ),
         ),
-      ]),
+      ),
     );
   }
 

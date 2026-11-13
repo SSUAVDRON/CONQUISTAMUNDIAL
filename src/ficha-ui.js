@@ -53,6 +53,11 @@ export class FichaUI {
     this.cur = null; // { type: 'obra' | 'bono', kind, bonus, anchor, mode: 'hover' | 'press' | 'dock' | 'bono' }
     this._html = '';
     this._at = 0;
+    // Con el dedo o el ratón pulsado dentro no se rehace (si no, un clic que
+    // empieza en «Mejorar» acabaría en un botón nuevo y se perdería)
+    this._held = false;
+    el.addEventListener('pointerdown', () => (this._held = true));
+    for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, () => (this._held = false), true);
     el.addEventListener('click', (e) => {
       if (e.target.closest('[data-cancelar]')) onCancel?.(this.cur && this.cur.kind);
       else if (e.target.closest('[data-mejorar]')) {
@@ -92,7 +97,7 @@ export class FichaUI {
     const cur = this.cur;
     if (!cur || cur.type !== 'obra' || !game || !p) return;
     const now = performance.now();
-    if (!force && now - this._at < 330) return;
+    if (!force && (this._held || now - this._at < 330)) return;
     this._at = now;
     const check = cur.mode === 'sheet' && cur.kind === 'capUp' ? game.canBuild(p, 'capUp') : null;
     this._render(this._buildingHtml(buildingCard(game, p, cur.kind), p, cur.mode, check));

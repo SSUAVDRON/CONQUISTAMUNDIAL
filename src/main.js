@@ -15,6 +15,7 @@ import { fmtTroops, formatNumber, formatPercent, formatTime } from './format.js'
 
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { bootLoader, withLoading } from './loading.js';
+import { loadMapData } from './mapas-carga.js';
 import { paintMapPreview, paintTerrain } from './terreno.js';
 import { Account } from './cuenta.js';
 import { AccountUI } from './cuenta-ui.js';
@@ -31,7 +32,7 @@ import { Diagnostico } from './diagnostico.js';
 const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('diag') === '1';
 import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
-import { abrirDialogo, cerrarDialogo, hayDialogo } from './movimiento.js';
+import { abrirDialogo, cerrarDialogo, hayDialogo, ondasAlPulsar } from './movimiento.js';
 import { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } from './toque.js';
 import { installGlobalHandlers, reportError, setErrorContext, setErrorNotifier } from './errores.js';
 import { abrirGuia } from './guia.js';
@@ -326,6 +327,7 @@ function enterGame(game) {
   minimap.setGame(game, state.renderer, camera);
   setMinimapFolded(profile.ajustes.minimapa === false);
   state.demo = false;
+  socialUI.hideToast(); // una invitación no saca a nadie de su partida
   // La simulación arranca ahora (ni durante la carga ni durante la presentación)
   state.holdSim = false;
   state.acc = 0;
@@ -881,6 +883,7 @@ let socialSignedIn = false;
 function onAccountChange(st) {
   if (!social || st.signedIn === socialSignedIn) return;
   socialSignedIn = st.signedIn;
+  social.forgetCard(); // otra cuenta: su ficha pública se manda de nuevo
   if (st.signedIn) {
     social.saveCard(profile).finally(() => social.refresh());
     social.poll(30000);
@@ -893,7 +896,8 @@ function onAccountChange(st) {
 /** Tu sala abierta (para invitar a amigos): { code, red } o null. */
 function roomForInvite() {
   const sala = state.sala;
-  if (!sala || sala.started || !transport || transport.kind === 'claude') return null;
+  // (la red local solo llega a otras pestañas de este navegador: no sirve para invitar)
+  if (!sala || sala.started || !transport || transport.kind === 'claude' || transport.kind === 'local') return null;
   return { code: sala.code, red: roomNet() };
 }
 /** El servidor de salas, como en el enlace de invitación («b=1» o «red=local»). */
@@ -905,9 +909,14 @@ function roomNet() {
 }
 /** Unirse a la sala de una invitación: aquí mismo si es el mismo servidor de salas; si no, con su enlace. */
 function joinInvite(inv) {
+  // En mitad de una partida no: la invitación sigue ahí al volver al menú
+  if (state.game && !state.demo) return;
   social?.dismissInvite(inv.id).catch(() => {});
   const code = normalizeCode(inv.sala);
   if (code.length !== 5) return;
+  // Del servidor de salas solo se acepta su número («b=1»): nada más del enlace
+  const red = /^b=\d{1,2}$/.test(inv.red || '') ? inv.red : '';
+  inv = { ...inv, red };
   if (transport && (inv.red || '') === roomNet() && !(state.game && !state.demo)) {
     state.pendingEntry = code;
     home.showLobby();
@@ -2057,6 +2066,7 @@ function whenBooted(fn) {
 }
 async function boot() {
   const loader = bootLoader();
+  ondasAlPulsar(); // la onda dorada al pulsar los botones
   // Sonido: la música espera al menú; si el navegador ya deja sonar (o hay un
   // toque durante la carga), suena el tono de carga
   let atGate = false;
@@ -2069,12 +2079,25 @@ async function boot() {
   });
   const paint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const atMost = (promise, ms) => Promise.race([Promise.resolve(promise).catch(() => {}), new Promise((resolve) => setTimeout(resolve, ms))]);
+  // En la web los mapas llegan aparte: la descarga empieza ya, en paralelo
+  const mapsFirst = loadMapData().catch(() => {});
   try {
     loader?.step('Preparando el cuartel…', 0.1, 400, 'cuartel');
     await atMost(document.fonts?.ready, 1200);
     loader?.step('Izando las banderas…', 0.2, 400, 'banderas');
     await atMost(loadFlags(), 2000);
     loader?.step('Cartografiando el mundo…', 0.42, 900, 'mapa');
+    await mapsFirst;
+    // Sin los mapas no hay juego: si la descarga falla, se reintenta (con pausas cada vez más largas)
+    for (let i = 0; ; i++) {
+      try {
+        await loadMapData();
+        break;
+      } catch {
+        loader?.step('Sin conexión con el servidor: reintentando…', 0.42, 900, 'mapa');
+        await new Promise((resolve) => setTimeout(resolve, Math.min(8000, 1000 * 2 ** i)));
+      }
+    }
     await paint();
     const { map, countries } = loadRealMap('mundo');
     const cropH = Math.min(map.height, Math.round((map.width * 230) / 480));

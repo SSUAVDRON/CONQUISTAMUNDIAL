@@ -252,7 +252,7 @@ export const BUILDINGS = {
   // se compran desde la barra y se aplican al momento, sin elegir sitio
   capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada (defensa ×6 dentro y ×2,5 en las afueras), con escudo antimisiles y banco de tropas; las bombas no destruyen lo que hay dentro' },
   // Una sola mejora (doc-1.7): más oro y más sitio en el banco de tropas
-  capUp: { name: 'Mejorar la capital', short: 'Capital', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'up', desc: '+25 % de oro pasivo, +15 % de capacidad del banco de tropas y murallas más fuertes por nivel' },
+  capUp: { name: 'Mejorar la capital', short: 'Capital', fem: true, base: 150000, build: 0, key: 'KeyZ', unit: 'capital', track: 'up', desc: '+20 % de oro pasivo, +15 % de capacidad del banco de tropas y murallas más fuertes por nivel (cuesta oro y tropas)' },
   port: { name: 'Puerto', fem: false, base: 125000, build: 60, key: 'KeyE', coastal: true, desc: 'Lanza mercantes a puertos de otros jugadores: los dos cobráis al llegar (comparte precio con las fábricas)' },
   fort: { name: 'Puesto defensivo', short: 'Puesto', fem: false, base: 50000, build: 40, key: 'KeyR', desc: 'Defensa ×3 alrededor (tiempo y bajas del atacante)' },
   factory: { name: 'Fábrica', fem: true, base: 125000, build: 60, key: 'KeyF', desc: 'Tiende vías a las estaciones cercanas; sus trenes dan oro al llegar (10k propia o neutral, 35k aliada). Comparte precio con los puertos' },

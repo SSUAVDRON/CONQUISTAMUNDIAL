@@ -2,6 +2,7 @@
 // "personalidad" (agresividad, ritmo de expansión, diplomacia, lealtad) y
 // piensa cada pocos ticks.
 import { AREA, CONFIG, RES } from './config.js';
+import { MECH } from './mecanicas.js';
 import { TECHS, TECH_IDS, techAvailable } from './tecnologias.js';
 
 /** Turnos que puede tener el resumen de vecinos con el que decide un bot (ver Game.neighborSummary). */
@@ -345,7 +346,7 @@ export class BotBrain {
     else if (this.saveFor) want = this.saveFor;
     // Su capital (doc-1.7: una sola mejora); y pueblos baratos
     // (doc-1.8: también cuesta tropas, así que solo si va sobrada)
-    else if (p.capital && !p.capital.work && p.troops > p.maxTroops() * 0.5 && g.rng.chance(0.35)) want = 'capUp';
+    else if (p.capital && !p.capital.work && (p.capital.up || 0) < MECH.capital.maxLevel && p.troops > p.maxTroops() * 0.5 && g.rng.chance(0.35)) want = 'capUp';
     else if (p.buildings.village < 2 + Math.floor(p.tiles / (1500 * AREA)) && g.rng.chance(0.3)) want = 'village';
     // La primera fábrica (y sus trenes) en cuanto tiene un par de ciudades
     else if (p.buildings.city >= 2 && p.buildings.factory < 1 && g.rng.chance(0.6)) want = 'factory';

@@ -59,7 +59,7 @@ function cuenta_de(PDO $pdo, array $c, $token): array {
     $h = hash_token($c, $token);
     $st = $pdo->prepare('SELECT s.usado, c.id, c.email, c.nombre FROM sesiones s JOIN cuentas c ON c.id = s.cuenta_id WHERE s.token = ?');
     $st->execute([$h]);
-    $f = $st->fetch();
+    $f = una($st);
     $ahora = time();
     if (!$f || (int) $f['usado'] < $ahora - SESION_DIAS * 86400) responder(401, ['error' => 'Tu sesión ha caducado: vuelve a entrar.']);
     if ((int) $f['usado'] < $ahora - 86400) $pdo->prepare('UPDATE sesiones SET usado = ? WHERE token = ?')->execute([$ahora, $h]);

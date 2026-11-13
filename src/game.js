@@ -43,6 +43,8 @@ const NB_MISC = new Int32Array(4);
 const DOC_LEN = RES / 2;
 const DOC_AREA = DOC_LEN * DOC_LEN;
 const ANNEX_MAX_TILES = Math.round(MECH.annexMaxTiles * DOC_AREA);
+// Las colonias cercan bolsas más pequeñas (doc-1.9): no saltan cientos de casillas de golpe
+const ANNEX_MAX_COLONY = Math.round(ANNEX_MAX_TILES * MECH.colonyAnnexShare);
 const ANNEX_VISITS_PER_TICK = Math.round(MECH.annexVisitsPerTick * DOC_AREA);
 // Casillas recorridas antes de probar la sonda del cerco (ver _annexProbe)
 const ANNEX_PROBE_AT = MECH.annexProbeAt;
@@ -112,6 +114,7 @@ export class Game {
     this.winningAlliance = null;
     this.ticks = 0;
     this.phase = 'spawn'; // 'spawn' | 'playing' | 'ended'
+    this.nationAvgTiles = 0; // casillas medias de las naciones (cada segundo; frena a las colonias)
     this.winner = null;
     // Por qué acabó: 'dominio', 'ultimo', 'alianza', 'capitales', 'economia', 'supervivencia' o 'tiempo'
     this.winReason = null;
@@ -1507,6 +1510,14 @@ export class Game {
    *   bajas del atacante magnitud × … y del defensor sus tropas / casillas.
    * `time` se descuenta del presupuesto del ataque.
    */
+  /** Ritmo de una colonia que ya es mayor que el 80 % de la nación media: (80 % media / casillas)², mínimo 0,15. */
+  _colonyBrake(p) {
+    const ref = this.nationAvgTiles * MECH.colonyBrakeAt;
+    if (!ref || p.tiles <= ref) return 1;
+    const r = ref / p.tiles;
+    return Math.max(MECH.colonyBrakeMin, r * r);
+  }
+
   conquestCost(t, target, troops, front, attacker = null) {
     const T = MECH.terrain[this.map.terrain[t]];
     const speed = Math.max(0.2, 1 + (attacker ? attacker.mods.attackSpeed : 0));
@@ -1515,9 +1526,11 @@ export class Game {
       // Las colonias ocupan tierra libre más rápido y con menos bajas
       // Las colonias, a su ritmo propio y sin depender de cuántas tropas mandan
       // (como una nación con un envío normal, × su ritmo de 0,8 a 1,3)
+      // (doc-1.9) y frenan al pasar del 80 % de la nación media, para que no
+      // encabecen la clasificación
       const colony = attacker && attacker.weak;
       const time = colony
-        ? neutralTimeCost(T.tileCost, Math.max(troops, MECH.colonyRefTroops)) / speed / MECH.colonyNeutralSpeed / (attacker.pace || 1)
+        ? neutralTimeCost(T.tileCost, Math.max(troops, MECH.colonyRefTroops)) / speed / MECH.colonyNeutralSpeed / (attacker.pace || 1) / this._colonyBrake(attacker)
         : neutralTimeCost(T.tileCost, troops) / speed;
       return { time, loss: (T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1), defLoss: 0 };
     }
@@ -1934,6 +1947,8 @@ export class Game {
     const queue = this._queue;
     const fail = this._annexFail;
     const nb = (this._annexNb2 ??= new Int32Array(4));
+    const max = this.players[aid].weak ? ANNEX_MAX_COLONY : ANNEX_MAX_TILES;
+    let tooBig = false;
     let head = 0;
     let tail = 0;
     queue[tail++] = start;
@@ -1969,8 +1984,13 @@ export class Game {
         }
         const ov = owner[v];
         if (ov === aid) continue;
-        if (ov !== o || fail[v] === this.ticks || (seen[v] !== stamp && tail >= ANNEX_MAX_TILES)) {
-          ok = false; // toca a otro, ya se vio que escapa o es demasiado grande
+        if (ov !== o || fail[v] === this.ticks) {
+          ok = false; // toca a otro o ya se vio que escapa
+          break;
+        }
+        if (seen[v] !== stamp && tail >= max) {
+          ok = false; // demasiado grande para este jugador
+          tooBig = max < ANNEX_MAX_TILES;
           break;
         }
         if (seen[v] !== stamp) {
@@ -1981,7 +2001,8 @@ export class Game {
     }
     this._annexBudget -= tail + probeSteps;
     if (!ok) {
-      for (let i = 0; i < tail; i++) fail[queue[i]] = this.ticks;
+      // (si solo era grande para una colonia, una nación aún puede cercarla)
+      if (!tooBig) for (let i = 0; i < tail; i++) fail[queue[i]] = this.ticks;
       return false;
     }
     const tiles = Array.from(queue.subarray(0, tail));
@@ -3513,6 +3534,19 @@ export class Game {
 
   // -------------------------------------------------------------------- tick
 
+  /** Casillas medias de las naciones vivas (para frenar a las colonias), cada segundo. */
+  _updateNationAverage() {
+    let n = 0;
+    let sum = 0;
+    for (let i = 1; i < this.players.length; i++) {
+      const p = this.players[i];
+      if (!p.alive || p.weak) continue;
+      n++;
+      sum += p.tiles;
+    }
+    this.nationAvgTiles = n ? sum / n : 0;
+  }
+
   tick() {
     if (this.phase === 'ended') return;
     this.ticks++;
@@ -3528,6 +3562,7 @@ export class Game {
     // ciudades terminadas); 4) tropas, con acumulador decimal; 5) ataques en
     // orden estable con su presupuesto y costes; 6) cercos y eliminaciones;
     // después, obras, barcos, comercio, misiles y trenes (oro de eventos)
+    if (this.ticks % 10 === 0) this._updateNationAverage();
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive) continue;

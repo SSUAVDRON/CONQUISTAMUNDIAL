@@ -24,7 +24,7 @@
  * industria y población, pueblos, pesqueros, comercio más frecuente y
  * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.8';
+export const MECH_VERSION = 'doc-1.9';
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -37,7 +37,7 @@ export const MECH_VERSION = 'doc-1.8';
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7; clasico-9, con las de doc-1.8. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7; clasico-9, con las de doc-1.8; clasico-10, con las de doc-1.9. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -47,8 +47,8 @@ export const MECH_VERSION = 'doc-1.8';
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-9', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-8', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-10', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-9', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */
@@ -115,6 +115,11 @@ export const MECH = {
   // PROPUESTA (doc-1.4): su velocidad en tierra libre no depende de cuánto
   // mandan: como una nación con este envío (y su ritmo propio, ver bot.js)
   colonyRefTroops: 6600,
+  // doc-1.9: una colonia mayor que el 80 % de la nación media avanza a (80 % media / casillas)²,
+  // mínimo 0,15, y solo cerca bolsas de un cuarto del tamaño (no encabezan la clasificación)
+  colonyBrakeAt: 0.8,
+  colonyBrakeMin: 0.15,
+  colonyAnnexShare: 0.25,
   // Guerra entre países (sección 05.2)
   pvp: {
     lossBase: 0.463,

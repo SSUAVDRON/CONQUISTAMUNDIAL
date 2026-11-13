@@ -10,8 +10,6 @@ import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from 
 import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
 
-export const ROOM_TOPICS = ['start', 'turn', 'intent', 'resend', 'hash', 'cargado'];
-
 /**
  * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios): si
  * dos clientes tienen versiones distintas del juego, no coincide.

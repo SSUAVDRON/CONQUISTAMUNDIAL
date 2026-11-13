@@ -350,3 +350,44 @@ export function rodar(box) {
   const on = items.find((b) => b.getAttribute('aria-selected') === 'true' || b.getAttribute('aria-checked') === 'true') || items.find((b) => !b.disabled) || items[0];
   for (const b of items) b.tabIndex = b === on ? 0 : -1;
 }
+
+/**
+ * Onda al pulsar: un círculo que se abre desde el punto del toque, recortado
+ * a la forma del botón. Va en una capa fija aparte (no toca los estilos del
+ * botón: muchos están colocados con position o recortan sus brillos) y se
+ * quita sola. Se instala una vez para toda la página.
+ */
+const ONDA_SEL = 'button.principal, button.btn-sec, .modo, .mapa-tarjeta, #hud .obra, .banco-btn, .g-tab, .ini-pestanas [role="tab"]';
+export function ondasAlPulsar() {
+  if (typeof document === 'undefined') return;
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (e.button > 0 || sinMovimiento()) return;
+      const b = e.target.closest?.(ONDA_SEL);
+      if (!b || b.disabled) return;
+      const r = b.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) return;
+      const cs = getComputedStyle(b);
+      const capa = document.createElement('span');
+      capa.className = 'onda-capa';
+      capa.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-radius:${cs.borderRadius}`;
+      const d = Math.hypot(Math.max(e.clientX - r.left, r.right - e.clientX), Math.max(e.clientY - r.top, r.bottom - e.clientY)) * 2;
+      const o = document.createElement('span');
+      o.className = b.matches('button.principal') ? 'onda oro' : 'onda';
+      o.style.cssText = `left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px;width:${d}px;height:${d}px`;
+      capa.append(o);
+      document.body.append(capa);
+      const a = o.animate(
+        [
+          { transform: 'scale(0.05)', opacity: 0.85 },
+          { transform: 'scale(0.6)', opacity: 0.55, offset: 0.45 },
+          { transform: 'scale(1)', opacity: 0 },
+        ],
+        { duration: 620, easing: EASE_OUT },
+      );
+      a.onfinish = a.oncancel = () => capa.remove();
+    },
+    { passive: true, capture: true },
+  );
+}

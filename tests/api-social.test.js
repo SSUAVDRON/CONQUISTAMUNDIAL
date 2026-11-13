@@ -18,7 +18,7 @@ let dir;
 before(async () => {
   if (!hasPhp) return;
   dir = mkdtempSync(join(tmpdir(), 'social-'));
-  server = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', ROOT], { env: { ...process.env, TRINCHERA_DSN: `sqlite:${join(dir, 's.db')}`, TRINCHERA_SAL: 'x', TRINCHERA_REGISTROS_HORA: '500' }, stdio: 'ignore' });
+  server = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', ROOT], { env: { ...process.env, TRINCHERA_DSN: `sqlite:${join(dir, 's.db')}`, TRINCHERA_SAL: 'x', TRINCHERA_REGISTROS_HORA: '500', PHP_CLI_SERVER_WORKERS: '4' }, stdio: 'ignore' });
   for (let i = 0; i < 50; i++) {
     try {
       await fetch(`${BASE}cuentas.php`, { method: 'POST', body: '{"accion":"proveedores"}' });
@@ -122,8 +122,9 @@ test('invitaciones: solo a amigos, a una sala, y caducan o se borran', { skip },
   assert.equal(inv[0].sala, 'abc23');
   assert.equal(inv[0].red, 'b=1');
   assert.equal(inv[0].de.nombre, 'Castilla');
-  // Invitar otra vez no la duplica
-  await a.s('invitar', { id: b.yo.id, sala: 'xyz45' });
+  // Invitar otra vez no la duplica; del servidor de salas solo viaja su número
+  await a.s('invitar', { id: b.yo.id, sala: 'xyz45', red: 'broker=wss:otro.io' });
+  assert.equal((await b.s('social')).body.invitaciones[0].red, '', 'nada de parámetros ajenos en el enlace');
   assert.equal((await b.s('social')).body.invitaciones.length, 1);
   assert.equal((await b.s('invitacion_borrar', { id: (await b.s('social')).body.invitaciones[0].id })).status, 200);
   assert.equal((await b.s('social')).body.invitaciones.length, 0);
@@ -204,6 +205,38 @@ test('borrar la cuenta borra también sus amistades y su clan', { skip }, async 
   const sb = (await b.s('social')).body;
   assert.equal(sb.amigos.length, 0, 'sin el amigo borrado');
   assert.equal(sb.clan.rol, 'lider', 'el clan pasa a quien queda');
+});
+
+test('muchas peticiones a la vez con SQLite: ninguna falla por cerrojos', { skip }, async () => {
+  const js = await Promise.all(Array.from({ length: 8 }, (_, i) => jugador(`Concurrente ${i}`)));
+  const st = [];
+  for (let round = 0; round < 4; round++) {
+    const rs = await Promise.all(js.flatMap((j, i) => [j.s('social'), j.s('amigo_solicitar', { codigo: js[(i + 1) % js.length].yo.codigo })]));
+    for (const r of rs) st.push(r.status);
+  }
+  assert.deepEqual([...new Set(st)], [200], `estados: ${st.join(',')}`);
+});
+
+test('búsqueda, nombre público y límite de clanes', { skip }, async () => {
+  const a = await jugador('Templars');
+  const b = await jugador('Buscador');
+  // Un nombre de 8 letras que parece un código también se encuentra
+  const r = await b.s('buscar', { texto: 'Templars' });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.jugadores.map((j) => j.nombre), ['Templars']);
+  // Sin ficha guardada, el nombre público es «Jugador» (nunca sale del correo)
+  const email = `juan.perez.${Date.now()}@ejemplo.com`;
+  const reg = await post('cuentas.php', 'registro', { email, password: 'trinchera123', nombre: '' });
+  assert.equal(reg.status, 200, reg.text);
+  const yo = (await post('social.php', 'social', { token: reg.body.token })).body.yo;
+  assert.equal(yo.nombre, 'Jugador');
+  assert.equal((await b.s('buscar', { texto: 'juan.p' })).body.jugadores.length, 0);
+  // Nombres o etiquetas repetidos no gastan el límite diario de clanes
+  const c = await jugador('Fundador');
+  const tag = `T${(Date.now() % 1000).toString(36).toUpperCase()}`;
+  assert.equal((await a.s('clan_crear', { nombre: `Orden ${tag}`, tag, abierto: true })).status, 200);
+  for (let i = 0; i < 6; i++) assert.equal((await c.s('clan_crear', { nombre: `Otra ${i} ${tag}`, tag })).status, 409);
+  assert.equal((await c.s('clan_crear', { nombre: `Legión ${tag}`, tag: `${tag}X`.slice(0, 5) })).status, 200);
 });
 
 test('la API interna no se sirve sola', { skip }, async () => {

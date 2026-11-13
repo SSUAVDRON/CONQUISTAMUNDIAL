@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publica la web del juego (index.html = el juego empaquetado en un solo
-# archivo, con su JavaScript y su CSS dentro, más .htaccess y la API de
-# rangos api/rangos.php) en dos pasos:
+# archivo, con su JavaScript y su CSS dentro; los mapas en mapas-<huella>.json,
+# que se guardan en caché para siempre; .htaccess y la API de api/) en dos pasos:
 #
 #   bash herramientas/hostinger.sh prueba       → rama «hostinger-prueba»
 #        (Hostinger la despliega en …/prueba/: se valida ahí primero)
@@ -39,7 +39,7 @@ if [ "$DESTINO" = prueba ]; then
     exit 1
   fi
   npm run empaquetar >/dev/null
-  cp dist/dominia.html "$SRC/index.html"
+  cp dist/web/index.html dist/web/mapas-*.json "$SRC/"
   # API en PHP (rangos, cuentas y lo común); su configuración va fuera de public_html
   mkdir -p "$SRC/api"
   cp api/*.php api/.htaccess "$SRC/api/"
@@ -51,6 +51,10 @@ else
     exit 1
   fi
   git -C "$RAIZ" show origin/hostinger-prueba:index.html > "$SRC/index.html"
+  # Y el archivo de mapas que pide ese index.html
+  for f in $(git -C "$RAIZ" ls-tree --name-only origin/hostinger-prueba | grep '^mapas-.*\.json$' || true); do
+    git -C "$RAIZ" show "origin/hostinger-prueba:$f" > "$SRC/$f"
+  done
   mkdir -p "$SRC/api"
   # Todos los archivos de api/ tal como están en prueba
   for f in $(git -C "$RAIZ" ls-tree --name-only origin/hostinger-prueba api/ 2>/dev/null); do
@@ -71,6 +75,14 @@ else
 fi
 
 cp "$SRC/index.html" "$TMP/index.html"
+# Los mapas: solo el que pide este index.html (los de versiones anteriores se quitan)
+MAPAS=$(grep -o 'window.__TRINCHERA_MAPAS = "mapas-[0-9a-f]*\.json"' "$SRC/index.html" | grep -o 'mapas-[0-9a-f]*\.json' || true)
+if [ -z "$MAPAS" ] || [ ! -f "$SRC/$MAPAS" ]; then
+  echo "Falta el archivo de mapas que pide index.html ($MAPAS)." >&2
+  exit 1
+fi
+find "$TMP" -maxdepth 1 -name 'mapas-*.json' -delete
+cp "$SRC/$MAPAS" "$TMP/$MAPAS"
 cp herramientas/hostinger.htaccess "$TMP/.htaccess"
 if [ -d "$SRC/api" ]; then
   # api/ se sustituye entero (si se quita un archivo, también se quita en la web)
@@ -79,7 +91,8 @@ if [ -d "$SRC/api" ]; then
   cp -a "$SRC/api/." "$TMP/api/"
   git -C "$TMP" add -A api
 fi
-git -C "$TMP" add index.html .htaccess
+# (la rama solo lleva la web: index.html, .htaccess, los mapas y api/)
+git -C "$TMP" add -A
 if git -C "$TMP" diff --cached --quiet; then
   echo "La rama $RAMA ya tiene la compilación $BUILD."
   exit 0

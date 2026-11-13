@@ -104,6 +104,30 @@ export class SocialUI {
     $('perfil-pestanas')?.addEventListener('pestana', (e) => this.show(e.detail));
     this.toast = el('div', { class: 'soc-aviso', role: 'status', 'aria-live': 'polite', hidden: true });
     document.body.append(this.toast);
+    // Lo que llegue mientras escribes se pinta al salir del campo
+    for (const id of ['perfil-amigos', 'perfil-clan']) $(id)?.addEventListener('focusout', () => setTimeout(() => this._flush(), 0));
+  }
+
+  /** ¿Estás escribiendo en un campo o a mitad de confirmar algo? (no se repinta) */
+  _interacting() {
+    if (this._confirm) return true;
+    const a = document.activeElement;
+    const box = $(this.tab === 'clan' ? 'perfil-clan' : 'perfil-amigos');
+    return !!(a && box && box.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+  }
+
+  /** Repinta si se puede; si no, cuando acabes (datos del sondeo). */
+  _softRender() {
+    if (this._interacting()) {
+      this._pending = true;
+      return;
+    }
+    this._pending = false;
+    this.render();
+  }
+
+  _flush() {
+    if (this._pending) this._softRender();
   }
 
   /** ¿Hay amigos y clanes en este sitio? (lo dice la API al arrancar) */
@@ -131,7 +155,7 @@ export class SocialUI {
     this.onSummary(data ? { clan: data.clan, amigos: data.amigos.length, enLinea: data.amigos.filter((a) => a.estado !== 'fuera').length } : null);
     // Con la pestaña del clan a la vista, sus miembros y solicitudes se recargan en cada sondeo
     if (this.tab === 'clan' && data?.clan && !this._clanLoading) this._loadClan(data.clan.id);
-    this.render();
+    this._softRender();
   }
 
   // ------------------------------------------------------------------ pintar
@@ -217,6 +241,7 @@ export class SocialUI {
             this._confirm = null;
             b.textContent = b.dataset.texto;
             b.classList.remove('confirmar');
+            this._flush();
           }
         }, 3000);
         return;
@@ -384,7 +409,7 @@ export class SocialUI {
     } finally {
       this._clanLoading = false;
     }
-    this.render();
+    this._softRender();
   }
 
   async _loadClans() {
@@ -680,11 +705,20 @@ export class SocialUI {
     }
   }
 
+  /** Quita el aviso de invitación (al empezar una partida). */
+  hideToast() {
+    clearTimeout(this._toastT);
+    this.toast.hidden = true;
+  }
+
   /** Invitaciones nuevas a una sala: un aviso arriba con «Unirme». */
   _invites(d) {
     if (!d) return;
     // En mitad de una partida no se avisa (se verá al volver al menú)
-    if (this.isBusy()) return;
+    if (this.isBusy()) {
+      this.hideToast();
+      return;
+    }
     const fresh = d.invitaciones.filter((i) => !this._seenInvites.has(i.id));
     for (const i of d.invitaciones) this._seenInvites.add(i.id);
     if (!fresh.length) return;

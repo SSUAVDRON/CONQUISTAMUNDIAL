@@ -368,7 +368,16 @@ npm run empaquetar
 ```
 
 Se crea `dist/dominia.html`: funciona sin servidor ni conexión, en cualquier
-navegador. Es el fichero que puedes mandar a alguien o subir tal cual.
+navegador. Es el fichero que puedes mandar a alguien o subir tal cual. El
+JavaScript va **compactado** (sin comentarios ni sangría, ~20 % menos; ver
+`herramientas/compactar.js`, que solo quita eso y tiene su test de que la
+simulación da la misma partida turno a turno). Se crea también `dist/web/`, lo
+que se sube al hosting: `index.html` **sin los mapas** (~380 KB comprimido) y
+`mapas-<huella>.json` aparte (terreno y relieve, ~1,5 MB comprimido). Los
+mapas casi nunca cambian y llevan la huella en el nombre: el navegador los
+guarda para siempre y cada versión nueva del juego se descarga en una quinta
+parte de lo que pesaba (antes ~2 MB por versión). Si la descarga de los mapas
+falla, la pantalla de carga lo reintenta sola.
 
 **Para desarrollar:**
 
@@ -390,8 +399,10 @@ SQLite o MySQL); sin él, el juego funciona igual, sin cuentas, y el rango se
 guarda en cada navegador.
 
 **Con Git (Hostinger), en dos pasos.** Se sirve el juego **empaquetado en un
-solo archivo** (`index.html` con su JavaScript y su CSS dentro): no puede
-mezclar versiones como pasaba con los módulos sueltos y la caché de la CDN. El
+solo archivo** (`index.html` con su JavaScript y su CSS dentro, de `dist/web/`):
+no puede mezclar versiones como pasaba con los módulos sueltos y la caché de la
+CDN. Los mapas van en `mapas-<huella>.json`, con caché permanente
+(`immutable`): si cambian, cambia su nombre. El
 paquete lleva un sello de compilación (commit y fecha) que se ve en Ajustes y en
 `<meta name="trinchera-build">`.
 
@@ -417,7 +428,8 @@ GitHub → Settings → Deploy keys, solo lectura):
 
 Con el webhook de «Despliegue automático» (GitHub → Settings → Webhooks), cada
 subida a esas ramas se publica sola. El `.htaccess` de las ramas no deja leer
-`.git` y pide revalidar el HTML siempre (`no-cache, must-revalidate`).
+`.git`, pide revalidar el HTML siempre (`no-cache, must-revalidate`) y deja
+los mapas en caché un año.
 
 **Rama `main` tal cual** (módulos sueltos): el `.htaccess` de la raíz no deja
 leer `.git`, `tests/`, `herramientas/`, `docs/` ni los `.md`, y pide comprobar
@@ -427,7 +439,8 @@ cada módulo (`src/render.js?v=…`): cada archivo cambia de dirección solo cua
 cambia. Tras tocar `src/` o `css/`: `node herramientas/versionar.js` (un test
 falla si se olvida).
 
-**A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras.
+**A mano:** sube `dist/dominia.html` como `index.html` a la carpeta que quieras
+(todo en uno), o el contenido de `dist/web/` (más ligero en cada versión).
 
 **Tabla de rangos en Hostinger**: `api/rangos.php` va con la web (en `main` y
 en las ramas de `hostinger.sh`) y **no hace falta configurar nada**: la primera
@@ -512,13 +525,17 @@ Fuera del enlace de Claude y sin cuenta, el perfil y la clasificación general
 se guardan en cada navegador; el multijugador entre ordenadores va por el
 servidor de salas público.
 
-## Economía, capital y lugares de interés (doc-1.6 a doc-1.8)
+## Economía, capital y lugares de interés (doc-1.6 a doc-1.9)
 
-Versión de reglas `doc-1.8` (perfiles `clasico-9` y `trinchera-8`; `doc-1.6`
+Versión de reglas `doc-1.9` (perfiles `clasico-10` y `trinchera-9`; `doc-1.6`
 trajo la economía, la capital y los lugares; `doc-1.7`, el banco de tropas,
 murallas, afueras y escudo más fuertes, antimisiles mucho más eficaces y
 colonias que no se quedan sin tropas; `doc-1.8`, la capital hasta el nivel 12
-con coste en oro y tropas, premios por nivel y murallas que dependen del banco): en línea,
+con coste en oro y tropas, premios por nivel y murallas que dependen del banco;
+`doc-1.9`, colonias que frenan al pasar del 80 % de la nación media —ritmo ×
+(80 % media / casillas)², como poco ×0,15— y cercan bolsas de un cuarto del
+tamaño, para que no encabecen la clasificación: a los 60 s una colonia media
+sigue teniendo ~80 % de lo de una nación, pero ninguna adelanta a las mayores): en línea,
 versiones distintas no juegan juntas. Todo está en `MECH` (`mecanicas.js`) y
 en `src/lugares.js`.
 
@@ -750,7 +767,8 @@ CONQUISTAMUNDIAL/
 ├── api/social.php      Amigos, invitaciones a sala y clanes
 ├── api/social-comun.php Tablas sociales, ficha pública y borrado (no se sirve)
 ├── herramientas/
-│   ├── empaquetar.js   Genera dist/dominia.html, todo en un fichero (npm run empaquetar)
+│   ├── empaquetar.js   Genera dist/dominia.html (todo en un fichero) y dist/web (npm run empaquetar)
+│   ├── compactar.js    Quita comentarios y sangría del JavaScript del paquete
 │   ├── mapas.js        Genera src/mapas-reales.js desde Natural Earth
 │   └── rios.js         Genera src/rios.js (ríos de los mapas reales)
 ├── src/
@@ -761,6 +779,7 @@ CONQUISTAMUNDIAL/
 │   ├── bot.js          IA de las naciones rivales
 │   ├── map.js          Mundo procedural y carga de mapas reales
 │   ├── mapas-reales.js GENERADO: mapas reales (herramientas/mapas.js)
+│   ├── mapas-carga.js  En la web, descarga aparte el terreno y el relieve de los mapas
 │   ├── player.js       Estado de cada nación
 │   ├── attack.js       Estado de un ataque (frente de casillas)
 │   ├── render.js       Dibujo en canvas: terreno, territorios, barcos, nombres
@@ -768,7 +787,7 @@ CONQUISTAMUNDIAL/
 │   ├── input.js        Ratón, táctil y teclado
 │   ├── ui.js           Interfaz de la partida: panel, construcción, diplomacia, avisos
 │   ├── home.js         Pantallas de inicio: navegación por páginas con historial, Competitivo, Crear partida, Multijugador, perfil y aspecto, tienda, progreso, ajustes y sala
-│   ├── movimiento.js   Transiciones de la interfaz: mostrar/ocultar, diálogos, cifras que suben, barras, teclado en pestañas
+│   ├── movimiento.js   Transiciones de la interfaz: mostrar/ocultar, diálogos, cifras que suben, barras, teclado en pestañas, onda al pulsar
 │   ├── guia.js         Guía del juego (diálogo con pestañas)
 │   ├── resumen.js      Grabación de la partida (muestras, momentos, fotos del mapa), puesto final y gráficas
 │   ├── fin.js          Pantalla de fin: resumen, gráficas, momentos clave, repetición y compartir
@@ -804,8 +823,8 @@ Decisiones de diseño que conviene conservar:
   ejecutar en Node; así funcionan los tests y así podrá correr en un servidor.
 - **Es determinista.** Toda la aleatoriedad sale de un generador con semilla y
   las acciones del jugador entran como *intents* que se aplican al inicio de cada
-  tick. Misma semilla + mismas acciones = misma partida. Es la base para el
-  multijugador (ver `ROADMAP.md`).
+  tick. Misma semilla + mismas acciones = misma partida. Es la base del
+  multijugador (cada navegador simula la partida con las mismas acciones).
 - **Tick fijo de 100 ms** independiente de los FPS. Las partidas van siempre a
   velocidad normal (no hay pausa ni aceleración en la partida).
 - **Imports simples.** El empaquetador solo entiende `import { a } from './x.js'`

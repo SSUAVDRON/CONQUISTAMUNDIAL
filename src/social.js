@@ -78,13 +78,17 @@ export class Social {
     return body;
   }
 
-  /** Trae amigos, solicitudes, invitaciones y tu clan (y te marca en línea). */
-  refresh() {
+  /**
+   * Trae amigos, solicitudes, invitaciones y tu clan (y te marca en línea).
+   * Con `fresh`, si ya había una petición en marcha (de antes de una acción),
+   * pide otra al terminar: lo que se pinta incluye lo que acabas de hacer.
+   */
+  refresh(fresh = false) {
     if (!this.ready) {
       this.data = null;
       return Promise.resolve(null);
     }
-    if (this._busy) return this._busy;
+    if (this._busy) return fresh ? this._busy.then(() => this.refresh()) : this._busy;
     if (this.estadoFn) this.estado = this.estadoFn();
     this._last = Date.now();
     this._busy = this.call('social', { estado: this.estado })
@@ -131,6 +135,11 @@ export class Social {
     this.estado = estado;
   }
 
+  /** Olvida la última ficha mandada (al cambiar de cuenta, para mandar la nueva). */
+  forgetCard() {
+    this._cardJson = '';
+  }
+
   /** Manda tu ficha pública si ha cambiado. */
   async saveCard(profile) {
     if (!this.ready) return;
@@ -148,7 +157,7 @@ export class Social {
   // Acciones (cada una refresca los datos al terminar)
   async _act(accion, data) {
     const out = await this.call(accion, data);
-    await this.refresh();
+    await this.refresh(true);
     return out;
   }
   search(texto) {
