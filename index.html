@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="ae27448 2026-11-13 00:40 UTC">
+<meta name="trinchera-build" content="7a83427 2026-11-14 13:26 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -1849,10 +1849,14 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 /* Editor de reglas (contra la IA y sala multijugador) */
 .reglas { grid-column: 1 / -1; }
-.reglas-rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.reglas-rejilla { display: flex; flex-direction: column; gap: 12px; }
 .reglas-rejilla .interruptores { grid-column: 1 / -1; flex-wrap: wrap; }
+/* Grupos de reglas (DEV10): título con la letra de los títulos; dentro, la de lectura */
+.reglas-grupo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin: 0; padding: 10px 14px 14px; border: 1px solid rgba(233, 185, 85, 0.18); border-radius: 12px; background: rgba(255, 255, 255, 0.02); min-width: 0; }
+.reglas-grupo > legend { padding: 0 6px; font-family: var(--serif); font-weight: 800; font-size: 14px; letter-spacing: 0.04em; color: var(--oro-claro); }
+.reglas-grupo > .nota { grid-column: 1 / -1; }
 #sala-ajustes .reglas-rejilla { margin-top: 12px; }
-@media (max-width: 720px) { .reglas-rejilla { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .reglas-grupo { grid-template-columns: 1fr; } }
 
 /* =========================================================== Móvil (al final: prevalece)
    Vertical: panel inferior en tres filas cortas (cifras, fuerza de ataque en una
@@ -1978,6 +1982,10 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #panel-jugador .barra::before { left: 33%; width: 20%; }
 #panel-jugador .cifras .sub.baja { color: var(--peligro); }
 #panel-jugador .cifras .sub-trab { color: #7fd8c9; }
+#panel-jugador .cifras .sub-tropas { display: flex; gap: 6px; white-space: nowrap; overflow: hidden; }
+#pj-crec.baja { color: var(--peligro); }
+#panel-jugador .sub-comp { color: #ffb36b; overflow: hidden; text-overflow: ellipsis; }
+#panel-jugador .sub-comp:empty { display: none; }
 #panel-jugador .cifras .sub-barcos { color: var(--texto-suave); }
 /* Dos controles en la columna de ataque: fuerza de ataque y reparto */
 #panel-jugador .pj-ataque { justify-content: center; gap: 4px; }
@@ -4677,6 +4685,11 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .fn-de { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
 .fn-a { font-style: normal; font-weight: 800; color: var(--g-color); }
 .fn-fila b { font-weight: 800; color: #9be38f; font-variant-numeric: tabular-nums; }
+.ficha-amort { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; padding: 6px 8px; border-radius: 10px; background: rgba(255, 196, 61, 0.08); border: 1px solid rgba(255, 196, 61, 0.18); font-size: 11px; line-height: 1.35; color: #e9dcb8; }
+.ficha-amort svg { width: 13px; height: 13px; flex: none; margin-top: 1px; color: #ffc43d; }
+.ficha-amort b { color: #fff; }
+.ficha-amort small { display: block; font-size: 10px; color: var(--texto-suave); }
+.ficha.ficha-dock .ficha-amort { margin-top: 6px; padding: 4px 7px; font-size: 10.5px; }
 .ficha-tienes { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; font-size: 11px; color: #cdd6e4; }
 .ficha-tienes .fi { flex: none; display: grid; place-items: center; width: 16px; height: 16px; color: #5fd38d; }
 .ficha-tienes .fi svg { width: 13px; height: 13px; }
@@ -5047,6 +5060,126 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
   :is(.retos, .logros, .ajustes-rejilla, .est-fichas) > *, #hud .obra.ya-puedes, #hud .obra.ya-puedes .b-coste { animation: none; }
 }
 
+/* Última partida: repetir configuración o el mismo escenario (DEV01) */
+.ultima-repetir { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.ultima-config { font-size: 12px; color: #8b97ad; }
+#inicio .ultima-escenario { min-height: 32px; padding: 4px 12px; font-size: 12.5px; }
+.ultima-aviso { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.35; color: #f5c56b; }
+
+/* Tutorial (DEV02): una sola región de ayuda. Durante el despliegue, la cuenta
+   atrás y «Elegir por mí» van dentro de la tarjeta (no un panel encima) */
+body.con-tutorial #despliegue { display: none !important; }
+.tutorial { z-index: 13; max-height: calc(100dvh - 140px); overflow-y: auto; }
+.tut-despliegue { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: -2px 0 10px; padding: 8px 10px; border-radius: 12px; background: rgba(242, 179, 61, 0.08); border: 1px solid rgba(242, 179, 61, 0.3); }
+.tut-despliegue[hidden] { display: none; }
+.tut-reloj { font-weight: 800; font-size: 14px; color: #ffe3a1; font-variant-numeric: tabular-nums; }
+.tut-despliegue .dp-auto { padding: 7px 14px; font-size: 13px; }
+@media (max-width: 380px) { .tut-texto { font-size: 14px; } .tutorial { padding: 10px 12px; } }
+
+/* Fin de partida: motivo y validez de la ronda (DEV05) */
+.fin-motivo { display: flex; flex-direction: column; gap: 3px; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(255, 159, 46, 0.1); border: 1px solid rgba(255, 159, 46, 0.35); font-size: 13px; color: var(--texto-2, #c3cde0); }
+.fin-motivo strong { color: #ffd08a; font-size: 14px; }
+.fin-sello.interrumpida { filter: saturate(0.9); }
+
+/* Clasificación de la partida: las colonias, en una línea aparte (DEV08) */
+.lb-colonias { margin: 4px 0 0; padding: 0 6px; font-size: 11px; color: var(--texto-suave, #8b97ad); }
+.lb-colonias[hidden] { display: none; }
+.mision-perfil { font-size: 11px; font-weight: 600; color: #c9a8ff; }
+.nota-victoria { display: block; margin-top: 6px; font-size: 12px; line-height: 1.35; color: var(--texto-2, #c3cde0); }
+.nota-victoria[hidden] { display: none; }
+.nota-victoria.aviso { color: #ffd08a; }
+
+/* Despliegue (DEV03): lo que da la salida y «Empezar partida» contra la IA */
+.dp-textos small.dp-mala { color: #ffb3a8; }
+.dp-empezar, .dp-empezar:hover { background: linear-gradient(180deg, #8ff0b4, #3fbf74); color: #0b2416; box-shadow: 0 4px 14px rgba(63, 191, 116, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+.dp-empezar:hover { filter: brightness(1.06); }
+.dp-empezar[hidden] { display: none; }
+
+/* Previsión de una orden (DEV04): envío y reserva, previsión, defensa y, aparte, tu exposición */
+#tooltip .tip-orden { margin-top: 3px; font-size: 11px; font-weight: 700; color: #e9eef6; }
+#tooltip .tip-orden.ataque { color: #ffb3a8; }
+#tooltip .tip-orden.expansion { color: #bfe3ff; }
+#tooltip .tip-mods { font-size: 10.5px; color: #c9b8ff; }
+#tooltip .tip-expo { margin-top: 2px; padding: 1px 5px; border-radius: 5px; font-size: 10.5px; font-weight: 700; color: #ffd08a; background: rgba(255, 159, 46, 0.12); }
+#tooltip .tip-expo.alta { color: #ffb3a8; background: rgba(255, 77, 77, 0.16); }
+
+/* Portada: las tres entradas principales y una fila de accesos pequeños (DEV10) */
+.portada-mas { display: flex; flex-wrap: wrap; gap: 4px 6px; flex: 1 0 100%; }
+.btn-mini { display: inline-flex; align-items: center; gap: 6px; min-height: 0; padding: 7px 11px; border-radius: 999px; border: 1px solid rgba(233, 185, 85, 0.28); background: rgba(8, 12, 24, 0.6); color: #e8dcc0; font-size: 13px; font-weight: 700; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.btn-mini:hover { border-color: var(--oro); background: rgba(233, 185, 85, 0.12); color: var(--oro-claro); }
+.btn-mini svg { width: 14px; height: 14px; }
+.btn-mini[hidden] { display: none; }
+@media (max-width: 600px) {
+  .heroe-texto { padding: 84px 14px 14px; gap: 7px; }
+  .heroe .portada-titulo { font-size: 28px; }
+  .heroe-sub { display: none; }
+  .heroe .portada-botones { gap: 8px; margin-top: 4px; }
+  .heroe .btn-entrada { flex: 1 1 0; min-width: 0; padding: 11px 6px !important; font-size: 14px; }
+  .portada-mas { justify-content: center; gap: 6px; margin-top: 2px; }
+  .btn-mini { padding: 6px 10px; font-size: 12.5px; }
+}
+/* Móvil en horizontal (y teclado virtual abierto): las entradas, arriba */
+@media (max-height: 500px) and (orientation: landscape) {
+  .heroe { min-height: 0; }
+  .heroe-texto { padding: 14px 18px; gap: 6px; }
+  .heroe .portada-titulo { font-size: 26px; }
+  .heroe-sub, .heroe .portada-datos, .heroe .portada-saludo { display: none; }
+  .heroe .portada-botones { margin-top: 2px; gap: 8px; }
+  .heroe .portada-botones .principal.grande { padding: 10px 20px; font-size: 15px; }
+  .heroe .btn-heroe { padding: 9px 14px !important; }
+}
+
+/* Borrador del anfitrión (DEV10): lo que falta por aplicar, con Aplicar y Descartar */
+.borrador { display: flex; align-items: center; gap: 8px 14px; flex: 1 1 auto; min-width: 0; padding: 6px 6px 6px 12px; border-radius: 12px; border: 1px solid rgba(255, 196, 61, 0.45); background: rgba(48, 37, 12, 0.7); animation: aparecer 0.25s ease-out; }
+.borrador[hidden] { display: none; }
+.borrador-texto { flex: 1 1 200px; min-width: 0; margin: 0; font-size: 13px; line-height: 1.35; color: #f3e3bb; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.borrador-botones { display: flex; gap: 8px; flex: none; }
+.borrador-botones button { min-height: 42px; padding: 8px 16px; }
+/* Con cambios a medias, el pie los muestra en lugar de «Iniciar partida» */
+.sala-pie.con-borrador #btn-empezar, .sala-pie.con-borrador .sala-motivo { display: none; }
+@media (max-width: 600px) {
+  .borrador { flex-direction: column; align-items: stretch; padding: 8px; }
+  .borrador-botones button { flex: 1; }
+}
+.borrador-extra { display: flex; justify-content: flex-end; margin-top: 10px; }
+.sala-resumen { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.sala-resumen:empty { display: none; }
+#sala-jugadores li.libre small { color: var(--texto-3); }
+/* Vestíbulo en el móvil: la vista del mapa, plegada en una franja (se despliega al tocarla) */
+@media (max-width: 600px) {
+  .sala-mapa .mapa-vista { cursor: pointer; }
+  .sala-mapa .mapa-vista:not(.desplegada) canvas { aspect-ratio: 16 / 5; }
+  .sala-mapa .mapa-vista::after { content: "▾"; position: absolute; right: 10px; bottom: 8px; line-height: 1; font-size: 14px; color: #fff; text-shadow: 0 1px 4px #000; }
+  .sala-mapa .mapa-vista.desplegada::after { content: "▴"; }
+}
+
+/* Plazas (DEV06): − y + con accesos directos a 4, 8, 16, 24 y 32 */
+.atajos-plazas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.atajo-plazas { min-width: 44px; min-height: 34px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.04); color: var(--texto-2); font-weight: 800; font-variant-numeric: tabular-nums; box-shadow: none; }
+.atajo-plazas[aria-pressed="true"] { border-color: var(--oro); background: rgba(233, 185, 85, 0.16); color: var(--oro-claro); }
+.atajo-plazas:disabled { opacity: 0.35; }
+.selector-plazas .paso button { width: 44px; height: 40px; padding: 0; border: 0; border-radius: 0; font-size: 20px; color: var(--marfil); background: rgba(255, 255, 255, 0.05); box-shadow: none; }
+.selector-plazas .paso button:disabled { opacity: 0.35; }
+.nota-plazas { display: block; margin-top: 6px; }
+.nota-plazas:empty { display: none; }
+/* Sala con muchos jugadores: filas compactas y, en el ordenador, a dos columnas */
+#sala-jugadores.muchos { display: grid; grid-template-columns: 1fr; gap: 6px; }
+#sala-jugadores.muchos li { padding-top: 6px; padding-bottom: 6px; min-height: 0; }
+#sala-jugadores.muchos .sala-escudo canvas { width: 26px; height: 26px; }
+#sala-jugadores.muchos .sala-nombre small { display: none; }
+@media (min-width: 1100px) { #sala-jugadores.muchos { grid-template-columns: 1fr 1fr; } }
+
+/* Competitivo con colas separadas (DEV07) */
+.cp-cola-rango { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-3); margin-bottom: 2px; }
+.cp-como-texto { margin: 0; font-size: 14px; line-height: 1.55; color: var(--texto-2); max-width: 80ch; }
+.cp-historico { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.025); }
+.cp-historico[hidden] { display: none; }
+.cp-historico-cab { display: flex; align-items: center; gap: 10px; }
+.cp-historico-cab span { display: flex; flex-direction: column; }
+.cp-historico-cab small { color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.cp-historico .nota { margin: 8px 0 0; }
+.cp-top-nota { margin: 0 0 10px; }
+
 </style>
 <link rel="preload" href="mapas-871f2c30c5db.json" as="fetch" crossorigin="anonymous">
 </head>
@@ -5187,13 +5320,18 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
             <p class="heroe-sub">Expande tu territorio, administra tus tropas y domina el mapa global.</p>
             <div class="portada-datos" id="portada-datos"></div>
             <div class="portada-botones">
-              <button type="button" class="principal grande btn-brillo" id="btn-jugar-ya">
+              <button type="button" class="principal grande btn-brillo" id="btn-jugar-ya" title="El mundo con 90 naciones de la IA, perfil Clásico">
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 L13 8 L4 13.5 Z" fill="currentColor"/></svg>
-                Jugar ahora
+                Jugar rápido
               </button>
-              <button type="button" class="secundario btn-heroe" id="btn-repetir"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6 A5.3 5.3 0 1 1 11.6 4.2 M12.2 1.6 V4.8 H9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Volver a jugar</button>
-              <button type="button" class="secundario btn-heroe" id="btn-guia"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3 c2 -1 4 -1 6 0.5 c2 -1.5 4 -1.5 6 -0.5 v10 c-2 -1 -4 -1 -6 0.5 c-2 -1.5 -4 -1.5 -6 -0.5 Z M8 3.5 v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Guía</button>
-              <button type="button" class="secundario btn-heroe" id="btn-tutorial"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6 L8 3 L15 6 L8 9 Z M4 7.5 V11 c1 1 2.5 1.5 4 1.5 s3 -0.5 4 -1.5 V7.5 M14 6.5 V10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Tutorial</button>
+              <!-- Las tres entradas principales (DEV10): rápida, personalizada y multijugador, sin desplazar -->
+              <button type="button" class="secundario btn-heroe btn-entrada" id="btn-personalizar" data-ir="crear"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h7M12 4h2M2 12h2M7 12h7M10.5 2.3v3.4M5.5 10.3v3.4M2 8h4M9 8h5M7.5 6.3v3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Personalizar</button>
+              <button type="button" class="secundario btn-heroe btn-entrada" id="btn-multijugador" data-ir="multijugador"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11.2" cy="5.6" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13.2c0-2.6 1.8-4.1 4-4.1s4 1.5 4 4.1M9.6 9.4c.5-.2 1-.3 1.6-.3 1.9 0 3.3 1.3 3.3 3.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Multijugador</button>
+              <div class="portada-mas">
+                <button type="button" class="btn-mini" id="btn-repetir" title="Repetir la configuración de tu última partida (mismo mapa, rivales y reglas; reparto nuevo)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6 A5.3 5.3 0 1 1 11.6 4.2 M12.2 1.6 V4.8 H9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Repetir partida</button>
+                <button type="button" class="btn-mini" id="btn-tutorial"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6 L8 3 L15 6 L8 9 Z M4 7.5 V11 c1 1 2.5 1.5 4 1.5 s3 -0.5 4 -1.5 V7.5 M14 6.5 V10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Tutorial</button>
+                <button type="button" class="btn-mini" id="btn-guia"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3 c2 -1 4 -1 6 0.5 c2 -1.5 4 -1.5 6 -0.5 v10 c-2 -1 -4 -1 -6 0.5 c-2 -1.5 -4 -1.5 -6 -0.5 Z M8 3.5 v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Guía</button>
+              </div>
             </div>
           </div>
         </div>
@@ -5298,6 +5436,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
           </div>
           <div class="cp-rango">
             <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><canvas id="cp-insignia" width="300" height="300"></canvas></div>
+            <small id="cp-cola-rango" class="cp-cola-rango"></small>
             <strong id="cp-liga" class="cp-liga"></strong>
             <span id="cp-pl" class="cp-pl"></span>
             <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
@@ -5315,6 +5454,12 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
             <small id="cp-cola-extra" class="cp-cola-extra"></small>
           </div>
         </div>
+        <!-- Colas separadas (DEV07): cómo se obtienen los puntos y el rango mixto de antes -->
+        <section class="bloque cp-como" aria-labelledby="cp-como-tit">
+          <h2 id="cp-como-tit">Cómo se puntúa</h2>
+          <p id="cp-como" class="cp-como-texto"></p>
+          <div id="cp-historico" class="cp-historico" hidden></div>
+        </section>
         <section class="bloque cp-escalera" aria-labelledby="cp-ligas-tit">
           <h2 id="cp-ligas-tit">Ligas</h2>
           <ol id="cp-ligas" class="cp-ligas"></ol>
@@ -5670,10 +5815,12 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
           </div>
           <div class="campo"><span class="campo-tit">Plazas <small>jugadores humanos; los bots van aparte</small></span>
             <div class="paso" role="group" aria-label="Plazas">
-              <button type="button" id="plazas-menos" aria-label="Una plaza menos">−</button><output id="plazas-valor">4</output><button type="button" id="plazas-mas" aria-label="Una plaza más">+</button>
+              <button type="button" id="plazas-menos" aria-label="Una plaza menos">−</button><output id="plazas-valor">8</output><button type="button" id="plazas-mas" aria-label="Una plaza más">+</button>
             </div>
+            <div class="atajos-plazas" id="plazas-atajos"></div>
           </div>
           <div class="chips-sala" id="crear-resumen"></div>
+          <p class="sala-resumen" id="crear-plazas-resumen"></p>
           <details class="sala-avanzadas" id="crear-avanzadas"><summary>Reglas avanzadas</summary><div id="crear-reglas"></div></details>
         </section>
       </div>
@@ -5711,6 +5858,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
         <section class="sala-caja sala-mapa">
           <div class="mapa-vista"><canvas id="sala-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="sala-mapa-nombre"></span></div>
           <div class="sala-mapa-pie"><div class="chips-sala" id="sala-chips"></div><button type="button" id="btn-editar-reglas" class="secundario" hidden aria-expanded="false">Editar reglas</button></div>
+          <p class="sala-resumen" id="sala-resumen"></p>
           <div class="sala-ajustes" id="sala-ajustes" hidden></div>
         </section>
         <section class="sala-caja sala-gente" aria-labelledby="sala-gente-tit">
@@ -5725,6 +5873,11 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
       <span class="sala-motivo" id="sala-motivo"></span>
       <button type="button" id="btn-listo" class="principal grande">Estoy listo</button>
       <button type="button" id="btn-empezar" class="principal grande">Iniciar partida</button>
+      <!-- Borrador del anfitrión (DEV10): lo que falta por aplicar -->
+      <div class="borrador" id="sala-borrador" role="status" aria-live="polite" hidden>
+        <p class="borrador-texto" id="sala-borrador-texto"></p>
+        <div class="borrador-botones"><button type="button" class="secundario" id="sala-descartar">Descartar</button><button type="button" class="principal" id="sala-aplicar">Aplicar cambios</button></div>
+      </div>
     </footer>
     <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
   </div>
@@ -5741,6 +5894,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
         <div class="cuerpo-plegable"><div>
           <div class="lb-cab" aria-hidden="true"><span class="pos">#</span><span></span><span class="nom">Nación</span><span class="pct">Tierra</span><span class="oro">Oro</span><span class="tro">Tropas</span></div>
           <ol id="lista-clasificacion"></ol>
+          <p id="lb-colonias" class="lb-colonias" hidden></p>
         </div></div>
       </aside>
       <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
@@ -5757,7 +5911,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9V6.2M6.5 2h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span id="reloj">0:00</span>
       </span>
-      <span class="dato" title="Tu puesto por territorio entre las naciones en pie">
+      <span class="dato" id="dato-puesto-caja" title="Tu puesto entre las naciones (el mismo que en el informe final); las colonias se cuentan aparte">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7v3a3.5 3.5 0 0 1-7 0zM8 9v3M5.5 13.5h5M4.5 3.5H2.5a2 2 0 0 0 2 2.5M11.5 3.5h2a2 2 0 0 1-2 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
         <span id="dato-puesto">—</span>
       </span>
@@ -5801,6 +5955,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
           <small id="dp-texto">Haz clic en el mapa</small>
         </span>
         <button type="button" id="aviso-auto" class="dp-auto">🎲 Elegir por mí</button>
+        <button type="button" id="dp-empezar" class="dp-auto dp-empezar" hidden>▶ Empezar partida</button>
       </div>
       <span class="dp-barra" aria-hidden="true"><span id="dp-barra"></span></span>
     </div>
@@ -5831,7 +5986,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
       </div>
       <div class="barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido en la franja marcada, hacia el 42 % del techo"><div id="pj-barra"></div></div>
       <div class="cifras">
-        <div class="cifra-pob" title="Tropas (o población, con trabajadores) y su techo: 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad. Se regeneran más rápido hacia el 42 % del techo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="pj-pob-etq">Tropas</span></span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub" id="pj-crec"></small></div>
+        <div class="cifra-pob" title="Tropas (o población, con trabajadores) y su techo: 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad. Se regeneran más rápido hacia el 42 % del techo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="pj-pob-etq">Tropas</span></span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub sub-tropas"><span id="pj-crec"></span><span id="pj-comprometidas" class="sub-comp" title="Tropas en tus ataques y barcos: ya no defienden"></span></small></div>
         <div class="cifra-soldados" title="Soldados: atacan y defienden. Trabajadores: producen oro extra (cada trabajador, ~1 de oro por segundo)"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Soldados</span><span class="valor" id="pj-tropas">0</span><small class="sub sub-trab" id="pj-trab"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Territorio</span><span class="valor" id="pj-terr">0%</span><small class="sub sub-barcos" title="Barcos de transporte en el mar / máximo, y buques de guerra"><span id="pj-barcos">0</span> barcos<span id="pj-buques"></span></small></div>
@@ -5941,6 +6096,10 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
         <button type="button" id="tut-saltar" class="tut-saltar">Saltar tutorial</button>
       </div>
       <p id="tut-texto" class="tut-texto"></p>
+      <div id="tut-despliegue" class="tut-despliegue" hidden>
+        <span id="tut-reloj" class="tut-reloj"></span>
+        <button type="button" id="tut-auto" class="dp-auto">🎲 Elegir por mí</button>
+      </div>
       <div class="tut-pie">
         <div id="tut-puntos" class="tut-puntos" aria-hidden="true"></div>
         <button type="button" id="tut-paso-saltar" class="tut-saltar">Saltar paso</button>
@@ -6155,7 +6314,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "ae27448 2026-11-13 00:40 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "7a83427 2026-11-14 13:26 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-871f2c30c5db.json";</script>
 <script>
 (function () {
@@ -7642,6 +7801,71 @@ return REAL_MAPS[id] || (MAP_SIZES[id] && MAP_SIZES[id].label) || '—';
 
 return { TICK_MS, RES, AREA, TERRAIN, TERRAIN_NAMES, CONFIG, DEFAULT_RULES, PROFILE_IDS, migrateRules, ECONOMY_MODES, DIFFICULTIES, VICTORY_MODES, RULE_MULTS, TRUCE_MINS, TIME_LIMITS, WIN_SHARES, GOLD_STEPS, cleanRules, EMOJIS, BUILDINGS, STRUCTURE_KINDS, BUILDING_KINDS, BUILD_GROUPS, colonyCount, MAP_SIZES, REAL_MAPS, MAP_IDS, mapLabel };
 });
+__define('configurador', function () {
+const { DEFAULT_RULES, colonyCount, migrateRules } = __require('config');
+const { PROFILES } = __require('mecanicas');
+const DIFFICULTY_NAMES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
+const TOGGLES = { missiles: 'misiles', warships: 'buques de guerra', alliances: 'alianzas', boats: 'desembarcos', factories: 'fábricas y trenes' };
+const pct = (v) => `${Math.round(v * 100)} %`;
+const mult = (v) => `×${String(v).replace('.', ',')}`;
+const mins = (v, none) => (v ? `${v} min` : none);
+function settingsDiff(a, b, mapName = (id) => id) {
+if (!a || !b) return [];
+const out = [];
+const ra = { ...DEFAULT_RULES, ...(a.rules || {}) };
+const rb = { ...DEFAULT_RULES, ...(b.rules || {}) };
+const step = (label, x, y, fmt = String) => {
+if (x !== y) out.push(`${label}: ${fmt(x)} → ${fmt(y)}`);
+};
+step('mapa', a.mapSize, b.mapSize, mapName);
+step('naciones de la IA', a.bots, b.bots);
+step('dificultad', a.difficulty, b.difficulty, (v) => DIFFICULTY_NAMES[v] || v);
+step('perfil', ra.profile, rb.profile, (v) => (PROFILES[v] ? PROFILES[v].name : v));
+step('colonias', ra.colonies, rb.colonies, (v) => (v == null ? 'auto' : String(v)));
+step('victoria', ra.victory, rb.victory, (v) => VICTORY_NAMES[v] || v);
+step('dominación', ra.winShare, rb.winShare, pct);
+step('límite de tiempo', ra.timeLimitMin, rb.timeLimitMin, (v) => mins(v, 'sin límite'));
+step('tregua', ra.truceMin, rb.truceMin, (v) => mins(v, 'no'));
+step('economía', ra.economy, rb.economy, (v) => (v === 'workers' ? 'con trabajadores' : 'oro fijo'));
+step('oro inicial', ra.startGold, rb.startGold);
+step('tropas', ra.troopMult, rb.troopMult, mult);
+step('oro', ra.goldMult, rb.goldMult, mult);
+step('precios', ra.priceMult, rb.priceMult, mult);
+for (const [key, name] of Object.entries(TOGGLES)) if ((ra[key] !== false) !== (rb[key] !== false)) out.push(rb[key] !== false ? `con ${name}` : `sin ${name}`);
+if (!!ra.coop !== !!rb.coop) out.push(rb.coop ? 'cooperativo por parejas' : 'sin cooperativo');
+else if (rb.coop && !!ra.coopRoles !== !!rb.coopRoles) out.push(rb.coopRoles ? 'cooperativo con roles' : 'cooperativo sin roles');
+return out;
+}
+function seatsSummary({ seats, humans = 0, bots = 0, rules = {}, landCount = 0 }) {
+const r = { ...DEFAULT_RULES, ...rules };
+const colonies = r.colonies ?? (landCount ? colonyCount(landCount, bots) : null);
+const parts = [`${seats} ${seats === 1 ? 'plaza humana' : 'plazas humanas'}`];
+if (r.coop) {
+const nations = Math.ceil(Math.max(humans, 1) / 2);
+parts.push(`${nations} ${nations === 1 ? 'nación humana' : 'naciones humanas'} por parejas`);
+}
+parts.push(`${bots} ${bots === 1 ? 'nación de la IA' : 'naciones de la IA'}`);
+if (colonies != null) parts.push(`${colonies} ${colonies === 1 ? 'colonia' : 'colonias'}${r.colonies == null ? ' (auto)' : ''}`);
+return parts.join(' · ');
+}
+function coopSlots(count, coop) {
+if (!coop) return Array.from({ length: count }, () => null);
+return Array.from({ length: count }, (_, i) => ({ pair: Math.floor(i / 2) + 1, solo: i === count - 1 && count % 2 === 1 }));
+}
+function normalizeConfig(c, fallback = {}) {
+const src = c && typeof c === 'object' ? c : {};
+const bots = Number(src.bots ?? fallback.bots);
+return {
+bots: Number.isFinite(bots) ? Math.max(0, Math.round(bots)) : 70,
+mapa: typeof (src.mapa ?? fallback.mapa) === 'string' ? src.mapa ?? fallback.mapa : 'mundo',
+dificultad: typeof (src.dificultad ?? fallback.dificultad) === 'string' ? src.dificultad ?? fallback.dificultad : 'normal',
+reglas: { ...DEFAULT_RULES, ...(migrateRules(src.reglas ?? fallback.reglas) || {}) },
+};
+}
+
+return { settingsDiff, seatsSummary, coopSlots, normalizeConfig };
+});
 __define('cuenta-ui', function () {
 const { abrirDialogo, cerrarDialogo, sinMovimiento } = __require('movimiento');
 const $ = (id) => document.getElementById(id);
@@ -7762,7 +7986,8 @@ $('btn-cuenta').hidden = !on || signedIn;
 $('chip-nube').hidden = !signedIn;
 if (signedIn) $('chip-nube').title = `Progreso guardado en tu cuenta (${state.email})`;
 const card = $('tarjeta-cuenta');
-const showCard = on && !signedIn && !this._dismissed();
+const played = (this.profile?.stats?.partidas || 0) > 0;
+const showCard = on && !signedIn && played && !this._dismissed();
 if (card.hidden === showCard) card.hidden = !showCard;
 const block = $('perfil-cuenta');
 block.hidden = !on;
@@ -8378,7 +8603,7 @@ return { POI_TYPES, POI, placePoints };
 __define('ficha-ui', function () {
 const { BUILD_GROUPS, TICK_MS } = __require('config');
 const { fmtTroops, formatNumber } = __require('format');
-const { buildingCard } = __require('fichas');
+const { buildingCard, minSec } = __require('fichas');
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
 const svg = (body, fill = false) =>
 `<svg viewBox="0 0 16 16" aria-hidden="true" ${fill ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"'}>${body}</svg>`;
@@ -8555,6 +8780,7 @@ return `
       ${!sheet && meta ? `<div class="ficha-meta">${meta}</div>` : ''}
       ${!sheet ? `<p class="ficha-resumen">${esc(c.summary)}</p>` : ''}
       ${gives && !sheet ? `<section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>` : ''}
+      ${c.payback ? `<p class="ficha-amort" title="Orientativo: con tu oro de ahora; cambia con tu territorio y tus bonos">${ICONS.reloj}<span>Se paga en <b>~${esc(minSec(c.payback.seconds))}</b> de funcionar · ${esc(minSec(c.payback.withBuild))} contando la obra${c.payback.note && mode !== 'dock' ? `<small>${esc(c.payback.note)}</small>` : ''}</span></p>` : ''}
       ${next}
       ${perks}
       ${have}
@@ -8645,6 +8871,8 @@ card.gives = [
 const perk = C.perks.find((x) => x.level === next);
 if (perk && up < C.maxLevel) card.gives.push({ icon: 'estrella', label: 'Premio', value: '', note: perk.text });
 card.perks = C.perks.map((pk) => ({ level: pk.level, text: pk.text, state: pk.level <= up ? 'hecho' : pk.level === up + 1 ? 'siguiente' : 'futuro' }));
+card.goldPerSec = cap && up < C.maxLevel ? passive * C.gold : 0;
+card.paybackNote = 'solo el oro: el banco y las murallas son aparte';
 card.level = up;
 if (!cap) {
 card.have = 'No tienes capital.';
@@ -8686,6 +8914,7 @@ card.gives = [
 card.have = count ? `${count} ${count === 1 ? 'pueblo' : 'pueblos'}${levels > count ? ` (${levels} niveles)` : ''}: +${formatNumber(gold * levels)}/s de oro y +${fmtTroops(capT * levels)} de techo.` : 'Ningún pueblo todavía.';
 card.givesTitle = 'Qué te da (y otra vez cada nivel)';
 card.how = `Clic ${where}. ${upHow}`;
+card.goldPerSec = gold;
 break;
 }
 case 'city': {
@@ -8814,7 +9043,17 @@ default:
 card.summary = def.desc || '';
 card.how = `Clic ${where}.`;
 }
+if (card.goldPerSec > 0 && card.cost > 0) {
+const pay = card.cost / card.goldPerSec;
+const build = (card.time * TICK_MS) / 1000;
+card.payback = { seconds: pay, withBuild: pay + build, note: card.paybackNote || '' };
+}
 return card;
+}
+function minSec(seconds) {
+const s = Math.max(0, Math.round(seconds));
+const m = Math.floor(s / 60);
+return m ? `${m} min${s % 60 ? ` ${s % 60} s` : ''}` : `${s} s`;
 }
 function shortEffect(game, p, kind) {
 switch (kind) {
@@ -8876,7 +9115,7 @@ out.push({ id: `perm-${k}`, icon, title: 'Para siempre', value: `+${pct(v)} ${pe
 return out;
 }
 
-return { groupOf, buildingCard, shortEffect, activeBonuses };
+return { groupOf, buildingCard, minSec, shortEffect, activeBonuses };
 });
 __define('fin', function () {
 const { abrirDialogo, contar, rodar, sinMovimiento, teclasGrupo } = __require('movimiento');
@@ -8971,7 +9210,7 @@ this.pause();
 $('fin-titulo').textContent = data.title;
 $('fin-texto').textContent = data.text;
 const sello = $('fin-sello');
-sello.textContent = data.outcome === 'victoria' ? '🏆' : data.outcome === 'derrota' ? '💀' : '🏁';
+sello.textContent = data.outcome === 'victoria' ? '🏆' : data.outcome === 'derrota' ? '💀' : data.outcome === 'interrumpida' ? '⚠️' : '🏁';
 sello.className = `fin-sello ${data.outcome || 'fin'}`;
 this._renderStats();
 this._renderProgress();
@@ -9014,6 +9253,13 @@ cells.push(cell('Máximo territorio', formatPercent(s.maxShare || 0)));
 cells.push(cell('Eliminaciones', formatNumber(s.kills || 0)));
 cells.push(cell('Edificios', formatNumber(s.built || 0)));
 $('fin-cifras').replaceChildren(...cells);
+$('fin-cifras').parentElement.querySelector('.fin-motivo')?.remove();
+if (d.motivo || d.validez) {
+const m = el('p', 'fin-motivo');
+if (d.motivo) m.append(el('strong', '', d.motivo));
+if (d.validez) m.append(el('span', '', d.validez));
+$('fin-cifras').after(m);
+}
 const old = $('fin-cifras').parentElement.querySelector('.fin-reto');
 old?.remove();
 if (d.challenge) {
@@ -9184,14 +9430,15 @@ return formatNumber(n / TROOP_SCALE);
 function hudSnapshot(troops, ratio) {
 const reserva = Math.max(0, Math.floor(troops || 0));
 const r = Math.min(1, Math.max(0, ratio || 0));
-return { reserva, envio: Math.floor(reserva * r) };
+return { reserva, envio: Math.floor(Math.max(0, troops || 0) * r) };
 }
 function fmtTroopsCount(n) {
 return formatCount(n / TROOP_SCALE);
 }
 function formatPercent(x) {
 const v = x * 100;
-return (v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
+if (v > 0 && v < 0.01) return '<0.01%';
+return (v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
 }
 function formatShare(tiles, landCount) {
 const share = landCount > 0 ? tiles / landCount : 0;
@@ -9825,7 +10072,7 @@ return { resetFxSprites, Fx, drawMissileSprite };
 __define('game', function () {
 const { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } = __require('config');
 const { fmtTroops, formatNumber } = __require('format');
-const { Rng } = __require('rng');
+const { Rng, hashString } = __require('rng');
 const { MinHeap } = __require('heap');
 const { Player } = __require('player');
 const { Attack } = __require('attack');
@@ -9983,6 +10230,12 @@ this.brains.set(p.id, brain);
 alivePlayers() {
 return this.players.filter((p) => p && p.alive);
 }
+skipSpawn() {
+if (this.phase === 'spawn') this.ticks = Math.max(this.ticks, CONFIG.spawnTicks - 1);
+}
+applyIntentsNow() {
+if (this.phase === 'spawn') this._applyIntents();
+}
 start() {
 this.ticks = 0;
 this.phase = 'spawn';
@@ -10018,7 +10271,7 @@ for (const [id, c] of colors) this.players[id].color = c;
 startFits(t) {
 return this._startZone(t).length;
 }
-_startZone(t) {
+_startZone(t, self = 0) {
 const map = this.map;
 const cx = map.x(t);
 const cy = map.y(t);
@@ -10030,7 +10283,8 @@ const x = cx + dx;
 const y = cy + dy;
 if (!map.inBounds(x, y)) continue;
 const i = map.index(x, y);
-if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) cand.add(i);
+const o = this.owner[i];
+if (map.isLand(i) && (o === 0 || (self && o === self)) && map.landBody[i] === body) cand.add(i);
 }
 if (!cand.has(t)) return [];
 const out = [t];
@@ -10141,6 +10395,109 @@ if (map.isLand(t) && this.owner[t] === 0 && map.landBodySizes[map.landBody[t]] >
 }
 }
 return -1;
+}
+spawnInfo(p, tile, { free: withFree = true } = {}) {
+const map = this.map;
+const self = p.spawned ? p.id : 0;
+const freeAt = (i) => this.owner[i] === 0 || (self && this.owner[i] === self);
+if (this.phase !== 'spawn' || !p.alive || tile < 0 || tile >= map.size || !map.isLand(tile) || !freeAt(tile)) return null;
+if (map.landBodySizes[map.landBody[tile]] < CONFIG.minSpawnBodySize) return null;
+const zone = this._startZone(tile, self);
+const inZone = new Set(zone);
+const cx = map.x(tile);
+const cy = map.y(tile);
+const body = map.landBody[tile];
+const cut = { costa: 0, rio: 0, ocupada: 0, otra: 0 };
+for (const [dx, dy] of START_OFFSETS) {
+const x = cx + dx;
+const y = cy + dy;
+if (!map.inBounds(x, y)) {
+cut.costa++;
+continue;
+}
+const i = map.index(x, y);
+if (inZone.has(i)) continue;
+if (!map.isLand(i)) {
+if (map.river && map.river[i]) cut.rio++;
+else cut.costa++;
+} else if (!freeAt(i)) cut.ocupada++;
+else cut.otra++;
+}
+const terrain = [0, 0, 0];
+for (const i of zone) terrain[Math.max(0, map.terrain[i] - 1)]++;
+const FREE_CAP = 3000 * AREA;
+let free = 0;
+if (withFree && zone.length) {
+const stamp = this._nextStamp();
+const seen = this._stampArr;
+const queue = this._queue;
+const nb = (this._freeNb ??= new Int32Array(4));
+let tail = 0;
+for (const t of zone) {
+seen[t] = stamp;
+queue[tail++] = t;
+}
+for (let q = 0; q < tail && free < FREE_CAP; q++) {
+const c = map.neighbors(queue[q], nb);
+for (let k = 0; k < c; k++) {
+const v = nb[k];
+if (seen[v] === stamp) continue;
+seen[v] = stamp;
+if (!map.isLand(v) || !freeAt(v) || map.landBody[v] !== body) continue;
+free++;
+queue[tail++] = v;
+}
+}
+}
+const nearest = (weak) => {
+let best = null;
+for (const o of this.players) {
+if (!o || o === p || !o.alive || !o.spawned || !!o.weak !== weak) continue;
+const d = Math.hypot(map.x(o.spawnTile) - cx, map.y(o.spawnTile) - cy);
+if (!best || d < best.tiles) best = { player: o, tiles: d };
+}
+if (best) best.km = Math.round(best.tiles * (map.tileKm || 5));
+return best;
+};
+return { tile, zone, full: START_OFFSETS.length, cut, terrain, free: withFree ? free : FREE_CAP, freeCap: FREE_CAP, rival: nearest(false), colony: nearest(true) };
+}
+_spawnScore(info) {
+const room = 40 * RES;
+const zone = info.zone.length / info.full;
+const free = Math.min(1, info.free / info.freeCap);
+const rival = info.rival ? Math.min(1, info.rival.tiles / room) : 1;
+const flat = (info.terrain[0] + info.terrain[1] * 0.6) / Math.max(1, info.zone.length);
+return zone * 4 + free * 2.5 + rival * 1.5 + flat * 0.5 - (zone < 1 ? 1 : 0);
+}
+recommendSpawn(p, samples = 260) {
+const map = this.map;
+const rng = new Rng(hashString(`salida:${this.seed}:${p.id}`));
+const yMin = map.rowWeight ? Math.round(map.height * 0.08) : 0;
+const yMax = map.height - 1 - yMin;
+const cands = [];
+for (let k = 0, tries = 0; k < samples && tries < samples * 8; tries++) {
+const t = map.landTiles[rng.int(0, map.landTiles.length - 1)];
+const y = map.y(t);
+if (y < yMin || y > yMax) continue;
+const info = this.spawnInfo(p, t, { free: false });
+if (!info) continue;
+k++;
+cands.push({ t, score: this._spawnScore(info) });
+}
+cands.sort((a, b) => b.score - a.score);
+let best = -1;
+let bestScore = -Infinity;
+let bestInfo = null;
+for (const c of cands.slice(0, 14)) {
+const info = this.spawnInfo(p, c.t);
+const score = this._spawnScore(info);
+if (score > bestScore) {
+bestScore = score;
+best = c.t;
+bestInfo = info;
+}
+}
+return { tile: best, info: bestInfo };
 }
 spawnCheck(p, tile, minBody = CONFIG.minSpawnBodySize) {
 const map = this.map;
@@ -10346,8 +10703,9 @@ return true;
 }
 _finishCapitalWork(b) {
 b.work = null;
-b.up = (b.up || 0) + 1;
 const p = this.players[b.owner];
+const before = p && p === this.human ? this._econSnap(p) : null;
+b.up = (b.up || 0) + 1;
 if (!p) return;
 this._refreshMods(p);
 p.stats.finished = (p.stats.finished || 0) + 1;
@@ -10355,8 +10713,23 @@ p.stats.lastFinished = 'city';
 if (p === this.human) {
 const C = MECH.capital;
 const perk = C.perks.find((x) => x.level === b.up);
-this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco para ${fmtTroops(this.bankCap(p))}${perk ? ` · Premio: ${perk.text}` : ''}`, 'good', perk ? { sfx: 'logro' } : null);
+const delta = before ? this._econDelta(before, this._econSnap(p), true) : '';
+this._emit(`🏰 Capital a nivel ${b.up}: ${delta || `+${Math.round(C.gold * b.up * 100)} % de oro pasivo`} (banco para ${fmtTroops(this.bankCap(p))})${perk ? ` · Premio: ${perk.text}` : ''}`, 'good', perk ? { sfx: 'logro' } : null);
 }
+}
+_econSnap(p) {
+return { gold: p.goldPerTick() * (1000 / TICK_MS), cap: p.maxTroops(), bank: this.bankCap(p) };
+}
+_econDelta(a, b, bank) {
+const sign = (v) => (v > 0 ? '+' : '−');
+const parts = [];
+const dg = b.gold - a.gold;
+if (Math.abs(dg) >= 0.5) parts.push(`${sign(dg)}${formatNumber(Math.abs(dg))}/s de oro`);
+const dc = b.cap - a.cap;
+if (Math.abs(dc) >= 1) parts.push(`${sign(dc)}${fmtTroops(Math.abs(dc))} de techo`);
+const db = b.bank - a.bank;
+if (bank && Math.abs(db) >= 1) parts.push(`${sign(db)}${fmtTroops(Math.abs(db))} de banco`);
+return parts.join(', ');
 }
 bankCap(p) {
 const cap = p && p.capital;
@@ -11070,6 +11443,57 @@ const ratio = target ? troops / Math.max(1, target.troops) : Infinity;
 const risk = !target || ratio > 1.5 ? 'bajo' : ratio > 0.7 ? 'medio' : 'alto';
 return { tiles, risk, uncertain: !!(target && (target.forts.size || target.passes)) };
 }
+defenseBreakdown(target, t) {
+const map = this.map;
+const parts = [];
+if (target) {
+const wall = this.wallMultiplier(target, t);
+const fort = this.fortMultiplier(target, t);
+const zone = this.capitalZone(target, t);
+if (fort > wall) parts.push({ label: 'puesto defensivo', mult: fort });
+else if (wall > 1) parts.push({ label: zone === 2 ? 'murallas de la capital' : 'afueras de la capital', mult: wall });
+const pass = this.passMultiplier(target, t);
+if (pass > 1) parts.push({ label: 'paso de montaña', mult: pass });
+const mods = Math.max(0.2, 1 + target.mods.defense);
+if (mods !== 1) parts.push({ label: mods > 1 ? 'bonificaciones de defensa' : 'defensa reducida', mult: mods });
+}
+const T = MECH.terrain[map.terrain[t]] || MECH.terrain[1];
+const plain = MECH.terrain[1];
+return {
+mult: target ? this.defenseMult(target, t) : 1,
+parts,
+terrain: { kind: map.terrain[t], cost: T.tileCost / plain.tileCost, loss: T.mag / plain.mag },
+};
+}
+attackPreview(p, tile, troops) {
+const targetId = tile >= 0 ? this.owner[tile] : 0;
+const send = Math.max(0, Math.min(Math.floor(troops), Math.floor(p.troops)));
+const reserve = Math.max(0, p.troops - send);
+let incoming = 0;
+let attackers = 0;
+for (const q of this.players) {
+if (!q || q === p || !q.alive) continue;
+const a = q.attacks.get(p.id);
+if (a && a.troops > 0) {
+incoming += a.troops;
+attackers++;
+}
+}
+const exposure = !incoming ? 'baja' : incoming > reserve ? 'alta' : incoming > reserve * 0.5 ? 'media' : 'baja';
+const est = this.estimateAttack(p, targetId, send);
+return {
+targetId,
+send,
+reserve,
+incoming,
+attackers,
+exposure,
+tiles: est.tiles,
+risk: est.risk,
+uncertain: est.uncertain,
+defense: tile >= 0 ? this.defenseBreakdown(targetId ? this.players[targetId] : null, tile) : null,
+};
+}
 passMultiplier(defender, t) {
 if (!defender.passes) return 1;
 const map = this.map;
@@ -11618,12 +12042,14 @@ b.level = b.target;
 b.target = 0;
 changed = true;
 const p = this.players[b.owner];
+const before = p === this.human ? this._econSnap(p) : null;
 this._recount(p);
 p.stats.finished = (p.stats.finished || 0) + 1;
 p.stats.lastFinished = b.kind;
-if (p === this.human) {
+if (before) {
 const def = BUILDINGS[b.kind];
-this._emit(upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`, 'good');
+const delta = this._econDelta(before, this._econSnap(p), false);
+this._emit(`${upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`}${delta ? `: ${delta}` : ''}`, 'good');
 }
 }
 if (changed) this.sites = this.sites.filter((b) => b.target && this.buildingAt.get(b.tile) === b);
@@ -13485,9 +13911,10 @@ return { MinHeap };
 __define('home', function () {
 const { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } = __require('config');
 const { PROFILES } = __require('mecanicas');
-const { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } = __require('multiplayer');
+const { DEFAULT_SEATS, MAX_ONLINE_BOTS, MIN_HUMANS, RULES_FINGERPRINT, SEAT_SHORTCUTS, VALIDATED_SEATS } = __require('multiplayer');
 const { REAL_MAP_DATA } = __require('mapas-reales');
 const { loadMapData } = __require('mapas-carga');
+const { configSummary, replayPlan } = __require('repeticion');
 const { decodeRelief, generateMap, markRivers } = __require('map');
 const { RIVERS } = __require('rios');
 const { paintMapPreview } = __require('terreno');
@@ -13503,7 +13930,9 @@ const { abrirGuia } = __require('guia');
 const { errorReport } = __require('errores');
 const { drawChart, drawSparkline } = __require('resumen');
 const { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, pointsFromMmr, rankOf, rankText, seasonEnd, seasonName, seasonReward } = __require('rangos');
-const { ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly, achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText } = __require('profile');
+const { ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly, achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rememberConfig, rewardsOf, titleName, unlockText } = __require('profile');
+const { coopSlots, seatsSummary, settingsDiff } = __require('configurador');
+const MAX_HUMANS = VALIDATED_SEATS;
 const SWATCHES = [
 '#2f7dff', '#1fb5ff', '#20c997', '#3ddc84', '#8bd346', '#ffd23f', '#ffa23d', '#ff6b3d',
 '#ff4d6d', '#e0483f', '#c2185b', '#b05cff', '#7b5cff', '#5b6b8c', '#f2f4f8', '#1b2133',
@@ -13527,6 +13956,7 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Novedades', title: 'Salas de 32 y rangos por cola', text: 'Salas de hasta 32 jugadores con accesos a 4, 8, 16, 24 y 32 plazas; el anfitrión edita las reglas en borrador y las aplica de una vez. La clasificatoria contra la IA y la de en línea tienen ahora rangos separados (tu rango de antes queda como histórico). Y más: salidas explicadas, previsión de cada ataque, amortización en las fichas y repetir tu última partida tal cual.', art: 1 },
 { tag: 'Mejoras', title: 'Más ligero y más pulido', text: 'Cada versión nueva se descarga en una quinta parte (los mapas se guardan en tu navegador), arreglos en amigos y clanes, colonias que ya no encabezan la clasificación, Arsenal y Progreso mejor colocados y nuevas animaciones al pulsar y al poder construir.', art: 0 },
 { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
 { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
@@ -13547,7 +13977,7 @@ const NEWS_SLIDES = 3;
 const $ = (id) => document.getElementById(id);
 const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
 const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
-const ONLINE_MAX_BOTS = 60;
+const ONLINE_MAX_BOTS = MAX_ONLINE_BOTS;
 const statIcon = (d, fill = false) => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}" ${fill ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"'}/></svg>`;
 const STAT_ICONS = {
 bandera: statIcon('M4 14.5V2M4 2.5h8l-2 3 2 3H4'),
@@ -13792,12 +14222,21 @@ change();
 return el('label', { class: 'interruptor' }, input, el('span', { text: label }));
 };
 const victoryBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Modo de victoria' });
-const syncVictory = () => {
+const victoryNote = el('small', { class: 'nota-victoria', role: 'status' });
+const syncVictory = (fromProfile = false) => {
 const opts = [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]
 .filter(([v]) => !(v === 'capitales' && rules.profile === 'clasico'));
-if (!opts.some(([v]) => v === rules.victory)) rules.victory = 'dominio';
+let note = rules.profile === 'clasico' ? 'En Clásico no hay victoria por capitales: no tiene puntos estratégicos.' : '';
+if (!opts.some(([v]) => v === rules.victory)) {
+if (fromProfile && rules.victory === 'capitales') note = 'Has elegido Clásico, que no tiene capitales que conquistar: el objetivo ha pasado de Capitales a Dominación.';
+rules.victory = 'dominio';
+}
+victoryNote.textContent = note;
+victoryNote.hidden = !note;
+victoryNote.classList.toggle('aviso', note.startsWith('Has elegido'));
 segmented(victoryBox, opts, rules.victory, (v) => {
 rules.victory = v;
+victoryNote.classList.remove('aviso');
 change();
 });
 };
@@ -13815,21 +14254,27 @@ const profileBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-lab
 segmented(profileBox, Object.entries(PROFILES).map(([k, P]) => [k, P.name]), rules.profile, (v) => {
 rules.profile = v;
 syncProfileNote();
-syncVictory();
+syncVictory(true);
 change();
 });
+const group = (title, ...fields) => el('fieldset', { class: 'reglas-grupo' }, el('legend', { text: title }), ...fields);
 const box = el('div', { class: 'reglas-rejilla' },
 el('div', { class: 'campo campo-perfil' }, el('span', {}, 'Perfil de reglas ', profileNote), profileBox),
+group('Objetivo y duración',
+el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox, victoryNote),
+seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
+seg('Límite de tiempo (gana quien tenga más)', 'timeLimitMin', TIME_LIMITS.map((v) => [v, v ? `${v} min` : 'Sin límite'])),
+),
+group('Economía y tropas',
 el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
 el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
 seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
-el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox),
-seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
 seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
 seg('Ingresos de oro', 'goldMult', MULT_OPTS),
 seg('Precios de edificios', 'priceMult', MULT_OPTS),
+),
+group('Combate y diplomacia',
 seg('Tregua inicial (sin ataques entre naciones)', 'truceMin', TRUCE_MINS.map((v) => [v, v ? `${v} min` : 'No'])),
-seg('Límite de tiempo (gana quien tenga más)', 'timeLimitMin', TIME_LIMITS.map((v) => [v, v ? `${v} min` : 'Sin límite'])),
 el('div', { class: 'interruptores' },
 toggle('Misiles y antimisiles', 'missiles'),
 toggle('Buques de guerra', 'warships'),
@@ -13837,8 +14282,9 @@ toggle('Alianzas', 'alliances'),
 toggle('Desembarcos', 'boats'),
 toggle('Fábricas y trenes', 'factories'),
 ),
+),
 );
-if (prefix === 'sala') {
+if (prefix === 'sala' || prefix === 'crear') {
 const optIn = (label, key, title) => {
 const input = el('input', { type: 'checkbox', id: id(key) });
 input.checked = rules[key] === true;
@@ -13853,13 +14299,50 @@ change();
 });
 return el('label', { class: 'interruptor', title }, input, el('span', { text: label }));
 };
-box.append(el('div', { class: 'interruptores coop' },
+box.append(group('Cooperativo',
+el('div', { class: 'interruptores coop' },
 optIn('Cooperativo: cada dos jugadores llevan una misma nación', 'coop', 'Por orden de llegada a la sala: 1.º y 2.º juntos, 3.º y 4.º juntos…'),
 optIn('Con roles: uno el mando militar y otro la economía y la diplomacia', 'coopRoles', 'Evita compras o ataques por accidente: cada uno solo puede hacer lo suyo'),
+),
+el('small', { class: 'nota', text: 'Con un número impar de jugadores, el último en llegar lleva su nación en solitario (se marca en la lista de la sala).' }),
 ));
 }
 box.refresh = syncCol;
 syncCol();
+return box;
+}
+function seatPicker(value, min, onChange) {
+let v = value;
+const out = el('output', { text: String(v) });
+const less = el('button', { type: 'button', 'aria-label': 'Una plaza menos', text: '−' });
+const more = el('button', { type: 'button', 'aria-label': 'Una plaza más', text: '+' });
+const cuts = el('div', { class: 'atajos-plazas' });
+const note = el('small', { class: 'nota nota-plazas' });
+const set = (n) => {
+const lo = Math.max(MIN_HUMANS, min());
+const next = Math.max(lo, Math.min(MAX_HUMANS, n));
+if (next !== v) {
+v = next;
+onChange(v);
+}
+paint();
+};
+const paint = () => {
+const lo = Math.max(MIN_HUMANS, min());
+out.textContent = String(v);
+less.disabled = v <= lo;
+more.disabled = v >= MAX_HUMANS;
+cuts.replaceChildren(...SEAT_SHORTCUTS.map((n) => el('button', { type: 'button', class: 'atajo-plazas', 'aria-pressed': String(v === n), disabled: n < lo, text: String(n), onclick: () => set(n) })));
+note.textContent = lo > MIN_HUMANS ? `No puede bajar de ${lo}: ya tienen plaza (contando a quien se está reconectando).` : '';
+};
+less.addEventListener('click', () => set(v - 1));
+more.addEventListener('click', () => set(v + 1));
+paint();
+const box = el('div', { class: 'selector-plazas' }, el('div', { class: 'paso', role: 'group', 'aria-label': 'Plazas' }, less, out, more), cuts, note);
+box.refresh = (value) => {
+if (Number.isFinite(value)) v = value;
+paint();
+};
 return box;
 }
 function segmented(box, options, current, onChange) {
@@ -13883,7 +14366,7 @@ const modes = { capitales: 'victoria por capitales', economia: 'victoria económ
 const parts = [(PROFILES[r.profile] || PROFILES.trinchera).name, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
 if (r.economy === 'workers') parts.push('economía con trabajadores');
 if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
-if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
+if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} ${r.colonies === 1 ? 'colonia' : 'colonias'}`);
 const mult = (v) => (v === 0.5 ? '×0,5' : `×${v}`);
 if (r.troopMult && r.troopMult !== 1) parts.push(`tropas ${mult(r.troopMult)}`);
 if (r.goldMult && r.goldMult !== 1) parts.push(`oro ${mult(r.goldMult)}`);
@@ -14026,7 +14509,7 @@ histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.vi
 for (const card of document.querySelectorAll('.modo[data-modo]')) {
 card.addEventListener('click', () => this._mode(card.dataset.modo));
 }
-const a = this.profile.ajustes;
+const a = this.profile.ajustes.ia;
 this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } };
 this._galleryIA = mapPicker($('galeria-mapas'), this.choice.map, (id) => {
 this.choice.map = id;
@@ -14079,7 +14562,7 @@ difficulty: this.choice.difficulty,
 seed: REAL_MAPS[this.choice.map] ? '' : $('in-semilla').value.trim(),
 rules: { ...this.choice.rules },
 };
-Object.assign(this.profile.ajustes, { bots: opts.bots, mapa: opts.mapSize, dificultad: opts.difficulty, reglas: opts.rules });
+rememberConfig(this.profile, 'ia', { bots: opts.bots, mapa: opts.mapSize, dificultad: opts.difficulty, reglas: opts.rules });
 this.h.onProfileChange?.(false);
 this.h.onQuickPlay?.(opts);
 });
@@ -14139,7 +14622,7 @@ segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.q
 this.queue = v;
 this.profile.ajustes.colaClasif = v;
 this.h.onProfileChange?.(false);
-this.renderQueue();
+this.renderCompetitive();
 });
 $('cp-buscar').addEventListener('click', () => this._findMatch());
 this.search = null;
@@ -14219,10 +14702,23 @@ const bar = document.querySelector('.ini-barra');
 if (bar) new ResizeObserver(() => { if (bar.offsetHeight) $('inicio').style.setProperty('--alto-cabecera', `${bar.offsetHeight}px`); }).observe(bar);
 }
 $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
-$('btn-empezar').addEventListener('click', () => this.h.onStartRoom?.());
+$('btn-empezar').addEventListener('click', () => {
+if (this.draftPending()) {
+this._notice('Tienes cambios sin aplicar en las reglas: pulsa «Aplicar cambios» o «Descartar» antes de empezar.', 'aviso');
+$('sala-ajustes').hidden = false;
+$('btn-editar-reglas').setAttribute('aria-expanded', 'true');
+$('btn-editar-reglas').textContent = 'Cerrar reglas';
+$('sala-borrador')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+return;
+}
+this.h.onStartRoom?.();
+});
 $('btn-listo').addEventListener('click', () => this.h.onReady?.());
 $('btn-copiar-enlace').addEventListener('click', () => this.h.onCopyLink?.());
 $('btn-copiar-codigo').addEventListener('click', () => this.h.onCopyCode?.());
+$('sala-aplicar').addEventListener('click', () => this._applyDraft());
+$('sala-descartar').addEventListener('click', () => this._discardDraft());
+document.querySelector('.sala-mapa .mapa-vista')?.addEventListener('click', (e) => e.currentTarget.classList.toggle('desplegada'));
 $('btn-editar-reglas').addEventListener('click', () => {
 const box = $('sala-ajustes');
 box.hidden = !box.hidden;
@@ -14234,7 +14730,7 @@ this._syncBots();
 }
 _mode(mode) {
 if (mode === 'rapida') {
-this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
+this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.ia.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
 } else if (mode === 'tutorial') {
 this.h.onTutorial?.();
 } else if (mode === 'online') {
@@ -14273,18 +14769,44 @@ if (!cur || cur.capa !== capa) return;
 if (cur.n > 0) history.back();
 else histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.view]);
 }
+returnTo(view) {
+this._returnTo = view;
+setTimeout(() => {
+if (this._returnTo !== view) return;
+this._returnTo = null;
+this.go(view, { replace: true });
+}, 400);
+}
 _onPop(st) {
 if (this.h.onHistory?.(st)) return;
+if (this._returnTo && this.menuVisible()) {
+const v = this._returnTo;
+this._returnTo = null;
+this.go(v, { replace: true });
+return;
+}
 if (!$('crear-sala').hidden && st?.capa !== 'crear-sala') this._closeCreate();
 if (!this.menuVisible()) return;
 const view = (st && st.vista) || viewFromHash() || 'jugar';
 if (view !== this.view) this.setView(view);
 }
-_replay(game = null) {
-const a = this.profile.ajustes;
-const map = game?.mapa && (REAL_MAPS[game.mapa] || MAP_SIZES[game.mapa]) ? game.mapa : this.choice.map;
-const bots = Math.min(maxBotsFor(map), game?.rivales || a.bots || 70);
-this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } });
+_replay(entry = this.profile.historial[0], { scenario = false } = {}) {
+const plan = replayPlan(entry, { scenario });
+if (!plan) return this._mode('rapida');
+if (plan.kind === 'tutorial') return this.h.onTutorial?.();
+if (plan.kind === 'online') return this.go('multijugador');
+if (plan.kind === 'revisar') {
+if (plan.prefill.mapSize) {
+this.choice.map = plan.prefill.mapSize;
+this._galleryIA?.set(plan.prefill.mapSize);
+this._syncBots?.();
+}
+this.go('crear');
+this.flash('Esa partida es de antes de guardar su configuración completa: revisa mapa, rivales y reglas antes de empezar.');
+return;
+}
+const bots = Math.min(maxBotsFor(plan.opts.mapSize), plan.opts.bots);
+this.h.onQuickPlay?.({ ...plan.opts, bots });
 }
 _paintArt() {
 this._paintHero();
@@ -14350,9 +14872,10 @@ c._painted = true;
 _syncSummaryIA() {
 const c = this.choice;
 const n = Number($('in-bots').value);
+const col = c.rules.colonies ?? colonyCount(landTilesOf(c.map), n);
 $('ia-resumen').replaceChildren(
 el('strong', { text: mapLabel(c.map) }),
-` · ${n} rival${n === 1 ? '' : 'es'} · ${DIFFICULTY[c.difficulty] || 'Normal'}`,
+` · ${n} ${n === 1 ? 'nación' : 'naciones'} de la IA · ${col} colonia${col === 1 ? '' : 's'}${c.rules.colonies == null ? ' (auto)' : ''} · ${DIFFICULTY[c.difficulty] || 'Normal'}`,
 el('small', { text: rulesSummary(c.rules) }),
 );
 $('ia-reglas-resumen').textContent = rulesSummary(c.rules);
@@ -14413,16 +14936,16 @@ const now = new Date();
 const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 const mins = Math.max(1, Math.round((midnight - now) / 60000));
 $('misiones-reloj').textContent = `⏱ ${Math.floor(mins / 60)} h ${mins % 60} min`;
-const items = d.retos.map((id) => {
+const items = d.retos.flatMap((id) => {
 const r = DAILY.find((x) => x.id === id);
-if (!r) return null;
+if (!r) return [];
 const prog = Math.min(r.need, d.progreso[id] || 0);
 const done = !!d.hechos[id];
 return el(
 'li',
 { class: done ? 'hecha' : '' },
 el('span', { class: 'mision-check', 'aria-hidden': 'true', text: done ? '✓' : '' }),
-el('span', { class: 'mision-nombre', text: r.name }),
+el('span', { class: 'mision-nombre' }, r.name, r.perfil ? el('small', { class: 'mision-perfil', title: 'En Clásico (el de Partida rápida) no se puede cumplir', text: ` · solo en ${PROFILES[r.perfil]?.name || r.perfil}` }) : null),
 el('span', { class: 'mision-prog', text: `${prog}/${r.need}` }),
 el('b', { class: 'mision-premio', text: `🪙 ${r.coins}` }),
 el('span', { class: 'mision-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
@@ -14466,11 +14989,30 @@ el(
 el('strong', { text: mapLabel(g.mapa) }),
 el('span', { text: `${placeText(g) ? `${placeText(g)} · ` : ''}${formatPercent(g.pct)} del mapa · ${formatTime(g.duracion)}` }),
 sparkline(g.curva),
-el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}${g.rivales ? ` · ${g.rivales} rivales` : ''}${g.online ? ' · online' : ''}` }),
+el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}${g.config ? '' : g.rivales ? ` · ${g.rivales} ${g.rivales === 1 ? 'rival' : 'rivales'}` : ''}${g.online ? ' · online' : ''}` }),
 ),
-el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': 'Jugar otra vez en este mapa', title: 'Jugar otra vez en este mapa', onclick: () => this._replay(g) },
-el('span', { 'aria-hidden': 'true', text: '▶' })),
+...this._replayButtons(g),
 );
+}
+_replayButtons(g) {
+const plan = replayPlan(g);
+const profName = (id) => PROFILES[id]?.name || id;
+const difName = (id) => ({ facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' })[id] || id;
+if (!plan || plan.kind !== 'jugar') {
+const label = plan?.kind === 'online' ? 'Ir a Multijugador' : plan?.kind === 'tutorial' ? 'Repetir el tutorial' : 'Revisar y jugar';
+return [el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': label, title: label, onclick: () => this._replay(g) }, el('span', { 'aria-hidden': 'true', text: '▶' }))];
+}
+const out = [
+el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': 'Repetir configuración: mismo mapa, rivales y reglas, con otro reparto', title: 'Repetir configuración (mismo mapa, rivales y reglas; reparto nuevo)', onclick: () => this._replay(g) }, el('span', { 'aria-hidden': 'true', text: '▶' })),
+el(
+'div',
+{ class: 'ultima-repetir' },
+el('small', { class: 'ultima-config', text: configSummary(g.config, profName, difName) }),
+el('button', { type: 'button', class: 'btn-sec ultima-escenario', title: 'Repetir escenario: también la misma semilla (el mismo reparto inicial)', onclick: () => this._replay(g, { scenario: true }), text: plan.versionChanged ? 'Mismo escenario (reglas nuevas)' : 'Mismo escenario' }),
+),
+];
+if (plan.versionChanged) out.push(el('p', { class: 'ultima-aviso', text: `Se jugó con las reglas ${plan.version || 'antiguas'}; ahora son otras, así que el mismo escenario no saldrá idéntico.` }));
+return out;
 }
 _buildNews() {
 const slides = NEWS.slice(0, NEWS_SLIDES).map((n, i) =>
@@ -14880,8 +15422,11 @@ const placing = inPlacement(r);
 const k = rankOf(r.puntos);
 return (ctx, cx, cy, size) => drawBadge(ctx, cx, cy, size, placing ? null : k.league, placing ? 0 : k.div);
 }
+_queueRank() {
+return this.queue === 'sala' ? this.profile.rangoOnline : this.profile.rango;
+}
 renderCompetitive() {
-const r = this.profile.rango;
+const r = this._queueRank();
 if (!r || !$('cp-insignia')) return;
 const p = this.profile;
 const placing = inPlacement(r);
@@ -14904,6 +15449,7 @@ const col = placing ? [196, 170, 120] : k.league.color;
 const band = document.querySelector('.cp-portada');
 band.style.setProperty('--liga', col.join(', '));
 band.classList.toggle('en-colocacion', placing);
+$('cp-cola-rango').textContent = this.queue === 'sala' ? 'Tu rango en línea' : 'Tu rango contra la IA';
 $('cp-liga').textContent = placing ? 'Sin clasificar' : k.label;
 $('cp-pl').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.league.apex ? `${k.pl} PL` : `${k.pl} / 100 PL`;
 const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
@@ -14918,15 +15464,32 @@ el('span', { class: 'cp-d', text: `${losses} D` }),
 r.escudo ? el('span', { class: 'cp-escudo', title: 'No bajas de división en estas partidas', text: ` · 🛡 escudo ${r.escudo}` }) : '',
 );
 this.renderQueue();
+this._renderHow(r);
 this._renderLeagues(r);
 this._renderSeasonStats(r);
 this._renderRankedHistory(r);
 this._renderTop(r);
 this._renderRewards(r);
 }
+_renderHow(r) {
+const online = this.queue === 'sala';
+$('cp-como').textContent = online
+? `En línea: tus puntos salen de quién queda por delante de quién entre las personas de la sala (Elo, con el nivel de cada una) y, un poco, de tu puesto entre todas las naciones. Abandonar cuenta como quedar el último. Si se pierde al anfitrión, la partida se anula: no cuenta para nadie. Las ${PLACEMENT_GAMES} primeras partidas de la temporada son de colocación.`
+: `Contra la IA: cuenta tu puesto final entre las ${RANKED_AI.bots + 1} naciones, comparado con lo que se espera de tu nivel frente a esa dificultad (la IA se ajusta a tu liga). Abandonar cuenta como quedar el último. Es el rango de la tabla de la temporada. Las ${PLACEMENT_GAMES} primeras partidas son de colocación.`;
+const h = this.profile.rangoHistorico;
+const box = $('cp-historico');
+box.hidden = !h;
+if (!h) return;
+const placed = !inPlacement(h);
+const k = rankOf(h.puntos);
+box.replaceChildren(
+el('div', { class: 'cp-historico-cab' }, badgeCanvas(h, 28), el('span', {}, el('strong', { text: 'Rango mixto (histórico)' }), el('small', { text: `${placed ? `${k.label} · ${k.pl} PL` : `Colocación ${h.colocacion}/${PLACEMENT_GAMES}`} · ${h.partidas} partidas · ${seasonName(h.temporada)}` }))),
+el('p', { class: 'nota', text: 'Antes, las partidas contra la IA y en línea sumaban al mismo rango. Ahora cada cola tiene el suyo: el mixto se queda aquí tal cual, y las dos colas empezaron sus colocaciones con tu nivel de entonces como punto de partida.' }),
+);
+}
 renderQueue() {
 if (!$('cp-buscar')) return;
-const r = this.profile.rango;
+const r = this._queueRank();
 const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
 const btn = $('cp-buscar');
 if (this.queue === 'ia') {
@@ -14979,7 +15542,7 @@ return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 const pill = $('busqueda-pill');
 if (info) {
-const r = this.profile.rango;
+const r = this.profile.rangoOnline;
 const lo = rankOf(pointsFromMmr(r.mmr - info.window)).label;
 const hi = rankOf(pointsFromMmr(r.mmr + info.window)).label;
 $('cp-busca-tiempo').textContent = fmt(info.waited);
@@ -15012,7 +15575,7 @@ el('small', { text: L.apex ? `${formatNumber(L.base)}+` : `IV → I` }));
 );
 }
 _renderSeasonStats(r) {
-const hist = r.historial || [];
+const hist = (r.historial || []).filter((h) => !h.previa && !h.anulada);
 const games = hist.filter((h) => !h.abandono && h.de > 0);
 const avg = games.length ? games.reduce((a, h) => a + h.puesto, 0) / games.length : 0;
 let streak = 0;
@@ -15076,13 +15639,13 @@ return `hace ${d} día${d === 1 ? '' : 's'}`;
 };
 list.replaceChildren(
 ...hist.map((h) => {
-const won = !h.abandono && h.puesto === 1;
+const won = !h.abandono && !h.anulada && h.puesto === 1;
 const good = won || h.delta > 0;
-const cls = h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
-const title = h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
-const delta = h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
+const cls = h.anulada ? 'neutra' : h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
+const title = h.anulada ? 'Anulada' : h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
+const delta = h.anulada ? 'No cuenta' : h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
 return el('li', { class: `cp-partida ${cls}` },
-el('span', { class: 'cp-res' }, el('strong', { text: title }), el('small', { text: h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA' })),
+el('span', { class: 'cp-res', title: h.anulada ? h.motivo || '' : '' }, el('strong', { text: title }), el('small', { text: `${h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA'}${h.previa ? ' · rango mixto' : ''}${h.anulada && h.motivo ? ` · ${h.motivo}` : ''}` })),
 el('span', { class: 'cp-tras' }, badgeCanvas(h.puntos, 18), el('small', { text: rankOf(h.puntos).label })),
 el('span', { class: 'cp-delta', text: delta }),
 el('small', { class: 'cp-cuando', text: ago(h.fecha) }));
@@ -15093,11 +15656,13 @@ _renderTop(r) {
 const box = $('cp-top');
 const L = this.ladder;
 const rows = L.available ? L.rows.filter((x) => x.temporada === r.temporada).slice(0, 8) : [];
+const note = this.queue === 'sala' ? el('p', { class: 'nota cp-top-nota', text: 'Esta es la tabla de la cola contra la IA. La de en línea se publicará cuando su resultado se pueda validar en todos los clientes; tu rango en línea se guarda en tu perfil.' }) : null;
 if (!rows.length) {
-box.replaceChildren(emptyState('🏅', L.available ? 'Nadie tiene rango todavía esta temporada' : 'La tabla de la temporada aún no está disponible', L.available ? 'Juega una clasificatoria para estrenarla.' : L.error || 'Tu rango se guarda y sube a la tabla en cuanto haya conexión.'));
+box.replaceChildren(note || '', emptyState('🏅', L.available ? 'Nadie tiene rango todavía esta temporada' : 'La tabla de la temporada aún no está disponible', L.available ? 'Juega una clasificatoria para estrenarla.' : L.error || 'Tu rango se guarda y sube a la tabla en cuanto haya conexión.'));
 return;
 }
 box.replaceChildren(
+note || '',
 el('ol', { class: 'cp-mejores' },
 ...rows.map((row, i) => {
 const rk = rankOf(row.puntos);
@@ -15127,7 +15692,7 @@ $('cp-anteriores').replaceChildren(
 setLadder(state) {
 this.ladder = { ...this.ladder, ...state };
 if (this.view === 'clasificacion' && this.table === 'rangos') this.renderTable();
-if (this.view === 'competitivo') this._renderTop(this.profile.rango);
+if (this.view === 'competitivo') this._renderTop(this._queueRank());
 }
 _ranksTable() {
 const r = this.profile.rango;
@@ -15640,9 +16205,9 @@ const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 const mins = Math.max(1, Math.round((midnight - now) / 60000));
 $('retos-reloj').textContent = `cambian en ${Math.floor(mins / 60)} h ${mins % 60} min`;
 $('retos-diarios').replaceChildren(
-...d.retos.map((id) => {
+...d.retos.flatMap((id) => {
 const r = DAILY.find((x) => x.id === id);
-if (!r) return null;
+if (!r) return [];
 const prog = Math.min(r.need, d.progreso[id] || 0);
 const hecho = !!d.hechos[id];
 return el(
@@ -15654,7 +16219,7 @@ el(
 { class: 'reto-texto' },
 el('strong', { text: r.name }),
 el('span', { class: 'reto-barra llena-al-ver' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
-el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}` }),
+el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}${r.perfil ? ` · solo con el perfil ${PROFILES[r.perfil]?.name || r.perfil}` : ''}` }),
 ),
 el('b', { class: 'reto-premio', text: `🪙 ${r.coins}` }),
 );
@@ -15674,9 +16239,9 @@ const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((8 -
 const hours = Math.max(1, Math.round((monday - now) / 3600000));
 $('semana-reloj').textContent = `cambian en ${Math.floor(hours / 24)} d ${hours % 24} h`;
 $('retos-semanales').replaceChildren(
-...w.retos.map((id) => {
+...w.retos.flatMap((id) => {
 const r = WEEKLY.find((x) => x.id === id);
-if (!r) return null;
+if (!r) return [];
 const prog = Math.min(r.need, w.progreso[id] || 0);
 const hecho = !!w.hechos[id];
 return el(
@@ -15872,7 +16437,7 @@ el(
 { class: 'sala-info' },
 el('strong', { text: String(r.nombre || 'Sala').slice(0, 28) }),
 el('small', { text: `${r.clasificatoria ? '🏅 Clasificatoria · ' : ''}${mapLabel(r.mapa)} · ${P.name} · ${VICTORY_NAMES[r.victoria] || 'Dominación'}` }),
-el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} bots` }),
+el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} ${Number(r.bots) === 1 ? 'nación de la IA' : 'naciones de la IA'}` }),
 ),
 el('span', { class: 'sala-entrar', text: r.otraVersion ? 'Otra versión' : full ? 'Llena' : 'Entrar' }),
 ),
@@ -15905,21 +16470,27 @@ _chips(box, settings) {
 const s = settings || {};
 const r = s.rules || {};
 const P = PROFILES[r.profile] || PROFILES.trinchera;
+const nBots = Number(s.bots) || 0;
+const nCol = Number.isFinite(r.colonies) ? r.colonies : null;
 box.replaceChildren(
+...[
 s.clasificatoria ? el('span', { class: 'chip-sala chip-clasif' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🏅' }), 'Clasificatoria') : null,
 el('span', { class: 'chip-sala', title: `Perfil de reglas ${P.id}` }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚙' }), P.name),
-el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${Number(s.bots) || 0} bots`),
+el('span', { class: 'chip-sala', title: 'Naciones que lleva la IA' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${nBots} ${nBots === 1 ? 'nación de la IA' : 'naciones de la IA'}`),
+nCol !== null ? el('span', { class: 'chip-sala', title: 'Colonias: presas débiles repartidas por el mapa' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⌂' }), `${nCol} ${nCol === 1 ? 'colonia' : 'colonias'}`) : null,
 el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚑' }), VICTORY_NAMES[r.victory] || 'Dominación'),
+r.coop ? el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤝' }), r.coopRoles ? 'Cooperativo con roles' : 'Cooperativo') : null,
+].filter(Boolean),
 );
 }
 showCreate({ ranked = false } = {}) {
-const a = this.profile.ajustes;
+const a = this.profile.ajustes.online;
 if (!this.create) {
 this.create = {
 map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'europa',
 name: `Sala de ${this.profile.nombre || 'Trinchera'}`,
 visibility: 'enlace',
-seats: 4,
+seats: DEFAULT_SEATS,
 bots: Math.min(ONLINE_MAX_BOTS, a.bots || 40),
 difficulty: a.dificultad || 'normal',
 rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) },
@@ -15976,7 +16547,9 @@ $('crear-vis-nota').textContent = c.visibility === 'publica' ? 'Sale en la lista
 $('plazas-valor').textContent = String(c.seats);
 $('plazas-menos').disabled = c.seats <= MIN_HUMANS;
 $('plazas-mas').disabled = c.seats >= MAX_HUMANS;
+$('plazas-atajos').replaceChildren(...SEAT_SHORTCUTS.map((n) => el('button', { type: 'button', class: 'atajo-plazas', 'aria-pressed': String(c.seats === n), text: String(n), onclick: () => this._seats(n - c.seats) })));
 this._chips($('crear-resumen'), c.ranked ? this._rankedSettings() : { bots: c.bots, rules: c.rules });
+this._createSummary();
 if (!this._createRules) {
 const out = el('strong', { text: String(c.bots) });
 const bots = el('input', { type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(c.bots) });
@@ -15984,13 +16557,14 @@ bots.addEventListener('input', () => {
 c.bots = Number(bots.value);
 out.textContent = bots.value;
 this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+this._createSummary();
 this._createRules?.refresh();
 });
 const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
 segmented(dif, Object.entries(DIFFICULTY), c.difficulty, (v) => {
 c.difficulty = v;
 });
-this._createRules = rulesEditor('crear', c.rules, () => this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules }), {
+this._createRules = rulesEditor('crear', c.rules, () => (this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules }), this._createSummary()), {
 autoColonies: () => colonyCount(landTilesOf(c.map), c.bots),
 });
 $('crear-reglas').replaceChildren(
@@ -16000,6 +16574,11 @@ this._createRules,
 );
 }
 this._createRules.refresh();
+}
+_createSummary() {
+const c = this.create;
+const set = c.ranked ? this._rankedSettings() : { bots: c.bots, mapSize: c.map, rules: c.rules };
+$('crear-plazas-resumen').textContent = seatsSummary({ seats: c.seats, humans: c.seats, bots: set.bots, rules: set.rules, landCount: landTilesOf(set.mapSize || c.map) });
 }
 _seats(d) {
 this.create.seats = Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, this.create.seats + d));
@@ -16018,7 +16597,7 @@ c.name = $('crear-nombre').value.trim() || `Sala de ${this.profile.nombre || 'Tr
 this._busyCreate(true);
 $('crear-error').textContent = '';
 if (!c.ranked) {
-Object.assign(this.profile.ajustes, { mapa: c.map, dificultad: c.difficulty, reglas: { ...c.rules } });
+rememberConfig(this.profile, 'online', { bots: c.bots, mapa: c.map, dificultad: c.difficulty, reglas: c.rules });
 this.h.onProfileChange?.(false);
 }
 try {
@@ -16050,6 +16629,8 @@ $('sala-ajustes').hidden = true;
 $('btn-editar-reglas').textContent = 'Editar reglas';
 $('sala-copia').hidden = true;
 delete $('sala-ajustes').dataset.host;
+this._hostDraft = null;
+this._showDraftBar();
 this.pushLayer('sala');
 }
 hideLobby() {
@@ -16134,13 +16715,16 @@ if (s) {
 this._paintMapInto($('sala-mapa-img'), s.mapSize);
 $('sala-mapa-nombre').textContent = mapLabel(s.mapSize);
 this._chips($('sala-chips'), s);
+const seed = REAL_MAPS[s.mapSize] ? '' : ' · mapa generado: la semilla se reparte al empezar';
+$('sala-resumen').textContent = `${seatsSummary({ seats: st.seats, humans: st.total, bots: s.bots, rules: s.rules, landCount: landTilesOf(s.mapSize) })}${seed}`;
 }
 const seen = this._lobbyPeers;
 const wasReady = this._lobbyReady;
 this._lobbyPeers = new Set(st.players.map((p) => p.peer));
 this._lobbyReady = new Set(st.players.filter((p) => p.ready).map((p) => p.peer));
 const claims = sala.rankClaims ? sala.rankClaims() : new Map();
-const rows = st.players.map((p) => {
+const slots = coopSlots(st.players.length, !!(s && s.rules && s.rules.coop));
+const rows = st.players.map((p, i) => {
 const claim = claims.get(p.peer);
 const card = () => this.openPlayerCard({ ...p, rank: claim && Number.isFinite(claim.puntos) ? rankOf(claim.puntos).label : '' }, 'sala');
 const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
@@ -16150,17 +16734,21 @@ return el(
 'li',
 { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''} fila-boton`, tabindex: '0', title: 'Ver su ficha', onclick: card, onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), card()) },
 el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
-el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
+el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}${slots[i] ? (slots[i].solo ? ' · nación en solitario' : ` · pareja ${slots[i].pair}`) : ''}` })),
 el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),
 el('span', { class: `check-sala${p.ready ? ' si' : ''}`, 'aria-label': p.ready ? 'Preparado' : 'Sin preparar', text: p.ready ? '✓' : '' }),
 );
 });
-for (let i = st.players.length; i < st.seats; i++) {
-rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: 'Plaza libre' }))));
-}
+const free = st.seats - st.players.length;
+if (free > 0) rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: free === 1 ? '1 plaza libre' : `${free} plazas libres` }), el('small', { text: 'Comparte el código o el enlace para que entren' }))));
 $('sala-jugadores').replaceChildren(...rows);
+$('sala-jugadores').classList.toggle('muchos', st.players.length > 8);
 $('sala-cuenta').textContent = `${st.total}/${st.seats}`;
-$('sala-preparados').textContent = `${st.readyCount} de ${st.total} preparado${st.total === 1 ? '' : 's'}`;
+$('sala-cuenta').title = `${st.total} de ${st.seats} plazas ocupadas`;
+const guests = st.players.filter((p) => !p.host);
+const guestsReady = guests.filter((p) => p.ready).length;
+$('sala-preparados').textContent = guests.length ? `${guestsReady}/${guests.length} invitado${guests.length === 1 ? '' : 's'} listo${guests.length === 1 ? '' : 's'}` : 'Sin invitados todavía';
+if (sala.isHost) this._seatPicker?.refresh(sala.info.plazas);
 const me = st.players.find((p) => p.isMe);
 const waiting = !me && st.waiting.some((p) => p.isMe);
 const counting = !!sala.countdown;
@@ -16190,8 +16778,23 @@ if (sala.isHost) this._hostEditor(sala, s);
 else {
 $('sala-ajustes').hidden = true;
 delete $('sala-ajustes').dataset.host;
+this._hostDraft = null;
+this._showDraftBar();
 }
+if (!sala.isHost && s) {
+const prev = this._guestSeen;
+if (prev && prev.code === sala.code && prev.rev !== st.rev) {
+const diff = settingsDiff(prev.settings, s, mapLabel);
+if (diff.length) this._changeNote = { text: `El anfitrión ha cambiado: ${diff.join(' · ')}. Revisa y confirma de nuevo.`, until: performance.now() + 20000 };
+}
+this._guestSeen = { code: sala.code, rev: st.rev, settings: JSON.parse(JSON.stringify(s)) };
+if (me && me.ready) this._changeNote = null;
+} else this._changeNote = null;
+const change = this._changeNote && performance.now() < this._changeNote.until ? this._changeNote.text : '';
+const syncing = !sala.isHost && sala.sync ? `Sincronizando jugadores (${sala.sync.got}/${sala.sync.total})…` : '';
 if (status) this._notice(status, /no |otra versión|perdid|ha salido|llena|cerrad|cancel/i.test(status) ? 'error' : '');
+else if (syncing) this._notice(syncing, 'aviso');
+else if (change) this._notice(change, 'aviso');
 else if (kind === 'local') this._notice('Prueba entre pestañas: solo pueden entrar otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.', 'aviso');
 else this._notice('');
 }
@@ -16199,13 +16802,14 @@ _hostEditor(sala, s) {
 const box = $('sala-ajustes');
 if (box.dataset.host) return;
 box.dataset.host = '1';
+this._hostSala = sala;
 const info = sala.info;
 const name = el('input', { maxlength: '28', value: info.nombre, 'aria-label': 'Nombre de la sala' });
 name.addEventListener('change', () => this.h.onRoomInfo?.({ nombre: name.value.trim() || info.nombre }));
 const vis = el('div', { class: 'segmentos visibilidad', role: 'radiogroup', 'aria-label': 'Visibilidad' });
 segmented(vis, [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], info.visibilidad, (v) => this.h.onRoomInfo?.({ visibilidad: v }));
-const seats = el('div', { class: 'segmentos plazas', role: 'radiogroup', 'aria-label': 'Plazas' });
-segmented(seats, Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => [i + MIN_HUMANS, String(i + MIN_HUMANS)]), info.plazas, (v) => this.h.onRoomInfo?.({ plazas: v }));
+const seats = seatPicker(info.plazas, () => sala.minSeats(), (v) => this.h.onRoomInfo?.({ plazas: v }));
+this._seatPicker = seats;
 if (s.clasificatoria) {
 box.replaceChildren(
 el('p', { class: 'nota', text: 'Sala clasificatoria: el mapa, las naciones de la IA y las reglas son fijos.' }),
@@ -16214,45 +16818,85 @@ el('div', { class: 'fila-2' }, el('div', { class: 'campo' }, el('span', { text: 
 );
 return;
 }
-this.choice.rules = { ...DEFAULT_RULES, ...migrateRules(s.rules) };
-this._salaMap = s.mapSize;
-this._salaDifficulty = s.difficulty;
+const draft = (this._hostDraft = { bots: Math.min(ONLINE_MAX_BOTS, s.bots), mapSize: s.mapSize, difficulty: s.difficulty, rules: { ...DEFAULT_RULES, ...migrateRules(s.rules) } });
 const maps = el('div', { class: 'crear-mapas', 'aria-label': 'Mapa' });
-mapPicker(maps, s.mapSize, (id) => {
-this._salaMap = id;
-this._lobbyChanged();
+mapPicker(maps, draft.mapSize, (id) => {
+draft.mapSize = id;
+this._draftChanged();
 });
 const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
-segmented(dif, Object.entries(DIFFICULTY), s.difficulty, (v) => {
-this._salaDifficulty = v;
-this._lobbyChanged();
+segmented(dif, Object.entries(DIFFICULTY), draft.difficulty, (v) => {
+draft.difficulty = v;
+this._draftChanged();
+});
+const botsOut = el('strong', { id: 'sala-out-bots', text: String(draft.bots) });
+const bots = el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(draft.bots) });
+bots.addEventListener('input', () => {
+draft.bots = Number(bots.value);
+botsOut.textContent = bots.value;
+this._draftChanged();
+});
+const rulesSlot = el('div', { class: 'sala-reglas' });
+const mountRules = () => {
+this._rulesSala = rulesEditor('sala', draft.rules, () => this._draftChanged(), {
+autoColonies: () => colonyCount(landTilesOf(draft.mapSize || 'mundo'), draft.bots),
+});
+rulesSlot.replaceChildren(this._rulesSala);
+this._rulesSala.refresh();
+};
+mountRules();
+const reset = el('button', { type: 'button', class: 'btn-mini', text: 'Restablecer reglas', title: 'Vuelve a las reglas por defecto en el borrador (se aplican con «Aplicar cambios»)' });
+reset.addEventListener('click', () => {
+for (const k of Object.keys(draft.rules)) delete draft.rules[k];
+Object.assign(draft.rules, DEFAULT_RULES);
+mountRules();
+this._draftChanged();
 });
 box.replaceChildren(
-el('p', { class: 'nota', text: 'Si cambias el mapa, las naciones, la dificultad o las reglas, los invitados tienen que confirmar de nuevo. El nombre, la visibilidad y las plazas no.' }),
+el('p', { class: 'nota', text: 'El nombre, la visibilidad y las plazas cambian al momento. El mapa, las naciones, la dificultad y las reglas se aplican juntos con «Aplicar cambios»: entonces los invitados confirman de nuevo.' }),
 el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name),
 el('div', { class: 'fila-2' }, el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis), el('div', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
 el('div', { class: 'campo' }, el('span', { text: 'Mapa' }), maps),
 el('div', { class: 'fila-2' },
-el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
-el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(Math.min(ONLINE_MAX_BOTS, s.bots)), oninput: () => this._lobbyChanged() })),
+el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', botsOut), bots),
 el('div', { class: 'campo' }, el('span', { text: 'Dificultad' }), dif)),
-(this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
-autoColonies: () => colonyCount(landTilesOf(this._salaMap || 'mundo'), Number($('sala-bots')?.value || 0)),
-})),
+rulesSlot,
+el('div', { class: 'borrador-extra' }, reset),
 );
-this._rulesSala.refresh();
+this._draftChanged();
 }
-_lobbyChanged() {
-$('sala-out-bots').textContent = $('sala-bots').value;
+_draftChanged() {
+const sala = this._hostSala;
+const draft = this._hostDraft;
+if (!sala || !draft || !$('sala-borrador')) return;
 this._rulesSala?.refresh();
-this.profile.ajustes.reglas = { ...this.choice.rules };
+const diff = sala.isHost ? settingsDiff(sala.settings, draft, mapLabel) : [];
+this._showDraftBar(diff);
+}
+_showDraftBar(diff = []) {
+const on = diff.length > 0;
+$('sala-borrador').hidden = !on;
+$('sala-borrador-texto').textContent = on ? `Sin aplicar: ${diff.join(' · ')}.` : '';
+$('sala-pie').classList.toggle('con-borrador', on);
+}
+draftPending() {
+const sala = this._hostSala;
+return !!(sala && sala.isHost && this._hostDraft && settingsDiff(sala.settings, this._hostDraft).length);
+}
+_applyDraft() {
+const d = this._hostDraft;
+if (!d || !this.draftPending()) return;
+const settings = { bots: d.bots, mapSize: d.mapSize, difficulty: d.difficulty, rules: { ...d.rules } };
+rememberConfig(this.profile, 'online', { bots: d.bots, mapa: d.mapSize, dificultad: d.difficulty, reglas: d.rules });
 this.h.onProfileChange?.(false);
-this.h.onRoomSettings?.({
-bots: Number($('sala-bots').value),
-mapSize: this._salaMap,
-difficulty: this._salaDifficulty,
-rules: { ...this.choice.rules },
-});
+this.h.onRoomSettings?.(settings);
+this._draftChanged();
+}
+_discardDraft() {
+const sala = this._hostSala;
+if (!sala) return;
+delete $('sala-ajustes').dataset.host;
+this._hostEditor(sala, sala.settings);
 }
 showCountdown(ms) {
 const box = $('sala-cuenta-atras');
@@ -18633,8 +19277,9 @@ const { Grabador, compactCurve, placement } = __require('resumen');
 const { Ladder } = __require('ladder');
 const { claimText, getIdentity, signClaim, verifiedRank } = __require('identidad');
 const { challengeBeaten, challengeLink, parseChallenge } = __require('reto');
-const { RANKED_AI, RANKED_ROOM, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } = __require('rangos');
+const { RANKED_AI, RANKED_ROOM, aiDifficultyFor, alreadyApplied, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName, voidResult } = __require('rangos');
 const { presentMatch } = __require('presentacion');
+const { configSnapshot } = __require('repeticion');
 const { INVITE_MS, Matchmaker } = __require('emparejamiento');
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -18790,6 +19435,15 @@ role: game.rules.coopRoles ? (members[0] === localIndex ? 'militar' : 'economia'
 game.addBots(bots, difficulty, countries);
 game.addColonies(game.rules.colonies ?? colonyCount(map.landCount, bots));
 game.start();
+state.config = configSnapshot({
+mode: humans.length > 1 ? 'online' : 'ia',
+mapSize,
+nations: game.players.filter((p) => p && !p.isHuman && !p.weak).length,
+colonies: game.players.filter((p) => p && p.weak).length,
+difficulty,
+rules: game.rules,
+seed,
+});
 state.game = game;
 state.human = game.human;
 state.mapSize = mapSize;
@@ -18908,6 +19562,7 @@ newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficu
 },
 { label: 'Cavando trincheras…', run: (game) => game },
 ]);
+if (state.config) state.config.modo = opts.tutorial ? 'tutorial' : opts.ranked ? 'clasificatoria' : opts.challenge ? 'reto' : 'ia';
 if (!opts.tutorial) await presentMatch(soloPresentation(game, opts));
 if (state.game !== game) return;
 enterGame(game);
@@ -18917,9 +19572,13 @@ state.loading = false;
 }
 }
 const DIFF_NAMES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 function myCard(ranked) {
-const r = profile.rango;
+const r = queueRank(ranked);
 return { ...myIdentity(), nameColor: nameColorOf(profile), me: true, rank: ranked ? { points: r.puntos, placing: inPlacement(r) } : null };
+}
+function queueRank(cola) {
+return cola === 'sala' || cola === 'online' ? profile.rangoOnline : profile.rango;
 }
 function nationsOf(game) {
 return game.players.filter((p) => p && !p.isHuman && !p.weak).map((p) => ({ name: p.name, color: `rgb(${p.color.join(',')})`, flag: p.flag || '' }));
@@ -18933,9 +19592,9 @@ const ranked = !!opts.ranked;
 return {
 kicker: ranked ? `Clasificatoria · ${seasonName(profile.rango.temporada)}` : opts.challenge ? 'Reto' : 'Partida contra la IA',
 title: opts.title && !ranked ? opts.title : mapLabel(opts.mapSize),
-details: `${nations.length} naciones · ${colonies} colonias · perfil ${prof} · IA ${dif}`,
+details: `${plural(nations.length, 'nación', 'naciones')} · ${plural(colonies, 'colonia', 'colonias')} · perfil ${prof} · IA ${dif}`,
 players: [myCard(ranked)],
-ai: { name: 'La IA', title: `Ejércitos de ${nations.length} naciones`, note: `Dificultad ${dif}`, color: '#b5402f', emblem: { shape: 'escudo', symbol: 'espadas', bg: '#3a1418', fg: '#f2b33d', flag: '' }, frame: ranked ? 'oro' : 'bronce', banner: 'volcan' },
+ai: { name: 'La IA', title: `Ejércitos de ${nations.length} ${nations.length === 1 ? 'nación' : 'naciones'}`, note: `Dificultad ${dif}`, color: '#b5402f', emblem: { shape: 'escudo', symbol: 'espadas', bg: '#3a1418', fg: '#f2b33d', flag: '' }, frame: ranked ? 'oro' : 'bronce', banner: 'volcan' },
 nations,
 ranked,
 sound,
@@ -18945,6 +19604,10 @@ function tutorialState() {
 return { game: state.game, human: state.human, ratio: state.ratio };
 }
 const tutorial = new Tutorial({
+onStartNow: () => {
+if (!state.net && state.game && state.game.phase === 'spawn') state.game.skipSpawn();
+},
+onAuto: () => document.getElementById('aviso-auto')?.click(),
 onFinish() {
 profile.tutorial = true;
 const ach = grantAchievement(profile, 'recluta');
@@ -19016,18 +19679,80 @@ ui.coop = state.coop;
 document.body.classList.toggle('sin-animaciones', a.animaciones === false);
 }
 function leaveOnline() {
-if (state.net) state.net.stop();
+clearInterval(state.rematchWatch);
+const net = state.net;
+const sala = state.sala;
+const hostAbandon = !!(net && net.isHost && state.game && !state.demo && state.game.phase !== 'ended');
+if (hostAbandon) net.announceLeave('abandono');
+if (net) net.stop();
+if (state.oldNet) state.oldNet.stop();
+state.oldNet = null;
 state.net = null;
-if (state.sala) state.sala.leave();
+if (sala) {
+if (hostAbandon) setTimeout(() => sala.leave(), 400);
+else sala.leave();
+}
 state.sala = null;
 state.online = false;
 }
+function onlineEndActions(ended) {
+if (!state.online) return {};
+const sala = state.sala;
+const host = !!(sala && sala.isHost);
+if (!ended) return { nueva: { hidden: true }, menu: { label: host ? 'Salir (se interrumpe para todos)' : 'Salir a Multijugador' } };
+if (state.ranked || !sala) return { nueva: { hidden: true }, menu: { label: 'Volver a Multijugador' } };
+if (host) return { nueva: { label: 'Abrir revancha', title: 'Vuelve al vestíbulo con el mismo código, mapa y reglas; la próxima ronda tiene semilla nueva' }, menu: { label: 'Salir a Multijugador' } };
+const open = sala.rematchOpen();
+return { nueva: { label: open ? 'Unirse a la revancha' : 'Esperando la revancha…', disabled: !open, title: open ? '' : 'Cuando el anfitrión la abra, podrás unirte' }, menu: { label: 'Salir a Multijugador' } };
+}
+function watchRematch() {
+clearInterval(state.rematchWatch);
+if (!state.online || !state.sala || state.sala.isHost || state.ranked) return;
+const sala = state.sala;
+state.rematchWatch = setInterval(() => {
+if (state.sala !== sala || !state.online) clearInterval(state.rematchWatch);
+else ui.setEndActions(onlineEndActions(true));
+}, 700);
+}
+function backToRoom() {
+clearInterval(state.rematchWatch);
+finishGame();
+ui.hideEnd();
+tutorial.stop();
+const net = state.net;
+if (net && net.isHost) {
+if (state.oldNet) state.oldNet.stop();
+state.oldNet = net;
+setTimeout(() => {
+net.stop();
+if (state.oldNet === net) state.oldNet = null;
+}, 60000);
+} else if (net) net.stop();
+state.net = null;
+state.online = false;
+state.ranked = null;
+startDemo({ background: true });
+home.showLobby();
+}
+function openRematch() {
+const sala = state.sala;
+if (!sala || !sala.isHost) return;
+backToRoom();
+sala.reopen();
+}
+function joinRematch() {
+const sala = state.sala;
+if (!sala || sala.isHost || !sala.rematchOpen()) return;
+backToRoom();
+sala.rejoin();
+}
 function defaultRoomSettings() {
+const c = profile.ajustes.online;
 return {
-bots: Math.min(60, profile.ajustes.bots),
-mapSize: profile.ajustes.mapa,
-difficulty: profile.ajustes.dificultad,
-rules: { ...DEFAULT_RULES, ...migrateRules(profile.ajustes.reglas) },
+bots: Math.min(60, c.bots),
+mapSize: c.mapa,
+difficulty: c.dificultad,
+rules: { ...DEFAULT_RULES, ...migrateRules(c.reglas) },
 };
 }
 function toggleMatchmaking() {
@@ -19039,7 +19764,7 @@ if (!transport) {
 home.flash?.('Sin conexión con el servidor de salas.');
 return;
 }
-const r = profile.rango;
+const r = profile.rangoOnline;
 const reward = ensureSeason(r);
 if (reward) grantSeasonReward(reward);
 state.mm = new Matchmaker(transport, {
@@ -19106,7 +19831,7 @@ const sala = new Sala(transport, { code, isHost, me: { ...myIdentity(), name: ro
 state.sala = sala;
 try {
 const ident = await getIdentity();
-const r = profile.rango;
+const r = profile.rangoOnline;
 const signed = ident ? await signClaim(claimText(code, r.mmr, r.puntos), ident) : null;
 if (signed) sala.rankClaim = { mmr: Math.round(r.mmr), puntos: r.puntos, ...signed };
 } catch {
@@ -19217,7 +19942,8 @@ state.lastOpts = null;
 const rankPoints = new Map();
 let ranksReady = Promise.resolve();
 if (state.ranked) {
-profile.rango.pendiente = { tipo: 'sala', inicio: Date.now() };
+state.rankedMatch = `${sala.code}.${payload.ronda}.${payload.seed >>> 0}`;
+profile.rangoOnline.pendiente = { tipo: 'sala', inicio: Date.now(), partida: state.rankedMatch };
 saveProfile(profile);
 const claims = sala.rankClaims();
 state.rankedMmr = new Map();
@@ -19229,7 +19955,7 @@ if (v) rankPoints.set(p.peer, v.puntos);
 }
 state.holdSim = true;
 const game = await withLoading(
-`${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
+`${mapLabel(payload.settings.mapSize)}${REAL_MAPS[payload.settings.mapSize] ? '' : ` · semilla ${payload.seed >>> 0}`} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
 [
 { label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
 {
@@ -19256,14 +19982,14 @@ const nations = nationsOf(game);
 const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
 const ranked = !!state.ranked;
 await presentMatch({
-kicker: ranked ? `Sala clasificatoria · ${seasonName(profile.rango.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
+kicker: ranked ? `Sala clasificatoria · en línea · ${seasonName(profile.rangoOnline.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
 title: mapLabel(payload.settings.mapSize),
-details: `${payload.players.length} jugadores · ${nations.length} naciones de la IA · perfil ${prof}`,
+details: `${plural(payload.players.length, 'jugador', 'jugadores')} · ${plural(nations.length, 'nación de la IA', 'naciones de la IA')} · perfil ${prof}`,
 players: payload.players.map((p) => ({
 ...p,
 nameColor: nameColorOf({ colorNombre: p.nameColor, color: p.color }),
 me: p.peer === myPeer,
-rank: ranked ? (p.peer === myPeer ? { points: profile.rango.puntos, placing: inPlacement(profile.rango) } : rankPoints.has(p.peer) ? { points: rankPoints.get(p.peer), placing: false } : { points: 0, placing: true }) : null,
+rank: ranked ? (p.peer === myPeer ? { points: profile.rangoOnline.puntos, placing: inPlacement(profile.rangoOnline) } : rankPoints.has(p.peer) ? { points: rankPoints.get(p.peer), placing: false } : { points: 0, placing: true }) : null,
 })),
 nations,
 ranked,
@@ -19275,17 +20001,25 @@ if (state.sala !== sala || state.game !== game) return;
 const groups = coopGroups(payload.players.length, game.rules.coop);
 const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
 const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true });
+state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true, ronda: payload.ronda || 1 });
 state.rankedRivals = () =>
 payload.players
 .map((p, i) => ({ p, player: game.players[playerOf(i)] }))
 .filter(({ p }) => p.peer !== myPeer)
 .map(({ p, player }) => ({ mmr: state.rankedMmr?.get(p.peer) ?? 1000, place: player ? placement(game, player).place : Infinity }));
-state.net.onHostLeft = () => {
-if (game.phase === 'ended') return;
-if (state.ranked) state.rankedVoid = true;
-const progress = finishGame();
-ui.showEnd('Partida interrumpida', 'El anfitrión ha abandonado la partida.', progress);
+state.net.onHostLeft = (reason) => {
+if (game.phase === 'ended' || state.game !== game || state.endShown) return;
+state.endShown = true;
+if (state.ranked) {
+state.rankedVoid = true;
+state.rankedVoidReason = reason === 'abandono' ? 'El anfitrión abandonó la partida' : 'Se perdió la conexión con el anfitrión';
+}
+const progress = finishGame({ interrupted: true });
+const extra = endExtra('interrumpida');
+extra.motivo = reason === 'abandono' ? 'El anfitrión ha abandonado la partida.' : 'Se ha perdido la conexión con el anfitrión.';
+extra.validez = state.ranked ? 'Clasificatoria anulada: no cuenta para el rango de nadie.' : 'La ronda no se ha completado: queda en tu historial como interrumpida.';
+extra.actions = { nueva: { hidden: true }, seguir: { hidden: true }, menu: { label: 'Volver a Multijugador' } };
+ui.showEnd('Partida interrumpida', `Se interrumpió a los ${formatTime(extra.stats.seconds)} de partida.`, progress, extra);
 };
 enterGame(game);
 }
@@ -19428,7 +20162,9 @@ coop: !!state.coop,
 victory: game.rules.victory,
 alive: human.alive,
 survivedSeconds: survived,
+ended: game.phase === 'ended',
 rivals: game.players.length - 2,
+config: state.config && state.config.semilla === (game.seed >>> 0) ? state.config : null,
 };
 }
 function endFanfare(progress, ms) {
@@ -19436,14 +20172,15 @@ if (!progress) return;
 const name = progress.levelUp ? 'nivel' : progress.achievements?.length ? 'logro' : null;
 if (name) setTimeout(() => sound.play(name, 1, 0), ms);
 }
-function finishGame() {
+function finishGame({ interrupted = false } = {}) {
 const { game, human } = state;
 if (state.recorded || state.demo || !game || !human) return null;
 state.recorded = true;
 if (state.rec && state.rec.game === game) state.rec.finish();
 const result = gameResult();
+result.interrupted = interrupted;
 applyRanked(result);
-if (game.phase !== 'ended' && human.alive && result.seconds < 60) return null;
+if (!interrupted && game.phase !== 'ended' && human.alive && result.seconds < 60) return null;
 const out = recordGame(profile, result);
 scheduleCloudSync(0);
 for (const a of out.achievements) ui.pushEvent({ text: `${a.icon} Logro: ${a.name}`, kind: 'good' });
@@ -19475,7 +20212,8 @@ const r = profile.rango;
 const reward = ensureSeason(r);
 if (reward) grantSeasonReward(reward);
 const difficulty = aiDifficultyFor(r);
-r.pendiente = { tipo: 'ia', inicio: Date.now() };
+state.rankedMatch = `ia.${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 8)}`;
+r.pendiente = { tipo: 'ia', inicio: Date.now(), partida: state.rankedMatch };
 saveProfile(profile);
 state.rankedDifficulty = difficulty;
 startGame({
@@ -19497,36 +20235,44 @@ home.flash?.(`Nueva temporada. Por tu ${reward.league.name} de la anterior: +�
 function applyRanked(result) {
 if (!state.ranked || state.rankedDone || !state.human) return;
 state.rankedDone = true;
-const r = profile.rango;
+const r = queueRank(state.ranked);
+const partida = (r.pendiente && r.pendiente.partida) || state.rankedMatch || '';
 if (state.rankedVoid) {
+const out = voidResult(r, { partida, motivo: state.rankedVoidReason || 'Se perdió al anfitrión' });
 r.pendiente = null;
 saveProfile(profile);
+if (out) state.rankOut = { ...out, rank: { ...r } };
+home.renderRanked?.();
 return;
 }
 const abandon = state.game.phase !== 'ended' && state.human.alive;
 const place = { place: result.place, of: result.of };
 const before = { puntos: r.puntos, colocacion: r.colocacion };
 let out;
-if (state.ranked === 'sala') out = applyRoomResult(r, place, state.rankedRivals ? state.rankedRivals() : [], { abandon });
-else out = applyAiResult(r, place, { difficulty: state.rankedDifficulty, abandon });
+if (state.ranked === 'sala') out = applyRoomResult(r, place, state.rankedRivals ? state.rankedRivals() : [], { abandon, partida });
+else out = applyAiResult(r, place, { difficulty: state.rankedDifficulty, abandon, partida });
 r.pendiente = null;
 saveProfile(profile);
+if (!out) return;
 state.rankOut = { ...out, abandon, before, rank: { ...r } };
 pushRankRow();
 home.renderRanked?.();
 home.renderChip();
 }
 function settlePendingRanked() {
-const r = profile.rango;
+for (const r of [profile.rango, profile.rangoOnline]) {
 const reward = ensureSeason(r);
 if (reward) grantSeasonReward(reward);
-if (!r.pendiente) return;
-const tipo = r.pendiente.tipo;
-const out = tipo === 'sala' ? applyRoomResult(r, null, [], { abandon: true }) : applyAiResult(r, null, { abandon: true });
+if (!r.pendiente) continue;
+const { tipo, partida } = r.pendiente;
+const out = alreadyApplied(r, partida) ? null : tipo === 'sala' ? applyRoomResult(r, null, [], { abandon: true, partida }) : applyAiResult(r, null, { abandon: true, partida });
 r.pendiente = null;
 saveProfile(profile);
-pushRankRow();
-whenBooted(() => setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 500));
+if (!out) continue;
+if (tipo !== 'sala') pushRankRow();
+const cola = tipo === 'sala' ? 'en línea' : 'contra la IA';
+whenBooted(() => setTimeout(() => home.flash?.(`Dejaste una clasificatoria ${cola} sin terminar: cuenta como derrota (${out.delta} PL).`), 500));
+}
 }
 function renderRankChange(box, o) {
 const r = o.rank;
@@ -19539,7 +20285,10 @@ texts.className = 'fr-textos';
 const title = document.createElement('strong');
 const sub = document.createElement('small');
 const placing = inPlacement(r);
-if (o.placing && !o.placementDone) {
+if (o.void) {
+title.textContent = 'Clasificatoria anulada';
+sub.textContent = `${o.motivo || 'Se perdió al anfitrión'}: no cuenta ni a favor ni en contra. Queda en tu historial.`;
+} else if (o.placing && !o.placementDone) {
 title.textContent = `Colocación ${r.colocacion}/5`;
 sub.textContent = o.mmrDelta >= 0 ? 'Buena partida: tu nivel oculto sube.' : 'Tu nivel oculto baja un poco.';
 } else if (o.placementDone) {
@@ -19554,9 +20303,10 @@ title.style.color = placing ? '' : `rgb(${k.league.color.join(',')})`;
 texts.append(title, sub);
 const delta = document.createElement('span');
 delta.className = `fr-delta ${o.delta > 0 ? 'sube' : o.delta < 0 ? 'baja' : ''}`;
-delta.textContent = o.placing && !o.placementDone ? '' : `${o.delta > 0 ? '+' : ''}${o.delta} PL`;
+delta.textContent = o.void ? '0 PL' : o.placing && !o.placementDone ? '' : `${o.delta > 0 ? '+' : ''}${o.delta} PL`;
 head.append(texts, delta);
 box.append(head);
+if (o.void) return;
 if (!placing) {
 const bar = document.createElement('div');
 bar.className = 'fr-barra';
@@ -19644,14 +20394,18 @@ const fit = Math.min(camera.viewW / map.width, camera.viewH / map.height) * 0.9;
 camera.flyTo(map.width / 2, map.height / 2, fit, 1300);
 const won = game.winner === human || !!(game.winningAlliance && game.winningAlliance.includes(human));
 const extra = endExtra(won ? 'victoria' : 'fin');
+extra.actions = onlineEndActions(true);
 setTimeout(() => {
-if (state.game === game) ui.showEnd(title, text, progress, extra);
+if (state.game !== game) return;
+ui.showEnd(title, text, progress, extra);
+watchRematch();
 }, 1500);
 endFanfare(progress, 2600);
 } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
 state.defeatShown = true;
 const progress = finishGame();
 const extra = endExtra('derrota');
+extra.actions = onlineEndActions(false);
 setTimeout(() => {
 if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(extra.stats.seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress, extra);
 }, 1200);
@@ -19973,10 +20727,33 @@ if (game.spawnCheck(human, t).ok) best = t;
 }
 return best;
 }
+document.getElementById('dp-empezar').addEventListener('click', () => {
+const { game, human } = state;
+if (state.demo || state.net || !game || !human?.spawned || game.phase !== 'spawn') return;
+game.skipSpawn();
+});
+function updateSpawnPreview() {
+const { game, human } = state;
+if (state.demo || !game || !human || game.phase !== 'spawn') {
+if (state.spawnPreview) {
+state.spawnPreview = null;
+ui.setSpawnInfo(null);
+}
+return;
+}
+const hover = !TOUCH && state.hover.tile >= 0 ? state.hover.tile : -1;
+const tile = hover >= 0 && game.map.isLand(hover) ? hover : human.spawned ? human.spawnTile : -1;
+const key = `${tile}:${human.spawnTile}`;
+if (state.spawnKey === key) return;
+state.spawnKey = key;
+state.spawnPreview = tile >= 0 ? game.spawnInfo(human, tile) : null;
+ui.setSpawnInfo(state.spawnPreview);
+}
 document.getElementById('aviso-auto').addEventListener('click', () => {
 const { game, human } = state;
 if (state.demo || !game || !human || game.phase !== 'spawn') return;
-const t = suggestSpawn(game, human);
+const rec = game.recommendSpawn(human);
+const t = rec.tile >= 0 ? rec.tile : suggestSpawn(game, human);
 if (t < 0) {
 ui.hint('No encuentro un buen sitio: elige tú en el mapa', 'warn');
 return;
@@ -20064,9 +20841,10 @@ const o = g.owner[tile];
 if (g.phase === 'playing' && o !== h.id && !(o && h.allies.has(o))) {
 const troops = ui.nextSend(h);
 if (troops >= 1) {
-const e = g.estimateAttack(h, o, troops);
-const who = o ? g.players[o].name : 'tierra libre';
-ui.hint(`${who}: ~${formatNumber(e.tiles)} casillas con ${fmtTroops(troops)} soldados${o ? ` · riesgo ${e.risk}` : ''}${e.uncertain ? ' (incierto)' : ''}`, o && e.risk === 'alto' ? 'warn' : 'info');
+const pv = g.attackPreview(h, tile, troops);
+const who = o ? g.players[o].name : 'Tierra libre';
+const expo = pv.incoming ? ` · ⚠ te atacan con ${fmtTroops(pv.incoming)}${pv.exposure === 'alta' ? ' (tu reserva no basta)' : ''}` : '';
+ui.hint(`${who}: envías ${fmtTroops(pv.send)}, te quedan ${fmtTroops(pv.reserve)} · previsión ~${formatNumber(pv.tiles)} cas.${o ? ` (riesgo ${pv.risk})` : ''}${expo}`, pv.exposure === 'alta' || (o && pv.risk === 'alto') ? 'warn' : 'info');
 }
 }
 },
@@ -20119,11 +20897,18 @@ if (!force && !state.demo) {
 openGameMenu();
 return;
 }
+const wasOnline = state.online;
 finishGame();
 tutorial.stop();
 startDemo();
+if (wasOnline) home.returnTo('multijugador');
 },
 onRematch() {
+if (state.online) {
+if (state.sala?.isHost) openRematch();
+else joinRematch();
+return;
+}
 finishGame();
 ui.hideEnd();
 if (state.online || !state.lastOpts) {
@@ -20164,6 +20949,8 @@ state.lastRaw = now;
 if (game && game.phase !== 'ended') {
 if (state.net) {
 state.net.update();
+} else if (tutorial.holds() && !state.holdSim) {
+if (game.phase === 'spawn') game.applyIntentsNow();
 } else if (state.speed > 0 && !state.holdSim) {
 state.acc += dt * state.speed;
 let steps = 0;
@@ -20188,7 +20975,7 @@ const demoGap = TOUCH ? 62 : 46;
 if (!state.demo || (now - (state.lastDemoDraw || 0) >= demoGap && !home.menuCovers())) {
 if (state.demo) state.lastDemoDraw = now;
 try {
-state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping, spawn: state.spawnPreview });
 } catch (err) {
 reportError(err, 'dibujo del mapa');
 }
@@ -20203,6 +20990,8 @@ reportError(err, 'minimapa y sonido');
 if (!state.demo && state.human && now - state.lastHud > 200) {
 state.lastHud = now;
 try {
+ui.soloSpawn = !state.net;
+updateSpawnPreview();
 ui.update(state.game, state.human, state.ratio, state.buildMode);
 if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y, camera.zoom);
 if (state.net) ui.setNetNote(state.net.status);
@@ -20264,7 +21053,7 @@ document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
 document.getElementById('mp-repintar').addEventListener('click', () => state.renderer?.restoreCanvases());
 document.getElementById('mp-salir').addEventListener('click', () => {
 cerrarDialogo(document.getElementById('menu-partida'));
-if (stillPlaying()) ui.confirmExit(!!state.ranked);
+if (stillPlaying()) ui.confirmExit(!!state.ranked, { host: !!(state.online && state.net?.isHost), guests: state.sala ? Math.max(0, state.sala.players().length - 1) : 0 });
 else {
 finishGame();
 tutorial.stop();
@@ -20367,6 +21156,12 @@ await paint();
 home.renderChip();
 home.renderHero();
 settlePendingRanked();
+if (profile.rangoMigrado && !profile.ajustes.avisoColas) {
+profile.ajustes.avisoColas = Date.now();
+saveProfile(profile);
+const h = profile.rangoHistorico;
+whenBooted(() => setTimeout(() => home.flash?.(`Ahora la clasificatoria contra la IA y la de en línea tienen rangos separados. Tu rango de antes${h && !inPlacement(h) ? ` (${rankOf(h.puntos).label})` : ''} se guarda como histórico en Competitivo; las dos colas empiezan con 5 partidas de colocación a partir de tu nivel.`, true), 1200));
+}
 home.renderAll();
 loader?.step('Desplegando el frente…', 0.96, 700, 'frente');
 await paint();
@@ -22318,8 +23113,9 @@ __define('multiplayer', function () {
 const { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } = __require('config');
 const { MECH, PROFILES, rulesetId } = __require('mecanicas');
 const { selfPeer } = __require('net');
+const PROTOCOL = 3;
 const FINGERPRINT = (() => {
-const s = JSON.stringify([MECH, PROFILES, CONFIG, BUILDINGS, MAP_IDS]);
+const s = JSON.stringify([PROTOCOL, MECH, PROFILES, CONFIG, BUILDINGS, MAP_IDS]);
 let h = 2166136261;
 for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
 return (h >>> 0).toString(36);
@@ -22330,6 +23126,9 @@ return `${rulesetId(cleanRules(rules))}#${FINGERPRINT}`;
 }
 function checkStartPayload(d) {
 if (!d || d.v !== 1 || !Number.isFinite(d.seed) || !Array.isArray(d.players) || !d.settings) return { ok: false, reason: 'datos' };
+if (d.players.length < 1 || d.players.length > MAX_HUMANS) return { ok: false, reason: 'datos' };
+if (new Set(d.players.map((p) => String(p && p.peer))).size !== d.players.length) return { ok: false, reason: 'datos' };
+if (Number.isInteger(d.count) && d.count !== d.players.length) return { ok: false, reason: 'datos' };
 const rules = cleanRules(d.settings.rules);
 const mine = roomRuleset(rules);
 if (d.ruleset !== mine) return { ok: false, reason: 'version', theirs: String(d.ruleset || 'desconocida'), mine };
@@ -22338,21 +23137,30 @@ return {
 ok: true,
 payload: {
 seed: d.seed >>> 0,
+ronda: Number.isInteger(d.ronda) && d.ronda > 0 ? d.ronda : 1,
 ruleset: mine,
 settings: {
 mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
-bots: Math.max(0, Math.min(60, Math.floor(d.settings.bots) || 0)),
+bots: Math.max(0, Math.min(MAX_ONLINE_BOTS, Math.floor(d.settings.bots) || 0)),
 difficulty: ['facil', 'normal', 'dificil', 'imposible'].includes(d.settings.difficulty) ? d.settings.difficulty : 'normal',
 rules,
 clasificatoria: !!d.settings.clasificatoria,
 },
-players: d.players.slice(0, MAX_HUMANS).map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
+players: d.players.map((p) => ({ peer: String(p.peer), ...cleanPlayer(p) })),
 },
 };
 }
-const MAX_HUMANS = 8;
+const MAX_HUMANS = 32;
+const VALIDATED_SEATS = 32;
+const SEAT_SHORTCUTS = [4, 8, 16, 24, 32].filter((n) => n <= VALIDATED_SEATS);
+const DEFAULT_SEATS = 8;
+const MAX_ONLINE_BOTS = 60;
 const TURN_TICKS = 2;
 const MAX_MSG_BYTES = 3500;
+const MAX_TICK_INTENTS = 32;
+const MAX_SENDER_TICK = 4;
+const MAX_SENDER_QUEUE = 64;
+const MAX_TICK_BYTES = 2800;
 const HASH_EVERY = 100;
 const RESEND_AFTER_MS = 700;
 const GAP_RESEND_MS = 300;
@@ -22423,9 +23231,7 @@ const host = peers.find((p) => p.presence && p.presence.anfitrion && p.presence.
 const rev = host ? host.presence.rev : null;
 const info = cleanRoomInfo(host && host.presence.info);
 const hostVersion = host ? host.presence.version : null;
-const all = peers
-.filter((p) => p.presence && p.presence.jugador)
-.sort((a, b) => (b.presence.anfitrion ? 1 : 0) - (a.presence.anfitrion ? 1 : 0) || (Number(a.presence.desde) || 0) - (Number(b.presence.desde) || 0) || (a.peer < b.peer ? -1 : 1));
+const all = peers.filter((p) => p.presence && p.presence.jugador).sort(byArrival);
 const mk = (p) => {
 const isHost = !!p.presence.anfitrion;
 return {
@@ -22446,8 +23252,17 @@ if (n === 1) return p;
 const suffix = ` (${n})`;
 return { ...p, name: `${p.name.slice(0, 18 - suffix.length)}${suffix}` };
 });
-const players = listed.slice(0, info.plazas);
-const waiting = listed.slice(info.plazas);
+const granted = host && Array.isArray(host.presence.admitidos) ? host.presence.admitidos.map(String) : null;
+let players;
+if (granted) {
+const byPeer = new Map(listed.map((p) => [p.peer, p]));
+const seated = granted.map((id) => byPeer.get(id)).filter(Boolean).slice(0, info.plazas);
+const ids = new Set(seated.map((p) => p.peer));
+for (const p of listed) if (seated.length < info.plazas && !ids.has(p.peer)) seated.push(p), ids.add(p.peer);
+players = seated;
+} else players = listed.slice(0, info.plazas);
+const seatedIds = new Set(players.map((p) => p.peer));
+const waiting = listed.filter((p) => !seatedIds.has(p.peer));
 const blockers = [];
 if (!host) blockers.push('El anfitrión no está en la sala');
 for (const p of players) if (!p.versionOk) blockers.push(`${p.name} tiene otra versión del juego: tiene que recargar la página`);
@@ -22474,6 +23289,95 @@ banner: word(p.banner, 'noche'),
 nameColor: typeof p.nameColor === 'string' && /^[a-z]{2,12}$/.test(p.nameColor) ? p.nameColor : '',
 };
 }
+const utf8 = new TextEncoder();
+function utf8Bytes(s) {
+return utf8.encode(s).length;
+}
+function wireBytes(topic, data, peer = 'xxxxxxxxxxxx') {
+return utf8Bytes(JSON.stringify({ t: 'e', topic, data, peer }));
+}
+function startFragments(payload, { code = '', maxBytes = MAX_MSG_BYTES } = {}) {
+const { players, ...head } = payload;
+const k = `${code}.${payload.ronda}.${payload.rev || 0}.${payload.seed}`;
+const base = (i) => ({ v: 2, k, r: payload.ronda, rev: payload.rev || 0, i, n: 99, count: players.length, p: [] });
+const frags = [];
+let cur = { ...base(0), h: head };
+if (wireBytes('inicio', cur) > maxBytes) throw new Error('La configuración no cabe en un mensaje');
+players.forEach((pl, x) => {
+const entry = { ...pl, x };
+cur.p.push(entry);
+if (wireBytes('inicio', cur) <= maxBytes) return;
+cur.p.pop();
+if (cur.p.length) frags.push(cur);
+cur = base(frags.length);
+cur.p.push(entry);
+if (wireBytes('inicio', cur) > maxBytes) throw new Error('Un jugador no cabe en un mensaje');
+});
+frags.push(cur);
+for (const f of frags) f.n = frags.length;
+return frags;
+}
+class StartAssembler {
+constructor() {
+this.key = null;
+this.total = 0;
+this.parts = new Map();
+this.frags = new Map();
+this.conflicts = 0;
+this.done = null;
+}
+add(f) {
+if (!f || f.v !== 2 || typeof f.k !== 'string' || f.k.length > 80 || !Number.isInteger(f.i) || !Number.isInteger(f.n) || f.n < 1 || f.n > 64 || f.i < 0 || f.i >= f.n || !Array.isArray(f.p)) return { estado: 'ignorado' };
+if (f.k !== this.key) {
+this.key = f.k;
+this.total = f.n;
+this.parts = new Map();
+this.frags = new Map();
+this.done = null;
+}
+if (this.done) return { estado: 'completo', payload: this.done };
+if (f.n !== this.total) {
+this.conflicts++;
+return { estado: 'ignorado' };
+}
+const text = JSON.stringify(f);
+const prev = this.parts.get(f.i);
+if (prev !== undefined) {
+if (prev !== text) this.conflicts++;
+return { estado: 'parcial' };
+}
+this.parts.set(f.i, text);
+this.frags.set(f.i, f);
+if (this.frags.size < this.total) return { estado: 'parcial' };
+const head = this.frags.get(0).h;
+const players = [];
+for (let i = 0; i < this.total; i++) players.push(...this.frags.get(i).p);
+players.sort((a, b) => a.x - b.x);
+const count = this.frags.get(0).count;
+const okOrder = players.every((pl, i) => pl && pl.x === i);
+if (!head || typeof head !== 'object' || players.length !== count || !okOrder) return { estado: 'error' };
+this.done = { ...head, count, players: players.map(({ x, ...pl }) => pl) };
+return { estado: 'completo', payload: this.done };
+}
+missing() {
+const out = [];
+for (let i = 0; i < this.total; i++) if (!this.frags.has(i)) out.push(i);
+return out;
+}
+}
+function byArrival(a, b) {
+return (b.presence.anfitrion ? 1 : 0) - (a.presence.anfitrion ? 1 : 0) || (Number(a.presence.desde) || 0) - (Number(b.presence.desde) || 0) || (a.peer < b.peer ? -1 : 1);
+}
+function admitPeers(peers, { prev = [], seats, hostPeer }) {
+const present = new Map(peers.filter((p) => p.presence && p.presence.jugador).map((p) => [p.peer, p]));
+const list = [hostPeer, ...prev.filter((id) => id !== hostPeer && present.has(id))];
+const cands = [...present.values()].filter((p) => !list.includes(p.peer) && !p.presence.anfitrion).sort(byArrival);
+for (const c of cands) {
+if (list.length >= seats) break;
+list.push(c.peer);
+}
+return list;
+}
 class Sala {
 constructor(transport, { code, isHost, me, settings, info }) {
 this.transport = transport;
@@ -22483,6 +23387,9 @@ this.me = me;
 this.settings = settings;
 this.info = cleanRoomInfo(info, `Sala de ${me && me.name ? me.name : 'Trinchera'}`);
 this.rev = 1;
+this.ronda = 1;
+this.playedRonda = 0;
+this.minRonda = 1;
 this._key = gameplayKey(settings);
 this.ready = false;
 this.observer = false;
@@ -22495,21 +23402,31 @@ this.onStart = null;
 this.onCountdown = null;
 this.onConnection = null;
 this._startTimer = null;
+this.admitted = [];
+this.asm = new StartAssembler();
+this.sync = null;
+this.acks = new Set();
 }
 async open({ observer = false } = {}) {
 this.observer = observer && !this.isHost;
 this.openedAt = Date.now();
 this.room = await this.transport.join(`sala-${this.code}`);
 this.unsubs.push(this.room.onPeers(() => this._changed()));
-this.unsubs.push(this.room.on('start', (m) => this._onStart(m)));
+this.unsubs.push(this.room.on('inicio', (m) => this._onFragment(m)));
+this.unsubs.push(this.room.on('inicio-falta', (m) => this._onMissing(m)));
+this.unsubs.push(this.room.on('inicio-ok', (m) => this._onAck(m)));
 this.unsubs.push(this.room.on('cuenta', (m) => this._onCountdownMsg(m)));
 this.unsubs.push(this.room.on('cancelar', (m) => this._onCancelMsg(m)));
 if (this.room.onConnection) this.unsubs.push(this.room.onConnection((on) => this.onConnection?.(on)) || (() => {}));
 if (this.isHost) {
-await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now(), rango: this.rankClaim || null });
+await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, ronda: this.ronda, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now(), rango: this.rankClaim || null });
+this._admit();
 this._advertise();
 } else if (!this.observer) await this.join();
-this._tick = setInterval(() => this._watchCountdown(), 250);
+this._tick = setInterval(() => {
+this._watchCountdown();
+this._watchStart();
+}, 250);
 }
 async join() {
 this.observer = false;
@@ -22581,8 +23498,22 @@ this._advertise();
 setInfo(info) {
 this.info = cleanRoomInfo({ ...this.info, ...info }, this.info.nombre);
 if (!this.isHost || !this.room) return;
+this.info.plazas = Math.max(this.info.plazas, this.minSeats());
 this.room.presence({ info: this.info });
+this._admit();
 this._advertise();
+}
+minSeats() {
+return Math.max(MIN_HUMANS, this.isHost ? this.admitted.length : this.status().total);
+}
+_admit() {
+if (!this.isHost || !this.room) return;
+const me = this.myPeer();
+if (!me) return;
+const list = this.started ? this.admitted.filter((id) => this.room.peers().some((p) => p.peer === id)) : admitPeers(this.room.peers(), { prev: this.admitted, seats: this.info.plazas, hostPeer: me });
+if (list.length === this.admitted.length && list.every((id, i) => id === this.admitted[i])) return;
+this.admitted = list;
+this.room.presence({ admitidos: list });
 }
 _advertise() {
 if (!this.isHost) return;
@@ -22609,6 +23540,7 @@ abierta: true,
 });
 }
 _changed() {
+if (this.isHost && !this.started) this._admit();
 if (this.isHost && !this.started) {
 const n = this.status().total;
 if (n !== this._advertisedPlayers) {
@@ -22705,40 +23637,121 @@ this.started = true;
 const payload = {
 v: 1,
 seed,
+ronda: this.ronda,
+rev: this.rev,
 ruleset: roomRuleset(this.settings.rules),
 settings: this.settings,
 players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor })),
 };
+payload.count = payload.players.length;
 this.payload = payload;
-this.room.emit('start', payload);
+this.fragments = startFragments(payload, { code: this.code });
+this.acks = new Set();
+this._expect = new Set(payload.players.map((p) => p.peer).filter((id) => id !== this.myPeer()));
+for (const f of this.fragments) this.room.emit('inicio', f);
 const t0 = Date.now();
 this._startTimer = setInterval(() => {
-if (Date.now() - t0 > START_REPEAT_FOR_MS) clearInterval(this._startTimer);
-else this.room?.emit('start', payload);
+const all = [...this._expect].every((id) => this.acks.has(id));
+if (all || Date.now() - t0 > START_REPEAT_FOR_MS) clearInterval(this._startTimer);
+else for (const f of this.fragments) this.room?.emit('inicio', f);
 }, START_REPEAT_MS);
 this._advertise();
 this.room.presence({ estado: 'jugando' });
+this._accept(payload, this.myPeer(), true);
 return payload;
 }
-_onStart(msg) {
-if (!msg.data || msg.data.v !== 1) return;
-if (this.started && !msg.isMe) return;
-if (this.isHost && !msg.isMe) return;
-if (this._startHandled) return;
+_onFragment(msg) {
+if (this.isHost || msg.isMe || !msg.data || this._startHandled) return;
 const host = this.host();
-if (!msg.isMe && (!host || msg.peer !== host.peer)) return;
-const check = checkStartPayload(msg.data);
+if (!host || msg.peer !== host.peer) return;
+const f = msg.data;
+if (!Number.isInteger(f.r) || f.r < this.minRonda) return;
+const res = this.asm.add(f);
+if (res.estado === 'ignorado') return;
+if (res.estado === 'parcial') {
+const got = this.asm.frags.size;
+if (!this.sync || this.sync.got !== got) {
+this.sync = { got, total: this.asm.total, since: this.sync?.since || Date.now(), asked: this.sync?.asked || 0 };
+this.onChange?.();
+}
+return;
+}
+if (res.estado === 'error') return;
+this.sync = null;
+if (this._accept(res.payload, msg.peer, false)) this.room.emit('inicio-ok', { r: f.r, k: f.k });
+}
+_watchStart() {
+const s = this.sync;
+if (!s || this.isHost || this._startHandled || !this.room) return;
+const now = Date.now();
+if (now - s.since < 600 || now - s.asked < 700) return;
+s.asked = now;
+this.room.emit('inicio-falta', { r: Number(this.asm.key?.split('.')[1]) || this.minRonda, k: this.asm.key, falta: this.asm.missing() });
+}
+_onMissing(msg) {
+if (!this.isHost || !this.fragments || !msg.data || msg.data.k !== this.fragments[0].k || !Array.isArray(msg.data.falta)) return;
+const now = Date.now();
+this._missingAt ??= new Map();
+if (now - (this._missingAt.get(msg.peer) || 0) < 300) return;
+this._missingAt.set(msg.peer, now);
+for (const i of msg.data.falta.slice(0, 64)) if (Number.isInteger(i) && this.fragments[i]) this.room.emit('inicio', this.fragments[i]);
+}
+_onAck(msg) {
+if (!this.isHost || !this.fragments || !msg.data || msg.data.k !== this.fragments[0].k) return;
+if (!this.acks.has(msg.peer)) {
+this.acks.add(msg.peer);
+this.onChange?.();
+}
+}
+_accept(data, peer, isMe) {
+if (this._startHandled) return false;
+const check = checkStartPayload(data);
 if (!check.ok) {
 if (check.reason === 'version' && !this._versionWarned) {
 this._versionWarned = true;
 this.onVersionMismatch?.(check.theirs, check.mine);
 }
-return;
+return false;
 }
+if (!isMe && check.payload.ronda < this.minRonda) return false;
 this._startHandled = true;
 this.started = true;
 this.countdown = null;
-this.onStart?.(check.payload, msg.isMe ? this.myPeer() : msg.peer);
+this.playedRonda = check.payload.ronda;
+this.onStart?.(check.payload, peer);
+return true;
+}
+reopen() {
+if (!this.isHost || !this.room) return;
+clearInterval(this._startTimer);
+this.started = false;
+this._startHandled = false;
+this.payload = null;
+this.fragments = null;
+this.acks = new Set();
+this.countdown = null;
+this.ronda++;
+this.rev++;
+this.room.presence({ estado: 'vestibulo', ronda: this.ronda, rev: this.rev });
+this._advertise();
+this.onChange?.();
+}
+rematchOpen() {
+const h = this.host();
+return !!(h && !h.stale && h.presence.estado === 'vestibulo' && (h.presence.ronda || 1) > this.playedRonda);
+}
+async rejoin() {
+if (this.isHost || !this.room) return;
+const h = this.host();
+this.started = false;
+this._startHandled = false;
+this.asm = new StartAssembler();
+this.sync = null;
+this.countdown = null;
+this.ready = false;
+this.minRonda = Math.max(this.playedRonda + 1, (h && h.presence.ronda) || 1);
+await this.room.presence({ listo: null });
+this.onChange?.();
 }
 async leave() {
 clearInterval(this._startTimer);
@@ -22786,8 +23799,9 @@ for (const p of game.players) if (p) h = Math.imul(h ^ (Math.floor(p.troops) & 0
 return h >>> 0;
 }
 class NetSync {
-constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, now = () => performance.now() }) {
+constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, ronda = 1, now = () => performance.now() }) {
 this.room = room;
+this.ronda = ronda;
 this.game = game;
 this.isHost = isHost;
 this.hostPeer = hostPeer;
@@ -22799,12 +23813,14 @@ this.unsubs = [];
 this.status = '';
 this.desynced = false;
 this.hostGone = false;
+this.hostGoneReason = '';
 this.onHostLeft = null;
 this.myPeer = myPeer;
 this.smooth = smooth;
 this.now = now;
 if (isHost) {
 this.queue = [];
+this.pending = new Map();
 this.seen = new Set();
 this.history = new Map();
 this.batch = [];
@@ -22812,12 +23828,12 @@ this.hashes = new Map();
 this.acc = 0;
 this.last = now();
 this.lastResend = new Map();
-this.unsubs.push(room.on('intent', (m) => this._onIntent(m)));
-this.unsubs.push(room.on('resend', (m) => this._onResend(m)));
-this.unsubs.push(room.on('hash', (m) => this._onHash(m)));
+this.unsubs.push(room.on('intent', (m) => this._mine(m) && this._onIntent(m)));
+this.unsubs.push(room.on('resend', (m) => this._mine(m) && this._onResend(m)));
+this.unsubs.push(room.on('hash', (m) => this._mine(m) && this._onHash(m)));
 this.waiting = new Set([...peerToPlayer.keys()].filter((peer) => peer !== hostPeer && peer !== myPeer));
 this.waitStart = now();
-this.unsubs.push(room.on('cargado', (m) => this.waiting.delete(m.peer)));
+this.unsubs.push(room.on('cargado', (m) => this._mine(m) && this.waiting.delete(m.peer)));
 this.unsubs.push(room.onPeers((c) => {
 for (const p of c.left) this.waiting.delete(p.peer);
 }));
@@ -22829,24 +23845,33 @@ this.lastAdvance = now();
 this.lastResendAsk = -Infinity;
 this.playLast = now();
 this.playAcc = TICK_MS;
-this.unsubs.push(room.on('turn', (m) => this._onTurn(m)));
+this.unsubs.push(room.on('turn', (m) => this._mine(m) && this._onTurn(m)));
 this.myHashes = new Map();
 this.hostHashes = new Map();
-this.unsubs.push(room.on('hash', (m) => this._onHostHash(m)));
+this.unsubs.push(room.on('hash', (m) => this._mine(m) && this._onHostHash(m)));
+this.unsubs.push(
+room.on('adios', (m) => {
+if (!this._mine(m) || m.peer !== this.hostPeer || this.hostGone) return;
+this.hostGone = true;
+this.hostGoneReason = 'abandono';
+this.onHostLeft?.('abandono');
+}),
+);
 const announce = () => {
 if (this.game.ticks > 0 || this.turns.size || this.hostGone) {
 clearInterval(this._loadTimer);
 return;
 }
-room.emit('cargado', {}).catch(() => {});
+room.emit('cargado', { r: this.ronda }).catch(() => {});
 };
 this._loadTimer = setInterval(announce, 1000);
 announce();
 this.unsubs.push(
 room.onPeers((c) => {
-if (c.left.some((p) => p.peer === this.hostPeer)) {
+if (c.left.some((p) => p.peer === this.hostPeer) && !this.hostGone) {
 this.hostGone = true;
-this.onHostLeft?.();
+this.hostGoneReason = 'conexion';
+this.onHostLeft?.('conexion');
 }
 }),
 );
@@ -22860,8 +23885,15 @@ if (this.isHost) {
 this.queue.push({ ...clean, playerId: this.myPlayerId, u });
 } else {
 this.outbox.set(u, { intent: clean, sentAt: this.now() });
-this.room.emit('intent', { u, i: clean }).catch(() => {});
+this.room.emit('intent', { r: this.ronda, u, i: clean }).catch(() => {});
 }
+}
+_mine(m) {
+return !!m && ((m.data && m.data.r) || 1) === this.ronda;
+}
+announceLeave(motivo = 'abandono') {
+if (!this.isHost) return;
+this.room.emit('adios', { r: this.ronda, motivo }).catch(() => {});
 }
 _onIntent(m) {
 const pid = this.peerToPlayer.get(m.peer);
@@ -22869,8 +23901,35 @@ const d = m.data;
 if (!pid || !d || typeof d.u !== 'string' || d.u.length > 24 || this.seen.has(d.u)) return;
 const intent = cleanIntent(d.i);
 if (!intent) return;
+const sender = slotOf(d.u);
+const pending = this.pending.get(sender) || 0;
+if (pending >= MAX_SENDER_QUEUE) return;
+this.pending.set(sender, pending + 1);
 this.seen.add(d.u);
 this.queue.push({ ...intent, playerId: pid, u: d.u });
+}
+_takeIntents() {
+const out = [];
+const rest = [];
+const per = new Map();
+let bytes = 0;
+for (const it of this.queue) {
+const sender = slotOf(it.u);
+const n = per.get(sender) || 0;
+const size = utf8Bytes(JSON.stringify(it)) + 1;
+if (out.length >= MAX_TICK_INTENTS || n >= MAX_SENDER_TICK || bytes + size > MAX_TICK_BYTES) {
+rest.push(it);
+continue;
+}
+per.set(sender, n + 1);
+bytes += size;
+out.push(it);
+const left = (this.pending.get(sender) || 1) - 1;
+if (left > 0) this.pending.set(sender, left);
+else this.pending.delete(sender);
+}
+this.queue = rest;
+return out;
 }
 _onResend(m) {
 const from = m.data && m.data.from;
@@ -22879,15 +23938,15 @@ const now = this.now();
 if (now - (this.lastResend.get(m.peer) ?? -Infinity) < 250) return;
 this.lastResend.set(m.peer, now);
 let turns = [];
-let bytes = 20;
+let bytes = wireBytes('turn', { r: this.ronda, turns: [] });
 for (let t = Math.max(from, this.game.ticks - 2999); t <= this.game.ticks && t < from + RESEND_MAX_TURNS; t++) {
 const entry = [t, this.history.get(t) || []];
-const size = JSON.stringify(entry).length;
+const size = utf8Bytes(JSON.stringify(entry)) + 1;
 if (bytes + size > MAX_MSG_BYTES) break;
 turns.push(entry);
 bytes += size;
 }
-if (turns.length) this.room.emit('turn', { turns }).catch(() => {});
+if (turns.length) this.room.emit('turn', { r: this.ronda, turns }).catch(() => {});
 }
 _onHash(m) {
 const d = m.data;
@@ -22898,7 +23957,7 @@ this.status = 'Aviso: un jugador se ha desincronizado';
 }
 }
 _hostStep() {
-const intents = this.queue.splice(0, 30);
+const intents = this._takeIntents();
 for (const it of intents) this.game.queueIntent({ ...it, by: slotOf(it.u) });
 this.game.tick();
 const t = this.game.ticks;
@@ -22908,18 +23967,17 @@ if (t % HASH_EVERY === 0) {
 const h = stateHash(this.game);
 this.hashes.set(t, h);
 if (this.hashes.size > 60) this.hashes.delete(t - HASH_EVERY * 60);
-this.room.emit('hash', { t, h, host: true }).catch(() => {});
+this.room.emit('hash', { r: this.ronda, t, h, host: true }).catch(() => {});
 }
 const entry = [t, intents];
-const size = JSON.stringify(this.batch).length + JSON.stringify(entry).length;
-if (this.batch.length && size > MAX_MSG_BYTES) this._flush();
+if (this.batch.length && wireBytes('turn', { r: this.ronda, turns: [...this.batch, entry], bg: 1 }) > MAX_MSG_BYTES) this._flush();
 this.batch.push(entry);
 if (this.batch.length >= TURN_TICKS) this._flush();
 }
 _flush() {
 if (!this.batch.length) return;
 const bg = typeof document !== 'undefined' && document.hidden ? 1 : 0;
-this.room.emit('turn', bg ? { turns: this.batch, bg } : { turns: this.batch }).catch(() => {});
+this.room.emit('turn', bg ? { r: this.ronda, turns: this.batch, bg } : { r: this.ronda, turns: this.batch }).catch(() => {});
 this.batch = [];
 }
 _onTurn(m) {
@@ -22940,7 +23998,7 @@ this.game.tick();
 const t = this.game.ticks;
 if (t % HASH_EVERY === 0) {
 const h = stateHash(this.game);
-this.room.emit('hash', { t, h }).catch(() => {});
+this.room.emit('hash', { r: this.ronda, t, h }).catch(() => {});
 this.myHashes.set(t, h);
 if (this.myHashes.size > 60) this.myHashes.delete(t - HASH_EVERY * 60);
 this._compareHash(t);
@@ -22980,7 +24038,8 @@ const offline = this._offline();
 if (this.isHost) {
 if (this.waiting.size && now - this.waitStart < LOAD_WAIT_MS) {
 this.last = now;
-this.status = 'Esperando a que todos carguen el mapa…';
+const total = this.peerToPlayer.size - 1;
+this.status = `Sincronizando jugadores (${total - this.waiting.size}/${total})…`;
 return;
 }
 if (this.waitStart !== null) {
@@ -23002,6 +24061,7 @@ return;
 }
 let steps = 0;
 const ready = this._ready();
+if (ready > CATCHUP_TURNS) this.status = 'Sincronizando partida…';
 if (!this.smooth || ready > CATCHUP_TURNS) {
 const keep = this.smooth ? SMOOTH_BUFFER : 0;
 while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1)) {
@@ -23025,16 +24085,18 @@ steps++;
 this.playLast = now;
 if (steps) {
 this.lastAdvance = now;
+if (this._ready() <= CATCHUP_TURNS) {
 this.status = this.desynced
 ? 'Te has desincronizado del anfitrión: lo que ves puede no coincidir con los demás'
 : this.hostBackground
 ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
 : '';
 }
+}
 const gap = this.turns.size > 0 && !this.turns.has(this.game.ticks + 1);
 if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !steps && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
 this.lastResendAsk = now;
-this.room.emit('resend', { from: this.game.ticks + 1 }).catch(() => {});
+this.room.emit('resend', { r: this.ronda, from: this.game.ticks + 1 }).catch(() => {});
 }
 if (!steps) {
 if (offline) this.status = OFFLINE_NOTE;
@@ -23044,7 +24106,7 @@ else if (this.status === OFFLINE_NOTE) this.status = '';
 for (const [u, entry] of this.outbox) {
 if (now - entry.sentAt > INTENT_RETRY_MS) {
 entry.sentAt = now;
-this.room.emit('intent', { u, i: entry.intent }).catch(() => {});
+this.room.emit('intent', { r: this.ronda, u, i: entry.intent }).catch(() => {});
 }
 }
 }
@@ -23056,7 +24118,7 @@ this.unsubs = [];
 }
 }
 
-return { RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, OFFLINE_NOTE, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, roomName, gameplayKey, openRooms, roomStatus, Sala, stateHash, NetSync };
+return { PROTOCOL, RULES_FINGERPRINT, roomRuleset, checkStartPayload, MAX_HUMANS, VALIDATED_SEATS, SEAT_SHORTCUTS, DEFAULT_SEATS, MAX_ONLINE_BOTS, OFFLINE_NOTE, newRoomCode, normalizeCode, MIN_HUMANS, COUNTDOWN_MS, VISIBILITIES, cleanRoomInfo, roomName, gameplayKey, openRooms, roomStatus, utf8Bytes, wireBytes, startFragments, StartAssembler, admitPeers, Sala, stateHash, NetSync };
 });
 __define('musica', function () {
 const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -24662,7 +25724,8 @@ return { presentMatch };
 });
 __define('profile', function () {
 const { DEFAULT_RULES, migrateRules } = __require('config');
-const { newRank, normalizeRank } = __require('rangos');
+const { normalizeConfig } = __require('configurador');
+const { newRank, normalizeRank, splitRanks } = __require('rangos');
 const { Rng, hashString } = __require('rng');
 const KEY = 'dominia.perfil.v1';
 const OLD_PREFS = 'dominia.prefs';
@@ -24811,10 +25874,12 @@ const PRICE_BY_KEY = new Map(
 [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
 );
 function rankBest(p) {
-const r = p.rango;
+const best = (r) => {
 if (!r) return 0;
 const placed = r.colocacion >= 5 ? Math.max(r.mejor || 0, r.puntos || 0) : 0;
 return Math.max(placed, ...(r.anteriores || []).map((x) => x.mejor || x.puntos || 0));
+};
+return Math.max(best(p.rango), best(p.rangoOnline), best(p.rangoHistorico));
 }
 const ACHIEVEMENTS = [
 { id: 'primera_partida', icon: '🌱', name: 'Primeros pasos', desc: 'Juega una partida', coins: 50, meta: { stat: 'partidas', n: 1 }, check: () => true },
@@ -24862,14 +25927,14 @@ const ACHIEVEMENTS = [
 { id: 'diplomatico_total', icon: '🌐', name: 'Gran diplomático', desc: 'Firma 5 alianzas en una partida', coins: 250, check: (r) => r.alliances >= 5 },
 { id: 'magnate_oro', icon: '🏦', name: 'Magnate', desc: 'Reúne 25 millones de oro', coins: 500, check: (r) => r.maxGold >= 25000000 },
 { id: 'aguante', icon: '⏱️', name: 'Aguante', desc: 'Sigue en pie a los 30 minutos', coins: 300, check: (r) => r.survivedSeconds >= 1800 },
-{ id: 'clasificado', icon: '🎯', name: 'Clasificado', desc: 'Termina las partidas de colocación', coins: 200, check: (r, p) => (p.rango ? p.rango.colocacion >= 5 : false) },
+{ id: 'clasificado', icon: '🎯', name: 'Clasificado', desc: 'Termina las partidas de colocación', coins: 200, check: (r, p) => [p.rango, p.rangoOnline, p.rangoHistorico].some((x) => x && x.colocacion >= 5) },
 { id: 'liga_bronce', icon: '🥉', name: 'Liga de Bronce', desc: 'Llega a Bronce en la clasificatoria', coins: 100, check: (r, p) => rankBest(p) >= 400 },
 { id: 'liga_plata', icon: '🥈', name: 'Liga de Plata', desc: 'Llega a Plata en la clasificatoria', coins: 200, check: (r, p) => rankBest(p) >= 800 },
 { id: 'liga_oro', icon: '🥇', name: 'Liga de Oro', desc: 'Llega a Oro en la clasificatoria', coins: 300, check: (r, p) => rankBest(p) >= 1200 },
 { id: 'liga_platino', icon: '💠', name: 'Liga de Platino', desc: 'Llega a Platino en la clasificatoria', coins: 400, check: (r, p) => rankBest(p) >= 1600 },
 { id: 'liga_diamante', icon: '💎', name: 'Liga de Diamante', desc: 'Llega a Diamante en la clasificatoria', coins: 600, check: (r, p) => rankBest(p) >= 2000 },
 { id: 'liga_maestro', icon: '🏵️', name: 'Maestro', desc: 'Llega a Maestro en la clasificatoria', coins: 1000, check: (r, p) => rankBest(p) >= 2400 },
-{ id: 'racha', icon: '🔥', name: 'En racha', desc: 'Gana 3 clasificatorias seguidas', coins: 400, check: (r, p) => !!p.rango && p.rango.historial.length >= 3 && p.rango.historial.slice(0, 3).every((h) => h.puesto === 1) },
+{ id: 'racha', icon: '🔥', name: 'En racha', desc: 'Gana 3 clasificatorias seguidas', coins: 400, check: (r, p) => [p.rango, p.rangoOnline].some((x) => !!x && x.historial.length >= 3 && x.historial.slice(0, 3).every((h) => h.puesto === 1 && !h.previa)) },
 { id: 'semanal', icon: '🗓️', name: 'Semana a semana', desc: 'Completa 5 retos semanales', coins: 400, meta: { stat: 'retosSemanales', n: 5 }, check: (r, p) => (p.stats.retosSemanales || 0) >= 5 },
 { id: 'retador', icon: '🎯', name: 'Reto superado', desc: 'Supera el reto que te manda otro jugador por enlace', coins: 250, check: (r) => !!r.challengeBeaten },
 { id: 'leyenda_viva', icon: '🏛️', name: 'Leyenda viva', desc: 'Juega 100 partidas', coins: 800, meta: { stat: 'partidas', n: 100 }, check: (r, p) => p.stats.partidas >= 100 },
@@ -24881,8 +25946,8 @@ const DAILY = [
 { id: 'eliminar6', icon: '⚔️', name: 'Elimina 6 naciones o colonias', need: 6, coins: 120, step: (r) => r.kills },
 { id: 'construir8', icon: '🏗️', name: 'Construye 8 edificios', need: 8, coins: 100, step: (r) => r.built },
 { id: 'territorio20', icon: '🗺️', name: 'Llega al 20 % de la tierra en una partida', need: 1, coins: 150, step: (r) => (r.maxShare >= 0.2 ? 1 : 0) },
-{ id: 'investigar3', icon: '🔬', name: 'Investiga 3 tecnologías', need: 3, coins: 120, step: (r) => r.techs || 0 },
-{ id: 'puntos3', icon: '🧭', name: 'Toma 3 puntos estratégicos', need: 3, coins: 120, step: (r) => r.pointsTaken || 0 },
+{ id: 'investigar3', icon: '🔬', name: 'Investiga 3 tecnologías', need: 3, coins: 120, perfil: 'trinchera', step: (r) => r.techs || 0 },
+{ id: 'puntos3', icon: '🧭', name: 'Toma 3 puntos estratégicos', need: 3, coins: 120, perfil: 'trinchera', step: (r) => r.pointsTaken || 0 },
 { id: 'capital', icon: '👑', name: 'Conquista una capital', need: 1, coins: 150, step: (r) => r.capitalsTaken || 0 },
 { id: 'pacto', icon: '📜', name: 'Firma un pacto o una paz', need: 1, coins: 100, step: (r) => r.pacts || 0 },
 { id: 'desembarcos2', icon: '⚓', name: 'Desembarca 2 veces', need: 2, coins: 100, step: (r) => r.landings },
@@ -25012,6 +26077,8 @@ bots: 70,
 mapa: 'mundo',
 dificultad: 'normal',
 reglas: { ...DEFAULT_RULES },
+ia: normalizeConfig({ bots: 70, mapa: 'mundo', dificultad: 'normal' }),
+online: normalizeConfig({ bots: 40, mapa: 'europa', dificultad: 'normal' }),
 alerta: true,
 puntero: true,
 marcadores: true,
@@ -25024,7 +26091,10 @@ volEfectos: 0.8,
 silencio: false,
 },
 tutorial: false,
-rango: newRank(),
+rango: newRank(new Date(), 'ia'),
+rangoOnline: newRank(new Date(), 'online'),
+rangoHistorico: null,
+rangoMigrado: 0,
 actualizado: 0,
 };
 }
@@ -25061,9 +26131,31 @@ monedas: Number.isFinite(p.monedas) ? Math.max(0, Math.floor(p.monedas)) : 0,
 comprados: p.comprados && typeof p.comprados === 'object' ? { ...p.comprados } : {},
 diarios: p.diarios && typeof p.diarios === 'object' && Array.isArray(p.diarios.retos) ? p.diarios : null,
 semanales: p.semanales && typeof p.semanales === 'object' && Array.isArray(p.semanales.retos) ? p.semanales : null,
-rango: normalizeRank(p.rango),
-ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...(migrateRules(p.ajustes && p.ajustes.reglas) || {}) } },
+...ranksOf(p),
+ajustes: normalizeSettings(d.ajustes, p.ajustes),
 };
+}
+function ranksOf(p) {
+if (p.rangoOnline && typeof p.rangoOnline === 'object') {
+return {
+rango: normalizeRank(p.rango, 'ia'),
+rangoOnline: normalizeRank(p.rangoOnline, 'online'),
+rangoHistorico: p.rangoHistorico && typeof p.rangoHistorico === 'object' ? { ...normalizeRank(p.rangoHistorico, 'mixta'), cerrado: Number(p.rangoHistorico.cerrado) || 0 } : null,
+rangoMigrado: Number(p.rangoMigrado) || 0,
+};
+}
+const split = splitRanks(p.rango);
+return { rango: split.ia, rangoOnline: split.online, rangoHistorico: split.historico, rangoMigrado: split.historico ? Date.now() : 0 };
+}
+function normalizeSettings(defaults, saved) {
+const a = { ...defaults, ...(saved || {}), reglas: { ...defaults.reglas, ...(migrateRules(saved && saved.reglas) || {}) } };
+const legacy = { bots: a.bots, mapa: a.mapa, dificultad: a.dificultad, reglas: a.reglas };
+a.ia = normalizeConfig(saved && saved.ia, legacy);
+a.online = normalizeConfig(saved && saved.online, legacy);
+return a;
+}
+function rememberConfig(profile, kind, { bots, mapa, dificultad, reglas }) {
+profile.ajustes[kind] = normalizeConfig({ bots, mapa, dificultad, reglas: { ...reglas } });
 }
 function loadProfile() {
 let p = null;
@@ -25104,9 +26196,15 @@ if (k === 'mejorTiempo') out.stats[k] = x == null ? y : y == null ? x : Math.min
 else out.stats[k] = Math.max(x || 0, y || 0);
 }
 out.logros = { ...older.logros, ...newer.logros };
-const ra = a.rango;
-const rb = b.rango;
-out.rango = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb);
+const pick = (ra, rb, modalidad) => {
+const win = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb, modalidad);
+win.aplicadas = [...new Set([...(ra.aplicadas || []), ...(rb.aplicadas || [])])].slice(0, 40);
+return win;
+};
+out.rango = pick(a.rango, b.rango, 'ia');
+out.rangoOnline = pick(a.rangoOnline, b.rangoOnline, 'online');
+out.rangoHistorico = a.rangoHistorico && b.rangoHistorico ? (a.rangoHistorico.partidas >= b.rangoHistorico.partidas ? a.rangoHistorico : b.rangoHistorico) : a.rangoHistorico || b.rangoHistorico || null;
+out.rangoMigrado = Math.max(a.rangoMigrado || 0, b.rangoMigrado || 0);
 out.comprados = { ...older.comprados, ...newer.comprados };
 out.monedas = Math.max(0, out.stats.monedasGanadas - out.stats.monedasGastadas);
 const seen = new Set();
@@ -25223,7 +26321,7 @@ profile.monedas = (profile.monedas || 0) + coins;
 s.monedasGanadas = (s.monedasGanadas || 0) + coins;
 profile.historial.unshift({
 fecha: Date.now(),
-resultado: r.won ? 'victoria' : r.alliedWin ? 'victoria en alianza' : r.alive ? 'abandonada' : 'derrota',
+resultado: r.interrupted ? 'interrumpida' : r.won ? 'victoria' : r.alliedWin ? 'victoria en alianza' : r.alive && !r.ended ? 'abandonada' : 'derrota',
 pct: r.maxShare,
 duracion: Math.round(r.seconds),
 mapa: r.mapSize,
@@ -25235,6 +26333,7 @@ elim: r.kills || 0,
 edif: r.built || 0,
 curva: Array.isArray(r.curve) ? r.curve.slice(0, 40) : [],
 clasif: r.ranked || undefined,
+config: r.config ? JSON.parse(JSON.stringify(r.config)) : undefined,
 reto: r.challenge ? { de: String(r.challenge.n || '').slice(0, 18), meta: r.challenge.p, superado: !!r.challengeBeaten } : undefined,
 });
 profile.historial.length = Math.min(profile.historial.length, HISTORY_MAX);
@@ -25242,7 +26341,7 @@ saveProfile(profile);
 return { xp: gained, coins, daily: doneDaily, dailyBonus, weekly: doneWeekly, achievements: fresh, levelUp: levelInfo(profile.xp).level > before };
 }
 
-return { SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, nameColorOf, PATTERNS, TITLES, itemKey, ACHIEVEMENTS, DAILY, DAILY_BONUS, WEEKLY, WEEKLY_BONUS, weekKey, weeklyFor, ensureWeekly, dayKey, dailyFor, ensureDaily, buyItem, rewardsOf, levelInfo, xpForGame, defaultProfile, normalizeProfile, loadProfile, saveProfile, mergeProfiles, achievementProgress, hasAchievement, grantAchievement, isUnlocked, unlockText, titleName, recordGame };
+return { SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, nameColorOf, PATTERNS, TITLES, itemKey, ACHIEVEMENTS, DAILY, DAILY_BONUS, WEEKLY, WEEKLY_BONUS, weekKey, weeklyFor, ensureWeekly, dayKey, dailyFor, ensureDaily, buyItem, rewardsOf, levelInfo, xpForGame, defaultProfile, normalizeProfile, rememberConfig, loadProfile, saveProfile, mergeProfiles, achievementProgress, hasAchievement, grantAchievement, isUnlocked, unlockText, titleName, recordGame };
 });
 __define('rangos', function () {
 const LEAGUES = [
@@ -25303,8 +26402,14 @@ function seasonEnd(id) {
 const [y, n] = String(id).split('-').map(Number);
 return new Date(y, n * 2, 1);
 }
-function newRank(date = new Date()) {
+const RANKED_VERSION = 'clasico';
+const QUEUES = { ia: 'Contra la IA', online: 'En línea' };
+const APPLIED = 40;
+function newRank(date = new Date(), modalidad = 'ia') {
 return {
+modalidad,
+version: RANKED_VERSION,
+aplicadas: [],
 temporada: seasonOf(date),
 mmr: MMR_START,
 puntos: 0,
@@ -25318,8 +26423,8 @@ historial: [],
 anteriores: [],
 };
 }
-function normalizeRank(r) {
-const d = newRank();
+function normalizeRank(r, modalidad = 'ia') {
+const d = newRank(new Date(), modalidad);
 if (!r || typeof r !== 'object') return d;
 const num = (v, dflt, lo, hi) => (Number.isFinite(v) ? clamp(v, lo, hi) : dflt);
 return {
@@ -25332,7 +26437,10 @@ partidas: Math.floor(num(r.partidas, 0, 0, 1e6)),
 victorias: Math.floor(num(r.victorias, 0, 0, 1e6)),
 escudo: Math.floor(num(r.escudo, 0, 0, SHIELD_GAMES)),
 mejor: Math.floor(num(r.mejor, 0, 0, MAX_POINTS)),
-pendiente: r.pendiente && typeof r.pendiente === 'object' ? { tipo: r.pendiente.tipo === 'sala' ? 'sala' : 'ia', inicio: Number(r.pendiente.inicio) || 0 } : null,
+modalidad: r.modalidad === 'online' || r.modalidad === 'mixta' ? r.modalidad : modalidad,
+version: typeof r.version === 'string' ? r.version.slice(0, 24) : RANKED_VERSION,
+aplicadas: Array.isArray(r.aplicadas) ? r.aplicadas.filter((x) => typeof x === 'string').slice(0, APPLIED) : [],
+pendiente: r.pendiente && typeof r.pendiente === 'object' ? { tipo: r.pendiente.tipo === 'sala' ? 'sala' : 'ia', inicio: Number(r.pendiente.inicio) || 0, partida: typeof r.pendiente.partida === 'string' ? r.pendiente.partida.slice(0, 64) : '' } : null,
 historial: Array.isArray(r.historial) ? r.historial.filter((h) => h && Number.isFinite(h.puntos)).slice(0, HISTORY) : [],
 anteriores: Array.isArray(r.anteriores) ? r.anteriores.slice(0, 12) : [],
 };
@@ -25402,9 +26510,36 @@ out.after = after;
 out.delta = after - before;
 }
 r.mejor = Math.max(r.mejor, r.puntos);
-r.historial.unshift({ fecha: Date.now(), puntos: r.puntos, delta: out.delta, ...info });
+r.historial.unshift({ fecha: Date.now(), puntos: r.puntos, delta: out.delta, temporada: r.temporada, version: RANKED_VERSION, ...info });
 r.historial.length = Math.min(r.historial.length, HISTORY);
+remember(r, info.partida);
 return out;
+}
+function remember(r, id) {
+if (!id) return;
+r.aplicadas = [id, ...(r.aplicadas || []).filter((x) => x !== id)].slice(0, APPLIED);
+}
+function alreadyApplied(r, id) {
+return !!id && Array.isArray(r.aplicadas) && r.aplicadas.includes(id);
+}
+function voidResult(r, { partida = '', motivo = '' } = {}) {
+if (alreadyApplied(r, partida)) return null;
+r.historial.unshift({ fecha: Date.now(), puntos: r.puntos, delta: 0, tipo: r.modalidad === 'online' ? 'sala' : 'ia', anulada: true, motivo: String(motivo).slice(0, 120), partida: partida || undefined, temporada: r.temporada, version: RANKED_VERSION });
+r.historial.length = Math.min(r.historial.length, HISTORY);
+remember(r, partida);
+return { void: true, motivo, before: r.puntos, after: r.puntos, delta: 0 };
+}
+function splitRanks(old, date = new Date()) {
+const mixed = normalizeRank(old, 'mixta');
+const played = mixed.partidas > 0 || mixed.colocacion > 0 || mixed.anteriores.length > 0;
+const seed = (modalidad, tipo) => {
+const r = newRank(date, modalidad);
+r.temporada = mixed.temporada;
+if (played) r.mmr = mixed.mmr;
+r.historial = mixed.historial.filter((h) => (h.tipo === 'sala' ? 'sala' : 'ia') === tipo).map((h) => ({ ...h, previa: true }));
+return r;
+};
+return { ia: seed('ia', 'ia'), online: seed('online', 'sala'), historico: played ? { ...mixed, modalidad: 'mixta', pendiente: null, cerrado: date.getTime() } : null };
 }
 function plFor(r, gain, won) {
 const lag = clamp((r.mmr - mmrFromPoints(r.puntos)) / 50, -10, 10);
@@ -25413,7 +26548,8 @@ pl = clamp(pl, -35, 50);
 if (gain >= 0 && pl < 1) pl = 1;
 return Math.round(pl);
 }
-function applyAiResult(r, place, { difficulty = aiDifficultyFor(r), abandon = false } = {}) {
+function applyAiResult(r, place, { difficulty = aiDifficultyFor(r), abandon = false, partida = '' } = {}) {
+if (alreadyApplied(r, partida)) return null;
 const perf = abandon || !place ? 0 : place.of <= 1 ? 1 : 1 - (place.place - 1) / (place.of - 1);
 const ai = AI_RATING[difficulty] || AI_RATING.normal;
 const expected = expectedPerf(r.mmr, ai);
@@ -25424,10 +26560,11 @@ return applyChange(r, {
 mmrDelta: K * (perf - expected),
 pl: plFor(r, 60 * (perf - expectedRank), won),
 won,
-info: { tipo: 'ia', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, abandono: abandon || undefined },
+info: { tipo: 'ia', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, abandono: abandon || undefined, partida: partida || undefined },
 });
 }
-function applyRoomResult(r, place, humans, { abandon = false } = {}) {
+function applyRoomResult(r, place, humans, { abandon = false, partida = '' } = {}) {
+if (alreadyApplied(r, partida)) return null;
 const perf = abandon || !place ? 0 : place.of <= 1 ? 1 : 1 - (place.place - 1) / (place.of - 1);
 const mine = abandon ? Infinity : place.place;
 let s = 0;
@@ -25449,7 +26586,7 @@ return applyChange(r, {
 mmrDelta: K * elo + 20 * nations,
 pl: plFor(r, 45 * eloRank + 12 * nations, won),
 won,
-info: { tipo: 'sala', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, rivales: humans.length, abandono: abandon || undefined },
+info: { tipo: 'sala', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, rivales: humans.length, abandono: abandon || undefined, partida: partida || undefined },
 });
 }
 function rankText(r) {
@@ -25585,7 +26722,7 @@ const k = rankOf(typeof r === 'number' ? r : r ? r.puntos : 0);
 drawBadge(ctx, c.width / 2, c.height * 0.54, c.height * 0.72, placing ? null : k.league, placing ? 0 : k.div);
 }
 
-return { LEAGUES, DIVISIONS, PLACEMENT_GAMES, SHIELD_GAMES, MMR_START, MAX_POINTS, AI_RATING, RANKED_AI, RANKED_ROOM, rankOf, divisionIndex, divisionFloor, pointsFromMmr, mmrFromPoints, seasonOf, seasonName, seasonEnd, newRank, normalizeRank, inPlacement, aiDifficultyFor, expectedPerf, seasonReward, ensureSeason, applyAiResult, applyRoomResult, rankText, drawBadge, badgeCanvas, paintBadge };
+return { LEAGUES, DIVISIONS, PLACEMENT_GAMES, SHIELD_GAMES, MMR_START, MAX_POINTS, AI_RATING, RANKED_AI, RANKED_ROOM, rankOf, divisionIndex, divisionFloor, pointsFromMmr, mmrFromPoints, seasonOf, seasonName, seasonEnd, RANKED_VERSION, QUEUES, newRank, normalizeRank, inPlacement, aiDifficultyFor, expectedPerf, seasonReward, ensureSeason, alreadyApplied, voidResult, splitRanks, applyAiResult, applyRoomResult, rankText, drawBadge, badgeCanvas, paintBadge };
 });
 __define('render', function () {
 const { BUILDINGS, CONFIG, RES, TICK_MS } = __require('config');
@@ -25594,10 +26731,11 @@ const { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } = __require('for
 const { PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } = __require('icons');
 const { CAPITAL_TIERS, capitalTier } = __require('capital-tier');
 const { forgetTerrain, paintTerrain } = __require('terreno');
-const { MECH } = __require('mecanicas');
+const { MECH, startOffsets } = __require('mecanicas');
 const { Fx, drawMissileSprite, resetFxSprites } = __require('fx');
 const { drawCargo, drawFishing, drawTransport, drawWarship } = __require('barcos');
 const { LUGARES } = __require('lugares');
+const START_ZONE = startOffsets();
 const TAU = Math.PI * 2;
 const COLONY_ALPHA = 108;
 const FILL_ALPHA = 142;
@@ -26627,6 +27765,7 @@ this._drawYouMarker(now);
 this._drawAttackArrows(now);
 this._drawAttackBadges();
 this._drawEmojis();
+if (game.phase === 'spawn' && overlay.spawn) this._drawSpawnZone(overlay.spawn);
 if (game.phase === 'spawn') this._drawSpawnMarker(now);
 if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
 if (overlay.ping) this._drawPing(now, overlay.ping);
@@ -28191,15 +29330,18 @@ _drawAttackBadges() {
 const { ctx, game, camera } = this;
 const human = game.human;
 if (!human || !game.attacks.length || this.options.badges === false) return;
-const fs = COARSE ? 9 : 10;
+const zr = camera.zoom * RES;
+const fs = Math.max(8, Math.min(COARSE ? 10 : 11, Math.round(9 + Math.log2(Math.max(0.25, zr)))));
 const h = fs + 5;
 ctx.textAlign = 'center';
 ctx.textBaseline = 'middle';
 ctx.font = `700 ${fs}px system-ui, sans-serif`;
 for (const atk of game.attacks) {
-if (atk.done || atk.troops < 1 || !atk.targetId) continue;
+if (atk.done || atk.troops < 1) continue;
 const incoming = atk.targetId === human.id;
 if (!incoming && atk.attacker !== human) continue;
+const expansion = !atk.targetId;
+if (expansion && zr < 1.2) continue;
 const f = this._front(atk);
 if (!f) continue;
 let [x, y] = camera.worldToScreen(f.x, f.y);
@@ -28208,15 +29350,17 @@ x -= Math.cos(f.ang) * (h + 4);
 y -= Math.sin(f.ang) * (h + 4);
 }
 if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
-const text = `${incoming ? '🛡' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
-const w = Math.max(40, Math.ceil((ctx.measureText(text).width + 10) / 8) * 8);
+const text = `${incoming ? '🛡' : expansion ? '➜' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
+const w = Math.max(fs * 4, Math.ceil((ctx.measureText(text).width + 10) / 8) * 8);
 ctx.beginPath();
 ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
-ctx.fillStyle = incoming ? 'rgba(170, 36, 36, 0.78)' : 'rgba(20, 120, 68, 0.78)';
+ctx.fillStyle = incoming ? 'rgba(170, 36, 36, 0.8)' : expansion ? 'rgba(30, 78, 140, 0.72)' : 'rgba(20, 120, 68, 0.78)';
 ctx.fill();
-ctx.lineWidth = 1;
-ctx.strokeStyle = incoming ? 'rgba(255, 179, 179, 0.85)' : 'rgba(168, 245, 198, 0.85)';
+ctx.lineWidth = incoming ? 2 : 1;
+if (expansion) ctx.setLineDash([3, 2]);
+ctx.strokeStyle = incoming ? 'rgba(255, 179, 179, 0.95)' : expansion ? 'rgba(170, 210, 255, 0.85)' : 'rgba(168, 245, 198, 0.85)';
 ctx.stroke();
+if (expansion) ctx.setLineDash([]);
 ctx.fillStyle = '#ffffff';
 ctx.fillText(text, x, y + 0.5);
 }
@@ -28259,6 +29403,31 @@ ctx.fillText(e.emoji, sx, sy + 1);
 ctx.restore();
 ctx.globalAlpha = 1;
 }
+}
+_drawSpawnZone(info) {
+const { ctx, game, camera } = this;
+const map = game.map;
+const z = camera.zoom;
+if (z < 0.6) return;
+ctx.save();
+ctx.fillStyle = 'rgba(95, 211, 141, 0.32)';
+for (const t of info.zone) {
+const [sx, sy] = camera.worldToScreen(map.x(t), map.y(t));
+ctx.fillRect(sx, sy, z + 0.5, z + 0.5);
+}
+const have = new Set(info.zone);
+const cx = map.x(info.tile);
+const cy = map.y(info.tile);
+ctx.fillStyle = 'rgba(255, 90, 80, 0.85)';
+const r = Math.max(1, Math.min(3, z * 0.3));
+for (const [dx, dy] of START_ZONE) {
+const x = cx + dx;
+const y = cy + dy;
+if (!map.inBounds(x, y) || have.has(map.index(x, y))) continue;
+const [sx, sy] = camera.worldToScreen(x + 0.5, y + 0.5);
+ctx.fillRect(sx - r / 2, sy - r / 2, r, r);
+}
+ctx.restore();
 }
 _drawSpawnMarker(now) {
 const { ctx, game, camera } = this;
@@ -28304,6 +29473,61 @@ ctx.restore();
 }
 
 return { Renderer };
+});
+__define('repeticion', function () {
+const { DEFAULT_RULES, DIFFICULTIES, MAP_SIZES, REAL_MAPS, migrateRules } = __require('config');
+const { MECH_VERSION } = __require('mecanicas');
+function configSnapshot({ mode = 'ia', mapSize, nations, colonies, difficulty, rules, seed }) {
+const src = migrateRules(rules) || {};
+const reglas = {};
+for (const k of Object.keys(DEFAULT_RULES)) {
+const v = k in src ? src[k] : DEFAULT_RULES[k];
+reglas[k] = v === undefined ? null : v;
+}
+reglas.colonies = colonies;
+return {
+v: 1,
+modo: mode,
+mapa: mapSize,
+naciones: Math.max(0, Math.round(nations || 0)),
+colonias: Math.max(0, Math.round(colonies || 0)),
+dificultad: DIFFICULTIES.includes(difficulty) ? difficulty : 'normal',
+reglas,
+perfil: reglas.profile,
+semilla: seed >>> 0,
+version: MECH_VERSION,
+};
+}
+function validConfig(c) {
+return !!(c && c.v === 1 && (REAL_MAPS[c.mapa] || MAP_SIZES[c.mapa]) && Number.isFinite(c.naciones) && Number.isFinite(c.colonias) && c.reglas && typeof c.reglas === 'object');
+}
+function replayPlan(entry, { scenario = false } = {}) {
+if (!entry) return null;
+const c = entry.config;
+if (c && c.modo === 'tutorial') return { kind: 'tutorial' };
+if (entry.online || (c && c.modo === 'online')) return { kind: 'online' };
+if (!validConfig(c)) {
+const map = REAL_MAPS[entry.mapa] || MAP_SIZES[entry.mapa] ? entry.mapa : null;
+return { kind: 'revisar', prefill: { mapSize: map } };
+}
+const opts = {
+mapSize: c.mapa,
+bots: c.naciones,
+difficulty: c.dificultad,
+seed: '',
+rules: { ...DEFAULT_RULES, ...c.reglas, colonies: c.colonias },
+};
+if (scenario) opts.seedNum = c.semilla >>> 0;
+return { kind: 'jugar', opts, versionChanged: c.version !== MECH_VERSION, version: c.version };
+}
+function configSummary(c, profileName = (id) => id, difficultyName = (id) => id) {
+if (!validConfig(c)) return '';
+const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+const seed = REAL_MAPS[c.mapa] ? null : `semilla ${c.semilla}`;
+return [n(c.naciones, 'nación', 'naciones'), n(c.colonias, 'colonia', 'colonias'), profileName(c.perfil), `IA ${difficultyName(c.dificultad)}`, seed].filter(Boolean).join(' · ');
+}
+
+return { configSnapshot, validConfig, replayPlan, configSummary };
 });
 __define('resumen', function () {
 const { CONFIG, TICK_MS } = __require('config');
@@ -28724,6 +29948,46 @@ return h >>> 0;
 }
 
 return { mulberry32, Rng, hashString };
+});
+__define('salida', function () {
+const pct = (n, total) => Math.round((100 * n) / Math.max(1, total));
+function freeLabel(info) {
+const f = info.free / Math.max(1, info.freeCap);
+return f >= 0.99 ? 'amplio' : f >= 0.35 ? 'medio' : 'escaso';
+}
+function describeSpawn(info) {
+if (!info) return null;
+const have = info.zone.length;
+const zone = have >= info.full ? `Zona inicial completa (${have} casillas)` : `Zona inicial ${have} de ${info.full} casillas`;
+const c = info.cut;
+const cutParts = [];
+if (c.costa) cutParts.push(`costa ${c.costa}`);
+if (c.rio) cutParts.push(`río ${c.rio}`);
+if (c.ocupada) cutParts.push(`ocupadas ${c.ocupada}`);
+if (c.otra) cutParts.push(`otra tierra ${c.otra}`);
+const cuts = cutParts.length ? `recortada por ${cutParts.join(', ')}` : '';
+const [llano, meseta, monte] = info.terrain;
+const terrainParts = [];
+if (llano) terrainParts.push(`llanura ${pct(llano, have)} %`);
+if (meseta) terrainParts.push(`meseta ${pct(meseta, have)} %`);
+if (monte) terrainParts.push(`montaña ${pct(monte, have)} %`);
+const free = `espacio libre alrededor: ${freeLabel(info)}`;
+const rival = info.rival ? `${info.rival.player.name} a ${info.rival.km} km` : 'ninguna nación cerca';
+const close = !!(info.rival && info.rival.tiles < 14 * Math.sqrt(info.full / 52) * 2);
+const warn = have < info.full || freeLabel(info) === 'escaso' || close;
+return {
+zone,
+cuts,
+terrain: terrainParts.join(' · '),
+free,
+rival,
+close,
+warn,
+line: [have >= info.full ? `${have}/${info.full} casillas` : `${have}/${info.full} casillas (${cutParts.join(', ')})`, freeLabel(info) === 'amplio' ? 'mucho sitio libre' : `sitio libre ${freeLabel(info)}`, info.rival ? `nación más cerca: ${rival}` : rival].join(' · '),
+};
+}
+
+return { freeLabel, describeSpawn };
 });
 __define('social-ui', function () {
 const { drawEmblem, drawFrame } = __require('icons');
@@ -30596,18 +31860,27 @@ return best;
 return { TAP_RADIUS_PX, TAP_RADIUS_MAX, attackableByLand, resolveTap, nearestTileOf };
 });
 __define('tutorial', function () {
-const { AREA } = __require('config');
+const { AREA, CONFIG, TICK_MS } = __require('config');
+const { fmtTroops, formatNumber } = __require('format');
 const $ = (id) => document.getElementById(id);
 const openGroup = (id) => $('construir')?.dispatchEvent(new CustomEvent('abrir-grupo', { detail: id }));
+const perSecond = 1000 / TICK_MS;
+const troopsPerSecond = (h) => `${fmtTroops(Math.max(0, h.growthPerTick() * perSecond))}/s`;
+const goldPerSecond = (h) => `${formatNumber(h.goldPerTick() * perSecond)}/s`;
 const STEPS = [
 {
-text: 'Bienvenido a Trinchera. Haz clic en una zona de tierra libre para elegir dónde empieza tu nación.',
+text: 'Bienvenido a Trinchera. Toca una zona de tierra libre para elegir dónde empieza tu nación, o pulsa «Elegir por mí». La cuenta atrás espera a que elijas.',
+pause: true,
 check: (s) => s.human.spawned,
 },
 {
-text: 'Bien. Cuando termine la cuenta atrás empieza la partida. Tus tropas se regeneran solas (más rápido hacia el 42 % del techo) y ganas 100 de oro por turno: lo ves en el panel de abajo.',
+text: (s) =>
+`Bien. Tus tropas crecen solas (ahora +${troopsPerSecond(s.human)}; más rápido cuanto más cerca del 42 % de tu techo) y ganas oro cada segundo (+${goldPerSecond(s.human)}): lo ves en el panel de abajo. Pulsa «Empezar» cuando quieras: la IA no se mueve hasta entonces.`,
 highlight: '#panel-jugador',
-check: (s) => s.game.phase === 'playing',
+info: true,
+next: 'Empezar',
+pause: true,
+leave: (s, tut) => tut.onStartNow?.(),
 },
 {
 text: 'Expándete: haz clic en tierra libre junto a tu territorio. Conquistarla cuesta pocas tropas.',
@@ -30617,8 +31890,9 @@ step.startTiles = s.human.tiles;
 check: (s, step) => s.human.tiles >= step.startTiles + 40 * AREA,
 },
 {
-text: 'La fuerza de ataque decide qué parte de tus tropas envías en cada clic. Pulsa la tecla 5 o mueve el control al 50 %.',
+text: 'La fuerza de ataque decide qué parte de tus tropas envías en cada clic; el resto se queda defendiendo. Pulsa la tecla 5 o mueve el control al 50 %. La partida espera mientras lo pruebas.',
 highlight: '#panel-jugador .ratio',
+pause: true,
 check: (s) => Math.abs(s.ratio - 0.2) > 0.04,
 },
 {
@@ -30648,19 +31922,27 @@ openGroup('economia');
 check: (s) => s.human.buildings.port >= 1,
 },
 {
-text: 'Ya conoces lo básico. Sigue jugando esta partida o vuelve al menú cuando quieras. En la ayuda del inicio tienes misiles, buques y más.',
+text: 'Ya conoces lo básico. Sigue jugando esta partida o vuelve al menú cuando quieras. En la guía del inicio tienes misiles, buques y más.',
 info: true,
+next: 'Terminar',
 },
 ];
 class Tutorial {
-constructor({ onFinish }) {
+constructor({ onFinish, onStartNow, onAuto }) {
 this.onFinish = onFinish;
+this.onStartNow = onStartNow;
+this.onAuto = onAuto;
 this.active = false;
 this.index = 0;
 this._lit = null;
 $('tut-saltar').addEventListener('click', () => this.stop());
 $('tut-paso-saltar').addEventListener('click', () => this._advance());
 $('tut-siguiente').addEventListener('click', () => this._advance());
+$('tut-auto')?.addEventListener('click', () => this.onAuto?.());
+}
+holds() {
+if (!this.active || this.index < 0) return false;
+return !!STEPS[this.index]?.pause;
 }
 start(state) {
 this.active = true;
@@ -30672,11 +31954,15 @@ this._advance();
 }
 stop() {
 this.active = false;
+$('tutorial').style.bottom = '';
+$('tutorial').style.maxHeight = '';
 $('tutorial').hidden = true;
 document.body.classList.remove('con-tutorial');
 this._highlight(null);
 }
 _advance() {
+const prev = STEPS[this.index];
+if (prev && this.state) prev.leave?.(this.state, this);
 this.index++;
 if (this.index >= STEPS.length) {
 this.stop();
@@ -30686,9 +31972,10 @@ return;
 const step = STEPS[this.index];
 step.enter?.(this.state, step);
 $('tut-paso').textContent = `Paso ${this.index + 1} de ${STEPS.length}`;
-$('tut-texto').textContent = step.text;
+$('tut-texto').textContent = typeof step.text === 'function' ? step.text(this.state, step) : step.text;
 $('tut-siguiente').hidden = !step.info;
-$('tut-siguiente').textContent = this.index === STEPS.length - 1 ? 'Terminar' : 'Siguiente';
+$('tut-siguiente').textContent = step.next || (this.index === STEPS.length - 1 ? 'Terminar' : 'Siguiente');
+this._spawnRow();
 $('tut-paso-saltar').hidden = !!step.info;
 $('tut-puntos').replaceChildren(
 ...STEPS.map((_, i) => {
@@ -30698,15 +31985,49 @@ return dot;
 }),
 );
 this._highlight(step.highlight || null);
+requestAnimationFrame(() => this._place());
 }
 _highlight(selector) {
 if (this._lit) this._lit.classList.remove('resalta');
 this._lit = selector ? document.querySelector(selector) : null;
 if (this._lit) this._lit.classList.add('resalta');
 }
+_spawnRow() {
+const row = $('tut-despliegue');
+if (!row) return;
+const g = this.state?.game;
+const spawning = !!(this.active && g && g.phase === 'spawn');
+row.hidden = !spawning;
+if (!spawning) return;
+const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - g.ticks) * TICK_MS) / 1000));
+const chosen = !!this.state.human?.spawned;
+$('tut-reloj').textContent = this.holds() ? `Cuenta atrás en pausa · ${left} s` : `Quedan ${left} s`;
+$('tut-auto').hidden = chosen;
+}
+_place() {
+const box = $('tutorial');
+if (!this.active || !box || box.hidden) return;
+if (window.innerWidth > 720) {
+box.style.bottom = '';
+box.style.maxHeight = '';
+return;
+}
+let top = window.innerHeight;
+for (const id of ['panel-jugador', 'bandeja-obras']) {
+const e = $(id);
+if (!e || e.hidden || (id === 'bandeja-obras' && !e.classList.contains('abierto'))) continue;
+const r = e.getBoundingClientRect();
+if (r.height) top = Math.min(top, r.top);
+}
+const bottom = Math.round(window.innerHeight - top + 10);
+box.style.bottom = `${bottom}px`;
+box.style.maxHeight = `${Math.max(120, window.innerHeight - bottom - 64)}px`;
+}
 update(state) {
 if (!this.active || !state.human) return;
 this.state = state;
+this._spawnRow();
+this._place();
 const step = STEPS[this.index];
 if (!step.info && step.check(state, step)) this._advance();
 }
@@ -30727,6 +32048,8 @@ const { FichaUI } = __require('ficha-ui');
 const { activeBonuses, shortEffect } = __require('fichas');
 const { drawCapitalEmblem, drawCapitalFx } = __require('icons');
 const { CAPITAL_TIERS, capitalTier } = __require('capital-tier');
+const { placement } = __require('resumen');
+const { describeSpawn } = __require('salida');
 const { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } = __require('movimiento');
 const { PantallaFin, abrirFin } = __require('fin');
 const $ = (id) => document.getElementById(id);
@@ -30751,6 +32074,7 @@ const IMPORTANT = [
 /contra ti|casillas tuyas|iba hacia ti|tu antimisiles/i,
 /uno de tus puertos/i,
 /logro|comienza la conquista/i,
+/(terminad[oa]|mejorad[oa] a nivel \d+): [+−]|capital a nivel/i,
 ];
 const NOT_IMPORTANT = [/propuesta de alianza enviada/i];
 function isImportant(text) {
@@ -30759,6 +32083,7 @@ return IMPORTANT.some((r) => r.test(text)) && !NOT_IMPORTANT.some((r) => r.test(
 function eventCategory(text) {
 const t = text.toLowerCase();
 if (/logro/.test(t)) return 'logro';
+if (/terminad[oa]|mejorad[oa] a nivel|capital a nivel/.test(t)) return 'edificio';
 if (/misil|💥|🚀|arrasad/.test(t)) return /derribad/.test(t) ? 'escudo' : 'misil';
 if (/derribad|🛡/.test(t)) return 'escudo';
 if (/alianza|aliad|traici|traidor|🤝|💔/.test(t)) return 'alianza';
@@ -30812,6 +32137,13 @@ this.text = t;
 this.el.textContent = t;
 }
 }
+}
+function defenseText(d) {
+if (!d) return '';
+const x = (v) => `×${(Math.round(v * 10) / 10).toString().replace('.', ',')}`;
+const out = d.parts.map((p) => `${p.label} ${x(p.mult)}`);
+if (d.terrain && d.terrain.cost > 1.01) out.push(`${(TERRAIN_NAMES[d.terrain.kind] || 'terreno').toLowerCase()} ${x(d.terrain.cost)}`);
+return out.join(' · ');
 }
 class UI {
 constructor() {
@@ -31344,15 +32676,29 @@ const left = Math.max(0, (req.expires - game.ticks) / (offer ? CONFIG.offerTicks
 card.querySelector('.sol-tiempo div').style.width = `${left * 100}%`;
 }
 }
-confirmExit(ranked = false) {
-$('conf-texto').textContent = ranked
-? 'Es una clasificatoria: abandonar cuenta como quedar el último y pierdes PL.'
-: 'Volverás al menú y se perderá esta partida.';
+confirmExit(ranked = false, { host = false, guests = 0 } = {}) {
+const parts = [];
+if (host) parts.push(`Eres el anfitrión: si sales, la partida se interrumpe para ${guests === 1 ? 'el otro jugador' : (guests ? `los otros ${guests} jugadores` : 'los demás jugadores')} y nadie podrá seguirla.`);
+parts.push(ranked ? 'Es una clasificatoria: abandonar cuenta como quedar el último y pierdes PL.' : 'Volverás al menú y se perderá esta partida.');
+$('conf-texto').textContent = parts.join(' ');
 abrirDialogo($('confirmar'), { foco: '#conf-no' });
 }
 showEnd(title, text, progress = null, extra = {}) {
 this.fin ??= new PantallaFin();
+this.setEndActions(extra.actions || {});
 abrirFin(this.fin, { title, text, progress, ...extra });
+}
+setEndActions(a = {}) {
+const set = (id, o = {}, label) => {
+const b = $(id);
+b.textContent = o.label || label;
+b.hidden = !!o.hidden;
+b.disabled = !!o.disabled;
+b.title = o.title || '';
+};
+set('fin-nueva', a.nueva, 'Revancha');
+set('fin-menu', a.menu, 'Menú');
+set('fin-seguir', a.seguir, 'Seguir mirando');
 }
 hideEnd() {
 this.fin?.hide();
@@ -31582,7 +32928,12 @@ const estado = left <= 5 ? 'urgente' : left <= 10 ? 'aviso' : 'normal';
 if (box.dataset.estado !== estado) box.dataset.estado = estado;
 box.classList.toggle('elegido', !!human.spawned);
 txt('dp-titulo', human.spawned ? '✓ Posición elegida' : 'Elige dónde empezar');
-txt('dp-texto', human.spawned ? 'Puedes cambiarla: haz clic en otro sitio' : left <= 5 ? '¡Rápido! Si no eliges, se te asigna un sitio' : 'Haz clic en el mapa donde quieras empezar');
+const d = describeSpawn(this._spawnInfo);
+const base = human.spawned ? 'Puedes cambiarla: haz clic en otro sitio' : left <= 5 ? '¡Rápido! Si no eliges, se te asigna un sitio' : 'Haz clic en el mapa donde quieras empezar';
+txt('dp-texto', d ? `${this._spawnInfo.tile === human.spawnTile && human.spawned ? 'Tu salida' : 'Aquí'}: ${d.line}` : base);
+$('dp-texto').classList.toggle('dp-mala', !!(d && d.warn));
+const startNow = !!(human.spawned && this.soloSpawn);
+if ($('dp-empezar').hidden === startNow) $('dp-empezar').hidden = !startNow;
 cssProp($('dp-barra'), 'transform', `scaleX(${frac.toFixed(4)})`);
 cssProp($('dp-aro'), 'stroke-dashoffset', `${(125.66 * (1 - frac)).toFixed(2)}`);
 if (this._spawnLeft !== left) {
@@ -31590,6 +32941,9 @@ this._spawnLeft = left;
 const num = $('dp-segundos');
 if (!document.body.classList.contains('sin-animaciones')) num.animate?.([{ transform: `scale(${left <= 5 ? 1.45 : 1.18})` }, { transform: 'scale(1)' }], { duration: left <= 5 ? 420 : 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
 }
+}
+setSpawnInfo(info) {
+this._spawnInfo = info;
 }
 animate(dt) {
 for (const c of this._counters) c.step(dt);
@@ -31670,6 +33024,13 @@ this._troopsMax.set(max);
 const growth = human.growthPerTick() * perSecond;
 txt('pj-crec', playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '');
 $('pj-crec').classList.toggle('baja', growth < 0);
+let committed = human.troopsInAttacks();
+for (const b of game.boats) if (b.owner === human.id) committed += b.troops;
+const banked = human.capital && game.buildingAt.get(human.capital.tile) === human.capital ? human.capital.bank || 0 : 0;
+txt('pj-comprometidas', committed >= 1 ? `⚔ ${fmtTroops(committed)}` : '');
+const troopsTitle = `Disponibles: ${fmtTroops(human.troops)} (atacan y defienden) · En ataques y barcos: ${fmtTroops(committed)} · En el banco: ${fmtTroops(banked)} · Techo: ${fmtTroops(max)}. El techo se reparte: cuanto más cerca del 42 %, más rápido se regeneran`;
+const pobBox = $('pj-pob').closest('.cifra-pob');
+if (pobBox.title !== troopsTitle) pobBox.title = troopsTitle;
 txt('pj-trab', `${fmtTroops(human.workers)} trab.`);
 if (!(performance.now() - (this._shareDragAt || 0) < 1500)) {
 $('reparto').value = Math.round(human.soldierShare * 100);
@@ -31677,6 +33038,11 @@ this._showShare(human.soldierShare);
 }
 this._gold.set(human.gold);
 txt('pj-oro-ritmo', playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '');
+const gb = human.goldBreakdown();
+const ps = (v) => formatNumber(v * perSecond);
+const goldTitle = `Oro pasivo por segundo: base +${ps(gb.base)} · territorio +${ps(gb.tax)} · pueblos +${ps(gb.villages)}${gb.workers ? ` · trabajadores +${ps(gb.workers)}` : ''} · bonos +${ps(gb.bonus)}. Comercio, pesqueros y botín llegan aparte (panel de desarrollo → Economía)`;
+const goldBox = $('pj-oro').parentElement;
+if (goldBox.title !== goldTitle) goldBox.title = goldTitle;
 txt('pj-terr', formatShare(human.tiles, landCount));
 txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
 txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
@@ -32320,8 +33686,12 @@ return { li, vs, aEl, dEl, barA, barD, caps, btn, a: this._counter(aEl, fmtTroop
 }
 _updateTopBar(game, human) {
 const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
-const rank = alive.indexOf(human);
-$('dato-puesto').textContent = rank >= 0 ? `${rank + 1}.º de ${alive.length}` : `${alive.length} en pie`;
+const pl = placement(game, human);
+const colonies = alive.reduce((n, p) => n + (p.weak ? 1 : 0), 0);
+const puesto = game.phase === 'playing' || game.phase === 'ended' ? `${pl.place}.º de ${pl.of}` : `${pl.of} naciones`;
+if ($('dato-puesto').textContent !== puesto) $('dato-puesto').textContent = puesto;
+const tip = `Tu puesto entre las ${pl.of} naciones (el mismo que en el informe final)${colonies ? ` · ${colonies} ${colonies === 1 ? 'colonia en pie' : 'colonias en pie'}, que se cuentan aparte` : ''}`;
+if ($('dato-puesto-caja').title !== tip) $('dato-puesto-caja').title = tip;
 const st = game.victoryStatus ? game.victoryStatus() : null;
 const leader = st ? st.leader : alive[0];
 if (leader) {
@@ -32360,11 +33730,17 @@ const now = performance.now();
 if (now - this._lbAt < 950) return;
 this._lbAt = now;
 const list = $('lista-clasificacion');
-const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
+const everyone = game.players.filter((p) => p && p.alive && p.tiles > 0);
+const alive = everyone.filter((p) => !p.weak).sort((a, b) => b.tiles - a.tiles);
+const colonies = everyone.length - alive.length;
 const rows = alive.slice(0, 10);
 const rank = alive.indexOf(human);
 if (rank >= 10) rows.push(human);
-$('cab-puesto').textContent = rank >= 0 ? `${rank + 1}.º` : '';
+const pl = placement(game, human);
+$('cab-puesto').textContent = `${pl.place}.º`;
+const colTxt = colonies ? `${colonies} ${colonies === 1 ? 'colonia' : 'colonias'} en pie (no cuentan en el puesto)` : '';
+if ($('lb-colonias').textContent !== colTxt) $('lb-colonias').textContent = colTxt;
+$('lb-colonias').hidden = !colonies;
 const leaderTiles = alive.length ? alive[0].tiles : 1;
 const animate = !document.body.classList.contains('sin-animaciones');
 const order = rows.map((p) => p.id).join(',');
@@ -32485,14 +33861,19 @@ const o = game.owner[pt.tile];
 const who = o ? ` · de ${escapeHtml(game.players[o].name)}` : ' · sin dueño';
 return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}</div>`;
 }
-_attackTip(game, targetId) {
+_attackTip(game, targetId, tile) {
 const h = game.human;
 if (!h || !h.alive || game.phase !== 'playing' || targetId === h.id || (targetId && h.allies.has(targetId))) return '';
 const troops = this.nextSend(h);
 if (troops < 1) return '';
-const e = game.estimateAttack(h, targetId, troops);
-const risk = targetId ? ` · ${e.risk}` : '';
-return `<div class="tip-estim">⚔ ${fmtTroops(troops)} → ~${formatNumber(e.tiles)} cas.${risk}${e.uncertain ? ' ?' : ''}</div>`;
+const pv = game.attackPreview(h, tile, troops);
+const lines = [];
+lines.push(`<div class="tip-orden ${targetId ? 'ataque' : 'expansion'}">${targetId ? '⚔ Ataque' : '➜ Expansión'}: envías ${fmtTroops(pv.send)} · te quedan ${fmtTroops(pv.reserve)} en casa</div>`);
+lines.push(`<div class="tip-estim">Previsión: ~${formatNumber(pv.tiles)} cas.${targetId ? ` · riesgo ${pv.risk}` : ''}${pv.uncertain ? ' (incierta)' : ''}</div>`);
+const mods = defenseText(pv.defense);
+if (mods) lines.push(`<div class="tip-mods">${targetId ? 'Defensa aquí' : 'Terreno'}: ${mods}</div>`);
+if (pv.incoming) lines.push(`<div class="tip-expo ${pv.exposure}">⚠ Te atacan con ${fmtTroops(pv.incoming)}${pv.attackers > 1 ? ` en ${pv.attackers} frentes` : ''}: ${pv.exposure === 'alta' ? 'tu reserva no les alcanza' : `exposición ${pv.exposure}`}</div>`);
+return lines.join('');
 }
 updateTooltip(game, tile, sx, sy, zoom = 1) {
 const tip = $('tooltip');
@@ -32560,9 +33941,9 @@ extra.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def
 }
 const human = game.human;
 const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
-return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
+return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o, tile)}`;
 }
-return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
+return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0, tile)}`;
 }
 }
 function txt(id, text) {
@@ -32579,7 +33960,7 @@ function escapeHtml(s) {
 return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
-return { UI };
+return { defenseText, UI };
 });
 __require('main');
 })();

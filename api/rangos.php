@@ -147,7 +147,9 @@ if ($vieja) {
     }
     // Plausible: en la misma temporada, el rango no puede moverse más de lo
     // que permiten las partidas jugadas desde la última vez
-    if ($vieja['temporada'] === $nueva['temporada']) {
+    // Volver a cero sin colocar (las colas separadas, DEV07) siempre vale: no da nada
+    $reinicio = $nueva['puntos'] === 0 && $nueva['colocado'] === 0;
+    if ($vieja['temporada'] === $nueva['temporada'] && !$reinicio) {
         $jugadas = $nueva['partidas'] - (int) $vieja['partidas'];
         $tope = PL_MAX_PARTIDA * max(0, $jugadas) + ($nueva['colocado'] && !(int) $vieja['colocado'] ? COLOCACION_MAX : 0);
         if ($jugadas < 0 || abs($nueva['puntos'] - (int) $vieja['puntos']) > $tope) {
