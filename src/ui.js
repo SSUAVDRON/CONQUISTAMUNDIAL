@@ -13,6 +13,7 @@ import { activeBonuses, shortEffect } from './fichas.js';
 import { drawCapitalEmblem, drawCapitalFx } from './icons.js';
 import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { placement } from './resumen.js';
+import { describeSpawn } from './salida.js';
 import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } from './movimiento.js';
 import { PantallaFin, abrirFin } from './fin.js';
 
@@ -47,6 +48,8 @@ const IMPORTANT = [
   /contra ti|casillas tuyas|iba hacia ti|tu antimisiles/i,
   /uno de tus puertos/i,
   /logro|comienza la conquista/i,
+  // Obra acabada que cambia tu ingreso o tu techo (DEV09): «Pueblo terminado: +300/s de oro, +6k de techo»
+  /(terminad[oa]|mejorad[oa] a nivel \d+): [+−]|capital a nivel/i,
 ];
 const NOT_IMPORTANT = [/propuesta de alianza enviada/i];
 function isImportant(text) {
@@ -57,6 +60,7 @@ function isImportant(text) {
 function eventCategory(text) {
   const t = text.toLowerCase();
   if (/logro/.test(t)) return 'logro';
+  if (/terminad[oa]|mejorad[oa] a nivel|capital a nivel/.test(t)) return 'edificio';
   if (/misil|💥|🚀|arrasad/.test(t)) return /derribad/.test(t) ? 'escudo' : 'misil';
   if (/derribad|🛡/.test(t)) return 'escudo';
   if (/alianza|aliad|traici|traidor|🤝|💔/.test(t)) return 'alianza';
@@ -124,6 +128,15 @@ class Counter {
       this.el.textContent = t;
     }
   }
+}
+
+/** «murallas de la capital ×6 · montaña ×1,5» (lo que aplica de verdad en la casilla; DEV04). */
+export function defenseText(d) {
+  if (!d) return '';
+  const x = (v) => `×${(Math.round(v * 10) / 10).toString().replace('.', ',')}`;
+  const out = d.parts.map((p) => `${p.label} ${x(p.mult)}`);
+  if (d.terrain && d.terrain.cost > 1.01) out.push(`${(TERRAIN_NAMES[d.terrain.kind] || 'terreno').toLowerCase()} ${x(d.terrain.cost)}`);
+  return out.join(' · ');
 }
 
 export class UI {
@@ -1059,7 +1072,14 @@ export class UI {
     if (box.dataset.estado !== estado) box.dataset.estado = estado;
     box.classList.toggle('elegido', !!human.spawned);
     txt('dp-titulo', human.spawned ? '✓ Posición elegida' : 'Elige dónde empezar');
-    txt('dp-texto', human.spawned ? 'Puedes cambiarla: haz clic en otro sitio' : left <= 5 ? '¡Rápido! Si no eliges, se te asigna un sitio' : 'Haz clic en el mapa donde quieras empezar');
+    // Lo que te da la salida que señalas o la elegida (DEV03): zona efectiva, recortes, sitio libre y rival cercano
+    const d = describeSpawn(this._spawnInfo);
+    const base = human.spawned ? 'Puedes cambiarla: haz clic en otro sitio' : left <= 5 ? '¡Rápido! Si no eliges, se te asigna un sitio' : 'Haz clic en el mapa donde quieras empezar';
+    txt('dp-texto', d ? `${this._spawnInfo.tile === human.spawnTile && human.spawned ? 'Tu salida' : 'Aquí'}: ${d.line}` : base);
+    $('dp-texto').classList.toggle('dp-mala', !!(d && d.warn));
+    // Contra la IA, «Empezar partida» acorta el despliegue en cuanto eliges (en línea manda la sala)
+    const startNow = !!(human.spawned && this.soloSpawn);
+    if ($('dp-empezar').hidden === startNow) $('dp-empezar').hidden = !startNow;
     // Barra y aro: se vacían de forma continua (transición de 200 ms entre actualizaciones)
     cssProp($('dp-barra'), 'transform', `scaleX(${frac.toFixed(4)})`);
     cssProp($('dp-aro'), 'stroke-dashoffset', `${(125.66 * (1 - frac)).toFixed(2)}`);
@@ -1069,6 +1089,11 @@ export class UI {
       const num = $('dp-segundos');
       if (!document.body.classList.contains('sin-animaciones')) num.animate?.([{ transform: `scale(${left <= 5 ? 1.45 : 1.18})` }, { transform: 'scale(1)' }], { duration: left <= 5 ? 420 : 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
     }
+  }
+
+  /** Salida que se está mirando durante el despliegue (ver game.spawnInfo). */
+  setSpawnInfo(info) {
+    this._spawnInfo = info;
   }
 
   /** Avanza las cifras animadas (llamar en cada frame). */
@@ -1165,6 +1190,14 @@ export class UI {
     const growth = human.growthPerTick() * perSecond;
     txt('pj-crec', playing ? `${growth < 0 ? '−' : '+'}${fmtTroops(Math.abs(growth))}/s` : '');
     $('pj-crec').classList.toggle('baja', growth < 0);
+    // Tropas disponibles, en ataques (y barcos) y en el banco, por separado (DEV09)
+    let committed = human.troopsInAttacks();
+    for (const b of game.boats) if (b.owner === human.id) committed += b.troops;
+    const banked = human.capital && game.buildingAt.get(human.capital.tile) === human.capital ? human.capital.bank || 0 : 0;
+    txt('pj-comprometidas', committed >= 1 ? `⚔ ${fmtTroops(committed)}` : '');
+    const troopsTitle = `Disponibles: ${fmtTroops(human.troops)} (atacan y defienden) · En ataques y barcos: ${fmtTroops(committed)} · En el banco: ${fmtTroops(banked)} · Techo: ${fmtTroops(max)}. El techo se reparte: cuanto más cerca del 42 %, más rápido se regeneran`;
+    const pobBox = $('pj-pob').closest('.cifra-pob');
+    if (pobBox.title !== troopsTitle) pobBox.title = troopsTitle;
     txt('pj-trab', `${fmtTroops(human.workers)} trab.`);
     // El deslizador sigue al reparto real salvo mientras lo estás moviendo
     if (!(performance.now() - (this._shareDragAt || 0) < 1500)) {
@@ -1173,6 +1206,12 @@ export class UI {
     }
     this._gold.set(human.gold);
     txt('pj-oro-ritmo', playing ? `+${formatNumber(human.goldPerTick() * perSecond)}/s` : '');
+    // Desglose del oro pasivo por segundo (DEV09); comercio, pesca y botín van aparte, por evento
+    const gb = human.goldBreakdown();
+    const ps = (v) => formatNumber(v * perSecond);
+    const goldTitle = `Oro pasivo por segundo: base +${ps(gb.base)} · territorio +${ps(gb.tax)} · pueblos +${ps(gb.villages)}${gb.workers ? ` · trabajadores +${ps(gb.workers)}` : ''} · bonos +${ps(gb.bonus)}. Comercio, pesqueros y botín llegan aparte (panel de desarrollo → Economía)`;
+    const goldBox = $('pj-oro').parentElement;
+    if (goldBox.title !== goldTitle) goldBox.title = goldTitle;
     txt('pj-terr', formatShare(human.tiles, landCount));
     txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
     txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
@@ -2121,15 +2160,25 @@ export class UI {
     return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}</div>`;
   }
 
-  /** Estimación de lo que daría un ataque con la fuerza de ataque actual. */
-  _attackTip(game, targetId) {
+  /**
+   * Lo que haría una orden aquí con la fuerza de ataque actual (DEV04), en
+   * tres partes que no se mezclan: el envío y lo que te queda en casa; la
+   * previsión de conquista; y, aparte, tu exposición si te están atacando.
+   * Más los modificadores de defensa reales de esa casilla.
+   */
+  _attackTip(game, targetId, tile) {
     const h = game.human;
     if (!h || !h.alive || game.phase !== 'playing' || targetId === h.id || (targetId && h.allies.has(targetId))) return '';
     const troops = this.nextSend(h);
     if (troops < 1) return '';
-    const e = game.estimateAttack(h, targetId, troops);
-    const risk = targetId ? ` · ${e.risk}` : '';
-    return `<div class="tip-estim">⚔ ${fmtTroops(troops)} → ~${formatNumber(e.tiles)} cas.${risk}${e.uncertain ? ' ?' : ''}</div>`;
+    const pv = game.attackPreview(h, tile, troops);
+    const lines = [];
+    lines.push(`<div class="tip-orden ${targetId ? 'ataque' : 'expansion'}">${targetId ? '⚔ Ataque' : '➜ Expansión'}: envías ${fmtTroops(pv.send)} · te quedan ${fmtTroops(pv.reserve)} en casa</div>`);
+    lines.push(`<div class="tip-estim">Previsión: ~${formatNumber(pv.tiles)} cas.${targetId ? ` · riesgo ${pv.risk}` : ''}${pv.uncertain ? ' (incierta)' : ''}</div>`);
+    const mods = defenseText(pv.defense);
+    if (mods) lines.push(`<div class="tip-mods">${targetId ? 'Defensa aquí' : 'Terreno'}: ${mods}</div>`);
+    if (pv.incoming) lines.push(`<div class="tip-expo ${pv.exposure}">⚠ Te atacan con ${fmtTroops(pv.incoming)}${pv.attackers > 1 ? ` en ${pv.attackers} frentes` : ''}: ${pv.exposure === 'alta' ? 'tu reserva no les alcanza' : `exposición ${pv.exposure}`}</div>`);
+    return lines.join('');
   }
 
   updateTooltip(game, tile, sx, sy, zoom = 1) {
@@ -2209,9 +2258,9 @@ export class UI {
       }
       const human = game.human;
       const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
-      return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o)}`;
+      return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o, tile)}`;
     }
-    return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0)}`;
+    return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0, tile)}`;
   }
 }
 

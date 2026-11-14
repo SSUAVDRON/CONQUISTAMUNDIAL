@@ -139,7 +139,9 @@ export class AccountUI {
     $('chip-nube').hidden = !signedIn;
     if (signedIn) $('chip-nube').title = `Progreso guardado en tu cuenta (${state.email})`;
     const card = $('tarjeta-cuenta');
-    const showCard = on && !signedIn && !this._dismissed();
+    // La invitación sale después de la primera partida (DEV10): antes, las entradas a jugar van primero
+    const played = (this.profile?.stats?.partidas || 0) > 0;
+    const showCard = on && !signedIn && played && !this._dismissed();
     if (card.hidden === showCard) card.hidden = !showCard;
     const block = $('perfil-cuenta');
     block.hidden = !on;

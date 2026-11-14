@@ -23,8 +23,9 @@ import { drawChart, drawSparkline } from './resumen.js';
 import { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, pointsFromMmr, rankOf, rankText, seasonEnd, seasonName, seasonReward } from './rangos.js';
 import {
   ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly,
-  achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rewardsOf, titleName, unlockText,
+  achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rememberConfig, rewardsOf, titleName, unlockText,
 } from './profile.js';
+import { coopSlots, seatsSummary, settingsDiff } from './configurador.js';
 
 /** Colores rápidos para el territorio y el emblema. */
 const SWATCHES = [
@@ -408,28 +409,36 @@ function rulesEditor(prefix, rules, onChange, ctx) {
     syncVictory(true);
     change();
   });
+  // Reglas en tres grupos (DEV10): objetivo y duración, economía y tropas, combate y diplomacia
+  const group = (title, ...fields) => el('fieldset', { class: 'reglas-grupo' }, el('legend', { text: title }), ...fields);
   const box = el('div', { class: 'reglas-rejilla' },
     el('div', { class: 'campo campo-perfil' }, el('span', {}, 'Perfil de reglas ', profileNote), profileBox),
-    el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
-    el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
-    seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
-    el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox, victoryNote),
-    seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
-    seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
-    seg('Ingresos de oro', 'goldMult', MULT_OPTS),
-    seg('Precios de edificios', 'priceMult', MULT_OPTS),
-    seg('Tregua inicial (sin ataques entre naciones)', 'truceMin', TRUCE_MINS.map((v) => [v, v ? `${v} min` : 'No'])),
-    seg('Límite de tiempo (gana quien tenga más)', 'timeLimitMin', TIME_LIMITS.map((v) => [v, v ? `${v} min` : 'Sin límite'])),
-    el('div', { class: 'interruptores' },
-      toggle('Misiles y antimisiles', 'missiles'),
-      toggle('Buques de guerra', 'warships'),
-      toggle('Alianzas', 'alliances'),
-      toggle('Desembarcos', 'boats'),
-      toggle('Fábricas y trenes', 'factories'),
+    group('Objetivo y duración',
+      el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox, victoryNote),
+      seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
+      seg('Límite de tiempo (gana quien tenga más)', 'timeLimitMin', TIME_LIMITS.map((v) => [v, v ? `${v} min` : 'Sin límite'])),
+    ),
+    group('Economía y tropas',
+      el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
+      el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
+      seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
+      seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
+      seg('Ingresos de oro', 'goldMult', MULT_OPTS),
+      seg('Precios de edificios', 'priceMult', MULT_OPTS),
+    ),
+    group('Combate y diplomacia',
+      seg('Tregua inicial (sin ataques entre naciones)', 'truceMin', TRUCE_MINS.map((v) => [v, v ? `${v} min` : 'No'])),
+      el('div', { class: 'interruptores' },
+        toggle('Misiles y antimisiles', 'missiles'),
+        toggle('Buques de guerra', 'warships'),
+        toggle('Alianzas', 'alliances'),
+        toggle('Desembarcos', 'boats'),
+        toggle('Fábricas y trenes', 'factories'),
+      ),
     ),
   );
-  // Sala multijugador: nación compartida por parejas (y roles opcionales)
-  if (prefix === 'sala') {
+  // Salas (al crearlas y al editarlas): nación compartida por parejas y roles opcionales
+  if (prefix === 'sala' || prefix === 'crear') {
     const optIn = (label, key, title) => {
       const input = el('input', { type: 'checkbox', id: id(key) });
       input.checked = rules[key] === true;
@@ -444,9 +453,12 @@ function rulesEditor(prefix, rules, onChange, ctx) {
       });
       return el('label', { class: 'interruptor', title }, input, el('span', { text: label }));
     };
-    box.append(el('div', { class: 'interruptores coop' },
-      optIn('Cooperativo: cada dos jugadores llevan una misma nación', 'coop', 'Por orden de llegada a la sala: 1.º y 2.º juntos, 3.º y 4.º juntos…'),
-      optIn('Con roles: uno el mando militar y otro la economía y la diplomacia', 'coopRoles', 'Evita compras o ataques por accidente: cada uno solo puede hacer lo suyo'),
+    box.append(group('Cooperativo',
+      el('div', { class: 'interruptores coop' },
+        optIn('Cooperativo: cada dos jugadores llevan una misma nación', 'coop', 'Por orden de llegada a la sala: 1.º y 2.º juntos, 3.º y 4.º juntos…'),
+        optIn('Con roles: uno el mando militar y otro la economía y la diplomacia', 'coopRoles', 'Evita compras o ataques por accidente: cada uno solo puede hacer lo suyo'),
+      ),
+      el('small', { class: 'nota', text: 'Con un número impar de jugadores, el último en llegar lleva su nación en solitario (se marca en la lista de la sala).' }),
     ));
   }
   box.refresh = syncCol;
@@ -660,8 +672,8 @@ export class Home {
       card.addEventListener('click', () => this._mode(card.dataset.modo));
     }
 
-    // Partida contra la IA
-    const a = this.profile.ajustes;
+    // Partida contra la IA: su propia configuración guardada (la de las salas va aparte, DEV10)
+    const a = this.profile.ajustes.ia;
     this.choice = { map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'mundo', difficulty: a.dificultad, rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } };
     this._galleryIA = mapPicker($('galeria-mapas'), this.choice.map, (id) => {
       this.choice.map = id;
@@ -721,7 +733,7 @@ export class Home {
         seed: REAL_MAPS[this.choice.map] ? '' : $('in-semilla').value.trim(),
         rules: { ...this.choice.rules },
       };
-      Object.assign(this.profile.ajustes, { bots: opts.bots, mapa: opts.mapSize, dificultad: opts.difficulty, reglas: opts.rules });
+      rememberConfig(this.profile, 'ia', { bots: opts.bots, mapa: opts.mapSize, dificultad: opts.difficulty, reglas: opts.rules });
       this.h.onProfileChange?.(false);
       this.h.onQuickPlay?.(opts);
     });
@@ -884,10 +896,25 @@ export class Home {
 
     // Sala
     $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
-    $('btn-empezar').addEventListener('click', () => this.h.onStartRoom?.());
+    $('btn-empezar').addEventListener('click', () => {
+      // Con cambios a medias no se empieza: o se aplican (y los invitados confirman) o se descartan
+      if (this.draftPending()) {
+        this._notice('Tienes cambios sin aplicar en las reglas: pulsa «Aplicar cambios» o «Descartar» antes de empezar.', 'aviso');
+        $('sala-ajustes').hidden = false;
+        $('btn-editar-reglas').setAttribute('aria-expanded', 'true');
+        $('btn-editar-reglas').textContent = 'Cerrar reglas';
+        $('sala-borrador')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+      this.h.onStartRoom?.();
+    });
     $('btn-listo').addEventListener('click', () => this.h.onReady?.());
     $('btn-copiar-enlace').addEventListener('click', () => this.h.onCopyLink?.());
     $('btn-copiar-codigo').addEventListener('click', () => this.h.onCopyCode?.());
+    $('sala-aplicar').addEventListener('click', () => this._applyDraft());
+    $('sala-descartar').addEventListener('click', () => this._discardDraft());
+    // Móvil: la vista del mapa de la sala va plegada; tocarla la despliega
+    document.querySelector('.sala-mapa .mapa-vista')?.addEventListener('click', (e) => e.currentTarget.classList.toggle('desplegada'));
     $('btn-editar-reglas').addEventListener('click', () => {
       const box = $('sala-ajustes');
       box.hidden = !box.hidden;
@@ -903,7 +930,7 @@ export class Home {
   _mode(mode) {
     if (mode === 'rapida') {
       // Partida rápida: el perfil Clásico, siempre (elegido aquí, no por los valores por defecto)
-      this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
+      this.h.onQuickPlay?.({ bots: 90, mapSize: 'mundo', difficulty: this.profile.ajustes.ia.dificultad, seed: '', rules: { ...DEFAULT_RULES, profile: 'clasico' } });
     } else if (mode === 'tutorial') {
       this.h.onTutorial?.();
     } else if (mode === 'online') {
@@ -1084,9 +1111,10 @@ export class Home {
   _syncSummaryIA() {
     const c = this.choice;
     const n = Number($('in-bots').value);
+    const col = c.rules.colonies ?? colonyCount(landTilesOf(c.map), n);
     $('ia-resumen').replaceChildren(
       el('strong', { text: mapLabel(c.map) }),
-      ` · ${n} rival${n === 1 ? '' : 'es'} · ${DIFFICULTY[c.difficulty] || 'Normal'}`,
+      ` · ${n} ${n === 1 ? 'nación' : 'naciones'} de la IA · ${col} colonia${col === 1 ? '' : 's'}${c.rules.colonies == null ? ' (auto)' : ''} · ${DIFFICULTY[c.difficulty] || 'Normal'}`,
       el('small', { text: rulesSummary(c.rules) }),
     );
     $('ia-reglas-resumen').textContent = rulesSummary(c.rules);
@@ -2885,7 +2913,7 @@ export class Home {
 
   /** Pantalla «Crear sala»: mapa y quién entra; las reglas, en «Reglas avanzadas». */
   showCreate({ ranked = false } = {}) {
-    const a = this.profile.ajustes;
+    const a = this.profile.ajustes.online;
     if (!this.create) {
       this.create = {
         map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'europa',
@@ -2955,6 +2983,7 @@ export class Home {
     $('plazas-menos').disabled = c.seats <= MIN_HUMANS;
     $('plazas-mas').disabled = c.seats >= MAX_HUMANS;
     this._chips($('crear-resumen'), c.ranked ? this._rankedSettings() : { bots: c.bots, rules: c.rules });
+    this._createSummary();
     // Reglas avanzadas: naciones, dificultad y el editor de reglas
     if (!this._createRules) {
       const out = el('strong', { text: String(c.bots) });
@@ -2963,13 +2992,14 @@ export class Home {
         c.bots = Number(bots.value);
         out.textContent = bots.value;
         this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules });
+        this._createSummary();
         this._createRules?.refresh();
       });
       const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
       segmented(dif, Object.entries(DIFFICULTY), c.difficulty, (v) => {
         c.difficulty = v;
       });
-      this._createRules = rulesEditor('crear', c.rules, () => this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules }), {
+      this._createRules = rulesEditor('crear', c.rules, () => (this._chips($('crear-resumen'), { bots: c.bots, rules: c.rules }), this._createSummary()), {
         autoColonies: () => colonyCount(landTilesOf(c.map), c.bots),
       });
       $('crear-reglas').replaceChildren(
@@ -2979,6 +3009,13 @@ export class Home {
       );
     }
     this._createRules.refresh();
+  }
+
+  /** «4 plazas humanas · 40 naciones de la IA · 25 colonias» al crear la sala (DEV10). */
+  _createSummary() {
+    const c = this.create;
+    const set = c.ranked ? this._rankedSettings() : { bots: c.bots, mapSize: c.map, rules: c.rules };
+    $('crear-plazas-resumen').textContent = seatsSummary({ seats: c.seats, humans: c.seats, bots: set.bots, rules: set.rules, landCount: landTilesOf(set.mapSize || c.map) });
   }
 
   _seats(d) {
@@ -3002,7 +3039,7 @@ export class Home {
     $('crear-error').textContent = '';
     // Las reglas elegidas pasan a ser las del jugador (las de una clasificatoria son fijas)
     if (!c.ranked) {
-      Object.assign(this.profile.ajustes, { mapa: c.map, dificultad: c.difficulty, reglas: { ...c.rules } });
+      rememberConfig(this.profile, 'online', { bots: c.bots, mapa: c.map, dificultad: c.difficulty, reglas: c.rules });
       this.h.onProfileChange?.(false);
     }
     try {
@@ -3037,6 +3074,8 @@ export class Home {
     $('btn-editar-reglas').textContent = 'Editar reglas';
     $('sala-copia').hidden = true;
     delete $('sala-ajustes').dataset.host;
+    this._hostDraft = null;
+    this._showDraftBar();
     this.pushLayer('sala');
   }
 
@@ -3133,6 +3172,9 @@ export class Home {
       this._paintMapInto($('sala-mapa-img'), s.mapSize);
       $('sala-mapa-nombre').textContent = mapLabel(s.mapSize);
       this._chips($('sala-chips'), s);
+      // Quién juega: plazas humanas, naciones de la IA y colonias, por separado (DEV10)
+      const seed = REAL_MAPS[s.mapSize] ? '' : ' · mapa generado: la semilla se reparte al empezar';
+      $('sala-resumen').textContent = `${seatsSummary({ seats: st.seats, humans: st.total, bots: s.bots, rules: s.rules, landCount: landTilesOf(s.mapSize) })}${seed}`;
     }
     // Jugadores: anfitrión, invitados y plazas libres. Los que acaban de
     // entrar aparecen con una animación y la marca de «listo» da un saltito
@@ -3141,7 +3183,9 @@ export class Home {
     this._lobbyPeers = new Set(st.players.map((p) => p.peer));
     this._lobbyReady = new Set(st.players.filter((p) => p.ready).map((p) => p.peer));
     const claims = sala.rankClaims ? sala.rankClaims() : new Map();
-    const rows = st.players.map((p) => {
+    // Cooperativo: la pareja de cada uno y, con un número impar, quién va en solitario (DEV10)
+    const slots = coopSlots(st.players.length, !!(s && s.rules && s.rules.coop));
+    const rows = st.players.map((p, i) => {
       const claim = claims.get(p.peer);
       const card = () => this.openPlayerCard({ ...p, rank: claim && Number.isFinite(claim.puntos) ? rankOf(claim.puntos).label : '' }, 'sala');
       const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
@@ -3151,14 +3195,14 @@ export class Home {
         'li',
         { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''} fila-boton`, tabindex: '0', title: 'Ver su ficha', onclick: card, onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), card()) },
         el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
-        el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}` })),
+        el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}${slots[i] ? (slots[i].solo ? ' · nación en solitario' : ` · pareja ${slots[i].pair}`) : ''}` })),
         el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),
         el('span', { class: `check-sala${p.ready ? ' si' : ''}`, 'aria-label': p.ready ? 'Preparado' : 'Sin preparar', text: p.ready ? '✓' : '' }),
       );
     });
-    for (let i = st.players.length; i < st.seats; i++) {
-      rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: 'Plaza libre' }))));
-    }
+    // Las plazas libres, en una sola fila (con 32 plazas, la lista no se alarga)
+    const free = st.seats - st.players.length;
+    if (free > 0) rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: free === 1 ? '1 plaza libre' : `${free} plazas libres` }), el('small', { text: 'Comparte el código o el enlace para que entren' }))));
     $('sala-jugadores').replaceChildren(...rows);
     $('sala-cuenta').textContent = `${st.total}/${st.seats}`;
     // Pie: cuántos preparados, el motivo y la acción
@@ -3193,18 +3237,40 @@ export class Home {
     else {
       $('sala-ajustes').hidden = true;
       delete $('sala-ajustes').dataset.host;
+      this._hostDraft = null;
+      this._showDraftBar();
     }
-    // Aviso: lo que se pase, o la prueba entre pestañas
+    // Invitado: si el anfitrión aplica cambios, se explica qué ha cambiado (DEV10)
+    if (!sala.isHost && s) {
+      const prev = this._guestSeen;
+      if (prev && prev.code === sala.code && prev.rev !== st.rev) {
+        const diff = settingsDiff(prev.settings, s, mapLabel);
+        if (diff.length) this._changeNote = { text: `El anfitrión ha cambiado: ${diff.join(' · ')}. Revisa y confirma de nuevo.`, until: performance.now() + 20000 };
+      }
+      this._guestSeen = { code: sala.code, rev: st.rev, settings: JSON.parse(JSON.stringify(s)) };
+      if (me && me.ready) this._changeNote = null;
+    } else this._changeNote = null;
+    const change = this._changeNote && performance.now() < this._changeNote.until ? this._changeNote.text : '';
+    // Aviso: lo que se pase, lo que ha cambiado o la prueba entre pestañas
     if (status) this._notice(status, /no |otra versión|perdid|ha salido|llena|cerrad|cancel/i.test(status) ? 'error' : '');
+    else if (change) this._notice(change, 'aviso');
     else if (kind === 'local') this._notice('Prueba entre pestañas: solo pueden entrar otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.', 'aviso');
     else this._notice('');
   }
 
-  /** Editor del anfitrión (nombre, visibilidad, plazas, mapa, naciones, dificultad y reglas): los mismos controles que «Crear sala». */
+  /**
+   * Editor del anfitrión, con los mismos controles que «Crear sala» (DEV10).
+   * Nombre, visibilidad y plazas se aplican al momento: no cambian la
+   * partida. Mapa, naciones, dificultad y reglas se editan sobre un borrador:
+   * «Aplicar cambios» los manda de una vez (una sola revisión: los invitados
+   * confirman de nuevo y se cancela la cuenta atrás) y «Descartar» vuelve a lo
+   * que hay aplicado. Las reglas de la IA no se tocan.
+   */
   _hostEditor(sala, s) {
     const box = $('sala-ajustes');
     if (box.dataset.host) return;
     box.dataset.host = '1';
+    this._hostSala = sala;
     const info = sala.info;
     const name = el('input', { maxlength: '28', value: info.nombre, 'aria-label': 'Nombre de la sala' });
     name.addEventListener('change', () => this.h.onRoomInfo?.({ nombre: name.value.trim() || info.nombre }));
@@ -3221,47 +3287,96 @@ export class Home {
       );
       return;
     }
-    this.choice.rules = { ...DEFAULT_RULES, ...migrateRules(s.rules) };
-    this._salaMap = s.mapSize;
-    this._salaDifficulty = s.difficulty;
+    const draft = (this._hostDraft = { bots: Math.min(ONLINE_MAX_BOTS, s.bots), mapSize: s.mapSize, difficulty: s.difficulty, rules: { ...DEFAULT_RULES, ...migrateRules(s.rules) } });
     const maps = el('div', { class: 'crear-mapas', 'aria-label': 'Mapa' });
-    mapPicker(maps, s.mapSize, (id) => {
-      this._salaMap = id;
-      this._lobbyChanged();
+    mapPicker(maps, draft.mapSize, (id) => {
+      draft.mapSize = id;
+      this._draftChanged();
     });
     const dif = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Dificultad' });
-    segmented(dif, Object.entries(DIFFICULTY), s.difficulty, (v) => {
-      this._salaDifficulty = v;
-      this._lobbyChanged();
+    segmented(dif, Object.entries(DIFFICULTY), draft.difficulty, (v) => {
+      draft.difficulty = v;
+      this._draftChanged();
+    });
+    const botsOut = el('strong', { id: 'sala-out-bots', text: String(draft.bots) });
+    const bots = el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(draft.bots) });
+    bots.addEventListener('input', () => {
+      draft.bots = Number(bots.value);
+      botsOut.textContent = bots.value;
+      this._draftChanged();
+    });
+    const rulesSlot = el('div', { class: 'sala-reglas' });
+    const mountRules = () => {
+      this._rulesSala = rulesEditor('sala', draft.rules, () => this._draftChanged(), {
+        autoColonies: () => colonyCount(landTilesOf(draft.mapSize || 'mundo'), draft.bots),
+      });
+      rulesSlot.replaceChildren(this._rulesSala);
+      this._rulesSala.refresh();
+    };
+    mountRules();
+    // Restablecer cambia el borrador; hay que aplicarlo para que cuente
+    const reset = el('button', { type: 'button', class: 'btn-mini', text: 'Restablecer reglas', title: 'Vuelve a las reglas por defecto en el borrador (se aplican con «Aplicar cambios»)' });
+    reset.addEventListener('click', () => {
+      for (const k of Object.keys(draft.rules)) delete draft.rules[k];
+      Object.assign(draft.rules, DEFAULT_RULES);
+      mountRules();
+      this._draftChanged();
     });
     box.replaceChildren(
-      el('p', { class: 'nota', text: 'Si cambias el mapa, las naciones, la dificultad o las reglas, los invitados tienen que confirmar de nuevo. El nombre, la visibilidad y las plazas no.' }),
+      el('p', { class: 'nota', text: 'El nombre, la visibilidad y las plazas cambian al momento. El mapa, las naciones, la dificultad y las reglas se aplican juntos con «Aplicar cambios»: entonces los invitados confirman de nuevo.' }),
       el('label', { class: 'campo' }, el('span', { text: 'Nombre de la sala' }), name),
       el('div', { class: 'fila-2' }, el('div', { class: 'campo' }, el('span', { text: 'Visibilidad' }), vis), el('div', { class: 'campo' }, el('span', { text: 'Plazas' }), seats)),
       el('div', { class: 'campo' }, el('span', { text: 'Mapa' }), maps),
       el('div', { class: 'fila-2' },
-        el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', el('strong', { id: 'sala-out-bots', text: String(s.bots) })),
-          el('input', { id: 'sala-bots', type: 'range', min: '0', max: String(ONLINE_MAX_BOTS), value: String(Math.min(ONLINE_MAX_BOTS, s.bots)), oninput: () => this._lobbyChanged() })),
+        el('label', { class: 'campo' }, el('span', {}, 'Naciones de la IA ', botsOut), bots),
         el('div', { class: 'campo' }, el('span', { text: 'Dificultad' }), dif)),
-      (this._rulesSala = rulesEditor('sala', this.choice.rules, () => this._lobbyChanged(), {
-        autoColonies: () => colonyCount(landTilesOf(this._salaMap || 'mundo'), Number($('sala-bots')?.value || 0)),
-      })),
+      rulesSlot,
+      el('div', { class: 'borrador-extra' }, reset),
     );
-    this._rulesSala.refresh();
+    this._draftChanged();
   }
 
-  _lobbyChanged() {
-    $('sala-out-bots').textContent = $('sala-bots').value;
+  /** Lo que el borrador cambia respecto de lo aplicado (barra con Aplicar y Descartar). */
+  _draftChanged() {
+    const sala = this._hostSala;
+    const draft = this._hostDraft;
+    if (!sala || !draft || !$('sala-borrador')) return;
     this._rulesSala?.refresh();
-    // Se guardan como las reglas por defecto del jugador
-    this.profile.ajustes.reglas = { ...this.choice.rules };
+    const diff = sala.isHost ? settingsDiff(sala.settings, draft, mapLabel) : [];
+    this._showDraftBar(diff);
+  }
+
+  /** Pie de la sala con cambios sin aplicar: el texto y Descartar / Aplicar en lugar de «Iniciar partida». */
+  _showDraftBar(diff = []) {
+    const on = diff.length > 0;
+    $('sala-borrador').hidden = !on;
+    $('sala-borrador-texto').textContent = on ? `Sin aplicar: ${diff.join(' · ')}.` : '';
+    $('sala-pie').classList.toggle('con-borrador', on);
+  }
+
+  /** ¿Hay cambios del anfitrión sin aplicar? (no se puede empezar con ellos a medias) */
+  draftPending() {
+    const sala = this._hostSala;
+    return !!(sala && sala.isHost && this._hostDraft && settingsDiff(sala.settings, this._hostDraft).length);
+  }
+
+  /** Aplica el borrador de una vez: una revisión, y se guarda como la configuración de las salas. */
+  _applyDraft() {
+    const d = this._hostDraft;
+    if (!d || !this.draftPending()) return;
+    const settings = { bots: d.bots, mapSize: d.mapSize, difficulty: d.difficulty, rules: { ...d.rules } };
+    rememberConfig(this.profile, 'online', { bots: d.bots, mapa: d.mapSize, dificultad: d.difficulty, reglas: d.rules });
     this.h.onProfileChange?.(false);
-    this.h.onRoomSettings?.({
-      bots: Number($('sala-bots').value),
-      mapSize: this._salaMap,
-      difficulty: this._salaDifficulty,
-      rules: { ...this.choice.rules },
-    });
+    this.h.onRoomSettings?.(settings);
+    this._draftChanged();
+  }
+
+  /** Descarta el borrador: el editor vuelve a lo que hay aplicado. */
+  _discardDraft() {
+    const sala = this._hostSala;
+    if (!sala) return;
+    delete $('sala-ajustes').dataset.host;
+    this._hostEditor(sala, sala.settings);
   }
 
   /** Cuenta atrás grande sobre la sala (ms) o la quita (null). */

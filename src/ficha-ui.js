@@ -5,7 +5,7 @@
 
 import { BUILD_GROUPS, TICK_MS } from './config.js';
 import { fmtTroops, formatNumber } from './format.js';
-import { buildingCard } from './fichas.js';
+import { buildingCard, minSec } from './fichas.js';
 
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
 
@@ -208,6 +208,7 @@ export class FichaUI {
       ${!sheet && meta ? `<div class="ficha-meta">${meta}</div>` : ''}
       ${!sheet ? `<p class="ficha-resumen">${esc(c.summary)}</p>` : ''}
       ${gives && !sheet ? `<section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>` : ''}
+      ${c.payback ? `<p class="ficha-amort" title="Orientativo: con tu oro de ahora; cambia con tu territorio y tus bonos">${ICONS.reloj}<span>Se paga en <b>~${esc(minSec(c.payback.seconds))}</b> de funcionar · ${esc(minSec(c.payback.withBuild))} contando la obra${c.payback.note && mode !== 'dock' ? `<small>${esc(c.payback.note)}</small>` : ''}</span></p>` : ''}
       ${next}
       ${perks}
       ${have}

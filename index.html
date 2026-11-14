@@ -19,21 +19,22 @@
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=d1eab0f290",
       "./src/config.js": "./src/config.js?v=7bc4a001ea",
-      "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=cd375dc108",
+      "./src/configurador.js": "./src/configurador.js?v=7075597e43",
+      "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=c42820ffba",
       "./src/cuenta.js": "./src/cuenta.js?v=b7a3d60681",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
       "./src/emparejamiento.js": "./src/emparejamiento.js?v=9aa2bffef5",
       "./src/errores.js": "./src/errores.js?v=d6981c22f3",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
-      "./src/ficha-ui.js": "./src/ficha-ui.js?v=de1a42378c",
-      "./src/fichas.js": "./src/fichas.js?v=1897af15c9",
+      "./src/ficha-ui.js": "./src/ficha-ui.js?v=2f54aeb69a",
+      "./src/fichas.js": "./src/fichas.js?v=0fbddbe469",
       "./src/fin.js": "./src/fin.js?v=8ad71316f7",
-      "./src/format.js": "./src/format.js?v=08658847e2",
+      "./src/format.js": "./src/format.js?v=3a70a55999",
       "./src/fx.js": "./src/fx.js?v=ab7609d597",
-      "./src/game.js": "./src/game.js?v=81aeab2c9e",
+      "./src/game.js": "./src/game.js?v=3cb57a049d",
       "./src/guia.js": "./src/guia.js?v=ca86666a88",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=f0e8263326",
+      "./src/home.js": "./src/home.js?v=6ccafd0a28",
       "./src/icons.js": "./src/icons.js?v=b6dac66058",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
@@ -41,7 +42,7 @@
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
       "./src/lugares.js": "./src/lugares.js?v=5289949ba5",
-      "./src/main.js": "./src/main.js?v=fdfc166476",
+      "./src/main.js": "./src/main.js?v=246cf89f8a",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
@@ -57,14 +58,15 @@
       "./src/player.js": "./src/player.js?v=829ea9c608",
       "./src/portada.js": "./src/portada.js?v=92e46a1eb5",
       "./src/presentacion.js": "./src/presentacion.js?v=853ea16b6c",
-      "./src/profile.js": "./src/profile.js?v=53671defda",
+      "./src/profile.js": "./src/profile.js?v=6d09f55815",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
-      "./src/render.js": "./src/render.js?v=9317850365",
-      "./src/repeticion.js": "./src/repeticion.js?v=228345d7cc",
+      "./src/render.js": "./src/render.js?v=f008fa49e0",
+      "./src/repeticion.js": "./src/repeticion.js?v=5d726656a5",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=ee313e0dbb",
       "./src/rng.js": "./src/rng.js?v=f9717328bc",
+      "./src/salida.js": "./src/salida.js?v=e58982c21b",
       "./src/social-ui.js": "./src/social-ui.js?v=e1891126dd",
       "./src/social.js": "./src/social.js?v=5a8905016d",
       "./src/sonido.js": "./src/sonido.js?v=9eb19f354e",
@@ -72,12 +74,12 @@
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=6b1ba4421a",
-      "./src/ui.js": "./src/ui.js?v=754a765915"
+      "./src/ui.js": "./src/ui.js?v=140efa4e6c"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=a49ee19cbe">
+  <link rel="stylesheet" href="css/estilo.css?v=61f8238ac2">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -216,13 +218,18 @@
             <p class="heroe-sub">Expande tu territorio, administra tus tropas y domina el mapa global.</p>
             <div class="portada-datos" id="portada-datos"></div>
             <div class="portada-botones">
-              <button type="button" class="principal grande btn-brillo" id="btn-jugar-ya">
+              <button type="button" class="principal grande btn-brillo" id="btn-jugar-ya" title="El mundo con 90 naciones de la IA, perfil Clásico">
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 L13 8 L4 13.5 Z" fill="currentColor"/></svg>
-                Jugar ahora
+                Jugar rápido
               </button>
-              <button type="button" class="secundario btn-heroe" id="btn-repetir" title="Repetir la configuración de tu última partida (mismo mapa, rivales y reglas; reparto nuevo)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6 A5.3 5.3 0 1 1 11.6 4.2 M12.2 1.6 V4.8 H9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Repetir partida</button>
-              <button type="button" class="secundario btn-heroe" id="btn-guia"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3 c2 -1 4 -1 6 0.5 c2 -1.5 4 -1.5 6 -0.5 v10 c-2 -1 -4 -1 -6 0.5 c-2 -1.5 -4 -1.5 -6 -0.5 Z M8 3.5 v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Guía</button>
-              <button type="button" class="secundario btn-heroe" id="btn-tutorial"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6 L8 3 L15 6 L8 9 Z M4 7.5 V11 c1 1 2.5 1.5 4 1.5 s3 -0.5 4 -1.5 V7.5 M14 6.5 V10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Tutorial</button>
+              <!-- Las tres entradas principales (DEV10): rápida, personalizada y multijugador, sin desplazar -->
+              <button type="button" class="secundario btn-heroe btn-entrada" id="btn-personalizar" data-ir="crear"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h7M12 4h2M2 12h2M7 12h7M10.5 2.3v3.4M5.5 10.3v3.4M2 8h4M9 8h5M7.5 6.3v3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Personalizar</button>
+              <button type="button" class="secundario btn-heroe btn-entrada" id="btn-multijugador" data-ir="multijugador"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11.2" cy="5.6" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13.2c0-2.6 1.8-4.1 4-4.1s4 1.5 4 4.1M9.6 9.4c.5-.2 1-.3 1.6-.3 1.9 0 3.3 1.3 3.3 3.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Multijugador</button>
+              <div class="portada-mas">
+                <button type="button" class="btn-mini" id="btn-repetir" title="Repetir la configuración de tu última partida (mismo mapa, rivales y reglas; reparto nuevo)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6 A5.3 5.3 0 1 1 11.6 4.2 M12.2 1.6 V4.8 H9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Repetir partida</button>
+                <button type="button" class="btn-mini" id="btn-tutorial"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6 L8 3 L15 6 L8 9 Z M4 7.5 V11 c1 1 2.5 1.5 4 1.5 s3 -0.5 4 -1.5 V7.5 M14 6.5 V10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Tutorial</button>
+                <button type="button" class="btn-mini" id="btn-guia"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3 c2 -1 4 -1 6 0.5 c2 -1.5 4 -1.5 6 -0.5 v10 c-2 -1 -4 -1 -6 0.5 c-2 -1.5 -4 -1.5 -6 -0.5 Z M8 3.5 v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Guía</button>
+              </div>
             </div>
           </div>
         </div>
@@ -703,6 +710,7 @@
             </div>
           </div>
           <div class="chips-sala" id="crear-resumen"></div>
+          <p class="sala-resumen" id="crear-plazas-resumen"></p>
           <details class="sala-avanzadas" id="crear-avanzadas"><summary>Reglas avanzadas</summary><div id="crear-reglas"></div></details>
         </section>
       </div>
@@ -740,6 +748,7 @@
         <section class="sala-caja sala-mapa">
           <div class="mapa-vista"><canvas id="sala-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="sala-mapa-nombre"></span></div>
           <div class="sala-mapa-pie"><div class="chips-sala" id="sala-chips"></div><button type="button" id="btn-editar-reglas" class="secundario" hidden aria-expanded="false">Editar reglas</button></div>
+          <p class="sala-resumen" id="sala-resumen"></p>
           <div class="sala-ajustes" id="sala-ajustes" hidden></div>
         </section>
         <section class="sala-caja sala-gente" aria-labelledby="sala-gente-tit">
@@ -754,6 +763,11 @@
       <span class="sala-motivo" id="sala-motivo"></span>
       <button type="button" id="btn-listo" class="principal grande">Estoy listo</button>
       <button type="button" id="btn-empezar" class="principal grande">Iniciar partida</button>
+      <!-- Borrador del anfitrión (DEV10): lo que falta por aplicar -->
+      <div class="borrador" id="sala-borrador" role="status" aria-live="polite" hidden>
+        <p class="borrador-texto" id="sala-borrador-texto"></p>
+        <div class="borrador-botones"><button type="button" class="secundario" id="sala-descartar">Descartar</button><button type="button" class="principal" id="sala-aplicar">Aplicar cambios</button></div>
+      </div>
     </footer>
     <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
   </div>
@@ -831,6 +845,7 @@
           <small id="dp-texto">Haz clic en el mapa</small>
         </span>
         <button type="button" id="aviso-auto" class="dp-auto">🎲 Elegir por mí</button>
+        <button type="button" id="dp-empezar" class="dp-auto dp-empezar" hidden>▶ Empezar partida</button>
       </div>
       <span class="dp-barra" aria-hidden="true"><span id="dp-barra"></span></span>
     </div>
@@ -861,7 +876,7 @@
       </div>
       <div class="barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido en la franja marcada, hacia el 42 % del techo"><div id="pj-barra"></div></div>
       <div class="cifras">
-        <div class="cifra-pob" title="Tropas (o población, con trabajadores) y su techo: 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad. Se regeneran más rápido hacia el 42 % del techo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="pj-pob-etq">Tropas</span></span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub" id="pj-crec"></small></div>
+        <div class="cifra-pob" title="Tropas (o población, con trabajadores) y su techo: 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad. Se regeneran más rápido hacia el 42 % del techo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="pj-pob-etq">Tropas</span></span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub sub-tropas"><span id="pj-crec"></span><span id="pj-comprometidas" class="sub-comp" title="Tropas en tus ataques y barcos: ya no defienden"></span></small></div>
         <div class="cifra-soldados" title="Soldados: atacan y defienden. Trabajadores: producen oro extra (cada trabajador, ~1 de oro por segundo)"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Soldados</span><span class="valor" id="pj-tropas">0</span><small class="sub sub-trab" id="pj-trab"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
         <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Territorio</span><span class="valor" id="pj-terr">0%</span><small class="sub sub-barcos" title="Barcos de transporte en el mar / máximo, y buques de guerra"><span id="pj-barcos">0</span> barcos<span id="pj-buques"></span></small></div>

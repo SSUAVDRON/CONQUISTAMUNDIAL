@@ -2,7 +2,7 @@
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
 import { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } from './config.js';
 import { fmtTroops, formatNumber } from './format.js';
-import { Rng } from './rng.js';
+import { Rng, hashString } from './rng.js';
 import { MinHeap } from './heap.js';
 import { Player } from './player.js';
 import { Attack } from './attack.js';
@@ -296,7 +296,7 @@ export class Game {
    * a `t` por tierra dentro de la zona (un río la corta: no se empieza en las
    * dos orillas).
    */
-  _startZone(t) {
+  _startZone(t, self = 0) {
     const map = this.map;
     const cx = map.x(t);
     const cy = map.y(t);
@@ -308,7 +308,8 @@ export class Game {
       const y = cy + dy;
       if (!map.inBounds(x, y)) continue;
       const i = map.index(x, y);
-      if (map.isLand(i) && this.owner[i] === 0 && map.landBody[i] === body) cand.add(i);
+      const o = this.owner[i];
+      if (map.isLand(i) && (o === 0 || (self && o === self)) && map.landBody[i] === body) cand.add(i);
     }
     if (!cand.has(t)) return [];
     const out = [t];
@@ -439,6 +440,136 @@ export class Game {
       }
     }
     return -1;
+  }
+
+  /**
+   * Qué te daría empezar en `tile` (DEV03), sin cambiar nada:
+   *  - zone: las casillas de tu zona inicial de verdad y `full`, las de una zona entera;
+   *  - cut: las que se pierden por costa (mar o lago), río, tierra ocupada u otra isla;
+   *  - terrain: [llanura, meseta, montaña] de la zona;
+   *  - free: tierra libre conectada alrededor (hasta FREE_CAP casillas);
+   *  - rival / colony: la nación y la colonia ya colocadas más cerca ({ player, tiles, km }).
+   * null si no se puede empezar ahí.
+   */
+  spawnInfo(p, tile, { free: withFree = true } = {}) {
+    const map = this.map;
+    // Tus casillas del despliegue cuentan como libres (al cambiar de sitio se sueltan)
+    const self = p.spawned ? p.id : 0;
+    const freeAt = (i) => this.owner[i] === 0 || (self && this.owner[i] === self);
+    if (this.phase !== 'spawn' || !p.alive || tile < 0 || tile >= map.size || !map.isLand(tile) || !freeAt(tile)) return null;
+    if (map.landBodySizes[map.landBody[tile]] < CONFIG.minSpawnBodySize) return null;
+    const zone = this._startZone(tile, self);
+    const inZone = new Set(zone);
+    const cx = map.x(tile);
+    const cy = map.y(tile);
+    const body = map.landBody[tile];
+    const cut = { costa: 0, rio: 0, ocupada: 0, otra: 0 };
+    for (const [dx, dy] of START_OFFSETS) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!map.inBounds(x, y)) {
+        cut.costa++;
+        continue;
+      }
+      const i = map.index(x, y);
+      if (inZone.has(i)) continue;
+      if (!map.isLand(i)) {
+        if (map.river && map.river[i]) cut.rio++;
+        else cut.costa++;
+      } else if (!freeAt(i)) cut.ocupada++;
+      else cut.otra++; // otra masa de tierra, o suelta del resto de la zona
+    }
+    const terrain = [0, 0, 0];
+    for (const i of zone) terrain[Math.max(0, map.terrain[i] - 1)]++;
+    // Tierra libre conectada alrededor de la zona (lo que podrás conquistar sin
+    // pelear), hasta FREE_CAP. Recorrido con los búferes de la partida (sin Set)
+    const FREE_CAP = 3000 * AREA;
+    let free = 0;
+    if (withFree && zone.length) {
+      const stamp = this._nextStamp();
+      const seen = this._stampArr;
+      const queue = this._queue;
+      const nb = (this._freeNb ??= new Int32Array(4));
+      let tail = 0;
+      for (const t of zone) {
+        seen[t] = stamp;
+        queue[tail++] = t;
+      }
+      for (let q = 0; q < tail && free < FREE_CAP; q++) {
+        const c = map.neighbors(queue[q], nb);
+        for (let k = 0; k < c; k++) {
+          const v = nb[k];
+          if (seen[v] === stamp) continue;
+          seen[v] = stamp;
+          if (!map.isLand(v) || !freeAt(v) || map.landBody[v] !== body) continue;
+          free++;
+          queue[tail++] = v;
+        }
+      }
+    }
+    const nearest = (weak) => {
+      let best = null;
+      for (const o of this.players) {
+        if (!o || o === p || !o.alive || !o.spawned || !!o.weak !== weak) continue;
+        const d = Math.hypot(map.x(o.spawnTile) - cx, map.y(o.spawnTile) - cy);
+        if (!best || d < best.tiles) best = { player: o, tiles: d };
+      }
+      if (best) best.km = Math.round(best.tiles * (map.tileKm || 5));
+      return best;
+    };
+    return { tile, zone, full: START_OFFSETS.length, cut, terrain, free: withFree ? free : FREE_CAP, freeCap: FREE_CAP, rival: nearest(false), colony: nearest(true) };
+  }
+
+  /**
+   * Puntuación de una salida (más es mejor): sobre todo la zona inicial
+   * entera y sitio libre para crecer; después, lejos de otras naciones y en
+   * terreno llano.
+   */
+  _spawnScore(info) {
+    const room = 40 * RES;
+    const zone = info.zone.length / info.full;
+    const free = Math.min(1, info.free / info.freeCap);
+    const rival = info.rival ? Math.min(1, info.rival.tiles / room) : 1;
+    const flat = (info.terrain[0] + info.terrain[1] * 0.6) / Math.max(1, info.zone.length);
+    return zone * 4 + free * 2.5 + rival * 1.5 + flat * 0.5 - (zone < 1 ? 1 : 0);
+  }
+
+  /**
+   * Salida recomendada para `p` (DEV03): la mejor de unas cuantas candidatas
+   * repartidas por el mapa. Determinista: con la misma semilla y las mismas
+   * naciones colocadas, la misma recomendación (no gasta el azar de la partida).
+   */
+  recommendSpawn(p, samples = 260) {
+    const map = this.map;
+    const rng = new Rng(hashString(`salida:${this.seed}:${p.id}`));
+    const yMin = map.rowWeight ? Math.round(map.height * 0.08) : 0;
+    const yMax = map.height - 1 - yMin;
+    // 1) Puntuación rápida (sin el recorrido del espacio libre) de todas las candidatas
+    const cands = [];
+    for (let k = 0, tries = 0; k < samples && tries < samples * 8; tries++) {
+      const t = map.landTiles[rng.int(0, map.landTiles.length - 1)];
+      const y = map.y(t);
+      if (y < yMin || y > yMax) continue;
+      const info = this.spawnInfo(p, t, { free: false });
+      if (!info) continue;
+      k++;
+      cands.push({ t, score: this._spawnScore(info) });
+    }
+    // 2) Las mejores, con su espacio libre de verdad (el orden estable deja el desempate a la semilla)
+    cands.sort((a, b) => b.score - a.score);
+    let best = -1;
+    let bestScore = -Infinity;
+    let bestInfo = null;
+    for (const c of cands.slice(0, 14)) {
+      const info = this.spawnInfo(p, c.t);
+      const score = this._spawnScore(info);
+      if (score > bestScore) {
+        bestScore = score;
+        best = c.t;
+        bestInfo = info;
+      }
+    }
+    return { tile: best, info: bestInfo };
   }
 
   /** Coloca (o recoloca, durante el despliegue) a un jugador en `tile`. */
@@ -708,8 +839,9 @@ export class Game {
 
   _finishCapitalWork(b) {
     b.work = null;
-    b.up = (b.up || 0) + 1;
     const p = this.players[b.owner];
+    const before = p && p === this.human ? this._econSnap(p) : null;
+    b.up = (b.up || 0) + 1;
     if (!p) return;
     this._refreshMods(p);
     p.stats.finished = (p.stats.finished || 0) + 1;
@@ -717,8 +849,27 @@ export class Game {
     if (p === this.human) {
       const C = MECH.capital;
       const perk = C.perks.find((x) => x.level === b.up);
-      this._emit(`🏰 Capital a nivel ${b.up}: +${Math.round(C.gold * b.up * 100)} % de oro pasivo y banco para ${fmtTroops(this.bankCap(p))}${perk ? ` · Premio: ${perk.text}` : ''}`, 'good', perk ? { sfx: 'logro' } : null);
+      const delta = before ? this._econDelta(before, this._econSnap(p), true) : '';
+      this._emit(`🏰 Capital a nivel ${b.up}: ${delta || `+${Math.round(C.gold * b.up * 100)} % de oro pasivo`} (banco para ${fmtTroops(this.bankCap(p))})${perk ? ` · Premio: ${perk.text}` : ''}`, 'good', perk ? { sfx: 'logro' } : null);
     }
+  }
+
+  /** Oro pasivo por segundo, techo de tropas y sitio en el banco de `p` (DEV09). */
+  _econSnap(p) {
+    return { gold: p.goldPerTick() * (1000 / TICK_MS), cap: p.maxTroops(), bank: this.bankCap(p) };
+  }
+
+  /** Lo que cambió entre dos instantáneas: «+300/s de oro, +6k de techo» ('' si nada). */
+  _econDelta(a, b, bank) {
+    const sign = (v) => (v > 0 ? '+' : '−');
+    const parts = [];
+    const dg = b.gold - a.gold;
+    if (Math.abs(dg) >= 0.5) parts.push(`${sign(dg)}${formatNumber(Math.abs(dg))}/s de oro`);
+    const dc = b.cap - a.cap;
+    if (Math.abs(dc) >= 1) parts.push(`${sign(dc)}${fmtTroops(Math.abs(dc))} de techo`);
+    const db = b.bank - a.bank;
+    if (bank && Math.abs(db) >= 1) parts.push(`${sign(db)}${fmtTroops(Math.abs(db))} de banco`);
+    return parts.join(', ');
   }
 
   // ------------------------------------------------- banco de tropas (doc-1.7)
@@ -1614,6 +1765,77 @@ export class Game {
     return { tiles, risk, uncertain: !!(target && (target.forts.size || target.passes)) };
   }
 
+  /**
+   * Desglose de la defensa de `target` en la casilla `t` (DEV04), con los
+   * mismos multiplicadores que usa el combate: `mult` es exactamente
+   * defenseMult(target, t). `parts`: [{ label, mult }] de lo que aplica
+   * (murallas o afueras de la capital, puesto defensivo, paso de montaña,
+   * bonificaciones de defensa); `terrain`: el terreno de la casilla y su coste
+   * frente a la llanura (tiempo y bajas).
+   */
+  defenseBreakdown(target, t) {
+    const map = this.map;
+    const parts = [];
+    if (target) {
+      const wall = this.wallMultiplier(target, t);
+      const fort = this.fortMultiplier(target, t);
+      const zone = this.capitalZone(target, t);
+      if (fort > wall) parts.push({ label: 'puesto defensivo', mult: fort });
+      else if (wall > 1) parts.push({ label: zone === 2 ? 'murallas de la capital' : 'afueras de la capital', mult: wall });
+      const pass = this.passMultiplier(target, t);
+      if (pass > 1) parts.push({ label: 'paso de montaña', mult: pass });
+      const mods = Math.max(0.2, 1 + target.mods.defense);
+      if (mods !== 1) parts.push({ label: mods > 1 ? 'bonificaciones de defensa' : 'defensa reducida', mult: mods });
+    }
+    const T = MECH.terrain[map.terrain[t]] || MECH.terrain[1];
+    const plain = MECH.terrain[1];
+    return {
+      mult: target ? this.defenseMult(target, t) : 1,
+      parts,
+      terrain: { kind: map.terrain[t], cost: T.tileCost / plain.tileCost, loss: T.mag / plain.mag },
+    };
+  }
+
+  /**
+   * Previsión de una orden de ataque de `p` sobre la casilla `tile` con
+   * `troops` soldados (DEV04). Separa tres cosas:
+   *  - el envío: `send` (lo que se descuenta al ejecutar) y `reserve` (lo que
+   *    te queda en casa);
+   *  - la previsión de conquista: `tiles` (aproximada, en llanura) y `risk`;
+   *  - tu exposición: `incoming` (tropas que te atacan ahora) y `exposure`
+   *    ('baja' | 'media' | 'alta') de tu reserva frente a eso.
+   * Y los modificadores reales del objetivo en esa casilla (`defense`).
+   */
+  attackPreview(p, tile, troops) {
+    const targetId = tile >= 0 ? this.owner[tile] : 0;
+    const send = Math.max(0, Math.min(Math.floor(troops), Math.floor(p.troops)));
+    const reserve = Math.max(0, p.troops - send);
+    let incoming = 0;
+    let attackers = 0;
+    for (const q of this.players) {
+      if (!q || q === p || !q.alive) continue;
+      const a = q.attacks.get(p.id);
+      if (a && a.troops > 0) {
+        incoming += a.troops;
+        attackers++;
+      }
+    }
+    const exposure = !incoming ? 'baja' : incoming > reserve ? 'alta' : incoming > reserve * 0.5 ? 'media' : 'baja';
+    const est = this.estimateAttack(p, targetId, send);
+    return {
+      targetId,
+      send,
+      reserve,
+      incoming,
+      attackers,
+      exposure,
+      tiles: est.tiles,
+      risk: est.risk,
+      uncertain: est.uncertain,
+      defense: tile >= 0 ? this.defenseBreakdown(targetId ? this.players[targetId] : null, tile) : null,
+    };
+  }
+
   /** Pasos de montaña de `defender`: cuesta más conquistar a su alrededor. */
   passMultiplier(defender, t) {
     if (!defender.passes) return 1;
@@ -2305,12 +2527,15 @@ export class Game {
       b.target = 0;
       changed = true;
       const p = this.players[b.owner];
+      const before = p === this.human ? this._econSnap(p) : null;
       this._recount(p);
       p.stats.finished = (p.stats.finished || 0) + 1;
       p.stats.lastFinished = b.kind;
-      if (p === this.human) {
+      if (before) {
         const def = BUILDINGS[b.kind];
-        this._emit(upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`, 'good');
+        // Qué ha cambiado con la obra (DEV09): ingreso pasivo y techo
+        const delta = this._econDelta(before, this._econSnap(p), false);
+        this._emit(`${upgraded ? `${def.name} mejorad${def.fem ? 'a' : 'o'} a nivel ${b.level}` : `${def.name} terminad${def.fem ? 'a' : 'o'}`}${delta ? `: ${delta}` : ''}`, 'good');
       }
     }
     if (changed) this.sites = this.sites.filter((b) => b.target && this.buildingAt.get(b.tile) === b);

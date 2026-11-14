@@ -9,10 +9,12 @@ import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.
 import { PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { forgetTerrain, paintTerrain } from './terreno.js';
-import { MECH } from './mecanicas.js';
+import { MECH, startOffsets } from './mecanicas.js';
 import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 import { LUGARES } from './lugares.js';
+/** Zona inicial (desplazamientos desde la casilla de salida), para la vista previa del despliegue. */
+const START_ZONE = startOffsets();
 
 const TAU = Math.PI * 2;
 const COLONY_ALPHA = 108; // las colonias, más tenues
@@ -1281,6 +1283,7 @@ export class Renderer {
     this._drawAttackArrows(now);
     this._drawAttackBadges();
     this._drawEmojis();
+    if (game.phase === 'spawn' && overlay.spawn) this._drawSpawnZone(overlay.spawn);
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
     if (overlay.ping) this._drawPing(now, overlay.ping);
@@ -3132,15 +3135,22 @@ export class Renderer {
     const { ctx, game, camera } = this;
     const human = game.human;
     if (!human || !game.attacks.length || this.options.badges === false) return;
-    const fs = COARSE ? 9 : 10;
+    // Al tamaño del zoom (DEV04): alejado, más pequeños y sin los de expansión,
+    // para que se vean las fronteras pequeñas
+    const zr = camera.zoom * RES;
+    const fs = Math.max(8, Math.min(COARSE ? 10 : 11, Math.round(9 + Math.log2(Math.max(0.25, zr)))));
     const h = fs + 5;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `700 ${fs}px system-ui, sans-serif`;
     for (const atk of game.attacks) {
-      if (atk.done || atk.troops < 1 || !atk.targetId) continue;
+      if (atk.done || atk.troops < 1) continue;
       const incoming = atk.targetId === human.id;
       if (!incoming && atk.attacker !== human) continue;
+      // Tres clases que se distinguen por icono, color y borde: recibido (rojo,
+      // borde grueso), ataque tuyo (verde) y expansión por tierra libre (azul, discontinuo)
+      const expansion = !atk.targetId;
+      if (expansion && zr < 1.2) continue;
       const f = this._front(atk);
       if (!f) continue;
       let [x, y] = camera.worldToScreen(f.x, f.y);
@@ -3149,16 +3159,18 @@ export class Renderer {
         y -= Math.sin(f.ang) * (h + 4);
       }
       if (x < -60 || y < -30 || x > camera.viewW + 60 || y > camera.viewH + 30) continue;
-      const text = `${incoming ? '🛡' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
+      const text = `${incoming ? '🛡' : expansion ? '➜' : '⚔'} ${formatTroops(this._smoothed(atk, atk.troops))}`;
       // Ancho por escalones: no «baila» cada vez que cambia una cifra
-      const w = Math.max(40, Math.ceil((ctx.measureText(text).width + 10) / 8) * 8);
+      const w = Math.max(fs * 4, Math.ceil((ctx.measureText(text).width + 10) / 8) * 8);
       ctx.beginPath();
       ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
-      ctx.fillStyle = incoming ? 'rgba(170, 36, 36, 0.78)' : 'rgba(20, 120, 68, 0.78)';
+      ctx.fillStyle = incoming ? 'rgba(170, 36, 36, 0.8)' : expansion ? 'rgba(30, 78, 140, 0.72)' : 'rgba(20, 120, 68, 0.78)';
       ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = incoming ? 'rgba(255, 179, 179, 0.85)' : 'rgba(168, 245, 198, 0.85)';
+      ctx.lineWidth = incoming ? 2 : 1;
+      if (expansion) ctx.setLineDash([3, 2]);
+      ctx.strokeStyle = incoming ? 'rgba(255, 179, 179, 0.95)' : expansion ? 'rgba(170, 210, 255, 0.85)' : 'rgba(168, 245, 198, 0.85)';
       ctx.stroke();
+      if (expansion) ctx.setLineDash([]);
       ctx.fillStyle = '#ffffff';
       ctx.fillText(text, x, y + 0.5);
     }
@@ -3205,6 +3217,37 @@ export class Renderer {
       ctx.restore();
       ctx.globalAlpha = 1;
     }
+  }
+
+  /**
+   * Zona inicial de la salida que se mira (DEV03): las casillas que tendrías,
+   * en verde, y las que se recortan, con un punto rojo.
+   */
+  _drawSpawnZone(info) {
+    const { ctx, game, camera } = this;
+    const map = game.map;
+    const z = camera.zoom;
+    if (z < 0.6) return; // muy alejado no se distingue
+    ctx.save();
+    ctx.fillStyle = 'rgba(95, 211, 141, 0.32)';
+    for (const t of info.zone) {
+      const [sx, sy] = camera.worldToScreen(map.x(t), map.y(t));
+      ctx.fillRect(sx, sy, z + 0.5, z + 0.5);
+    }
+    // Lo que falta para una zona entera: punto rojo en cada casilla recortada
+    const have = new Set(info.zone);
+    const cx = map.x(info.tile);
+    const cy = map.y(info.tile);
+    ctx.fillStyle = 'rgba(255, 90, 80, 0.85)';
+    const r = Math.max(1, Math.min(3, z * 0.3));
+    for (const [dx, dy] of START_ZONE) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!map.inBounds(x, y) || have.has(map.index(x, y))) continue;
+      const [sx, sy] = camera.worldToScreen(x + 0.5, y + 0.5);
+      ctx.fillRect(sx - r / 2, sy - r / 2, r, r);
+    }
+    ctx.restore();
   }
 
   _drawSpawnMarker(now) {

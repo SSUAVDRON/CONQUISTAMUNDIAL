@@ -1840,10 +1840,14 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 /* Editor de reglas (contra la IA y sala multijugador) */
 .reglas { grid-column: 1 / -1; }
-.reglas-rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.reglas-rejilla { display: flex; flex-direction: column; gap: 12px; }
 .reglas-rejilla .interruptores { grid-column: 1 / -1; flex-wrap: wrap; }
+/* Grupos de reglas (DEV10): título con la letra de los títulos; dentro, la de lectura */
+.reglas-grupo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin: 0; padding: 10px 14px 14px; border: 1px solid rgba(233, 185, 85, 0.18); border-radius: 12px; background: rgba(255, 255, 255, 0.02); min-width: 0; }
+.reglas-grupo > legend { padding: 0 6px; font-family: var(--serif); font-weight: 800; font-size: 14px; letter-spacing: 0.04em; color: var(--oro-claro); }
+.reglas-grupo > .nota { grid-column: 1 / -1; }
 #sala-ajustes .reglas-rejilla { margin-top: 12px; }
-@media (max-width: 720px) { .reglas-rejilla { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .reglas-grupo { grid-template-columns: 1fr; } }
 
 /* =========================================================== Móvil (al final: prevalece)
    Vertical: panel inferior en tres filas cortas (cifras, fuerza de ataque en una
@@ -1969,6 +1973,10 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 #panel-jugador .barra::before { left: 33%; width: 20%; }
 #panel-jugador .cifras .sub.baja { color: var(--peligro); }
 #panel-jugador .cifras .sub-trab { color: #7fd8c9; }
+#panel-jugador .cifras .sub-tropas { display: flex; gap: 6px; white-space: nowrap; overflow: hidden; }
+#pj-crec.baja { color: var(--peligro); }
+#panel-jugador .sub-comp { color: #ffb36b; overflow: hidden; text-overflow: ellipsis; }
+#panel-jugador .sub-comp:empty { display: none; }
 #panel-jugador .cifras .sub-barcos { color: var(--texto-suave); }
 /* Dos controles en la columna de ataque: fuerza de ataque y reparto */
 #panel-jugador .pj-ataque { justify-content: center; gap: 4px; }
@@ -4668,6 +4676,11 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .fn-de { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
 .fn-a { font-style: normal; font-weight: 800; color: var(--g-color); }
 .fn-fila b { font-weight: 800; color: #9be38f; font-variant-numeric: tabular-nums; }
+.ficha-amort { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; padding: 6px 8px; border-radius: 10px; background: rgba(255, 196, 61, 0.08); border: 1px solid rgba(255, 196, 61, 0.18); font-size: 11px; line-height: 1.35; color: #e9dcb8; }
+.ficha-amort svg { width: 13px; height: 13px; flex: none; margin-top: 1px; color: #ffc43d; }
+.ficha-amort b { color: #fff; }
+.ficha-amort small { display: block; font-size: 10px; color: var(--texto-suave); }
+.ficha.ficha-dock .ficha-amort { margin-top: 6px; padding: 4px 7px; font-size: 10.5px; }
 .ficha-tienes { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; font-size: 11px; color: #cdd6e4; }
 .ficha-tienes .fi { flex: none; display: grid; place-items: center; width: 16px; height: 16px; color: #5fd38d; }
 .ficha-tienes .fi svg { width: 13px; height: 13px; }
@@ -5066,3 +5079,67 @@ body.con-tutorial #despliegue { display: none !important; }
 .nota-victoria { display: block; margin-top: 6px; font-size: 12px; line-height: 1.35; color: var(--texto-2, #c3cde0); }
 .nota-victoria[hidden] { display: none; }
 .nota-victoria.aviso { color: #ffd08a; }
+
+/* Despliegue (DEV03): lo que da la salida y «Empezar partida» contra la IA */
+.dp-textos small.dp-mala { color: #ffb3a8; }
+.dp-empezar, .dp-empezar:hover { background: linear-gradient(180deg, #8ff0b4, #3fbf74); color: #0b2416; box-shadow: 0 4px 14px rgba(63, 191, 116, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+.dp-empezar:hover { filter: brightness(1.06); }
+.dp-empezar[hidden] { display: none; }
+
+/* Previsión de una orden (DEV04): envío y reserva, previsión, defensa y, aparte, tu exposición */
+#tooltip .tip-orden { margin-top: 3px; font-size: 11px; font-weight: 700; color: #e9eef6; }
+#tooltip .tip-orden.ataque { color: #ffb3a8; }
+#tooltip .tip-orden.expansion { color: #bfe3ff; }
+#tooltip .tip-mods { font-size: 10.5px; color: #c9b8ff; }
+#tooltip .tip-expo { margin-top: 2px; padding: 1px 5px; border-radius: 5px; font-size: 10.5px; font-weight: 700; color: #ffd08a; background: rgba(255, 159, 46, 0.12); }
+#tooltip .tip-expo.alta { color: #ffb3a8; background: rgba(255, 77, 77, 0.16); }
+
+/* Portada: las tres entradas principales y una fila de accesos pequeños (DEV10) */
+.portada-mas { display: flex; flex-wrap: wrap; gap: 4px 6px; flex: 1 0 100%; }
+.btn-mini { display: inline-flex; align-items: center; gap: 6px; min-height: 0; padding: 7px 11px; border-radius: 999px; border: 1px solid rgba(233, 185, 85, 0.28); background: rgba(8, 12, 24, 0.6); color: #e8dcc0; font-size: 13px; font-weight: 700; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.btn-mini:hover { border-color: var(--oro); background: rgba(233, 185, 85, 0.12); color: var(--oro-claro); }
+.btn-mini svg { width: 14px; height: 14px; }
+.btn-mini[hidden] { display: none; }
+@media (max-width: 600px) {
+  .heroe-texto { padding: 84px 14px 14px; gap: 7px; }
+  .heroe .portada-titulo { font-size: 28px; }
+  .heroe-sub { display: none; }
+  .heroe .portada-botones { gap: 8px; margin-top: 4px; }
+  .heroe .btn-entrada { flex: 1 1 0; min-width: 0; padding: 11px 6px !important; font-size: 14px; }
+  .portada-mas { justify-content: center; gap: 6px; margin-top: 2px; }
+  .btn-mini { padding: 6px 10px; font-size: 12.5px; }
+}
+/* Móvil en horizontal (y teclado virtual abierto): las entradas, arriba */
+@media (max-height: 500px) and (orientation: landscape) {
+  .heroe { min-height: 0; }
+  .heroe-texto { padding: 14px 18px; gap: 6px; }
+  .heroe .portada-titulo { font-size: 26px; }
+  .heroe-sub, .heroe .portada-datos, .heroe .portada-saludo { display: none; }
+  .heroe .portada-botones { margin-top: 2px; gap: 8px; }
+  .heroe .portada-botones .principal.grande { padding: 10px 20px; font-size: 15px; }
+  .heroe .btn-heroe { padding: 9px 14px !important; }
+}
+
+/* Borrador del anfitrión (DEV10): lo que falta por aplicar, con Aplicar y Descartar */
+.borrador { display: flex; align-items: center; gap: 8px 14px; flex: 1 1 auto; min-width: 0; padding: 6px 6px 6px 12px; border-radius: 12px; border: 1px solid rgba(255, 196, 61, 0.45); background: rgba(48, 37, 12, 0.7); animation: aparecer 0.25s ease-out; }
+.borrador[hidden] { display: none; }
+.borrador-texto { flex: 1 1 200px; min-width: 0; margin: 0; font-size: 13px; line-height: 1.35; color: #f3e3bb; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.borrador-botones { display: flex; gap: 8px; flex: none; }
+.borrador-botones button { min-height: 42px; padding: 8px 16px; }
+/* Con cambios a medias, el pie los muestra en lugar de «Iniciar partida» */
+.sala-pie.con-borrador #btn-empezar, .sala-pie.con-borrador .sala-motivo { display: none; }
+@media (max-width: 600px) {
+  .borrador { flex-direction: column; align-items: stretch; padding: 8px; }
+  .borrador-botones button { flex: 1; }
+}
+.borrador-extra { display: flex; justify-content: flex-end; margin-top: 10px; }
+.sala-resumen { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.sala-resumen:empty { display: none; }
+#sala-jugadores li.libre small { color: var(--texto-3); }
+/* Vestíbulo en el móvil: la vista del mapa, plegada en una franja (se despliega al tocarla) */
+@media (max-width: 600px) {
+  .sala-mapa .mapa-vista { cursor: pointer; }
+  .sala-mapa .mapa-vista:not(.desplegada) canvas { aspect-ratio: 16 / 5; }
+  .sala-mapa .mapa-vista::after { content: "▾"; position: absolute; right: 10px; bottom: 8px; line-height: 1; font-size: 14px; color: #fff; text-shadow: 0 1px 4px #000; }
+  .sala-mapa .mapa-vista.desplegada::after { content: "▴"; }
+}

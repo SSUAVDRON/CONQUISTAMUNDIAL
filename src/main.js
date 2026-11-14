@@ -630,11 +630,13 @@ function joinRematch() {
 
 /** Ajustes de partida por defecto para una sala (los del jugador). */
 function defaultRoomSettings() {
+  // La configuración de las salas, aparte de la de la IA (DEV10)
+  const c = profile.ajustes.online;
   return {
-    bots: Math.min(60, profile.ajustes.bots),
-    mapSize: profile.ajustes.mapa,
-    difficulty: profile.ajustes.dificultad,
-    rules: { ...DEFAULT_RULES, ...migrateRules(profile.ajustes.reglas) },
+    bots: Math.min(60, c.bots),
+    mapSize: c.mapa,
+    difficulty: c.dificultad,
+    rules: { ...DEFAULT_RULES, ...migrateRules(c.reglas) },
   };
 }
 
@@ -869,7 +871,8 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   // La simulación espera a la sincronización (si no, cada uno avanzaría por su cuenta)
   state.holdSim = true;
   const game = await withLoading(
-    `${mapLabel(payload.settings.mapSize)} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
+    // En un mapa generado, la semilla que reparte el anfitrión (la misma para todos, DEV10)
+    `${mapLabel(payload.settings.mapSize)}${REAL_MAPS[payload.settings.mapSize] ? '' : ` · semilla ${payload.seed >>> 0}`} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
       { label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
       {
@@ -1760,10 +1763,41 @@ function suggestSpawn(game, human) {
   return best;
 }
 
+document.getElementById('dp-empezar').addEventListener('click', () => {
+  // Contra la IA: empezar ya, sin esperar el resto de la cuenta atrás (DEV03)
+  const { game, human } = state;
+  if (state.demo || state.net || !game || !human?.spawned || game.phase !== 'spawn') return;
+  game.skipSpawn();
+});
+
+/**
+ * Salida que se mira durante el despliegue (DEV03): la casilla bajo el ratón
+ * o, si no, la elegida. Se calcula solo cuando cambia de casilla.
+ */
+function updateSpawnPreview() {
+  const { game, human } = state;
+  if (state.demo || !game || !human || game.phase !== 'spawn') {
+    if (state.spawnPreview) {
+      state.spawnPreview = null;
+      ui.setSpawnInfo(null);
+    }
+    return;
+  }
+  const hover = !TOUCH && state.hover.tile >= 0 ? state.hover.tile : -1;
+  const tile = hover >= 0 && game.map.isLand(hover) ? hover : human.spawned ? human.spawnTile : -1;
+  const key = `${tile}:${human.spawnTile}`;
+  if (state.spawnKey === key) return;
+  state.spawnKey = key;
+  state.spawnPreview = tile >= 0 ? game.spawnInfo(human, tile) : null;
+  ui.setSpawnInfo(state.spawnPreview);
+}
+
 document.getElementById('aviso-auto').addEventListener('click', () => {
   const { game, human } = state;
   if (state.demo || !game || !human || game.phase !== 'spawn') return;
-  const t = suggestSpawn(game, human);
+  // La salida recomendada: zona entera y sitio para crecer; la misma con la misma semilla (DEV03)
+  const rec = game.recommendSpawn(human);
+  const t = rec.tile >= 0 ? rec.tile : suggestSpawn(game, human);
   if (t < 0) {
     ui.hint('No encuentro un buen sitio: elige tú en el mapa', 'warn');
     return;
@@ -1876,9 +1910,11 @@ const input = new Input(canvas, camera, {
       // El mismo envío que muestra el panel (mismo turno, misma cifra)
       const troops = ui.nextSend(h);
       if (troops >= 1) {
-        const e = g.estimateAttack(h, o, troops);
-        const who = o ? g.players[o].name : 'tierra libre';
-        ui.hint(`${who}: ~${formatNumber(e.tiles)} casillas con ${fmtTroops(troops)} soldados${o ? ` · riesgo ${e.risk}` : ''}${e.uncertain ? ' (incierto)' : ''}`, o && e.risk === 'alto' ? 'warn' : 'info');
+        // Envío y reserva; previsión; y, aparte, tu exposición si te atacan (DEV04)
+        const pv = g.attackPreview(h, tile, troops);
+        const who = o ? g.players[o].name : 'Tierra libre';
+        const expo = pv.incoming ? ` · ⚠ te atacan con ${fmtTroops(pv.incoming)}${pv.exposure === 'alta' ? ' (tu reserva no basta)' : ''}` : '';
+        ui.hint(`${who}: envías ${fmtTroops(pv.send)}, te quedan ${fmtTroops(pv.reserve)} · previsión ~${formatNumber(pv.tiles)} cas.${o ? ` (riesgo ${pv.risk})` : ''}${expo}`, pv.exposure === 'alta' || (o && pv.risk === 'alto') ? 'warn' : 'info');
       }
     }
   },
@@ -2034,7 +2070,7 @@ function frame(now) {
   if (!state.demo || (now - (state.lastDemoDraw || 0) >= demoGap && !home.menuCovers())) {
     if (state.demo) state.lastDemoDraw = now;
     try {
-      state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping });
+      state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping, spawn: state.spawnPreview });
     } catch (err) {
       reportError(err, 'dibujo del mapa');
     }
@@ -2049,6 +2085,8 @@ function frame(now) {
   if (!state.demo && state.human && now - state.lastHud > 200) {
     state.lastHud = now;
     try {
+      ui.soloSpawn = !state.net;
+      updateSpawnPreview();
       ui.update(state.game, state.human, state.ratio, state.buildMode);
       if (state.hover.tile >= 0 && !TOUCH) ui.updateTooltip(state.game, state.hover.tile, state.hover.x, state.hover.y, camera.zoom);
       if (state.net) ui.setNetNote(state.net.status);

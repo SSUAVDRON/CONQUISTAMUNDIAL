@@ -3,6 +3,7 @@
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
 import { DEFAULT_RULES, migrateRules } from './config.js';
+import { normalizeConfig } from './configurador.js';
 import { newRank, normalizeRank } from './rangos.js';
 import { Rng, hashString } from './rng.js';
 
@@ -418,6 +419,9 @@ export function defaultProfile() {
       mapa: 'mundo',
       dificultad: 'normal',
       reglas: { ...DEFAULT_RULES },
+      // Última configuración confirmada, por separado (DEV10): contra la IA y de las salas
+      ia: normalizeConfig({ bots: 70, mapa: 'mundo', dificultad: 'normal' }),
+      online: normalizeConfig({ bots: 40, mapa: 'europa', dificultad: 'normal' }),
       alerta: true, // borde rojo al ser atacado
       puntero: true, // marca «TÚ» y flecha hacia tu nación
       marcadores: true, // tropas de los ataques sobre el mapa
@@ -477,8 +481,26 @@ function normalizeFields(p, d, pick) {
     semanales: p.semanales && typeof p.semanales === 'object' && Array.isArray(p.semanales.retos) ? p.semanales : null,
     rango: normalizeRank(p.rango),
     // Reglas guardadas antes de los perfiles: se migran (perfil histórico) ANTES de combinarlas con los valores por defecto
-    ajustes: { ...d.ajustes, ...(p.ajustes || {}), reglas: { ...d.ajustes.reglas, ...(migrateRules(p.ajustes && p.ajustes.reglas) || {}) } },
+    ajustes: normalizeSettings(d.ajustes, p.ajustes),
   };
+}
+
+/**
+ * Ajustes con sus valores por defecto. Las configuraciones de la IA y de las
+ * salas salen, si faltan, de la única que había antes (bots, mapa, dificultad
+ * y reglas): así se precargan los datos antiguos (DEV10).
+ */
+function normalizeSettings(defaults, saved) {
+  const a = { ...defaults, ...(saved || {}), reglas: { ...defaults.reglas, ...(migrateRules(saved && saved.reglas) || {}) } };
+  const legacy = { bots: a.bots, mapa: a.mapa, dificultad: a.dificultad, reglas: a.reglas };
+  a.ia = normalizeConfig(saved && saved.ia, legacy);
+  a.online = normalizeConfig(saved && saved.online, legacy);
+  return a;
+}
+
+/** Guarda la configuración confirmada de `kind` ('ia' u 'online') sin tocar la otra. */
+export function rememberConfig(profile, kind, { bots, mapa, dificultad, reglas }) {
+  profile.ajustes[kind] = normalizeConfig({ bots, mapa, dificultad, reglas: { ...reglas } });
 }
 
 export function loadProfile() {

@@ -48,7 +48,8 @@ export function fmtTroops(n) {
 export function hudSnapshot(troops, ratio) {
   const reserva = Math.max(0, Math.floor(troops || 0));
   const r = Math.min(1, Math.max(0, ratio || 0));
-  return { reserva, envio: Math.floor(reserva * r) };
+  // El envío, con la misma cuenta que el motor al ejecutar la orden (DEV04)
+  return { reserva, envio: Math.floor(Math.max(0, troops || 0) * r) };
 }
 
 /** Tropas en los contadores que se ven contar (formatCount de la cifra en pantalla). */

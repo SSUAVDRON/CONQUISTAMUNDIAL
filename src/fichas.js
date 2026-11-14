@@ -90,6 +90,9 @@ export function buildingCard(game, p, kind) {
       const perk = C.perks.find((x) => x.level === next);
       if (perk && up < C.maxLevel) card.gives.push({ icon: 'estrella', label: 'Premio', value: '', note: perk.text });
       card.perks = C.perks.map((pk) => ({ level: pk.level, text: pk.text, state: pk.level <= up ? 'hecho' : pk.level === up + 1 ? 'siguiente' : 'futuro' }));
+      // Lo que gana en oro cada segundo (para la amortización): el +20 % de tu oro pasivo de ahora
+      card.goldPerSec = cap && up < C.maxLevel ? passive * C.gold : 0;
+      card.paybackNote = 'solo el oro: el banco y las murallas son aparte';
       card.level = up;
       if (!cap) {
         card.have = 'No tienes capital.';
@@ -131,6 +134,7 @@ export function buildingCard(game, p, kind) {
       card.have = count ? `${count} ${count === 1 ? 'pueblo' : 'pueblos'}${levels > count ? ` (${levels} niveles)` : ''}: +${formatNumber(gold * levels)}/s de oro y +${fmtTroops(capT * levels)} de techo.` : 'Ningún pueblo todavía.';
       card.givesTitle = 'Qué te da (y otra vez cada nivel)';
       card.how = `Clic ${where}. ${upHow}`;
+      card.goldPerSec = gold;
       break;
     }
     case 'city': {
@@ -259,7 +263,21 @@ export function buildingCard(game, p, kind) {
       card.summary = def.desc || '';
       card.how = `Clic ${where}.`;
   }
+  // Amortización orientativa (DEV09): lo que tarda en devolver su oro, si da
+  // un ingreso fijo (el pueblo; la mejora de la capital). Con la obra, aparte
+  if (card.goldPerSec > 0 && card.cost > 0) {
+    const pay = card.cost / card.goldPerSec;
+    const build = (card.time * TICK_MS) / 1000;
+    card.payback = { seconds: pay, withBuild: pay + build, note: card.paybackNote || '' };
+  }
   return card;
+}
+
+/** «2 min 13 s» (amortizaciones y plazos largos). */
+export function minSec(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  const m = Math.floor(s / 60);
+  return m ? `${m} min${s % 60 ? ` ${s % 60} s` : ''}` : `${s} s`;
 }
 
 /** Una línea corta con lo principal (la bandeja del móvil). */

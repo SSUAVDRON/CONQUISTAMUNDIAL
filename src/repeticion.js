@@ -72,5 +72,7 @@ export function replayPlan(entry, { scenario = false } = {}) {
 export function configSummary(c, profileName = (id) => id, difficultyName = (id) => id) {
   if (!validConfig(c)) return '';
   const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
-  return [n(c.naciones, 'nación', 'naciones'), n(c.colonias, 'colonia', 'colonias'), profileName(c.perfil), `IA ${difficultyName(c.dificultad)}`].join(' · ');
+  // En un mapa generado, la semilla (con ella sale el mismo mapa, DEV10)
+  const seed = REAL_MAPS[c.mapa] ? null : `semilla ${c.semilla}`;
+  return [n(c.naciones, 'nación', 'naciones'), n(c.colonias, 'colonia', 'colonias'), profileName(c.perfil), `IA ${difficultyName(c.dificultad)}`, seed].filter(Boolean).join(' · ');
 }
