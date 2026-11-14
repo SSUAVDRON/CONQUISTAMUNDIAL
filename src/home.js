@@ -2,7 +2,7 @@
 // clasificación, y la sala de espera del multijugador.
 import { BUILDINGS, CONFIG, DEFAULT_RULES, GOLD_STEPS, MAP_SIZES, REAL_MAPS, RES, TIME_LIMITS, TRUCE_MINS, WIN_SHARES, colonyCount, mapLabel, migrateRules } from './config.js';
 import { PROFILES } from './mecanicas.js';
-import { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } from './multiplayer.js';
+import { DEFAULT_SEATS, MAX_ONLINE_BOTS, MIN_HUMANS, RULES_FINGERPRINT, SEAT_SHORTCUTS, VALIDATED_SEATS } from './multiplayer.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { loadMapData } from './mapas-carga.js';
 import { configSummary, replayPlan } from './repeticion.js';
@@ -26,6 +26,9 @@ import {
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rememberConfig, rewardsOf, titleName, unlockText,
 } from './profile.js';
 import { coopSlots, seatsSummary, settingsDiff } from './configurador.js';
+
+/** Plazas que se ofrecen: hasta el mayor aforo validado (DEV06). */
+const MAX_HUMANS = VALIDATED_SEATS;
 
 /** Colores rápidos para el territorio y el emblema. */
 const SWATCHES = [
@@ -56,6 +59,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Novedades', title: 'Salas de 32 y rangos por cola', text: 'Salas de hasta 32 jugadores con accesos a 4, 8, 16, 24 y 32 plazas; el anfitrión edita las reglas en borrador y las aplica de una vez. La clasificatoria contra la IA y la de en línea tienen ahora rangos separados (tu rango de antes queda como histórico). Y más: salidas explicadas, previsión de cada ataque, amortización en las fichas y repetir tu última partida tal cual.', art: 1 },
   { tag: 'Mejoras', title: 'Más ligero y más pulido', text: 'Cada versión nueva se descarga en una quinta parte (los mapas se guardan en tu navegador), arreglos en amigos y clanes, colonias que ya no encabezan la clasificación, Arsenal y Progreso mejor colocados y nuevas animaciones al pulsar y al poder construir.', art: 0 },
   { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
   { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
@@ -78,7 +82,7 @@ const $ = (id) => document.getElementById(id);
 const DIFFICULTY = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
 const VICTORY_NAMES = { dominio: 'Dominación', capitales: 'Capitales', economia: 'Economía', supervivencia: 'Supervivencia' };
 /** Naciones de la IA en una partida online (más cargan demasiado el lockstep). */
-const ONLINE_MAX_BOTS = 60;
+const ONLINE_MAX_BOTS = MAX_ONLINE_BOTS;
 
 /** Iconos de las fichas de estadísticas del perfil (16×16, trazo). */
 const statIcon = (d, fill = false) => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}" ${fill ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"'}/></svg>`;
@@ -466,6 +470,45 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   return box;
 }
 
+/**
+ * Plazas de una sala (DEV06): − y + y accesos a 4, 8, 16, 24 y 32. `min()`
+ * da el aforo mínimo (los que ya tienen plaza, con los que reconectan).
+ */
+function seatPicker(value, min, onChange) {
+  let v = value;
+  const out = el('output', { text: String(v) });
+  const less = el('button', { type: 'button', 'aria-label': 'Una plaza menos', text: '−' });
+  const more = el('button', { type: 'button', 'aria-label': 'Una plaza más', text: '+' });
+  const cuts = el('div', { class: 'atajos-plazas' });
+  const note = el('small', { class: 'nota nota-plazas' });
+  const set = (n) => {
+    const lo = Math.max(MIN_HUMANS, min());
+    const next = Math.max(lo, Math.min(MAX_HUMANS, n));
+    if (next !== v) {
+      v = next;
+      onChange(v);
+    }
+    paint();
+  };
+  const paint = () => {
+    const lo = Math.max(MIN_HUMANS, min());
+    out.textContent = String(v);
+    less.disabled = v <= lo;
+    more.disabled = v >= MAX_HUMANS;
+    cuts.replaceChildren(...SEAT_SHORTCUTS.map((n) => el('button', { type: 'button', class: 'atajo-plazas', 'aria-pressed': String(v === n), disabled: n < lo, text: String(n), onclick: () => set(n) })));
+    note.textContent = lo > MIN_HUMANS ? `No puede bajar de ${lo}: ya tienen plaza (contando a quien se está reconectando).` : '';
+  };
+  less.addEventListener('click', () => set(v - 1));
+  more.addEventListener('click', () => set(v + 1));
+  paint();
+  const box = el('div', { class: 'selector-plazas' }, el('div', { class: 'paso', role: 'group', 'aria-label': 'Plazas' }, less, out, more), cuts, note);
+  box.refresh = (value) => {
+    if (Number.isFinite(value)) v = value;
+    paint();
+  };
+  return box;
+}
+
 /** Control segmentado (botones excluyentes). */
 function segmented(box, options, current, onChange) {
   box.replaceChildren(
@@ -800,7 +843,8 @@ export class Home {
       this.queue = v;
       this.profile.ajustes.colaClasif = v;
       this.h.onProfileChange?.(false);
-      this.renderQueue();
+      // Cada cola tiene su rango (DEV07): se repinta la página entera con el suyo
+      this.renderCompetitive();
     });
     $('cp-buscar').addEventListener('click', () => this._findMatch());
     this.search = null;
@@ -1749,8 +1793,13 @@ export class Home {
   // ------------------------------------------------------- competitivo
 
   /** Página Competitivo entera (se llama al abrirla y cuando cambia el rango). */
+  /** Rango de la cola elegida en Competitivo (DEV07). */
+  _queueRank() {
+    return this.queue === 'sala' ? this.profile.rangoOnline : this.profile.rango;
+  }
+
   renderCompetitive() {
-    const r = this.profile.rango;
+    const r = this._queueRank();
     if (!r || !$('cp-insignia')) return;
     const p = this.profile;
     const placing = inPlacement(r);
@@ -1775,6 +1824,7 @@ export class Home {
     const band = document.querySelector('.cp-portada');
     band.style.setProperty('--liga', col.join(', '));
     band.classList.toggle('en-colocacion', placing);
+    $('cp-cola-rango').textContent = this.queue === 'sala' ? 'Tu rango en línea' : 'Tu rango contra la IA';
     $('cp-liga').textContent = placing ? 'Sin clasificar' : k.label;
     $('cp-pl').textContent = placing ? `Colocación: ${r.colocacion} de ${PLACEMENT_GAMES} partidas` : k.league.apex ? `${k.pl} PL` : `${k.pl} / 100 PL`;
     const frac = placing ? r.colocacion / PLACEMENT_GAMES : k.league.apex ? Math.min(1, k.pl / 300) : k.pl / 100;
@@ -1789,6 +1839,7 @@ export class Home {
       r.escudo ? el('span', { class: 'cp-escudo', title: 'No bajas de división en estas partidas', text: ` · 🛡 escudo ${r.escudo}` }) : '',
     );
     this.renderQueue();
+    this._renderHow(r);
     this._renderLeagues(r);
     this._renderSeasonStats(r);
     this._renderRankedHistory(r);
@@ -1796,10 +1847,31 @@ export class Home {
     this._renderRewards(r);
   }
 
+  /**
+   * Cómo se obtiene el puesto en la cola elegida y, si lo hay, el rango mixto
+   * de antes de separar las colas (histórico, DEV07).
+   */
+  _renderHow(r) {
+    const online = this.queue === 'sala';
+    $('cp-como').textContent = online
+      ? `En línea: tus puntos salen de quién queda por delante de quién entre las personas de la sala (Elo, con el nivel de cada una) y, un poco, de tu puesto entre todas las naciones. Abandonar cuenta como quedar el último. Si se pierde al anfitrión, la partida se anula: no cuenta para nadie. Las ${PLACEMENT_GAMES} primeras partidas de la temporada son de colocación.`
+      : `Contra la IA: cuenta tu puesto final entre las ${RANKED_AI.bots + 1} naciones, comparado con lo que se espera de tu nivel frente a esa dificultad (la IA se ajusta a tu liga). Abandonar cuenta como quedar el último. Es el rango de la tabla de la temporada. Las ${PLACEMENT_GAMES} primeras partidas son de colocación.`;
+    const h = this.profile.rangoHistorico;
+    const box = $('cp-historico');
+    box.hidden = !h;
+    if (!h) return;
+    const placed = !inPlacement(h);
+    const k = rankOf(h.puntos);
+    box.replaceChildren(
+      el('div', { class: 'cp-historico-cab' }, badgeCanvas(h, 28), el('span', {}, el('strong', { text: 'Rango mixto (histórico)' }), el('small', { text: `${placed ? `${k.label} · ${k.pl} PL` : `Colocación ${h.colocacion}/${PLACEMENT_GAMES}`} · ${h.partidas} partidas · ${seasonName(h.temporada)}` }))),
+      el('p', { class: 'nota', text: 'Antes, las partidas contra la IA y en línea sumaban al mismo rango. Ahora cada cola tiene el suyo: el mixto se queda aquí tal cual, y las dos colas empezaron sus colocaciones con tu nivel de entonces como punto de partida.' }),
+    );
+  }
+
   /** La cola elegida y qué hará «Buscar partida». */
   renderQueue() {
     if (!$('cp-buscar')) return;
-    const r = this.profile.rango;
+    const r = this._queueRank();
     const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
     const btn = $('cp-buscar');
     if (this.queue === 'ia') {
@@ -1860,7 +1932,7 @@ export class Home {
     };
     const pill = $('busqueda-pill');
     if (info) {
-      const r = this.profile.rango;
+      const r = this.profile.rangoOnline;
       const lo = rankOf(pointsFromMmr(r.mmr - info.window)).label;
       const hi = rankOf(pointsFromMmr(r.mmr + info.window)).label;
       $('cp-busca-tiempo').textContent = fmt(info.waited);
@@ -1898,7 +1970,8 @@ export class Home {
 
   /** Cifras de la temporada y la gráfica de tus PL. */
   _renderSeasonStats(r) {
-    const hist = r.historial || [];
+    // Solo las de esta cola y temporada: ni las del rango mixto de antes ni las anuladas (DEV07)
+    const hist = (r.historial || []).filter((h) => !h.previa && !h.anulada);
     const games = hist.filter((h) => !h.abandono && h.de > 0);
     const avg = games.length ? games.reduce((a, h) => a + h.puesto, 0) / games.length : 0;
     // Racha: del último resultado hacia atrás, mientras sea del mismo signo
@@ -1967,13 +2040,13 @@ export class Home {
     };
     list.replaceChildren(
       ...hist.map((h) => {
-        const won = !h.abandono && h.puesto === 1;
+        const won = !h.abandono && !h.anulada && h.puesto === 1;
         const good = won || h.delta > 0;
-        const cls = h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
-        const title = h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
-        const delta = h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
+        const cls = h.anulada ? 'neutra' : h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
+        const title = h.anulada ? 'Anulada' : h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
+        const delta = h.anulada ? 'No cuenta' : h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
         return el('li', { class: `cp-partida ${cls}` },
-          el('span', { class: 'cp-res' }, el('strong', { text: title }), el('small', { text: h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA' })),
+          el('span', { class: 'cp-res', title: h.anulada ? h.motivo || '' : '' }, el('strong', { text: title }), el('small', { text: `${h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA'}${h.previa ? ' · rango mixto' : ''}${h.anulada && h.motivo ? ` · ${h.motivo}` : ''}` })),
           el('span', { class: 'cp-tras' }, badgeCanvas(h.puntos, 18), el('small', { text: rankOf(h.puntos).label })),
           el('span', { class: 'cp-delta', text: delta }),
           el('small', { class: 'cp-cuando', text: ago(h.fecha) }));
@@ -1986,11 +2059,14 @@ export class Home {
     const box = $('cp-top');
     const L = this.ladder;
     const rows = L.available ? L.rows.filter((x) => x.temporada === r.temporada).slice(0, 8) : [];
+    // La tabla global es la de la cola contra la IA (DEV07); la de en línea, cuando su resultado esté validado
+    const note = this.queue === 'sala' ? el('p', { class: 'nota cp-top-nota', text: 'Esta es la tabla de la cola contra la IA. La de en línea se publicará cuando su resultado se pueda validar en todos los clientes; tu rango en línea se guarda en tu perfil.' }) : null;
     if (!rows.length) {
-      box.replaceChildren(emptyState('🏅', L.available ? 'Nadie tiene rango todavía esta temporada' : 'La tabla de la temporada aún no está disponible', L.available ? 'Juega una clasificatoria para estrenarla.' : L.error || 'Tu rango se guarda y sube a la tabla en cuanto haya conexión.'));
+      box.replaceChildren(note || '', emptyState('🏅', L.available ? 'Nadie tiene rango todavía esta temporada' : 'La tabla de la temporada aún no está disponible', L.available ? 'Juega una clasificatoria para estrenarla.' : L.error || 'Tu rango se guarda y sube a la tabla en cuanto haya conexión.'));
       return;
     }
     box.replaceChildren(
+      note || '',
       el('ol', { class: 'cp-mejores' },
         ...rows.map((row, i) => {
           const rk = rankOf(row.puntos);
@@ -2024,7 +2100,7 @@ export class Home {
   setLadder(state) {
     this.ladder = { ...this.ladder, ...state };
     if (this.view === 'clasificacion' && this.table === 'rangos') this.renderTable();
-    if (this.view === 'competitivo') this._renderTop(this.profile.rango);
+    if (this.view === 'competitivo') this._renderTop(this._queueRank());
   }
 
   _ranksTable() {
@@ -2919,7 +2995,7 @@ export class Home {
         map: REAL_MAPS[a.mapa] || MAP_SIZES[a.mapa] ? a.mapa : 'europa',
         name: `Sala de ${this.profile.nombre || 'Trinchera'}`,
         visibility: 'enlace',
-        seats: 4,
+        seats: DEFAULT_SEATS,
         bots: Math.min(ONLINE_MAX_BOTS, a.bots || 40),
         difficulty: a.dificultad || 'normal',
         rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) },
@@ -2982,6 +3058,8 @@ export class Home {
     $('plazas-valor').textContent = String(c.seats);
     $('plazas-menos').disabled = c.seats <= MIN_HUMANS;
     $('plazas-mas').disabled = c.seats >= MAX_HUMANS;
+    // Accesos directos: 4, 8, 16, 24 y 32 plazas (DEV06)
+    $('plazas-atajos').replaceChildren(...SEAT_SHORTCUTS.map((n) => el('button', { type: 'button', class: 'atajo-plazas', 'aria-pressed': String(c.seats === n), text: String(n), onclick: () => this._seats(n - c.seats) })));
     this._chips($('crear-resumen'), c.ranked ? this._rankedSettings() : { bots: c.bots, rules: c.rules });
     this._createSummary();
     // Reglas avanzadas: naciones, dificultad y el editor de reglas
@@ -3204,9 +3282,15 @@ export class Home {
     const free = st.seats - st.players.length;
     if (free > 0) rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: free === 1 ? '1 plaza libre' : `${free} plazas libres` }), el('small', { text: 'Comparte el código o el enlace para que entren' }))));
     $('sala-jugadores').replaceChildren(...rows);
+    // Con muchas plazas, filas compactas (y a dos columnas en el ordenador)
+    $('sala-jugadores').classList.toggle('muchos', st.players.length > 8);
     $('sala-cuenta').textContent = `${st.total}/${st.seats}`;
-    // Pie: cuántos preparados, el motivo y la acción
-    $('sala-preparados').textContent = `${st.readyCount} de ${st.total} preparado${st.total === 1 ? '' : 's'}`;
+    $('sala-cuenta').title = `${st.total} de ${st.seats} plazas ocupadas`;
+    // Pie: invitados listos («15/17 invitados listos»), el motivo y la acción (DEV06)
+    const guests = st.players.filter((p) => !p.host);
+    const guestsReady = guests.filter((p) => p.ready).length;
+    $('sala-preparados').textContent = guests.length ? `${guestsReady}/${guests.length} invitado${guests.length === 1 ? '' : 's'} listo${guests.length === 1 ? '' : 's'}` : 'Sin invitados todavía';
+    if (sala.isHost) this._seatPicker?.refresh(sala.info.plazas);
     const me = st.players.find((p) => p.isMe);
     const waiting = !me && st.waiting.some((p) => p.isMe);
     const counting = !!sala.countdown;
@@ -3251,8 +3335,11 @@ export class Home {
       if (me && me.ready) this._changeNote = null;
     } else this._changeNote = null;
     const change = this._changeNote && performance.now() < this._changeNote.until ? this._changeNote.text : '';
+    // Invitado: el inicio llega en fragmentos (DEV06)
+    const syncing = !sala.isHost && sala.sync ? `Sincronizando jugadores (${sala.sync.got}/${sala.sync.total})…` : '';
     // Aviso: lo que se pase, lo que ha cambiado o la prueba entre pestañas
     if (status) this._notice(status, /no |otra versión|perdid|ha salido|llena|cerrad|cancel/i.test(status) ? 'error' : '');
+    else if (syncing) this._notice(syncing, 'aviso');
     else if (change) this._notice(change, 'aviso');
     else if (kind === 'local') this._notice('Prueba entre pestañas: solo pueden entrar otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.', 'aviso');
     else this._notice('');
@@ -3276,8 +3363,8 @@ export class Home {
     name.addEventListener('change', () => this.h.onRoomInfo?.({ nombre: name.value.trim() || info.nombre }));
     const vis = el('div', { class: 'segmentos visibilidad', role: 'radiogroup', 'aria-label': 'Visibilidad' });
     segmented(vis, [['enlace', '🔒 Solo con enlace'], ['publica', '🌐 Pública']], info.visibilidad, (v) => this.h.onRoomInfo?.({ visibilidad: v }));
-    const seats = el('div', { class: 'segmentos plazas', role: 'radiogroup', 'aria-label': 'Plazas' });
-    segmented(seats, Array.from({ length: MAX_HUMANS - MIN_HUMANS + 1 }, (_, i) => [i + MIN_HUMANS, String(i + MIN_HUMANS)]), info.plazas, (v) => this.h.onRoomInfo?.({ plazas: v }));
+    const seats = seatPicker(info.plazas, () => sala.minSeats(), (v) => this.h.onRoomInfo?.({ plazas: v }));
+    this._seatPicker = seats;
     if (s.clasificatoria) {
       // Clasificatoria: solo nombre, visibilidad y plazas
       box.replaceChildren(

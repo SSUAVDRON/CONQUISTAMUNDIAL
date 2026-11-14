@@ -4,7 +4,7 @@
 
 import { DEFAULT_RULES, migrateRules } from './config.js';
 import { normalizeConfig } from './configurador.js';
-import { newRank, normalizeRank } from './rangos.js';
+import { newRank, normalizeRank, splitRanks } from './rangos.js';
 import { Rng, hashString } from './rng.js';
 
 // (Las claves conservan el nombre de la primera versión para no perder perfiles.)
@@ -177,10 +177,13 @@ const PRICE_BY_KEY = new Map(
 
 /** Mejores puntos de la clasificatoria (esta temporada o las anteriores). */
 function rankBest(p) {
-  const r = p.rango;
-  if (!r) return 0;
-  const placed = r.colocacion >= 5 ? Math.max(r.mejor || 0, r.puntos || 0) : 0;
-  return Math.max(placed, ...(r.anteriores || []).map((x) => x.mejor || x.puntos || 0));
+  // La mejor de las dos colas y del rango mixto de antes (DEV07)
+  const best = (r) => {
+    if (!r) return 0;
+    const placed = r.colocacion >= 5 ? Math.max(r.mejor || 0, r.puntos || 0) : 0;
+    return Math.max(placed, ...(r.anteriores || []).map((x) => x.mejor || x.puntos || 0));
+  };
+  return Math.max(best(p.rango), best(p.rangoOnline), best(p.rangoHistorico));
 }
 
 /**
@@ -237,14 +240,14 @@ export const ACHIEVEMENTS = [
   { id: 'diplomatico_total', icon: '🌐', name: 'Gran diplomático', desc: 'Firma 5 alianzas en una partida', coins: 250, check: (r) => r.alliances >= 5 },
   { id: 'magnate_oro', icon: '🏦', name: 'Magnate', desc: 'Reúne 25 millones de oro', coins: 500, check: (r) => r.maxGold >= 25000000 },
   { id: 'aguante', icon: '⏱️', name: 'Aguante', desc: 'Sigue en pie a los 30 minutos', coins: 300, check: (r) => r.survivedSeconds >= 1800 },
-  { id: 'clasificado', icon: '🎯', name: 'Clasificado', desc: 'Termina las partidas de colocación', coins: 200, check: (r, p) => (p.rango ? p.rango.colocacion >= 5 : false) },
+  { id: 'clasificado', icon: '🎯', name: 'Clasificado', desc: 'Termina las partidas de colocación', coins: 200, check: (r, p) => [p.rango, p.rangoOnline, p.rangoHistorico].some((x) => x && x.colocacion >= 5) },
   { id: 'liga_bronce', icon: '🥉', name: 'Liga de Bronce', desc: 'Llega a Bronce en la clasificatoria', coins: 100, check: (r, p) => rankBest(p) >= 400 },
   { id: 'liga_plata', icon: '🥈', name: 'Liga de Plata', desc: 'Llega a Plata en la clasificatoria', coins: 200, check: (r, p) => rankBest(p) >= 800 },
   { id: 'liga_oro', icon: '🥇', name: 'Liga de Oro', desc: 'Llega a Oro en la clasificatoria', coins: 300, check: (r, p) => rankBest(p) >= 1200 },
   { id: 'liga_platino', icon: '💠', name: 'Liga de Platino', desc: 'Llega a Platino en la clasificatoria', coins: 400, check: (r, p) => rankBest(p) >= 1600 },
   { id: 'liga_diamante', icon: '💎', name: 'Liga de Diamante', desc: 'Llega a Diamante en la clasificatoria', coins: 600, check: (r, p) => rankBest(p) >= 2000 },
   { id: 'liga_maestro', icon: '🏵️', name: 'Maestro', desc: 'Llega a Maestro en la clasificatoria', coins: 1000, check: (r, p) => rankBest(p) >= 2400 },
-  { id: 'racha', icon: '🔥', name: 'En racha', desc: 'Gana 3 clasificatorias seguidas', coins: 400, check: (r, p) => !!p.rango && p.rango.historial.length >= 3 && p.rango.historial.slice(0, 3).every((h) => h.puesto === 1) },
+  { id: 'racha', icon: '🔥', name: 'En racha', desc: 'Gana 3 clasificatorias seguidas', coins: 400, check: (r, p) => [p.rango, p.rangoOnline].some((x) => !!x && x.historial.length >= 3 && x.historial.slice(0, 3).every((h) => h.puesto === 1 && !h.previa)) },
   { id: 'semanal', icon: '🗓️', name: 'Semana a semana', desc: 'Completa 5 retos semanales', coins: 400, meta: { stat: 'retosSemanales', n: 5 }, check: (r, p) => (p.stats.retosSemanales || 0) >= 5 },
   { id: 'retador', icon: '🎯', name: 'Reto superado', desc: 'Supera el reto que te manda otro jugador por enlace', coins: 250, check: (r) => !!r.challengeBeaten },
   { id: 'leyenda_viva', icon: '🏛️', name: 'Leyenda viva', desc: 'Juega 100 partidas', coins: 800, meta: { stat: 'partidas', n: 100 }, check: (r, p) => p.stats.partidas >= 100 },
@@ -434,7 +437,10 @@ export function defaultProfile() {
       silencio: false, // botón de la barra superior
     },
     tutorial: false,
-    rango: newRank(), // partidas clasificatorias (ver rangos.js)
+    rango: newRank(new Date(), 'ia'), // clasificatorias contra la IA (ver rangos.js; la tabla global)
+    rangoOnline: newRank(new Date(), 'online'), // clasificatorias en línea, aparte (DEV07)
+    rangoHistorico: null, // el rango mixto de antes de separarlas, congelado
+    rangoMigrado: 0, // cuándo se separaron (para avisar una vez)
     actualizado: 0,
   };
 }
@@ -479,10 +485,25 @@ function normalizeFields(p, d, pick) {
     comprados: p.comprados && typeof p.comprados === 'object' ? { ...p.comprados } : {},
     diarios: p.diarios && typeof p.diarios === 'object' && Array.isArray(p.diarios.retos) ? p.diarios : null,
     semanales: p.semanales && typeof p.semanales === 'object' && Array.isArray(p.semanales.retos) ? p.semanales : null,
-    rango: normalizeRank(p.rango),
+    // Colas separadas (DEV07): un perfil de antes trae un solo rango mixto
+    ...ranksOf(p),
     // Reglas guardadas antes de los perfiles: se migran (perfil histórico) ANTES de combinarlas con los valores por defecto
     ajustes: normalizeSettings(d.ajustes, p.ajustes),
   };
+}
+
+/** Rangos del perfil: los dos de ahora o, de un perfil de antes, separados del mixto. */
+function ranksOf(p) {
+  if (p.rangoOnline && typeof p.rangoOnline === 'object') {
+    return {
+      rango: normalizeRank(p.rango, 'ia'),
+      rangoOnline: normalizeRank(p.rangoOnline, 'online'),
+      rangoHistorico: p.rangoHistorico && typeof p.rangoHistorico === 'object' ? { ...normalizeRank(p.rangoHistorico, 'mixta'), cerrado: Number(p.rangoHistorico.cerrado) || 0 } : null,
+      rangoMigrado: Number(p.rangoMigrado) || 0,
+    };
+  }
+  const split = splitRanks(p.rango);
+  return { rango: split.ia, rangoOnline: split.online, rangoHistorico: split.historico, rangoMigrado: split.historico ? Date.now() : 0 };
 }
 
 /**
@@ -548,10 +569,17 @@ export function mergeProfiles(a, b) {
     else out.stats[k] = Math.max(x || 0, y || 0);
   }
   out.logros = { ...older.logros, ...newer.logros };
-  // Rango: el de la temporada más reciente; en la misma, el que tiene más partidas
-  const ra = a.rango;
-  const rb = b.rango;
-  out.rango = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb);
+  // Rangos: en cada cola, el de la temporada más reciente; en la misma, el que
+  // tiene más partidas (y las partidas ya resueltas de los dos, DEV07)
+  const pick = (ra, rb, modalidad) => {
+    const win = normalizeRank(ra.temporada !== rb.temporada ? (ra.temporada > rb.temporada ? ra : rb) : ra.partidas + ra.colocacion >= rb.partidas + rb.colocacion ? ra : rb, modalidad);
+    win.aplicadas = [...new Set([...(ra.aplicadas || []), ...(rb.aplicadas || [])])].slice(0, 40);
+    return win;
+  };
+  out.rango = pick(a.rango, b.rango, 'ia');
+  out.rangoOnline = pick(a.rangoOnline, b.rangoOnline, 'online');
+  out.rangoHistorico = a.rangoHistorico && b.rangoHistorico ? (a.rangoHistorico.partidas >= b.rangoHistorico.partidas ? a.rangoHistorico : b.rangoHistorico) : a.rangoHistorico || b.rangoHistorico || null;
+  out.rangoMigrado = Math.max(a.rangoMigrado || 0, b.rangoMigrado || 0);
   out.comprados = { ...older.comprados, ...newer.comprados };
   // Monedas: lo ganado menos lo gastado (los dos, máximos de cada copia)
   out.monedas = Math.max(0, out.stats.monedasGanadas - out.stats.monedasGastadas);

@@ -180,7 +180,7 @@ test('el anfitrión espera a que todos carguen antes del primer turno', () => {
   host.last = performance.now() - 1000;
   host.update();
   assert.equal(hostGame.ticks, 0, 'sin el invitado cargado, no avanza');
-  assert.match(host.status, /carguen/);
+  assert.match(host.status, /Sincronizando jugadores \(0\/1\)/);
   // El invitado termina de cargar: lo anuncia al crear su NetSync
   const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 2, peerToPlayer, myPeer: 'g' });
   host.last = performance.now() - 1000;

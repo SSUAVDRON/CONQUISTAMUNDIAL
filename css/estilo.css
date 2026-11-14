@@ -5143,3 +5143,30 @@ body.con-tutorial #despliegue { display: none !important; }
   .sala-mapa .mapa-vista::after { content: "▾"; position: absolute; right: 10px; bottom: 8px; line-height: 1; font-size: 14px; color: #fff; text-shadow: 0 1px 4px #000; }
   .sala-mapa .mapa-vista.desplegada::after { content: "▴"; }
 }
+
+/* Plazas (DEV06): − y + con accesos directos a 4, 8, 16, 24 y 32 */
+.atajos-plazas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.atajo-plazas { min-width: 44px; min-height: 34px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.04); color: var(--texto-2); font-weight: 800; font-variant-numeric: tabular-nums; box-shadow: none; }
+.atajo-plazas[aria-pressed="true"] { border-color: var(--oro); background: rgba(233, 185, 85, 0.16); color: var(--oro-claro); }
+.atajo-plazas:disabled { opacity: 0.35; }
+.selector-plazas .paso button { width: 44px; height: 40px; padding: 0; border: 0; border-radius: 0; font-size: 20px; color: var(--marfil); background: rgba(255, 255, 255, 0.05); box-shadow: none; }
+.selector-plazas .paso button:disabled { opacity: 0.35; }
+.nota-plazas { display: block; margin-top: 6px; }
+.nota-plazas:empty { display: none; }
+/* Sala con muchos jugadores: filas compactas y, en el ordenador, a dos columnas */
+#sala-jugadores.muchos { display: grid; grid-template-columns: 1fr; gap: 6px; }
+#sala-jugadores.muchos li { padding-top: 6px; padding-bottom: 6px; min-height: 0; }
+#sala-jugadores.muchos .sala-escudo canvas { width: 26px; height: 26px; }
+#sala-jugadores.muchos .sala-nombre small { display: none; }
+@media (min-width: 1100px) { #sala-jugadores.muchos { grid-template-columns: 1fr 1fr; } }
+
+/* Competitivo con colas separadas (DEV07) */
+.cp-cola-rango { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-3); margin-bottom: 2px; }
+.cp-como-texto { margin: 0; font-size: 14px; line-height: 1.55; color: var(--texto-2); max-width: 80ch; }
+.cp-historico { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.025); }
+.cp-historico[hidden] { display: none; }
+.cp-historico-cab { display: flex; align-items: center; gap: 10px; }
+.cp-historico-cab span { display: flex; flex-direction: column; }
+.cp-historico-cab small { color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.cp-historico .nota { margin: 8px 0 0; }
+.cp-top-nota { margin: 0 0 10px; }

@@ -11,6 +11,19 @@ controladas por el ordenador por dominar el mundo, casilla a casilla.
 
 Sin dependencias ni paso de compilación: HTML + CSS + JavaScript (módulos ES).
 
+**Auditoría de desarrollo (14-nov-2026, DEV01–DEV10).** Repetición fiel de
+partidas («Repetir partida» con la misma configuración o el mismo escenario),
+tutorial legible durante el despliegue (con pausa y «Empezar ya»), salidas
+informadas (la zona inicial de verdad y por qué se recorta, «Elegir por mí» y
+«Empezar partida» en solitario), previsión de cada orden (envío, reserva,
+defensa y riesgo), informe de partida interrumpida y revancha en la misma sala,
+cifras y textos coherentes entre HUD, informe e historial, información para
+invertir (amortización, tropas disponibles/en ataques/en el banco, qué cambia
+al terminar una obra) con `herramientas/aperturas.js` → `docs/aperturas.md`,
+inicio móvil con las tres entradas a la vista y configurador común con
+borrador del anfitrión, salas de hasta 32 humanos (`herramientas/carga-salas.js`
+→ `docs/carga-salas.md`) y rangos separados contra la IA y en línea.
+
 ## Pantallas
 
 **Al abrir el juego**, una pantalla de carga (ya en el HTML, se ve desde el
@@ -186,7 +199,16 @@ Ajustes y la preferencia del sistema de reducir el movimiento.
 | Ajustes | En grupos: **Partida** (borde rojo al ser atacado, puntero, tropas de los ataques, emojis, consejos), **Interfaz** (animaciones), **Sonido** (música y efectos, cada uno con su volumen, que se apaga con su sonido) y **Más** (tutorial, guía, «Restablecer ajustes» con confirmación, créditos y versión). |
 
 **Clasificatoria** (tarjeta en Jugar): partidas que cuentan para tu rango de
-la temporada.
+la temporada. **Contra la IA y en línea tienen cada una su progresión**
+(liga, PL, colocación, historial y temporada): una partida contra la IA solo
+mueve la de la IA y una en línea, solo la de en línea. Competitivo enseña el
+rango de la cola elegida y explica cómo se puntúa en ella. Cada resultado se
+guarda con su modalidad, temporada, versión de reglas e identificador de
+partida, y se aplica una sola vez (aunque el final llegue repetido o se
+recargue la página). El rango mixto de antes de separarlas se conserva tal
+cual como «Rango mixto (histórico)»; las dos colas empezaron sus colocaciones
+con tu nivel oculto de entonces como punto de partida (se avisa una vez). La
+tabla global de la temporada es la de la cola contra la IA.
 
 - **Ligas**: Hierro, Bronce, Plata, Oro, Platino y Diamante, con divisiones IV–I
   de 100 puntos de liga (PL); luego Maestro, Gran Maestro y Leyenda, sin
@@ -205,7 +227,8 @@ la temporada.
   IA y reglas fijas. Elo entre las personas (quién quedó por delante de quién) y
   una parte pequeña según tu puesto entre todas las naciones. Cada navegador
   firma su rango para la sala con una clave ECDSA P-256 y los demás lo
-  comprueban. Si se va el anfitrión, no cuenta para nadie.
+  comprueban. Si se va el anfitrión, **se anula**: no cuenta para nadie, y
+  queda en tu historial como «Anulada» con el motivo.
 - **Temporadas** de dos meses: al cambiar, recompensa en monedas según tu mejor
   liga y reinicio suave (el MMR se acerca a 1000 y repites 2 partidas de
   colocación).
@@ -308,6 +331,24 @@ Créditos y licencias de terceros: `herramientas/LICENCIAS.md`.
 plazas; las reglas, en «Reglas avanzadas»), «Unirse con código» y la lista de
 salas públicas (miniatura, mapa, modo y plazas libres). En la sala:
 
+- **De 2 a 32 plazas humanas** (8 al crear una sala), con − y + y accesos a 4,
+  8, 16, 24 y 32. Las naciones de la IA (hasta 60) y las colonias van aparte, y
+  el resumen dice las tres cifras («8 plazas humanas · 40 naciones de la IA ·
+  280 colonias»). Las plazas las **concede el anfitrión** por orden de llegada,
+  una sola vez aunque dos pidan la última a la vez, y se reservan a quien se
+  está reconectando; el aforo no se puede bajar de los que ya tienen plaza. La
+  lista resume las plazas libres en una línea y se compacta con más de 8.
+- **Configurador común** (IA, crear sala y anfitrión): reglas en tres grupos
+  (objetivo y duración, economía y tropas, combate y diplomacia) y el
+  cooperativo desde la creación (con un número impar, el último lleva su nación
+  en solitario y la lista lo marca). El anfitrión edita mapa, naciones,
+  dificultad y reglas sobre un **borrador**: el pie de la sala dice qué falta
+  por aplicar y ofrece «Aplicar cambios» o «Descartar»; aplicar es una sola
+  revisión (los invitados confirman de nuevo y se les explica qué ha cambiado)
+  y no se puede empezar con cambios a medias. La configuración de la IA y la de
+  las salas se guardan por separado en el perfil. En un mapa generado, la
+  semilla que reparte el anfitrión sale al cargar y en el resumen de la partida.
+
 - **Invitar**: «Copiar enlace» (o el código de 5 caracteres). El enlace abre una
   ficha de entrada con el nombre, el mapa y las plazas, y el botón «Unirme»; si
   la sala está llena, ya empezó, se cerró o usa otra versión, dice por qué.
@@ -319,6 +360,15 @@ salas públicas (miniatura, mapa, modo y plazas libres). En la sala:
   cuenta atrás de 3 s que fija participantes, semilla y configuración; si alguien
   sale, se desconecta o deja de estar listo, se vuelve a la sala con el motivo.
   Antes de simular, cada invitado comprueba que tiene la misma versión de reglas.
+- **Inicio en fragmentos**: la configuración y la lista de jugadores viajan en
+  fragmentos de como mucho 3500 bytes (UTF-8, con la envoltura del mensaje).
+  Cada uno lleva sala, ronda, revisión, índice y total; el invitado acepta
+  duplicados idénticos, rechaza los contradictorios, pide los que faltan
+  («Sincronizando jugadores (k/n)») y, con la lista completa y comprobada
+  (recuento, sin repetidos, reglas y versión), confirma la recepción.
+- **Órdenes por turno**: como mucho 4 de cada emisor y 32 en total, sin pasar
+  de 2800 bytes; la cola de cada emisor está acotada (lo que sobra lo reintenta
+  su cliente), así que ni una cola larga ni un solo jugador acaparan el turno.
 - **Al empezar**: el anfitrión espera a que todos hayan cargado el mapa (como mucho 20 s) antes del primer turno. Cada invitado compara su estado con el del anfitrión y, si se desincroniza, se le avisa. El reloj del anfitrión va en un Worker: la partida no se frena si su pestaña queda en segundo plano (y, si lo está, los invitados lo ven).
 - **Reconexión**: quien pierde la conexión sale como «Reconectando…» y conserva
   su plaza unos 15 s. Si el corte es tuyo, no das por ido a nadie: al volver
@@ -346,6 +396,11 @@ salas públicas (miniatura, mapa, modo y plazas libres). En la sala:
   navegador, como prueba («Prueba entre pestañas»).
 - Para probar en local: `node herramientas/broker-local.js` y abrir el juego con
   `?broker=ws://localhost:1884/mqtt`.
+- **Prueba de carga**: `node herramientas/carga-salas.js --clientes 32 --min 10`
+  lanza N clientes completos (sala, simulación y lockstep) contra el servidor de
+  pruebas o uno propio (`--broker`) y añade a `docs/carga-salas.md` ticks por
+  segundo, desincronizaciones, retraso y la confirmación de órdenes (p50, p95,
+  máximo).
 
 Funciona por *lockstep*: todos ejecutan la misma simulación determinista con la
 misma semilla y solo viajan las acciones. El anfitrión marca el ritmo y reparte
@@ -813,7 +868,10 @@ CONQUISTAMUNDIAL/
 │   ├── tutorial.js     Tutorial guiado
 │   ├── banderas.js     GENERADO: sprite de banderas (herramientas/banderas.cjs)
 │   ├── profile.js      Perfil, niveles, logros, retos diarios, monedas y tienda
-│   ├── multiplayer.js  Salas y sincronización lockstep
+│   ├── multiplayer.js  Salas (hasta 32 plazas concedidas por el anfitrión), inicio en fragmentos y sincronización lockstep
+│   ├── configurador.js Configurador común: qué cambia entre dos configuraciones, resumen de plazas y configuraciones guardadas
+│   ├── repeticion.js   Configuración completa de cada partida para repetirla (misma o con el mismo escenario)
+│   ├── salida.js       Texto de la salida durante el despliegue (zona inicial, recortes, terreno, sitio libre, rival)
 │   ├── net.js          Transporte: room de Claude o pestañas del navegador
 │   ├── cloud.js        Perfil en la nube y clasificación global (db + user)
 │   ├── icons.js        Iconos de edificios, emblemas y patrones

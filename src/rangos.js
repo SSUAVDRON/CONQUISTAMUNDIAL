@@ -89,9 +89,22 @@ export function seasonEnd(id) {
   return new Date(y, n * 2, 1);
 }
 
-/** Rango vacío de un jugador nuevo. */
-export function newRank(date = new Date()) {
+/**
+ * Versión de las reglas de las clasificatorias (DEV07): va con cada rango y
+ * cada partida, para saber con qué reglas se consiguió.
+ */
+export const RANKED_VERSION = 'clasico';
+/** Colas con progresión propia (DEV07). */
+export const QUEUES = { ia: 'Contra la IA', online: 'En línea' };
+/** Partidas aplicadas que se recuerdan (para no aplicar dos veces el mismo final). */
+const APPLIED = 40;
+
+/** Rango vacío de un jugador nuevo, de la cola `modalidad` ('ia' u 'online'). */
+export function newRank(date = new Date(), modalidad = 'ia') {
   return {
+    modalidad,
+    version: RANKED_VERSION,
+    aplicadas: [], // identificadores de las partidas ya resueltas
     temporada: seasonOf(date),
     mmr: MMR_START,
     puntos: 0,
@@ -107,8 +120,8 @@ export function newRank(date = new Date()) {
 }
 
 /** Rango guardado, limpio (o uno nuevo). */
-export function normalizeRank(r) {
-  const d = newRank();
+export function normalizeRank(r, modalidad = 'ia') {
+  const d = newRank(new Date(), modalidad);
   if (!r || typeof r !== 'object') return d;
   const num = (v, dflt, lo, hi) => (Number.isFinite(v) ? clamp(v, lo, hi) : dflt);
   return {
@@ -121,7 +134,10 @@ export function normalizeRank(r) {
     victorias: Math.floor(num(r.victorias, 0, 0, 1e6)),
     escudo: Math.floor(num(r.escudo, 0, 0, SHIELD_GAMES)),
     mejor: Math.floor(num(r.mejor, 0, 0, MAX_POINTS)),
-    pendiente: r.pendiente && typeof r.pendiente === 'object' ? { tipo: r.pendiente.tipo === 'sala' ? 'sala' : 'ia', inicio: Number(r.pendiente.inicio) || 0 } : null,
+    modalidad: r.modalidad === 'online' || r.modalidad === 'mixta' ? r.modalidad : modalidad,
+    version: typeof r.version === 'string' ? r.version.slice(0, 24) : RANKED_VERSION,
+    aplicadas: Array.isArray(r.aplicadas) ? r.aplicadas.filter((x) => typeof x === 'string').slice(0, APPLIED) : [],
+    pendiente: r.pendiente && typeof r.pendiente === 'object' ? { tipo: r.pendiente.tipo === 'sala' ? 'sala' : 'ia', inicio: Number(r.pendiente.inicio) || 0, partida: typeof r.pendiente.partida === 'string' ? r.pendiente.partida.slice(0, 64) : '' } : null,
     historial: Array.isArray(r.historial) ? r.historial.filter((h) => h && Number.isFinite(h.puntos)).slice(0, HISTORY) : [],
     anteriores: Array.isArray(r.anteriores) ? r.anteriores.slice(0, 12) : [],
   };
@@ -214,9 +230,52 @@ function applyChange(r, { mmrDelta, pl, won, info }) {
     out.delta = after - before;
   }
   r.mejor = Math.max(r.mejor, r.puntos);
-  r.historial.unshift({ fecha: Date.now(), puntos: r.puntos, delta: out.delta, ...info });
+  r.historial.unshift({ fecha: Date.now(), puntos: r.puntos, delta: out.delta, temporada: r.temporada, version: RANKED_VERSION, ...info });
   r.historial.length = Math.min(r.historial.length, HISTORY);
+  remember(r, info.partida);
   return out;
+}
+
+/** Anota la partida como resuelta. */
+function remember(r, id) {
+  if (!id) return;
+  r.aplicadas = [id, ...(r.aplicadas || []).filter((x) => x !== id)].slice(0, APPLIED);
+}
+
+/** ¿Ya se resolvió esta partida? (un final repetido o tras recargar, DEV07) */
+export function alreadyApplied(r, id) {
+  return !!id && Array.isArray(r.aplicadas) && r.aplicadas.includes(id);
+}
+
+/**
+ * Partida anulada (en línea, si se pierde al anfitrión): no cuenta ni a favor
+ * ni en contra, pero queda en el historial con su motivo. Una sola vez.
+ */
+export function voidResult(r, { partida = '', motivo = '' } = {}) {
+  if (alreadyApplied(r, partida)) return null;
+  r.historial.unshift({ fecha: Date.now(), puntos: r.puntos, delta: 0, tipo: r.modalidad === 'online' ? 'sala' : 'ia', anulada: true, motivo: String(motivo).slice(0, 120), partida: partida || undefined, temporada: r.temporada, version: RANKED_VERSION });
+  r.historial.length = Math.min(r.historial.length, HISTORY);
+  remember(r, partida);
+  return { void: true, motivo, before: r.puntos, after: r.puntos, delta: 0 };
+}
+
+/**
+ * Migración a colas separadas (DEV07). El rango mixto de antes se guarda
+ * entero como histórico; las dos colas empiezan sus colocaciones con tu nivel
+ * oculto (MMR) de entonces como punto de partida, y cada una se lleva sus
+ * partidas del historial. Devuelve { ia, online, historico }.
+ */
+export function splitRanks(old, date = new Date()) {
+  const mixed = normalizeRank(old, 'mixta');
+  const played = mixed.partidas > 0 || mixed.colocacion > 0 || mixed.anteriores.length > 0;
+  const seed = (modalidad, tipo) => {
+    const r = newRank(date, modalidad);
+    r.temporada = mixed.temporada;
+    if (played) r.mmr = mixed.mmr;
+    r.historial = mixed.historial.filter((h) => (h.tipo === 'sala' ? 'sala' : 'ia') === tipo).map((h) => ({ ...h, previa: true }));
+    return r;
+  };
+  return { ia: seed('ia', 'ia'), online: seed('online', 'sala'), historico: played ? { ...mixed, modalidad: 'mixta', pendiente: null, cerrado: date.getTime() } : null };
 }
 
 /** PL de una partida: lo que mejoras lo esperado, ajustado si tu MMR va por delante o por detrás de tu rango. */
@@ -232,7 +291,8 @@ function plFor(r, gain, won) {
  * Resultado de una clasificatoria contra la IA. `place`: { place, of } entre
  * las naciones; `abandon`: abandonarla cuenta como quedar el último.
  */
-export function applyAiResult(r, place, { difficulty = aiDifficultyFor(r), abandon = false } = {}) {
+export function applyAiResult(r, place, { difficulty = aiDifficultyFor(r), abandon = false, partida = '' } = {}) {
+  if (alreadyApplied(r, partida)) return null;
   const perf = abandon || !place ? 0 : place.of <= 1 ? 1 : 1 - (place.place - 1) / (place.of - 1);
   const ai = AI_RATING[difficulty] || AI_RATING.normal;
   // El MMR se mueve según lo esperado de tu nivel real; los PL, según lo
@@ -245,7 +305,7 @@ export function applyAiResult(r, place, { difficulty = aiDifficultyFor(r), aband
     mmrDelta: K * (perf - expected),
     pl: plFor(r, 60 * (perf - expectedRank), won),
     won,
-    info: { tipo: 'ia', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, abandono: abandon || undefined },
+    info: { tipo: 'ia', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, abandono: abandon || undefined, partida: partida || undefined },
   });
 }
 
@@ -254,7 +314,8 @@ export function applyAiResult(r, place, { difficulty = aiDifficultyFor(r), aband
  * quién quedó por delante) y una parte pequeña según tu puesto entre todas
  * las naciones. `humans`: [{ mmr, place }] de los demás jugadores.
  */
-export function applyRoomResult(r, place, humans, { abandon = false } = {}) {
+export function applyRoomResult(r, place, humans, { abandon = false, partida = '' } = {}) {
+  if (alreadyApplied(r, partida)) return null;
   const perf = abandon || !place ? 0 : place.of <= 1 ? 1 : 1 - (place.place - 1) / (place.of - 1);
   const mine = abandon ? Infinity : place.place;
   let s = 0;
@@ -276,7 +337,7 @@ export function applyRoomResult(r, place, humans, { abandon = false } = {}) {
     mmrDelta: K * elo + 20 * nations,
     pl: plFor(r, 45 * eloRank + 12 * nations, won),
     won,
-    info: { tipo: 'sala', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, rivales: humans.length, abandono: abandon || undefined },
+    info: { tipo: 'sala', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, rivales: humans.length, abandono: abandon || undefined, partida: partida || undefined },
   });
 }
 

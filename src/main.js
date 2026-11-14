@@ -40,7 +40,7 @@ import { Grabador, compactCurve, placement } from './resumen.js';
 import { Ladder } from './ladder.js';
 import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js';
 import { challengeBeaten, challengeLink, parseChallenge } from './reto.js';
-import { RANKED_AI, RANKED_ROOM, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } from './rangos.js';
+import { RANKED_AI, RANKED_ROOM, aiDifficultyFor, alreadyApplied, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName, voidResult } from './rangos.js';
 import { presentMatch } from './presentacion.js';
 import { configSnapshot } from './repeticion.js';
 import { INVITE_MS, Matchmaker } from './emparejamiento.js';
@@ -419,8 +419,13 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /** Tu tarjeta para la presentación (con tu rango si es clasificatoria). */
 function myCard(ranked) {
-  const r = profile.rango;
+  const r = queueRank(ranked);
   return { ...myIdentity(), nameColor: nameColorOf(profile), me: true, rank: ranked ? { points: r.puntos, placing: inPlacement(r) } : null };
+}
+
+/** Rango de una cola (DEV07): 'sala' u 'online', el de en línea; si no, el de contra la IA. */
+function queueRank(cola) {
+  return cola === 'sala' || cola === 'online' ? profile.rangoOnline : profile.rango;
 }
 
 /** Las naciones de la partida (sin humanos ni colonias), con su bandera si es un mapa real. */
@@ -652,7 +657,7 @@ function toggleMatchmaking() {
     home.flash?.('Sin conexión con el servidor de salas.');
     return;
   }
-  const r = profile.rango;
+  const r = profile.rangoOnline;
   const reward = ensureSeason(r);
   if (reward) grantSeasonReward(reward);
   state.mm = new Matchmaker(transport, {
@@ -735,7 +740,7 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
   // Tu rango, firmado para esta sala (en una clasificatoria, los demás lo usan en el Elo)
   try {
     const ident = await getIdentity();
-    const r = profile.rango;
+    const r = profile.rangoOnline;
     const signed = ident ? await signClaim(claimText(code, r.mmr, r.puntos), ident) : null;
     if (signed) sala.rankClaim = { mmr: Math.round(r.mmr), puntos: r.puntos, ...signed };
   } catch {
@@ -857,7 +862,9 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   const rankPoints = new Map();
   let ranksReady = Promise.resolve();
   if (state.ranked) {
-    profile.rango.pendiente = { tipo: 'sala', inicio: Date.now() };
+    // Identificador de la partida (el mismo para todos): su resultado se aplica una vez (DEV07)
+    state.rankedMatch = `${sala.code}.${payload.ronda}.${payload.seed >>> 0}`;
+    profile.rangoOnline.pendiente = { tipo: 'sala', inicio: Date.now(), partida: state.rankedMatch };
     saveProfile(profile);
     // MMR de los demás: el que anuncian firmado para esta sala (si no cuadra, 1000)
     const claims = sala.rankClaims();
@@ -901,14 +908,14 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
     const ranked = !!state.ranked;
     await presentMatch({
-      kicker: ranked ? `Sala clasificatoria · ${seasonName(profile.rango.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
+      kicker: ranked ? `Sala clasificatoria · en línea · ${seasonName(profile.rangoOnline.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
       title: mapLabel(payload.settings.mapSize),
       details: `${plural(payload.players.length, 'jugador', 'jugadores')} · ${plural(nations.length, 'nación de la IA', 'naciones de la IA')} · perfil ${prof}`,
       players: payload.players.map((p) => ({
         ...p,
         nameColor: nameColorOf({ colorNombre: p.nameColor, color: p.color }),
         me: p.peer === myPeer,
-        rank: ranked ? (p.peer === myPeer ? { points: profile.rango.puntos, placing: inPlacement(profile.rango) } : rankPoints.has(p.peer) ? { points: rankPoints.get(p.peer), placing: false } : { points: 0, placing: true }) : null,
+        rank: ranked ? (p.peer === myPeer ? { points: profile.rangoOnline.puntos, placing: inPlacement(profile.rangoOnline) } : rankPoints.has(p.peer) ? { points: rankPoints.get(p.peer), placing: false } : { points: 0, placing: true }) : null,
       })),
       nations,
       ranked,
@@ -936,7 +943,10 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     if (game.phase === 'ended' || state.game !== game || state.endShown) return;
     state.endShown = true;
     // Si se va el anfitrión, la clasificatoria no cuenta para nadie
-    if (state.ranked) state.rankedVoid = true;
+    if (state.ranked) {
+      state.rankedVoid = true;
+      state.rankedVoidReason = reason === 'abandono' ? 'El anfitrión abandonó la partida' : 'Se perdió la conexión con el anfitrión';
+    }
     const progress = finishGame({ interrupted: true });
     const extra = endExtra('interrumpida');
     extra.motivo = reason === 'abandono' ? 'El anfitrión ha abandonado la partida.' : 'Se ha perdido la conexión con el anfitrión.';
@@ -1169,7 +1179,8 @@ function startRanked() {
   const reward = ensureSeason(r);
   if (reward) grantSeasonReward(reward);
   const difficulty = aiDifficultyFor(r);
-  r.pendiente = { tipo: 'ia', inicio: Date.now() };
+  state.rankedMatch = `ia.${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 8)}`;
+  r.pendiente = { tipo: 'ia', inicio: Date.now(), partida: state.rankedMatch };
   saveProfile(profile);
   state.rankedDifficulty = difficulty;
   startGame({
@@ -1198,20 +1209,27 @@ function grantSeasonReward(reward) {
 function applyRanked(result) {
   if (!state.ranked || state.rankedDone || !state.human) return;
   state.rankedDone = true;
-  const r = profile.rango;
+  // Cada cola, su progresión (DEV07): contra la IA o en línea
+  const r = queueRank(state.ranked);
+  const partida = (r.pendiente && r.pendiente.partida) || state.rankedMatch || '';
   if (state.rankedVoid) {
+    // Se perdió al anfitrión: anulada (no cuenta), con su motivo en el historial
+    const out = voidResult(r, { partida, motivo: state.rankedVoidReason || 'Se perdió al anfitrión' });
     r.pendiente = null;
     saveProfile(profile);
+    if (out) state.rankOut = { ...out, rank: { ...r } };
+    home.renderRanked?.();
     return;
   }
   const abandon = state.game.phase !== 'ended' && state.human.alive;
   const place = { place: result.place, of: result.of };
   const before = { puntos: r.puntos, colocacion: r.colocacion };
   let out;
-  if (state.ranked === 'sala') out = applyRoomResult(r, place, state.rankedRivals ? state.rankedRivals() : [], { abandon });
-  else out = applyAiResult(r, place, { difficulty: state.rankedDifficulty, abandon });
+  if (state.ranked === 'sala') out = applyRoomResult(r, place, state.rankedRivals ? state.rankedRivals() : [], { abandon, partida });
+  else out = applyAiResult(r, place, { difficulty: state.rankedDifficulty, abandon, partida });
   r.pendiente = null;
   saveProfile(profile);
+  if (!out) return; // ese final ya se había aplicado (recarga o final repetido)
   state.rankOut = { ...out, abandon, before, rank: { ...r } };
   pushRankRow();
   home.renderRanked?.();
@@ -1220,16 +1238,20 @@ function applyRanked(result) {
 
 /** Partida clasificatoria que quedó a medias (se cerró la página): cuenta como abandono. */
 function settlePendingRanked() {
-  const r = profile.rango;
-  const reward = ensureSeason(r);
-  if (reward) grantSeasonReward(reward);
-  if (!r.pendiente) return;
-  const tipo = r.pendiente.tipo;
-  const out = tipo === 'sala' ? applyRoomResult(r, null, [], { abandon: true }) : applyAiResult(r, null, { abandon: true });
-  r.pendiente = null;
-  saveProfile(profile);
-  pushRankRow();
-  whenBooted(() => setTimeout(() => home.flash?.(`Dejaste una clasificatoria sin terminar: cuenta como derrota (${out.delta} PL).`), 500));
+  for (const r of [profile.rango, profile.rangoOnline]) {
+    const reward = ensureSeason(r);
+    if (reward) grantSeasonReward(reward);
+    if (!r.pendiente) continue;
+    const { tipo, partida } = r.pendiente;
+    // Ya resuelta (se aplicó antes de cerrar): no se cuenta otra vez
+    const out = alreadyApplied(r, partida) ? null : tipo === 'sala' ? applyRoomResult(r, null, [], { abandon: true, partida }) : applyAiResult(r, null, { abandon: true, partida });
+    r.pendiente = null;
+    saveProfile(profile);
+    if (!out) continue;
+    if (tipo !== 'sala') pushRankRow();
+    const cola = tipo === 'sala' ? 'en línea' : 'contra la IA';
+    whenBooted(() => setTimeout(() => home.flash?.(`Dejaste una clasificatoria ${cola} sin terminar: cuenta como derrota (${out.delta} PL).`), 500));
+  }
 }
 
 /** Cambio de rango en el resumen de la partida: insignia, liga, barra de PL y el motivo. */
@@ -1244,7 +1266,10 @@ function renderRankChange(box, o) {
   const title = document.createElement('strong');
   const sub = document.createElement('small');
   const placing = inPlacement(r);
-  if (o.placing && !o.placementDone) {
+  if (o.void) {
+    title.textContent = 'Clasificatoria anulada';
+    sub.textContent = `${o.motivo || 'Se perdió al anfitrión'}: no cuenta ni a favor ni en contra. Queda en tu historial.`;
+  } else if (o.placing && !o.placementDone) {
     title.textContent = `Colocación ${r.colocacion}/5`;
     sub.textContent = o.mmrDelta >= 0 ? 'Buena partida: tu nivel oculto sube.' : 'Tu nivel oculto baja un poco.';
   } else if (o.placementDone) {
@@ -1259,9 +1284,10 @@ function renderRankChange(box, o) {
   texts.append(title, sub);
   const delta = document.createElement('span');
   delta.className = `fr-delta ${o.delta > 0 ? 'sube' : o.delta < 0 ? 'baja' : ''}`;
-  delta.textContent = o.placing && !o.placementDone ? '' : `${o.delta > 0 ? '+' : ''}${o.delta} PL`;
+  delta.textContent = o.void ? '0 PL' : o.placing && !o.placementDone ? '' : `${o.delta > 0 ? '+' : ''}${o.delta} PL`;
   head.append(texts, delta);
   box.append(head);
+  if (o.void) return;
   if (!placing) {
     // Barra de PL de la división: se llena desde donde estaba
     const bar = document.createElement('div');
@@ -2288,6 +2314,13 @@ async function boot() {
     home.renderHero();
     // Clasificatoria que quedó a medias al cerrar la página: cuenta como abandono
     settlePendingRanked();
+    // Colas separadas (DEV07): se avisa una vez de cómo queda el rango de antes
+    if (profile.rangoMigrado && !profile.ajustes.avisoColas) {
+      profile.ajustes.avisoColas = Date.now();
+      saveProfile(profile);
+      const h = profile.rangoHistorico;
+      whenBooted(() => setTimeout(() => home.flash?.(`Ahora la clasificatoria contra la IA y la de en línea tienen rangos separados. Tu rango de antes${h && !inPlacement(h) ? ` (${rankOf(h.puntos).label})` : ''} se guarda como histórico en Competitivo; las dos colas empiezan con 5 partidas de colocación a partir de tu nivel.`, true), 1200));
+    }
     home.renderAll();
     loader?.step('Desplegando el frente…', 0.96, 700, 'frente');
     await paint();
