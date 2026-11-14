@@ -5037,3 +5037,32 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
 @media (prefers-reduced-motion: reduce) {
   :is(.retos, .logros, .ajustes-rejilla, .est-fichas) > *, #hud .obra.ya-puedes, #hud .obra.ya-puedes .b-coste { animation: none; }
 }
+
+/* Última partida: repetir configuración o el mismo escenario (DEV01) */
+.ultima-repetir { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.ultima-config { font-size: 12px; color: #8b97ad; }
+#inicio .ultima-escenario { min-height: 32px; padding: 4px 12px; font-size: 12.5px; }
+.ultima-aviso { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.35; color: #f5c56b; }
+
+/* Tutorial (DEV02): una sola región de ayuda. Durante el despliegue, la cuenta
+   atrás y «Elegir por mí» van dentro de la tarjeta (no un panel encima) */
+body.con-tutorial #despliegue { display: none !important; }
+.tutorial { z-index: 13; max-height: calc(100dvh - 140px); overflow-y: auto; }
+.tut-despliegue { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: -2px 0 10px; padding: 8px 10px; border-radius: 12px; background: rgba(242, 179, 61, 0.08); border: 1px solid rgba(242, 179, 61, 0.3); }
+.tut-despliegue[hidden] { display: none; }
+.tut-reloj { font-weight: 800; font-size: 14px; color: #ffe3a1; font-variant-numeric: tabular-nums; }
+.tut-despliegue .dp-auto { padding: 7px 14px; font-size: 13px; }
+@media (max-width: 380px) { .tut-texto { font-size: 14px; } .tutorial { padding: 10px 12px; } }
+
+/* Fin de partida: motivo y validez de la ronda (DEV05) */
+.fin-motivo { display: flex; flex-direction: column; gap: 3px; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(255, 159, 46, 0.1); border: 1px solid rgba(255, 159, 46, 0.35); font-size: 13px; color: var(--texto-2, #c3cde0); }
+.fin-motivo strong { color: #ffd08a; font-size: 14px; }
+.fin-sello.interrumpida { filter: saturate(0.9); }
+
+/* Clasificación de la partida: las colonias, en una línea aparte (DEV08) */
+.lb-colonias { margin: 4px 0 0; padding: 0 6px; font-size: 11px; color: var(--texto-suave, #8b97ad); }
+.lb-colonias[hidden] { display: none; }
+.mision-perfil { font-size: 11px; font-weight: 600; color: #c9a8ff; }
+.nota-victoria { display: block; margin-top: 6px; font-size: 12px; line-height: 1.35; color: var(--texto-2, #c3cde0); }
+.nota-victoria[hidden] { display: none; }
+.nota-victoria.aviso { color: #ffd08a; }

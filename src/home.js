@@ -5,6 +5,7 @@ import { PROFILES } from './mecanicas.js';
 import { MAX_HUMANS, MIN_HUMANS, RULES_FINGERPRINT } from './multiplayer.js';
 import { REAL_MAP_DATA } from './mapas-reales.js';
 import { loadMapData } from './mapas-carga.js';
+import { configSummary, replayPlan } from './repeticion.js';
 import { decodeRelief, generateMap, markRivers } from './map.js';
 import { RIVERS } from './rios.js';
 import { paintMapPreview } from './terreno.js';
@@ -369,14 +370,24 @@ function rulesEditor(prefix, rules, onChange, ctx) {
     });
     return el('label', { class: 'interruptor' }, input, el('span', { text: label }));
   };
-  // Modo de victoria: en Clásico no hay capitales, así que esa opción no sale
+  // Modo de victoria: en Clásico no hay capitales, así que esa opción no sale.
+  // Si estaba elegida y cambias a Clásico, pasa a Dominación y se dice junto al selector (DEV08)
   const victoryBox = el('div', { class: 'segmentos', role: 'radiogroup', 'aria-label': 'Modo de victoria' });
-  const syncVictory = () => {
+  const victoryNote = el('small', { class: 'nota-victoria', role: 'status' });
+  const syncVictory = (fromProfile = false) => {
     const opts = [['dominio', 'Dominación'], ['capitales', 'Capitales'], ['economia', 'Economía'], ['supervivencia', 'Supervivencia']]
       .filter(([v]) => !(v === 'capitales' && rules.profile === 'clasico'));
-    if (!opts.some(([v]) => v === rules.victory)) rules.victory = 'dominio';
+    let note = rules.profile === 'clasico' ? 'En Clásico no hay victoria por capitales: no tiene puntos estratégicos.' : '';
+    if (!opts.some(([v]) => v === rules.victory)) {
+      if (fromProfile && rules.victory === 'capitales') note = 'Has elegido Clásico, que no tiene capitales que conquistar: el objetivo ha pasado de Capitales a Dominación.';
+      rules.victory = 'dominio';
+    }
+    victoryNote.textContent = note;
+    victoryNote.hidden = !note;
+    victoryNote.classList.toggle('aviso', note.startsWith('Has elegido'));
     segmented(victoryBox, opts, rules.victory, (v) => {
       rules.victory = v;
+      victoryNote.classList.remove('aviso');
       change();
     });
   };
@@ -394,7 +405,7 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   segmented(profileBox, Object.entries(PROFILES).map(([k, P]) => [k, P.name]), rules.profile, (v) => {
     rules.profile = v;
     syncProfileNote();
-    syncVictory();
+    syncVictory(true);
     change();
   });
   const box = el('div', { class: 'reglas-rejilla' },
@@ -402,7 +413,7 @@ function rulesEditor(prefix, rules, onChange, ctx) {
     el('label', { class: 'campo' }, el('span', {}, 'Colonias (bots débiles) ', colOut, ' ', colNote), col),
     el('label', { class: 'campo' }, el('span', {}, 'Oro inicial ', goldOut), gold),
     seg('Economía', 'economy', [['fixed', 'Oro fijo'], ['workers', 'Con trabajadores']]),
-    el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox),
+    el('div', { class: 'campo' }, el('span', { text: 'Modo de victoria' }), victoryBox, victoryNote),
     seg('Victoria al conquistar (dominación)', 'winShare', WIN_SHARES.map((v) => [v, `${Math.round(v * 100)} %`])),
     seg('Crecimiento de tropas', 'troopMult', MULT_OPTS),
     seg('Ingresos de oro', 'goldMult', MULT_OPTS),
@@ -467,7 +478,7 @@ export function rulesSummary(r) {
   const parts = [(PROFILES[r.profile] || PROFILES.trinchera).name, modes[r.victory] || `victoria al ${Math.round(r.winShare * 100)} %`];
   if (r.economy === 'workers') parts.push('economía con trabajadores');
   if (r.startGold) parts.push(`${formatNumber(r.startGold)} de oro inicial`);
-  if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} colonias`);
+  if (Number.isFinite(r.colonies)) parts.push(`${r.colonies} ${r.colonies === 1 ? 'colonia' : 'colonias'}`);
   const mult = (v) => (v === 0.5 ? '×0,5' : `×${v}`);
   if (r.troopMult && r.troopMult !== 1) parts.push(`tropas ${mult(r.troopMult)}`);
   if (r.goldMult && r.goldMult !== 1) parts.push(`oro ${mult(r.goldMult)}`);
@@ -946,21 +957,58 @@ export class Home {
     else histOp('replaceState', { trinchera: true, vista: this.view, n: 0 }, SLUG[this.view]);
   }
 
+  /**
+   * Al cerrar la capa de la partida, ir a `view` (p. ej. Multijugador al
+   * salir de una partida en línea). El «atrás» del historial llega un poco
+   * después: se resuelve en _onPop, o al rato si no hubo «atrás».
+   */
+  returnTo(view) {
+    this._returnTo = view;
+    setTimeout(() => {
+      if (this._returnTo !== view) return;
+      this._returnTo = null;
+      this.go(view, { replace: true });
+    }, 400);
+  }
+
   /** El navegador ha ido atrás o adelante. */
   _onPop(st) {
     if (this.h.onHistory?.(st)) return; // la partida o la sala lo resuelven
+    if (this._returnTo && this.menuVisible()) {
+      const v = this._returnTo;
+      this._returnTo = null;
+      this.go(v, { replace: true });
+      return;
+    }
     if (!$('crear-sala').hidden && st?.capa !== 'crear-sala') this._closeCreate();
     if (!this.menuVisible()) return;
     const view = (st && st.vista) || viewFromHash() || 'jugar';
     if (view !== this.view) this.setView(view);
   }
 
-  /** «Volver a jugar»: la última partida contra la IA, con el mismo mapa, rivales y reglas. */
-  _replay(game = null) {
-    const a = this.profile.ajustes;
-    const map = game?.mapa && (REAL_MAPS[game.mapa] || MAP_SIZES[game.mapa]) ? game.mapa : this.choice.map;
-    const bots = Math.min(maxBotsFor(map), game?.rivales || a.bots || 70);
-    this.h.onQuickPlay?.({ bots, mapSize: map, difficulty: a.dificultad, seed: '', rules: { ...DEFAULT_RULES, ...migrateRules(a.reglas) } });
+  /**
+   * Repite una partida del historial (DEV01) con la configuración que tuvo
+   * (no con tus preferencias de ahora). `scenario`: también la misma semilla.
+   * Los registros antiguos, sin esa configuración, abren el configurador con
+   * lo que se puede recuperar y un aviso para revisarlo.
+   */
+  _replay(entry = this.profile.historial[0], { scenario = false } = {}) {
+    const plan = replayPlan(entry, { scenario });
+    if (!plan) return this._mode('rapida');
+    if (plan.kind === 'tutorial') return this.h.onTutorial?.();
+    if (plan.kind === 'online') return this.go('multijugador');
+    if (plan.kind === 'revisar') {
+      if (plan.prefill.mapSize) {
+        this.choice.map = plan.prefill.mapSize;
+        this._galleryIA?.set(plan.prefill.mapSize);
+        this._syncBots?.();
+      }
+      this.go('crear');
+      this.flash('Esa partida es de antes de guardar su configuración completa: revisa mapa, rivales y reglas antes de empezar.');
+      return;
+    }
+    const bots = Math.min(maxBotsFor(plan.opts.mapSize), plan.opts.bots);
+    this.h.onQuickPlay?.({ ...plan.opts, bots });
   }
 
   /** Escena de la portada y dibujos de las tarjetas de modo. */
@@ -1114,16 +1162,16 @@ export class Home {
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     const mins = Math.max(1, Math.round((midnight - now) / 60000));
     $('misiones-reloj').textContent = `⏱ ${Math.floor(mins / 60)} h ${mins % 60} min`;
-    const items = d.retos.map((id) => {
+    const items = d.retos.flatMap((id) => {
       const r = DAILY.find((x) => x.id === id);
-      if (!r) return null;
+      if (!r) return [];
       const prog = Math.min(r.need, d.progreso[id] || 0);
       const done = !!d.hechos[id];
       return el(
         'li',
         { class: done ? 'hecha' : '' },
         el('span', { class: 'mision-check', 'aria-hidden': 'true', text: done ? '✓' : '' }),
-        el('span', { class: 'mision-nombre', text: r.name }),
+        el('span', { class: 'mision-nombre' }, r.name, r.perfil ? el('small', { class: 'mision-perfil', title: 'En Clásico (el de Partida rápida) no se puede cumplir', text: ` · solo en ${PROFILES[r.perfil]?.name || r.perfil}` }) : null),
         el('span', { class: 'mision-prog', text: `${prog}/${r.need}` }),
         el('b', { class: 'mision-premio', text: `🪙 ${r.coins}` }),
         el('span', { class: 'mision-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
@@ -1169,11 +1217,36 @@ export class Home {
         el('strong', { text: mapLabel(g.mapa) }),
         el('span', { text: `${placeText(g) ? `${placeText(g)} · ` : ''}${formatPercent(g.pct)} del mapa · ${formatTime(g.duracion)}` }),
         sparkline(g.curva),
-        el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}${g.rivales ? ` · ${g.rivales} rivales` : ''}${g.online ? ' · online' : ''}` }),
+        el('small', { text: `${new Date(g.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}${g.config ? '' : g.rivales ? ` · ${g.rivales} ${g.rivales === 1 ? 'rival' : 'rivales'}` : ''}${g.online ? ' · online' : ''}` }),
       ),
-      el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': 'Jugar otra vez en este mapa', title: 'Jugar otra vez en este mapa', onclick: () => this._replay(g) },
-        el('span', { 'aria-hidden': 'true', text: '▶' })),
+      ...this._replayButtons(g),
     );
+  }
+
+  /**
+   * Botones para repetir una partida del historial (DEV01): «Repetir
+   * configuración» (reparto nuevo) y «Mismo escenario» (misma semilla), con
+   * el resumen de la configuración y un aviso si las reglas han cambiado.
+   */
+  _replayButtons(g) {
+    const plan = replayPlan(g);
+    const profName = (id) => PROFILES[id]?.name || id;
+    const difName = (id) => ({ facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' })[id] || id;
+    if (!plan || plan.kind !== 'jugar') {
+      const label = plan?.kind === 'online' ? 'Ir a Multijugador' : plan?.kind === 'tutorial' ? 'Repetir el tutorial' : 'Revisar y jugar';
+      return [el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': label, title: label, onclick: () => this._replay(g) }, el('span', { 'aria-hidden': 'true', text: '▶' }))];
+    }
+    const out = [
+      el('button', { type: 'button', class: 'ultima-jugar', 'aria-label': 'Repetir configuración: mismo mapa, rivales y reglas, con otro reparto', title: 'Repetir configuración (mismo mapa, rivales y reglas; reparto nuevo)', onclick: () => this._replay(g) }, el('span', { 'aria-hidden': 'true', text: '▶' })),
+      el(
+        'div',
+        { class: 'ultima-repetir' },
+        el('small', { class: 'ultima-config', text: configSummary(g.config, profName, difName) }),
+        el('button', { type: 'button', class: 'btn-sec ultima-escenario', title: 'Repetir escenario: también la misma semilla (el mismo reparto inicial)', onclick: () => this._replay(g, { scenario: true }), text: plan.versionChanged ? 'Mismo escenario (reglas nuevas)' : 'Mismo escenario' }),
+      ),
+    ];
+    if (plan.versionChanged) out.push(el('p', { class: 'ultima-aviso', text: `Se jugó con las reglas ${plan.version || 'antiguas'}; ahora son otras, así que el mismo escenario no saldrá idéntico.` }));
+    return out;
   }
 
   /** Carrusel de novedades (pasa solo cada 7 s mientras se ve el inicio): fundido entre una y otra. */
@@ -2502,9 +2575,9 @@ export class Home {
     const mins = Math.max(1, Math.round((midnight - now) / 60000));
     $('retos-reloj').textContent = `cambian en ${Math.floor(mins / 60)} h ${mins % 60} min`;
     $('retos-diarios').replaceChildren(
-      ...d.retos.map((id) => {
+      ...d.retos.flatMap((id) => {
         const r = DAILY.find((x) => x.id === id);
-        if (!r) return null;
+        if (!r) return [];
         const prog = Math.min(r.need, d.progreso[id] || 0);
         const hecho = !!d.hechos[id];
         return el(
@@ -2516,7 +2589,7 @@ export class Home {
             { class: 'reto-texto' },
             el('strong', { text: r.name }),
             el('span', { class: 'reto-barra llena-al-ver' }, el('span', { style: `--p:${(prog / r.need).toFixed(3)}` })),
-            el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}` }),
+            el('small', { text: hecho ? '¡Hecho!' : `${prog} / ${r.need}${r.perfil ? ` · solo con el perfil ${PROFILES[r.perfil]?.name || r.perfil}` : ''}` }),
           ),
           el('b', { class: 'reto-premio', text: `🪙 ${r.coins}` }),
         );
@@ -2538,9 +2611,9 @@ export class Home {
     const hours = Math.max(1, Math.round((monday - now) / 3600000));
     $('semana-reloj').textContent = `cambian en ${Math.floor(hours / 24)} d ${hours % 24} h`;
     $('retos-semanales').replaceChildren(
-      ...w.retos.map((id) => {
+      ...w.retos.flatMap((id) => {
         const r = WEEKLY.find((x) => x.id === id);
-        if (!r) return null;
+        if (!r) return [];
         const prog = Math.min(r.need, w.progreso[id] || 0);
         const hecho = !!w.hechos[id];
         return el(
@@ -2752,7 +2825,7 @@ export class Home {
               { class: 'sala-info' },
               el('strong', { text: String(r.nombre || 'Sala').slice(0, 28) }),
               el('small', { text: `${r.clasificatoria ? '🏅 Clasificatoria · ' : ''}${mapLabel(r.mapa)} · ${P.name} · ${VICTORY_NAMES[r.victoria] || 'Dominación'}` }),
-              el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} bots` }),
+              el('small', { text: `${Math.max(0, (r.plazas || 8) - (r.jugadores || 1))} plaza${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} libre${(r.plazas || 8) - (r.jugadores || 1) === 1 ? '' : 's'} · ${r.jugadores || 1}/${r.plazas || 8} · ${Number(r.bots) || 0} ${Number(r.bots) === 1 ? 'nación de la IA' : 'naciones de la IA'}` }),
             ),
             el('span', { class: 'sala-entrar', text: r.otraVersion ? 'Otra versión' : full ? 'Llena' : 'Entrar' }),
           ),
@@ -2793,11 +2866,18 @@ export class Home {
     const s = settings || {};
     const r = s.rules || {};
     const P = PROFILES[r.profile] || PROFILES.trinchera;
+    // (replaceChildren escribe «null» si le llega un null: solo los que existen, DEV08)
+    const nBots = Number(s.bots) || 0;
+    const nCol = Number.isFinite(r.colonies) ? r.colonies : null;
     box.replaceChildren(
-      s.clasificatoria ? el('span', { class: 'chip-sala chip-clasif' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🏅' }), 'Clasificatoria') : null,
-      el('span', { class: 'chip-sala', title: `Perfil de reglas ${P.id}` }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚙' }), P.name),
-      el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${Number(s.bots) || 0} bots`),
-      el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚑' }), VICTORY_NAMES[r.victory] || 'Dominación'),
+      ...[
+        s.clasificatoria ? el('span', { class: 'chip-sala chip-clasif' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🏅' }), 'Clasificatoria') : null,
+        el('span', { class: 'chip-sala', title: `Perfil de reglas ${P.id}` }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚙' }), P.name),
+        el('span', { class: 'chip-sala', title: 'Naciones que lleva la IA' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤖' }), `${nBots} ${nBots === 1 ? 'nación de la IA' : 'naciones de la IA'}`),
+        nCol !== null ? el('span', { class: 'chip-sala', title: 'Colonias: presas débiles repartidas por el mapa' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⌂' }), `${nCol} ${nCol === 1 ? 'colonia' : 'colonias'}`) : null,
+        el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '⚑' }), VICTORY_NAMES[r.victory] || 'Dominación'),
+        r.coop ? el('span', { class: 'chip-sala' }, el('span', { class: 'chip-ico', 'aria-hidden': 'true', text: '🤝' }), r.coopRoles ? 'Cooperativo con roles' : 'Cooperativo') : null,
+      ].filter(Boolean),
     );
   }
 

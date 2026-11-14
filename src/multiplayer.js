@@ -11,12 +11,19 @@ import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
 
 /**
- * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios): si
- * dos clientes tienen versiones distintas del juego, no coincide.
+ * Versión del protocolo de la sala y de la sincronización. 2: cada mensaje de
+ * la partida lleva su ronda (revancha en la misma sala) y el anfitrión avisa
+ * al salir (DEV05).
+ */
+export const PROTOCOL = 2;
+
+/**
+ * Huella de los parámetros del motor (MECH, perfiles, CONFIG y edificios) y
+ * del protocolo: si dos clientes tienen versiones distintas, no coincide.
  */
 const FINGERPRINT = (() => {
   // Con la lista de mapas: una versión sin los mapas nuevos no puede jugar con esta
-  const s = JSON.stringify([MECH, PROFILES, CONFIG, BUILDINGS, MAP_IDS]);
+  const s = JSON.stringify([PROTOCOL, MECH, PROFILES, CONFIG, BUILDINGS, MAP_IDS]);
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);
@@ -46,6 +53,7 @@ export function checkStartPayload(d) {
     ok: true,
     payload: {
       seed: d.seed >>> 0,
+      ronda: Number.isInteger(d.ronda) && d.ronda > 0 ? d.ronda : 1,
       ruleset: mine,
       settings: {
         mapSize: MAP_IDS.includes(d.settings.mapSize) ? d.settings.mapSize : 'mundo',
@@ -245,6 +253,10 @@ export class Sala {
     this.info = cleanRoomInfo(info, `Sala de ${me && me.name ? me.name : 'Trinchera'}`);
     /** Revisión de la configuración: sube cuando cambia algo que afecta a la partida. */
     this.rev = 1;
+    /** Ronda de la sala: la revancha es la siguiente (mismo código, semilla nueva). */
+    this.ronda = 1;
+    this.playedRonda = 0; // la que jugó este cliente (para saber si ya hay revancha)
+    this.minRonda = 1; // un invitado no acepta inicios de rondas anteriores
     this._key = gameplayKey(settings);
     this.ready = false;
     this.observer = false;
@@ -270,7 +282,7 @@ export class Sala {
     this.unsubs.push(this.room.on('cancelar', (m) => this._onCancelMsg(m)));
     if (this.room.onConnection) this.unsubs.push(this.room.onConnection((on) => this.onConnection?.(on)) || (() => {}));
     if (this.isHost) {
-      await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now(), rango: this.rankClaim || null });
+      await this.room.presence({ jugador: this.me, anfitrion: true, ajustes: this.settings, rev: this.rev, ronda: this.ronda, info: this.info, estado: 'vestibulo', version: FINGERPRINT, desde: Date.now(), rango: this.rankClaim || null });
       this._advertise();
     } else if (!this.observer) await this.join();
     this._tick = setInterval(() => this._watchCountdown(), 250);
@@ -521,6 +533,7 @@ export class Sala {
     const payload = {
       v: 1,
       seed,
+      ronda: this.ronda,
       // Versión de reglas con la que simula el anfitrión: cada invitado la comprueba
       ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
@@ -556,10 +569,53 @@ export class Sala {
       }
       return;
     }
+    // Un inicio repetido de una ronda anterior (se reenvía unos segundos) no vale tras volver a la sala
+    if (!msg.isMe && check.payload.ronda < this.minRonda) return;
     this._startHandled = true;
     this.started = true;
     this.countdown = null;
+    this.playedRonda = check.payload.ronda;
     this.onStart?.(check.payload, msg.isMe ? this.myPeer() : msg.peer);
+  }
+
+  // ------------------------------------------------------------ revancha
+
+  /**
+   * Anfitrión: abre la revancha en el mismo vestíbulo (mismo código, enlace,
+   * mapa, reglas y visibilidad). Sube la ronda y la revisión, así que todos
+   * confirman «Estoy listo» de nuevo; la cuenta atrás reparte semilla nueva.
+   */
+  reopen() {
+    if (!this.isHost || !this.room) return;
+    clearInterval(this._startTimer);
+    this.started = false;
+    this._startHandled = false;
+    this.payload = null;
+    this.countdown = null;
+    this.ronda++;
+    this.rev++;
+    this.room.presence({ estado: 'vestibulo', ronda: this.ronda, rev: this.rev });
+    this._advertise();
+    this.onChange?.();
+  }
+
+  /** Invitado: ¿ha abierto ya el anfitrión la revancha de la ronda que jugamos? */
+  rematchOpen() {
+    const h = this.host();
+    return !!(h && !h.stale && h.presence.estado === 'vestibulo' && (h.presence.ronda || 1) > this.playedRonda);
+  }
+
+  /** Invitado: vuelve al vestíbulo para la revancha (sin «listo»: hay que confirmar otra vez). */
+  async rejoin() {
+    if (this.isHost || !this.room) return;
+    const h = this.host();
+    this.started = false;
+    this._startHandled = false;
+    this.countdown = null;
+    this.ready = false;
+    this.minRonda = Math.max(this.playedRonda + 1, (h && h.presence.ronda) || 1);
+    await this.room.presence({ listo: null });
+    this.onChange?.();
   }
 
   async leave() {
@@ -626,8 +682,10 @@ export class NetSync {
    * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
    * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, now = () => performance.now() }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, ronda = 1, now = () => performance.now() }) {
     this.room = room;
+    /** Ronda de la sala: los mensajes de otra ronda (una revancha, o restos de la anterior) se descartan. */
+    this.ronda = ronda;
     this.game = game;
     this.isHost = isHost;
     this.hostPeer = hostPeer;
@@ -639,6 +697,7 @@ export class NetSync {
     this.status = ''; // texto para la interfaz cuando hay problemas
     this.desynced = false;
     this.hostGone = false;
+    this.hostGoneReason = '';
     this.onHostLeft = null;
     this.myPeer = myPeer;
     /** true en el juego: el invitado reproduce los turnos a ritmo constante (ver CATCHUP_TURNS). */
@@ -654,14 +713,14 @@ export class NetSync {
       this.acc = 0;
       this.last = now();
       this.lastResend = new Map();
-      this.unsubs.push(room.on('intent', (m) => this._onIntent(m)));
-      this.unsubs.push(room.on('resend', (m) => this._onResend(m)));
-      this.unsubs.push(room.on('hash', (m) => this._onHash(m)));
+      this.unsubs.push(room.on('intent', (m) => this._mine(m) && this._onIntent(m)));
+      this.unsubs.push(room.on('resend', (m) => this._mine(m) && this._onResend(m)));
+      this.unsubs.push(room.on('hash', (m) => this._mine(m) && this._onHash(m)));
       // Antes del primer turno, espera a que todos hayan cargado el mapa (si
       // no, quien carga despacio pierde parte del despliegue)
       this.waiting = new Set([...peerToPlayer.keys()].filter((peer) => peer !== hostPeer && peer !== myPeer));
       this.waitStart = now();
-      this.unsubs.push(room.on('cargado', (m) => this.waiting.delete(m.peer)));
+      this.unsubs.push(room.on('cargado', (m) => this._mine(m) && this.waiting.delete(m.peer)));
       this.unsubs.push(room.onPeers((c) => {
         for (const p of c.left) this.waiting.delete(p.peer);
       }));
@@ -675,26 +734,36 @@ export class NetSync {
       this.lastResendAsk = -Infinity;
       this.playLast = now();
       this.playAcc = TICK_MS; // el primer turno se juega en cuanto llega
-      this.unsubs.push(room.on('turn', (m) => this._onTurn(m)));
+      this.unsubs.push(room.on('turn', (m) => this._mine(m) && this._onTurn(m)));
       // Hashes del anfitrión, para que el invitado sepa si se ha desincronizado
       this.myHashes = new Map();
       this.hostHashes = new Map();
-      this.unsubs.push(room.on('hash', (m) => this._onHostHash(m)));
+      this.unsubs.push(room.on('hash', (m) => this._mine(m) && this._onHostHash(m)));
+      // El anfitrión avisa al salir: interrupción explícita (no un corte de red)
+      this.unsubs.push(
+        room.on('adios', (m) => {
+          if (!this._mine(m) || m.peer !== this.hostPeer || this.hostGone) return;
+          this.hostGone = true;
+          this.hostGoneReason = 'abandono';
+          this.onHostLeft?.('abandono');
+        }),
+      );
       // Avisa de que ya ha cargado (y repite hasta que llegue el primer turno)
       const announce = () => {
         if (this.game.ticks > 0 || this.turns.size || this.hostGone) {
           clearInterval(this._loadTimer);
           return;
         }
-        room.emit('cargado', {}).catch(() => {});
+        room.emit('cargado', { r: this.ronda }).catch(() => {});
       };
       this._loadTimer = setInterval(announce, 1000);
       announce();
       this.unsubs.push(
         room.onPeers((c) => {
-          if (c.left.some((p) => p.peer === this.hostPeer)) {
+          if (c.left.some((p) => p.peer === this.hostPeer) && !this.hostGone) {
             this.hostGone = true;
-            this.onHostLeft?.();
+            this.hostGoneReason = 'conexion';
+            this.onHostLeft?.('conexion');
           }
         }),
       );
@@ -710,8 +779,19 @@ export class NetSync {
       this.queue.push({ ...clean, playerId: this.myPlayerId, u });
     } else {
       this.outbox.set(u, { intent: clean, sentAt: this.now() });
-      this.room.emit('intent', { u, i: clean }).catch(() => {});
+      this.room.emit('intent', { r: this.ronda, u, i: clean }).catch(() => {});
     }
+  }
+
+  /** ¿Es de esta ronda? (los mensajes sin ronda son de la 1) */
+  _mine(m) {
+    return !!m && ((m.data && m.data.r) || 1) === this.ronda;
+  }
+
+  /** Anfitrión: avisa a todos de que deja la partida (la interrupción se ve al momento y con su motivo). */
+  announceLeave(motivo = 'abandono') {
+    if (!this.isHost) return;
+    this.room.emit('adios', { r: this.ronda, motivo }).catch(() => {});
   }
 
   // ---- anfitrión
@@ -741,7 +821,7 @@ export class NetSync {
       turns.push(entry);
       bytes += size;
     }
-    if (turns.length) this.room.emit('turn', { turns }).catch(() => {});
+    if (turns.length) this.room.emit('turn', { r: this.ronda, turns }).catch(() => {});
   }
 
   _onHash(m) {
@@ -765,7 +845,7 @@ export class NetSync {
       this.hashes.set(t, h);
       if (this.hashes.size > 60) this.hashes.delete(t - HASH_EVERY * 60);
       // También a los invitados: cada uno comprueba si sigue sincronizado
-      this.room.emit('hash', { t, h, host: true }).catch(() => {});
+      this.room.emit('hash', { r: this.ronda, t, h, host: true }).catch(() => {});
     }
     const entry = [t, intents];
     const size = JSON.stringify(this.batch).length + JSON.stringify(entry).length;
@@ -778,7 +858,7 @@ export class NetSync {
     if (!this.batch.length) return;
     // bg: la pestaña del anfitrión está en segundo plano (los invitados lo avisan)
     const bg = typeof document !== 'undefined' && document.hidden ? 1 : 0;
-    this.room.emit('turn', bg ? { turns: this.batch, bg } : { turns: this.batch }).catch(() => {});
+    this.room.emit('turn', bg ? { r: this.ronda, turns: this.batch, bg } : { r: this.ronda, turns: this.batch }).catch(() => {});
     this.batch = [];
   }
 
@@ -803,7 +883,7 @@ export class NetSync {
     const t = this.game.ticks;
     if (t % HASH_EVERY === 0) {
       const h = stateHash(this.game);
-      this.room.emit('hash', { t, h }).catch(() => {});
+      this.room.emit('hash', { r: this.ronda, t, h }).catch(() => {});
       this.myHashes.set(t, h);
       if (this.myHashes.size > 60) this.myHashes.delete(t - HASH_EVERY * 60);
       this._compareHash(t);
@@ -878,6 +958,8 @@ export class NetSync {
     }
     let steps = 0;
     const ready = this._ready();
+    // Muchos turnos pendientes (tras un corte o con la pestaña en segundo plano): se recuperan de golpe
+    if (ready > CATCHUP_TURNS) this.status = 'Sincronizando partida…';
     if (!this.smooth || ready > CATCHUP_TURNS) {
       // Sin suavizado, o muy por detrás: todo lo que haya (hasta 60 por llamada),
       // dejando el colchón para no quedarse sin turnos al momento siguiente
@@ -904,18 +986,21 @@ export class NetSync {
     this.playLast = now;
     if (steps) {
       this.lastAdvance = now;
-      this.status = this.desynced
-        ? 'Te has desincronizado del anfitrión: lo que ves puede no coincidir con los demás'
-        : this.hostBackground
-          ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
-          : '';
+      // (mientras se recuperan muchos turnos se sigue viendo «Sincronizando partida…»)
+      if (this._ready() <= CATCHUP_TURNS) {
+        this.status = this.desynced
+          ? 'Te has desincronizado del anfitrión: lo que ves puede no coincidir con los demás'
+          : this.hostBackground
+            ? 'El anfitrión tiene la partida en segundo plano: puede ir más lenta'
+            : '';
+      }
     }
     // Falta el siguiente turno pero ya llegan otros posteriores: se ha perdido
     // un mensaje, se pide enseguida. Si no llega nada, se pide pasado un rato.
     const gap = this.turns.size > 0 && !this.turns.has(this.game.ticks + 1);
     if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !steps && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
       this.lastResendAsk = now;
-      this.room.emit('resend', { from: this.game.ticks + 1 }).catch(() => {});
+      this.room.emit('resend', { r: this.ronda, from: this.game.ticks + 1 }).catch(() => {});
     }
     if (!steps) {
       if (offline) this.status = OFFLINE_NOTE;
@@ -925,7 +1010,7 @@ export class NetSync {
     for (const [u, entry] of this.outbox) {
       if (now - entry.sentAt > INTENT_RETRY_MS) {
         entry.sentAt = now;
-        this.room.emit('intent', { u, i: entry.intent }).catch(() => {});
+        this.room.emit('intent', { r: this.ronda, u, i: entry.intent }).catch(() => {});
       }
     }
   }

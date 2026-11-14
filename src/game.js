@@ -228,6 +228,19 @@ export class Game {
     return this.players.filter((p) => p && p.alive);
   }
 
+  /**
+   * Acaba ya el despliegue (solo partidas contra la IA: «Empezar partida»).
+   * El turno siguiente empieza la partida, como al terminar la cuenta atrás.
+   */
+  skipSpawn() {
+    if (this.phase === 'spawn') this.ticks = Math.max(this.ticks, CONFIG.spawnTicks - 1);
+  }
+
+  /** Aplica las órdenes pendientes sin avanzar el turno (el despliegue del tutorial, en pausa). */
+  applyIntentsNow() {
+    if (this.phase === 'spawn') this._applyIntents();
+  }
+
   /** Arranca la fase de despliegue: los bots eligen ya su posición. */
   start() {
     this.ticks = 0;

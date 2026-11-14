@@ -213,3 +213,42 @@ test('el invitado se entera si se desincroniza', () => {
   host.stop();
   guest.stop();
 });
+
+test('rondas: los mensajes de una ronda no afectan a la siguiente; el aviso de salida del anfitrión llega con su motivo', () => {
+  const net = fakeNetwork(0);
+  const hostCh = net.channel('h');
+  const guestCh = net.channel('g');
+  const peerToPlayer = new Map([['h', 1], ['g', 2]]);
+  // Ronda 1 (la que acaba) y ronda 2 (la revancha) a la vez en el mismo canal
+  const old = new NetSync(hostCh, makeGame(5), { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, ronda: 1 });
+  const hostGame = makeGame(6);
+  const guestGame = makeGame(6);
+  const host = new NetSync(hostCh, hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, ronda: 2 });
+  const guest = new NetSync(guestCh, guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 2, peerToPlayer, ronda: 2 });
+  old._stopTicker();
+  host._stopTicker();
+  // La ronda 1 sigue mandando turnos (para los rezagados): la ronda 2 no los coge
+  for (let i = 0; i < 6; i++) old._hostStep();
+  old._flush();
+  assert.equal(guest.turns.size, 0, 'turnos de la ronda anterior descartados');
+  // Una acción de la ronda 2 no entra en la cola de la ronda 1
+  guest.localIntent({ type: 'emoji', targetId: 1, emoji: '👍' });
+  assert.equal(old.queue.length, 0);
+  assert.equal(host.queue.length, 1);
+  // Los turnos de la ronda 2 sí
+  for (let i = 0; i < 4; i++) host._hostStep();
+  host._flush();
+  assert.ok(guest.turns.size > 0);
+  // Salida explícita del anfitrión: el invitado lo sabe al momento y con su motivo, una vez
+  const reasons = [];
+  guest.onHostLeft = (r) => reasons.push(r);
+  old.announceLeave('abandono'); // de la ronda 1: no cuenta
+  assert.deepEqual(reasons, []);
+  host.announceLeave('abandono');
+  host.announceLeave('abandono');
+  assert.deepEqual(reasons, ['abandono']);
+  assert.equal(guest.hostGoneReason, 'abandono');
+  old.stop();
+  host.stop();
+  guest.stop();
+});

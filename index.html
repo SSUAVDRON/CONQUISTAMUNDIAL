@@ -27,13 +27,13 @@
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
       "./src/ficha-ui.js": "./src/ficha-ui.js?v=de1a42378c",
       "./src/fichas.js": "./src/fichas.js?v=1897af15c9",
-      "./src/fin.js": "./src/fin.js?v=72a8fd1796",
-      "./src/format.js": "./src/format.js?v=66b8e86f09",
+      "./src/fin.js": "./src/fin.js?v=8ad71316f7",
+      "./src/format.js": "./src/format.js?v=08658847e2",
       "./src/fx.js": "./src/fx.js?v=ab7609d597",
-      "./src/game.js": "./src/game.js?v=02e8c81444",
+      "./src/game.js": "./src/game.js?v=81aeab2c9e",
       "./src/guia.js": "./src/guia.js?v=ca86666a88",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=a53e90555a",
+      "./src/home.js": "./src/home.js?v=f0e8263326",
       "./src/icons.js": "./src/icons.js?v=b6dac66058",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
@@ -41,7 +41,7 @@
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
       "./src/lugares.js": "./src/lugares.js?v=5289949ba5",
-      "./src/main.js": "./src/main.js?v=53861ddad9",
+      "./src/main.js": "./src/main.js?v=fdfc166476",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
@@ -49,7 +49,7 @@
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ab2918104e",
       "./src/mqtt.js": "./src/mqtt.js?v=822e5b7211",
-      "./src/multiplayer.js": "./src/multiplayer.js?v=0a8dcd8ea3",
+      "./src/multiplayer.js": "./src/multiplayer.js?v=21ff7bb3b4",
       "./src/musica.js": "./src/musica.js?v=1c7e053d4e",
       "./src/names.js": "./src/names.js?v=a3419d11bb",
       "./src/net.js": "./src/net.js?v=4c4fd542c2",
@@ -57,9 +57,10 @@
       "./src/player.js": "./src/player.js?v=829ea9c608",
       "./src/portada.js": "./src/portada.js?v=92e46a1eb5",
       "./src/presentacion.js": "./src/presentacion.js?v=853ea16b6c",
-      "./src/profile.js": "./src/profile.js?v=4551c371f3",
+      "./src/profile.js": "./src/profile.js?v=53671defda",
       "./src/rangos.js": "./src/rangos.js?v=499f8b2a21",
       "./src/render.js": "./src/render.js?v=9317850365",
+      "./src/repeticion.js": "./src/repeticion.js?v=228345d7cc",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
       "./src/rios.js": "./src/rios.js?v=ee313e0dbb",
@@ -70,13 +71,13 @@
       "./src/tecnologias.js": "./src/tecnologias.js?v=e5f4d0a332",
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
-      "./src/tutorial.js": "./src/tutorial.js?v=c7841f8591",
-      "./src/ui.js": "./src/ui.js?v=3c1b1c2dfb"
+      "./src/tutorial.js": "./src/tutorial.js?v=6b1ba4421a",
+      "./src/ui.js": "./src/ui.js?v=754a765915"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=345104add0">
+  <link rel="stylesheet" href="css/estilo.css?v=a49ee19cbe">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -219,7 +220,7 @@
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 L13 8 L4 13.5 Z" fill="currentColor"/></svg>
                 Jugar ahora
               </button>
-              <button type="button" class="secundario btn-heroe" id="btn-repetir"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6 A5.3 5.3 0 1 1 11.6 4.2 M12.2 1.6 V4.8 H9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Volver a jugar</button>
+              <button type="button" class="secundario btn-heroe" id="btn-repetir" title="Repetir la configuración de tu última partida (mismo mapa, rivales y reglas; reparto nuevo)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8.6 A5.3 5.3 0 1 1 11.6 4.2 M12.2 1.6 V4.8 H9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Repetir partida</button>
               <button type="button" class="secundario btn-heroe" id="btn-guia"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3 c2 -1 4 -1 6 0.5 c2 -1.5 4 -1.5 6 -0.5 v10 c-2 -1 -4 -1 -6 0.5 c-2 -1.5 -4 -1.5 -6 -0.5 Z M8 3.5 v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Guía</button>
               <button type="button" class="secundario btn-heroe" id="btn-tutorial"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6 L8 3 L15 6 L8 9 Z M4 7.5 V11 c1 1 2.5 1.5 4 1.5 s3 -0.5 4 -1.5 V7.5 M14 6.5 V10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Tutorial</button>
             </div>
@@ -769,6 +770,7 @@
         <div class="cuerpo-plegable"><div>
           <div class="lb-cab" aria-hidden="true"><span class="pos">#</span><span></span><span class="nom">Nación</span><span class="pct">Tierra</span><span class="oro">Oro</span><span class="tro">Tropas</span></div>
           <ol id="lista-clasificacion"></ol>
+          <p id="lb-colonias" class="lb-colonias" hidden></p>
         </div></div>
       </aside>
       <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
@@ -785,7 +787,7 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9V6.2M6.5 2h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span id="reloj">0:00</span>
       </span>
-      <span class="dato" title="Tu puesto por territorio entre las naciones en pie">
+      <span class="dato" id="dato-puesto-caja" title="Tu puesto entre las naciones (el mismo que en el informe final); las colonias se cuentan aparte">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7v3a3.5 3.5 0 0 1-7 0zM8 9v3M5.5 13.5h5M4.5 3.5H2.5a2 2 0 0 0 2 2.5M11.5 3.5h2a2 2 0 0 1-2 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
         <span id="dato-puesto">—</span>
       </span>
@@ -969,6 +971,10 @@
         <button type="button" id="tut-saltar" class="tut-saltar">Saltar tutorial</button>
       </div>
       <p id="tut-texto" class="tut-texto"></p>
+      <div id="tut-despliegue" class="tut-despliegue" hidden>
+        <span id="tut-reloj" class="tut-reloj"></span>
+        <button type="button" id="tut-auto" class="dp-auto">🎲 Elegir por mí</button>
+      </div>
       <div class="tut-pie">
         <div id="tut-puntos" class="tut-puntos" aria-hidden="true"></div>
         <button type="button" id="tut-paso-saltar" class="tut-saltar">Saltar paso</button>

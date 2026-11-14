@@ -260,8 +260,9 @@ export const DAILY = [
   { id: 'eliminar6', icon: '⚔️', name: 'Elimina 6 naciones o colonias', need: 6, coins: 120, step: (r) => r.kills },
   { id: 'construir8', icon: '🏗️', name: 'Construye 8 edificios', need: 8, coins: 100, step: (r) => r.built },
   { id: 'territorio20', icon: '🗺️', name: 'Llega al 20 % de la tierra en una partida', need: 1, coins: 150, step: (r) => (r.maxShare >= 0.2 ? 1 : 0) },
-  { id: 'investigar3', icon: '🔬', name: 'Investiga 3 tecnologías', need: 3, coins: 120, step: (r) => r.techs || 0 },
-  { id: 'puntos3', icon: '🧭', name: 'Toma 3 puntos estratégicos', need: 3, coins: 120, step: (r) => r.pointsTaken || 0 },
+  // `perfil`: solo se puede cumplir con ese perfil de reglas (en Clásico no hay tecnologías ni puntos estratégicos; DEV08)
+  { id: 'investigar3', icon: '🔬', name: 'Investiga 3 tecnologías', need: 3, coins: 120, perfil: 'trinchera', step: (r) => r.techs || 0 },
+  { id: 'puntos3', icon: '🧭', name: 'Toma 3 puntos estratégicos', need: 3, coins: 120, perfil: 'trinchera', step: (r) => r.pointsTaken || 0 },
   { id: 'capital', icon: '👑', name: 'Conquista una capital', need: 1, coins: 150, step: (r) => r.capitalsTaken || 0 },
   { id: 'pacto', icon: '📜', name: 'Firma un pacto o una paz', need: 1, coins: 100, step: (r) => r.pacts || 0 },
   { id: 'desembarcos2', icon: '⚓', name: 'Desembarca 2 veces', need: 2, coins: 100, step: (r) => r.landings },
@@ -672,7 +673,8 @@ export function recordGame(profile, r) {
 
   profile.historial.unshift({
     fecha: Date.now(),
-    resultado: r.won ? 'victoria' : r.alliedWin ? 'victoria en alianza' : r.alive ? 'abandonada' : 'derrota',
+    // (si la partida terminó contigo en pie sin ganar, es una derrota, no un abandono)
+    resultado: r.interrupted ? 'interrumpida' : r.won ? 'victoria' : r.alliedWin ? 'victoria en alianza' : r.alive && !r.ended ? 'abandonada' : 'derrota',
     pct: r.maxShare,
     duracion: Math.round(r.seconds),
     mapa: r.mapSize,
@@ -685,6 +687,8 @@ export function recordGame(profile, r) {
     edif: r.built || 0,
     curva: Array.isArray(r.curve) ? r.curve.slice(0, 40) : [],
     clasif: r.ranked || undefined,
+    // DEV01: la configuración con la que se jugó (copiada: editar preferencias después no la cambia)
+    config: r.config ? JSON.parse(JSON.stringify(r.config)) : undefined,
     reto: r.challenge ? { de: String(r.challenge.n || '').slice(0, 18), meta: r.challenge.p, superado: !!r.challengeBeaten } : undefined,
   });
   profile.historial.length = Math.min(profile.historial.length, HISTORY_MAX);

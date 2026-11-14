@@ -42,6 +42,7 @@ import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js'
 import { challengeBeaten, challengeLink, parseChallenge } from './reto.js';
 import { RANKED_AI, RANKED_ROOM, aiDifficultyFor, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName } from './rangos.js';
 import { presentMatch } from './presentacion.js';
+import { configSnapshot } from './repeticion.js';
 import { INVITE_MS, Matchmaker } from './emparejamiento.js';
 
 const canvas = document.getElementById('lienzo');
@@ -242,6 +243,16 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   // Las reglas pueden fijar cuántas colonias; si no, según la tierra del mapa
   game.addColonies(game.rules.colonies ?? colonyCount(map.landCount, bots));
   game.start();
+  // Instantánea de la configuración (DEV01): para repetirla tal cual desde el historial
+  state.config = configSnapshot({
+    mode: humans.length > 1 ? 'online' : 'ia',
+    mapSize,
+    nations: game.players.filter((p) => p && !p.isHuman && !p.weak).length,
+    colonies: game.players.filter((p) => p && p.weak).length,
+    difficulty,
+    rules: game.rules,
+    seed,
+  });
 
   state.game = game;
   state.human = game.human;
@@ -390,6 +401,8 @@ async function startGame(opts) {
       },
       { label: 'Cavando trincheras…', run: (game) => game },
     ]);
+    // Qué partida es (para repetirla desde el historial)
+    if (state.config) state.config.modo = opts.tutorial ? 'tutorial' : opts.ranked ? 'clasificatoria' : opts.challenge ? 'reto' : 'ia';
     // Antes de empezar: tu tarjeta frente a la IA y las naciones en juego (el tutorial va directo)
     if (!opts.tutorial) await presentMatch(soloPresentation(game, opts));
     if (state.game !== game) return;
@@ -401,6 +414,8 @@ async function startGame(opts) {
 }
 
 const DIFF_NAMES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' };
+/** «1 nación» / «3 naciones». */
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /** Tu tarjeta para la presentación (con tu rango si es clasificatoria). */
 function myCard(ranked) {
@@ -423,9 +438,9 @@ function soloPresentation(game, opts) {
   return {
     kicker: ranked ? `Clasificatoria · ${seasonName(profile.rango.temporada)}` : opts.challenge ? 'Reto' : 'Partida contra la IA',
     title: opts.title && !ranked ? opts.title : mapLabel(opts.mapSize),
-    details: `${nations.length} naciones · ${colonies} colonias · perfil ${prof} · IA ${dif}`,
+    details: `${plural(nations.length, 'nación', 'naciones')} · ${plural(colonies, 'colonia', 'colonias')} · perfil ${prof} · IA ${dif}`,
     players: [myCard(ranked)],
-    ai: { name: 'La IA', title: `Ejércitos de ${nations.length} naciones`, note: `Dificultad ${dif}`, color: '#b5402f', emblem: { shape: 'escudo', symbol: 'espadas', bg: '#3a1418', fg: '#f2b33d', flag: '' }, frame: ranked ? 'oro' : 'bronce', banner: 'volcan' },
+    ai: { name: 'La IA', title: `Ejércitos de ${nations.length} ${nations.length === 1 ? 'nación' : 'naciones'}`, note: `Dificultad ${dif}`, color: '#b5402f', emblem: { shape: 'escudo', symbol: 'espadas', bg: '#3a1418', fg: '#f2b33d', flag: '' }, frame: ranked ? 'oro' : 'bronce', banner: 'volcan' },
     nations,
     ranked,
     sound,
@@ -437,6 +452,11 @@ function tutorialState() {
 }
 
 const tutorial = new Tutorial({
+  // El despliegue del tutorial: empezar ya (sin esperar la cuenta atrás) y «Elegir por mí»
+  onStartNow: () => {
+    if (!state.net && state.game && state.game.phase === 'spawn') state.game.skipSpawn();
+  },
+  onAuto: () => document.getElementById('aviso-auto')?.click(),
   onFinish() {
     profile.tutorial = true;
     const ach = grantAchievement(profile, 'recluta');
@@ -524,11 +544,88 @@ function applySettings() {
 // --------------------------------------------------------- multijugador
 
 function leaveOnline() {
-  if (state.net) state.net.stop();
+  clearInterval(state.rematchWatch);
+  const net = state.net;
+  const sala = state.sala;
+  // El anfitrión deja una partida en curso: avisa a todos (interrupción
+  // explícita, no un corte) y sale un momento después, para que llegue el aviso
+  const hostAbandon = !!(net && net.isHost && state.game && !state.demo && state.game.phase !== 'ended');
+  if (hostAbandon) net.announceLeave('abandono');
+  if (net) net.stop();
+  if (state.oldNet) state.oldNet.stop();
+  state.oldNet = null;
   state.net = null;
-  if (state.sala) state.sala.leave();
+  if (sala) {
+    if (hostAbandon) setTimeout(() => sala.leave(), 400);
+    else sala.leave();
+  }
   state.sala = null;
   state.online = false;
+}
+
+/**
+ * Botones de la pantalla final en línea (DEV05): solo lo que se puede hacer.
+ * `ended`: la ronda ha terminado (si no, te han derrotado y sigue para el resto).
+ */
+function onlineEndActions(ended) {
+  if (!state.online) return {};
+  const sala = state.sala;
+  const host = !!(sala && sala.isHost);
+  if (!ended) return { nueva: { hidden: true }, menu: { label: host ? 'Salir (se interrumpe para todos)' : 'Salir a Multijugador' } };
+  if (state.ranked || !sala) return { nueva: { hidden: true }, menu: { label: 'Volver a Multijugador' } };
+  if (host) return { nueva: { label: 'Abrir revancha', title: 'Vuelve al vestíbulo con el mismo código, mapa y reglas; la próxima ronda tiene semilla nueva' }, menu: { label: 'Salir a Multijugador' } };
+  const open = sala.rematchOpen();
+  return { nueva: { label: open ? 'Unirse a la revancha' : 'Esperando la revancha…', disabled: !open, title: open ? '' : 'Cuando el anfitrión la abra, podrás unirte' }, menu: { label: 'Salir a Multijugador' } };
+}
+
+/** Invitado con la pantalla final abierta: el botón se activa cuando el anfitrión abre la revancha. */
+function watchRematch() {
+  clearInterval(state.rematchWatch);
+  if (!state.online || !state.sala || state.sala.isHost || state.ranked) return;
+  const sala = state.sala;
+  state.rematchWatch = setInterval(() => {
+    if (state.sala !== sala || !state.online) clearInterval(state.rematchWatch);
+    else ui.setEndActions(onlineEndActions(true));
+  }, 700);
+}
+
+/** De la pantalla final al vestíbulo de la misma sala (revancha). */
+function backToRoom() {
+  clearInterval(state.rematchWatch);
+  finishGame();
+  ui.hideEnd();
+  tutorial.stop();
+  const net = state.net;
+  if (net && net.isHost) {
+    // Un invitado rezagado aún puede pedir los últimos turnos de esta ronda: se atienden un minuto
+    if (state.oldNet) state.oldNet.stop();
+    state.oldNet = net;
+    setTimeout(() => {
+      net.stop();
+      if (state.oldNet === net) state.oldNet = null;
+    }, 60000);
+  } else if (net) net.stop();
+  state.net = null;
+  state.online = false;
+  state.ranked = null;
+  startDemo({ background: true });
+  home.showLobby();
+}
+
+/** Anfitrión: abre la revancha en el mismo vestíbulo (DEV05). */
+function openRematch() {
+  const sala = state.sala;
+  if (!sala || !sala.isHost) return;
+  backToRoom();
+  sala.reopen();
+}
+
+/** Invitado: vuelve a la sala para la revancha (hay que confirmar «Estoy listo» otra vez). */
+function joinRematch() {
+  const sala = state.sala;
+  if (!sala || sala.isHost || !sala.rematchOpen()) return;
+  backToRoom();
+  sala.rejoin();
 }
 
 /** Ajustes de partida por defecto para una sala (los del jugador). */
@@ -803,7 +900,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     await presentMatch({
       kicker: ranked ? `Sala clasificatoria · ${seasonName(profile.rango.temporada)}` : `Multijugador · sala ${sala.code.toUpperCase()}`,
       title: mapLabel(payload.settings.mapSize),
-      details: `${payload.players.length} jugadores · ${nations.length} naciones de la IA · perfil ${prof}`,
+      details: `${plural(payload.players.length, 'jugador', 'jugadores')} · ${plural(nations.length, 'nación de la IA', 'naciones de la IA')} · perfil ${prof}`,
       players: payload.players.map((p) => ({
         ...p,
         nameColor: nameColorOf({ colorNombre: p.nameColor, color: p.color }),
@@ -822,19 +919,27 @@ async function beginOnlineGame(sala, payload, hostPeer) {
   const groups = coopGroups(payload.players.length, game.rules.coop);
   const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true });
+  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true, ronda: payload.ronda || 1 });
   // Rivales humanos para el Elo: su MMR (verificado) y su puesto al acabar
   state.rankedRivals = () =>
     payload.players
       .map((p, i) => ({ p, player: game.players[playerOf(i)] }))
       .filter(({ p }) => p.peer !== myPeer)
       .map(({ p, player }) => ({ mmr: state.rankedMmr?.get(p.peer) ?? 1000, place: player ? placement(game, player).place : Infinity }));
-  state.net.onHostLeft = () => {
-    if (game.phase === 'ended') return;
+  // Se va el anfitrión (aviso explícito) o se pierde su conexión: la partida
+  // se interrumpe con su informe completo (duración real, cifras, motivo y si
+  // cuenta), una sola vez aunque lleguen avisos repetidos (DEV05)
+  state.net.onHostLeft = (reason) => {
+    if (game.phase === 'ended' || state.game !== game || state.endShown) return;
+    state.endShown = true;
     // Si se va el anfitrión, la clasificatoria no cuenta para nadie
     if (state.ranked) state.rankedVoid = true;
-    const progress = finishGame();
-    ui.showEnd('Partida interrumpida', 'El anfitrión ha abandonado la partida.', progress);
+    const progress = finishGame({ interrupted: true });
+    const extra = endExtra('interrumpida');
+    extra.motivo = reason === 'abandono' ? 'El anfitrión ha abandonado la partida.' : 'Se ha perdido la conexión con el anfitrión.';
+    extra.validez = state.ranked ? 'Clasificatoria anulada: no cuenta para el rango de nadie.' : 'La ronda no se ha completado: queda en tu historial como interrumpida.';
+    extra.actions = { nueva: { hidden: true }, seguir: { hidden: true }, menu: { label: 'Volver a Multijugador' } };
+    ui.showEnd('Partida interrumpida', `Se interrumpió a los ${formatTime(extra.stats.seconds)} de partida.`, progress, extra);
   };
   enterGame(game);
 }
@@ -994,7 +1099,9 @@ function gameResult() {
     victory: game.rules.victory,
     alive: human.alive,
     survivedSeconds: survived,
+    ended: game.phase === 'ended',
     rivals: game.players.length - 2,
+    config: state.config && state.config.semilla === (game.seed >>> 0) ? state.config : null,
   };
 }
 
@@ -1006,15 +1113,20 @@ function endFanfare(progress, ms) {
   if (name) setTimeout(() => sound.play(name, 1, 0), ms);
 }
 
-function finishGame() {
+/**
+ * Anota la partida en el perfil (una sola vez por partida). `interrupted`:
+ * la interrumpió otro (el anfitrión se fue): cuenta aunque dure poco.
+ */
+function finishGame({ interrupted = false } = {}) {
   const { game, human } = state;
   if (state.recorded || state.demo || !game || !human) return null;
   state.recorded = true;
   if (state.rec && state.rec.game === game) state.rec.finish();
   const result = gameResult();
+  result.interrupted = interrupted;
   applyRanked(result);
-  // Abandonos de menos de un minuto no cuentan
-  if (game.phase !== 'ended' && human.alive && result.seconds < 60) return null;
+  // Abandonos tuyos de menos de un minuto no cuentan
+  if (!interrupted && game.phase !== 'ended' && human.alive && result.seconds < 60) return null;
   const out = recordGame(profile, result);
   scheduleCloudSync(0);
   for (const a of out.achievements) ui.pushEvent({ text: `${a.icon} Logro: ${a.name}`, kind: 'good' });
@@ -1249,14 +1361,18 @@ function checkEnd() {
     camera.flyTo(map.width / 2, map.height / 2, fit, 1300);
     const won = game.winner === human || !!(game.winningAlliance && game.winningAlliance.includes(human));
     const extra = endExtra(won ? 'victoria' : 'fin');
+    extra.actions = onlineEndActions(true);
     setTimeout(() => {
-      if (state.game === game) ui.showEnd(title, text, progress, extra);
+      if (state.game !== game) return;
+      ui.showEnd(title, text, progress, extra);
+      watchRematch();
     }, 1500);
     endFanfare(progress, 2600);
   } else if (!human.alive && !state.defeatShown && game.phase !== 'ended') {
     state.defeatShown = true;
     const progress = finishGame();
     const extra = endExtra('derrota');
+    extra.actions = onlineEndActions(false);
     setTimeout(() => {
       if (state.game === game) ui.showEnd('Has sido derrotado', `Aguantaste ${formatTime(extra.stats.seconds)}.\nTu máximo: ${formatPercent(human.maxTilesReached / land)} del territorio.`, progress, extra);
     }, 1200);
@@ -1821,12 +1937,19 @@ ui.on({
       openGameMenu();
       return;
     }
+    const wasOnline = state.online;
     finishGame();
     tutorial.stop();
     startDemo();
+    if (wasOnline) home.returnTo('multijugador');
   },
-  /** Revancha: misma partida contra la IA (en multijugador, volver a la sala). */
+  /** Revancha: misma partida contra la IA; en línea, la revancha de grupo en la misma sala. */
   onRematch() {
+    if (state.online) {
+      if (state.sala?.isHost) openRematch();
+      else joinRematch();
+      return;
+    }
     finishGame();
     ui.hideEnd();
     if (state.online || !state.lastOpts) {
@@ -1879,6 +2002,10 @@ function frame(now) {
     if (game && game.phase !== 'ended') {
       if (state.net) {
         state.net.update();
+      } else if (tutorial.holds() && !state.holdSim) {
+        // Tutorial en un paso de lectura o práctica: el tiempo no corre, pero en
+        // el despliegue tu elección de sitio se aplica igual (DEV02)
+        if (game.phase === 'spawn') game.applyIntentsNow();
       } else if (state.speed > 0 && !state.holdSim) {
         state.acc += dt * state.speed;
         let steps = 0;
@@ -2000,7 +2127,7 @@ document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
 document.getElementById('mp-repintar').addEventListener('click', () => state.renderer?.restoreCanvases());
 document.getElementById('mp-salir').addEventListener('click', () => {
   cerrarDialogo(document.getElementById('menu-partida'));
-  if (stillPlaying()) ui.confirmExit(!!state.ranked);
+  if (stillPlaying()) ui.confirmExit(!!state.ranked, { host: !!(state.online && state.net?.isHost), guests: state.sala ? Math.max(0, state.sala.players().length - 1) : 0 });
   else {
     finishGame();
     tutorial.stop();

@@ -223,3 +223,36 @@ test('salas: nombres que se distinguen (sin nombre, «Recluta NNNN»; repetidos,
   const long = roomStatus([P('h', { ...host, jugador: me('Comandante Larguísimo') }), P('a', { jugador: me('Comandante Larguísimo'), listo: 1, version: 'v1', desde: 2 })]);
   assert.ok(long.players[1].name.endsWith(' (2)') && long.players[1].name.length <= 18);
 });
+
+test('salas: revancha en el mismo vestíbulo (mismo código, listo de nuevo, semilla nueva)', async () => {
+  const a = await room('rrrr7');
+  const b = await guest('rrrr7', 'Vega');
+  await until(() => b.g.status().host, 4000, 'el invitado ve al anfitrión');
+  b.g.setReady(true);
+  await until(() => a.host.status().canStart, 4000, 'listo');
+  const starts = { host: [], guest: [] };
+  a.host.onStart = (p) => starts.host.push(p);
+  b.g.onStart = (p) => starts.guest.push(p);
+  assert.equal(a.host.beginCountdown(), null);
+  await until(() => starts.host.length && starts.guest.length, COUNTDOWN_MS + 3000, 'ronda 1');
+  assert.equal(starts.guest[0].ronda, 1);
+  // Termina la ronda: el invitado aún no puede unirse; el anfitrión abre la revancha
+  assert.equal(b.g.rematchOpen(), false);
+  a.host.reopen();
+  await until(() => b.g.rematchOpen(), 4000, 'el invitado ve la revancha abierta');
+  assert.equal(a.host.code, 'rrrr7');
+  await b.g.rejoin();
+  // Hay que confirmar otra vez: la ronda 1 no deja a nadie listo
+  await wait(300);
+  assert.equal(a.host.status().canStart, false, 'listo invalidado');
+  b.g.setReady(true);
+  await until(() => a.host.status().canStart, 4000, 'listo para la revancha');
+  assert.equal(a.host.beginCountdown(), null);
+  await until(() => starts.host.length === 2 && starts.guest.length === 2, COUNTDOWN_MS + 3000, 'ronda 2');
+  assert.equal(starts.guest[1].ronda, 2);
+  assert.notEqual(starts.guest[1].seed, starts.guest[0].seed, 'semilla nueva');
+  assert.deepEqual(starts.guest[1].settings, starts.guest[0].settings, 'mismo mapa y reglas');
+  await wait(1700); // repeticiones del inicio de la ronda 2: una sola vez
+  assert.equal(starts.guest.length, 2);
+  await closeAll(a, b);
+});

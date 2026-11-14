@@ -12,6 +12,7 @@ import { FichaUI } from './ficha-ui.js';
 import { activeBonuses, shortEffect } from './fichas.js';
 import { drawCapitalEmblem, drawCapitalFx } from './icons.js';
 import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
+import { placement } from './resumen.js';
 import { abrirDialogo, actualizarHtml, alternar, cerrarDialogo, cerrarDialogos, mostrar, ocultar } from './movimiento.js';
 import { PantallaFin, abrirFin } from './fin.js';
 
@@ -735,10 +736,16 @@ export class UI {
     }
   }
 
-  confirmExit(ranked = false) {
-    $('conf-texto').textContent = ranked
-      ? 'Es una clasificatoria: abandonar cuenta como quedar el último y pierdes PL.'
-      : 'Volverás al menú y se perderá esta partida.';
+  /**
+   * Confirmación de abandonar. `host`: eres el anfitrión de una partida en
+   * línea con otros jugadores (la simulación vive en tu navegador: si sales,
+   * se interrumpe para todos, DEV05).
+   */
+  confirmExit(ranked = false, { host = false, guests = 0 } = {}) {
+    const parts = [];
+    if (host) parts.push(`Eres el anfitrión: si sales, la partida se interrumpe para ${guests === 1 ? 'el otro jugador' : (guests ? `los otros ${guests} jugadores` : 'los demás jugadores')} y nadie podrá seguirla.`);
+    parts.push(ranked ? 'Es una clasificatoria: abandonar cuenta como quedar el último y pierdes PL.' : 'Volverás al menú y se perderá esta partida.');
+    $('conf-texto').textContent = parts.join(' ');
     abrirDialogo($('confirmar'), { foco: '#conf-no' });
   }
 
@@ -749,7 +756,26 @@ export class UI {
    */
   showEnd(title, text, progress = null, extra = {}) {
     this.fin ??= new PantallaFin();
+    this.setEndActions(extra.actions || {});
     abrirFin(this.fin, { title, text, progress, ...extra });
+  }
+
+  /**
+   * Botones de la pantalla final (solo los que de verdad se pueden usar,
+   * DEV05): `{ nueva: { label, hidden, disabled, title }, menu: { label }, seguir: { hidden } }`.
+   * Sin datos, los de siempre (Revancha, Menú, Seguir mirando).
+   */
+  setEndActions(a = {}) {
+    const set = (id, o = {}, label) => {
+      const b = $(id);
+      b.textContent = o.label || label;
+      b.hidden = !!o.hidden;
+      b.disabled = !!o.disabled;
+      b.title = o.title || '';
+    };
+    set('fin-nueva', a.nueva, 'Revancha');
+    set('fin-menu', a.menu, 'Menú');
+    set('fin-seguir', a.seguir, 'Seguir mirando');
   }
 
   hideEnd() {
@@ -1890,8 +1916,13 @@ export class UI {
   /** Barra superior: tu puesto y el líder frente a la meta de victoria. */
   _updateTopBar(game, human) {
     const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
-    const rank = alive.indexOf(human);
-    $('dato-puesto').textContent = rank >= 0 ? `${rank + 1}.º de ${alive.length}` : `${alive.length} en pie`;
+    // El mismo puesto que el informe final: entre las naciones (las colonias, aparte; DEV08)
+    const pl = placement(game, human);
+    const colonies = alive.reduce((n, p) => n + (p.weak ? 1 : 0), 0);
+    const puesto = game.phase === 'playing' || game.phase === 'ended' ? `${pl.place}.º de ${pl.of}` : `${pl.of} naciones`;
+    if ($('dato-puesto').textContent !== puesto) $('dato-puesto').textContent = puesto;
+    const tip = `Tu puesto entre las ${pl.of} naciones (el mismo que en el informe final)${colonies ? ` · ${colonies} ${colonies === 1 ? 'colonia en pie' : 'colonias en pie'}, que se cuentan aparte` : ''}`;
+    if ($('dato-puesto-caja').title !== tip) $('dato-puesto-caja').title = tip;
     // Objetivo de la partida según el modo de victoria
     const st = game.victoryStatus ? game.victoryStatus() : null;
     const leader = st ? st.leader : alive[0];
@@ -1939,11 +1970,18 @@ export class UI {
     if (now - this._lbAt < 950) return;
     this._lbAt = now;
     const list = $('lista-clasificacion');
-    const alive = game.players.filter((p) => p && p.alive && p.tiles > 0).sort((a, b) => b.tiles - a.tiles);
+    // Solo naciones (DEV08): el puesto coincide con el del informe final; las colonias, en una línea aparte
+    const everyone = game.players.filter((p) => p && p.alive && p.tiles > 0);
+    const alive = everyone.filter((p) => !p.weak).sort((a, b) => b.tiles - a.tiles);
+    const colonies = everyone.length - alive.length;
     const rows = alive.slice(0, 10);
     const rank = alive.indexOf(human);
     if (rank >= 10) rows.push(human);
-    $('cab-puesto').textContent = rank >= 0 ? `${rank + 1}.º` : '';
+    const pl = placement(game, human);
+    $('cab-puesto').textContent = `${pl.place}.º`;
+    const colTxt = colonies ? `${colonies} ${colonies === 1 ? 'colonia' : 'colonias'} en pie (no cuentan en el puesto)` : '';
+    if ($('lb-colonias').textContent !== colTxt) $('lb-colonias').textContent = colTxt;
+    $('lb-colonias').hidden = !colonies;
     const leaderTiles = alive.length ? alive[0].tiles : 1;
     const animate = !document.body.classList.contains('sin-animaciones');
     // Medir las filas obliga al navegador a recalcular el diseño: solo si

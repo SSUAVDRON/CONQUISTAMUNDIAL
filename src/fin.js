@@ -108,7 +108,7 @@ export class PantallaFin {
     $('fin-titulo').textContent = data.title;
     $('fin-texto').textContent = data.text;
     const sello = $('fin-sello');
-    sello.textContent = data.outcome === 'victoria' ? '🏆' : data.outcome === 'derrota' ? '💀' : '🏁';
+    sello.textContent = data.outcome === 'victoria' ? '🏆' : data.outcome === 'derrota' ? '💀' : data.outcome === 'interrumpida' ? '⚠️' : '🏁';
     sello.className = `fin-sello ${data.outcome || 'fin'}`;
     this._renderStats();
     this._renderProgress();
@@ -157,6 +157,14 @@ export class PantallaFin {
     cells.push(cell('Eliminaciones', formatNumber(s.kills || 0)));
     cells.push(cell('Edificios', formatNumber(s.built || 0)));
     $('fin-cifras').replaceChildren(...cells);
+    // Cómo acabó la ronda y si cuenta (interrupciones, anulaciones; DEV05)
+    $('fin-cifras').parentElement.querySelector('.fin-motivo')?.remove();
+    if (d.motivo || d.validez) {
+      const m = el('p', 'fin-motivo');
+      if (d.motivo) m.append(el('strong', '', d.motivo));
+      if (d.validez) m.append(el('span', '', d.validez));
+      $('fin-cifras').after(m);
+    }
     // Reto por enlace: ¿superado?
     const old = $('fin-cifras').parentElement.querySelector('.fin-reto');
     old?.remove();

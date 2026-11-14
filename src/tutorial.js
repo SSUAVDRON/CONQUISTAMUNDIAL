@@ -1,27 +1,40 @@
 // Tutorial guiado: una partida pequeña con pasos que avanzan solos cuando el
 // jugador hace lo que se le pide. Cada paso puede resaltar un control.
 
-import { AREA } from './config.js';
+import { AREA, CONFIG, TICK_MS } from './config.js';
+import { fmtTroops, formatNumber } from './format.js';
 
 const $ = (id) => document.getElementById(id);
 
 /** Abre un grupo de la barra de edificios (en el móvil están plegados en una bandeja). */
 const openGroup = (id) => $('construir')?.dispatchEvent(new CustomEvent('abrir-grupo', { detail: id }));
 
+/** Por segundo, como en el panel (+178/s, +1,3k/s). */
+const perSecond = 1000 / TICK_MS;
+const troopsPerSecond = (h) => `${fmtTroops(Math.max(0, h.growthPerTick() * perSecond))}/s`;
+const goldPerSecond = (h) => `${formatNumber(h.goldPerTick() * perSecond)}/s`;
+
 /**
- * Pasos: `text`, `check(s)` (¿cumplido?), `enter(s)` (al empezar el paso),
- * `highlight` (selector CSS) e `info` (solo se avanza con «Siguiente»).
+ * Pasos: `text` (o una función del estado), `check(s)` (¿cumplido?),
+ * `enter(s)` (al empezar el paso), `highlight` (selector CSS), `info` (solo
+ * se avanza con el botón, que dice `next`) y `pause` (la partida espera
+ * mientras dura el paso: para leer o practicar sin que la IA avance, DEV02).
  * `s` es el estado de main.js: { game, human, ratio }.
  */
 const STEPS = [
   {
-    text: 'Bienvenido a Trinchera. Haz clic en una zona de tierra libre para elegir dónde empieza tu nación.',
+    text: 'Bienvenido a Trinchera. Toca una zona de tierra libre para elegir dónde empieza tu nación, o pulsa «Elegir por mí». La cuenta atrás espera a que elijas.',
+    pause: true,
     check: (s) => s.human.spawned,
   },
   {
-    text: 'Bien. Cuando termine la cuenta atrás empieza la partida. Tus tropas se regeneran solas (más rápido hacia el 42 % del techo) y ganas 100 de oro por turno: lo ves en el panel de abajo.',
+    text: (s) =>
+      `Bien. Tus tropas crecen solas (ahora +${troopsPerSecond(s.human)}; más rápido cuanto más cerca del 42 % de tu techo) y ganas oro cada segundo (+${goldPerSecond(s.human)}): lo ves en el panel de abajo. Pulsa «Empezar» cuando quieras: la IA no se mueve hasta entonces.`,
     highlight: '#panel-jugador',
-    check: (s) => s.game.phase === 'playing',
+    info: true,
+    next: 'Empezar',
+    pause: true,
+    leave: (s, tut) => tut.onStartNow?.(),
   },
   {
     text: 'Expándete: haz clic en tierra libre junto a tu territorio. Conquistarla cuesta pocas tropas.',
@@ -31,8 +44,9 @@ const STEPS = [
     check: (s, step) => s.human.tiles >= step.startTiles + 40 * AREA,
   },
   {
-    text: 'La fuerza de ataque decide qué parte de tus tropas envías en cada clic. Pulsa la tecla 5 o mueve el control al 50 %.',
+    text: 'La fuerza de ataque decide qué parte de tus tropas envías en cada clic; el resto se queda defendiendo. Pulsa la tecla 5 o mueve el control al 50 %. La partida espera mientras lo pruebas.',
     highlight: '#panel-jugador .ratio',
+    pause: true,
     check: (s) => Math.abs(s.ratio - 0.2) > 0.04,
   },
   {
@@ -62,21 +76,31 @@ const STEPS = [
     check: (s) => s.human.buildings.port >= 1,
   },
   {
-    text: 'Ya conoces lo básico. Sigue jugando esta partida o vuelve al menú cuando quieras. En la ayuda del inicio tienes misiles, buques y más.',
+    text: 'Ya conoces lo básico. Sigue jugando esta partida o vuelve al menú cuando quieras. En la guía del inicio tienes misiles, buques y más.',
     info: true,
+    next: 'Terminar',
   },
 ];
 
 export class Tutorial {
   /** `onFinish()` se llama al completar (no al saltar). */
-  constructor({ onFinish }) {
+  constructor({ onFinish, onStartNow, onAuto }) {
     this.onFinish = onFinish;
+    this.onStartNow = onStartNow; // empezar ya la partida (fin del despliegue)
+    this.onAuto = onAuto; // «Elegir por mí» durante el despliegue
     this.active = false;
     this.index = 0;
     this._lit = null;
     $('tut-saltar').addEventListener('click', () => this.stop());
     $('tut-paso-saltar').addEventListener('click', () => this._advance());
     $('tut-siguiente').addEventListener('click', () => this._advance());
+    $('tut-auto')?.addEventListener('click', () => this.onAuto?.());
+  }
+
+  /** ¿Espera la partida? (pasos de lectura o de práctica: la IA no avanza) */
+  holds() {
+    if (!this.active || this.index < 0) return false;
+    return !!STEPS[this.index]?.pause;
   }
 
   start(state) {
@@ -90,12 +114,16 @@ export class Tutorial {
 
   stop() {
     this.active = false;
+    $('tutorial').style.bottom = '';
+    $('tutorial').style.maxHeight = '';
     $('tutorial').hidden = true;
     document.body.classList.remove('con-tutorial');
     this._highlight(null);
   }
 
   _advance() {
+    const prev = STEPS[this.index];
+    if (prev && this.state) prev.leave?.(this.state, this);
     this.index++;
     if (this.index >= STEPS.length) {
       this.stop();
@@ -105,9 +133,10 @@ export class Tutorial {
     const step = STEPS[this.index];
     step.enter?.(this.state, step);
     $('tut-paso').textContent = `Paso ${this.index + 1} de ${STEPS.length}`;
-    $('tut-texto').textContent = step.text;
+    $('tut-texto').textContent = typeof step.text === 'function' ? step.text(this.state, step) : step.text;
     $('tut-siguiente').hidden = !step.info;
-    $('tut-siguiente').textContent = this.index === STEPS.length - 1 ? 'Terminar' : 'Siguiente';
+    $('tut-siguiente').textContent = step.next || (this.index === STEPS.length - 1 ? 'Terminar' : 'Siguiente');
+    this._spawnRow();
     $('tut-paso-saltar').hidden = !!step.info;
     $('tut-puntos').replaceChildren(
       ...STEPS.map((_, i) => {
@@ -117,6 +146,7 @@ export class Tutorial {
       }),
     );
     this._highlight(step.highlight || null);
+    requestAnimationFrame(() => this._place());
   }
 
   _highlight(selector) {
@@ -125,10 +155,57 @@ export class Tutorial {
     if (this._lit) this._lit.classList.add('resalta');
   }
 
+  /**
+   * Despliegue dentro de la tarjeta (DEV02): durante la cuenta atrás, el
+   * aviso de «Elige dónde empezar» no sale aparte encima del tutorial; la
+   * tarjeta muestra los segundos y «Elegir por mí» en una sola región.
+   */
+  _spawnRow() {
+    const row = $('tut-despliegue');
+    if (!row) return;
+    const g = this.state?.game;
+    const spawning = !!(this.active && g && g.phase === 'spawn');
+    row.hidden = !spawning;
+    if (!spawning) return;
+    const left = Math.max(0, Math.ceil(((CONFIG.spawnTicks - g.ticks) * TICK_MS) / 1000));
+    const chosen = !!this.state.human?.spawned;
+    $('tut-reloj').textContent = this.holds() ? `Cuenta atrás en pausa · ${left} s` : `Quedan ${left} s`;
+    $('tut-auto').hidden = chosen;
+  }
+
+  /**
+   * Una sola región para la ayuda (DEV02): en pantallas estrechas la tarjeta
+   * va justo encima de lo que haya abajo (el panel del jugador y, si está
+   * abierta, la bandeja de edificios), recalculado al cambiar el panel, el
+   * banco, la bandeja, el tamaño o la orientación; si no cabe entera, se
+   * desplaza dentro.
+   */
+  _place() {
+    const box = $('tutorial');
+    if (!this.active || !box || box.hidden) return;
+    if (window.innerWidth > 720) {
+      box.style.bottom = '';
+      box.style.maxHeight = '';
+      return;
+    }
+    let top = window.innerHeight;
+    for (const id of ['panel-jugador', 'bandeja-obras']) {
+      const e = $(id);
+      if (!e || e.hidden || (id === 'bandeja-obras' && !e.classList.contains('abierto'))) continue;
+      const r = e.getBoundingClientRect();
+      if (r.height) top = Math.min(top, r.top);
+    }
+    const bottom = Math.round(window.innerHeight - top + 10);
+    box.style.bottom = `${bottom}px`;
+    box.style.maxHeight = `${Math.max(120, window.innerHeight - bottom - 64)}px`;
+  }
+
   /** Llamar cada pocos frames con el estado actual. */
   update(state) {
     if (!this.active || !state.human) return;
     this.state = state;
+    this._spawnRow();
+    this._place();
     const step = STEPS[this.index];
     if (!step.info && step.check(state, step)) this._advance();
   }

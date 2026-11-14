@@ -56,9 +56,16 @@ export function fmtTroopsCount(n) {
   return formatCount(n / TROOP_SCALE);
 }
 
+/**
+ * Porcentaje con la precisión que haga falta para ver el progreso (DEV08):
+ * por debajo del 1 %, con dos decimales (0,04 % en vez de un 0,0 % que no
+ * se mueve); hasta el 10 %, uno; después, entero. Un valor positivo nunca
+ * sale como 0.
+ */
 export function formatPercent(x) {
   const v = x * 100;
-  return (v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
+  if (v > 0 && v < 0.01) return '<0.01%';
+  return (v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
 }
 
 /**
