@@ -935,7 +935,7 @@ export class NetSync {
    * `mySlot`: puesto del jugador en la sala (único aunque dos jugadores
    * compartan nación en el modo cooperativo).
    */
-  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, ronda = 1, now = () => performance.now() }) {
+  constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, ronda = 1, now = () => performance.now(), slice = null }) {
     this.room = room;
     /** Ronda de la sala: los mensajes de otra ronda (una revancha, o restos de la anterior) se descartan. */
     this.ronda = ronda;
@@ -956,6 +956,13 @@ export class NetSync {
     /** true en el juego: el invitado reproduce los turnos a ritmo constante (ver CATCHUP_TURNS). */
     this.smooth = smooth;
     this.now = now;
+    /**
+     * { ms, behindMs, catchupMs }: reparte cada turno entre fotogramas
+     * (Game.tickPart, mismo resultado) con ese tiempo por llamada. Sin él,
+     * turnos enteros. `_partial`: el turno que quedó a medias.
+     */
+    this.slice = slice;
+    this._partial = null;
 
     if (isHost) {
       this.queue = []; // acciones para el próximo tick
@@ -1104,7 +1111,9 @@ export class NetSync {
     this.lastResend.set(m.peer, now);
     let turns = [];
     let bytes = wireBytes('turn', { r: this.ronda, turns: [] });
-    for (let t = Math.max(from, this.game.ticks - 2999); t <= this.game.ticks && t < from + RESEND_MAX_TURNS; t++) {
+    // Solo turnos terminados (con uno a medias, su lista aún no está en el historial)
+    const done = this._doneTicks();
+    for (let t = Math.max(from, done - 2999); t <= done && t < from + RESEND_MAX_TURNS; t++) {
       const entry = [t, this.history.get(t) || []];
       const size = utf8Bytes(JSON.stringify(entry)) + 1;
       if (bytes + size > MAX_MSG_BYTES) break;
@@ -1123,10 +1132,47 @@ export class NetSync {
     }
   }
 
-  _hostStep() {
+  /** Turnos terminados (sin contar uno a medias). */
+  _doneTicks() {
+    return this.game.midTick ? this.game.ticks - 1 : this.game.ticks;
+  }
+
+  /** Sigue el turno a medias hasta `deadline`. Devuelve si ya no queda ninguno. */
+  _finishPartial(deadline) {
+    const p = this._partial;
+    if (!p) return true;
+    if (!this.game.tickPart(deadline)) return false;
+    this._partial = null;
+    if (this.isHost) this._hostAfter(p.intents);
+    else this._guestAfter();
+    return true;
+  }
+
+  /**
+   * Plazo de la llamada (performance.now()): sin reparto, ninguno. Con la
+   * pestaña oculta tampoco: no hay nada que dibujar, y el navegador espacia
+   * los temporizadores (a veces a uno por segundo); con turnos troceados, el
+   * anfitrión en segundo plano se quedaría muy por detrás.
+   */
+  _deadline(ms) {
+    if (!this.slice || !ms || (typeof document !== 'undefined' && document.hidden)) return Infinity;
+    return performance.now() + ms;
+  }
+
+  /** Un turno del anfitrión (o su principio, si no cabe antes de `deadline`). Devuelve si ha terminado. */
+  _hostStep(deadline = Infinity) {
     const intents = this._takeIntents();
     for (const it of intents) this.game.queueIntent({ ...it, by: slotOf(it.u) });
-    this.game.tick();
+    if (!this.game.tickPart(deadline)) {
+      this._partial = { intents };
+      return false;
+    }
+    this._hostAfter(intents);
+    return true;
+  }
+
+  /** Tras el turno del anfitrión: historial, hash y envío. */
+  _hostAfter(intents) {
     const t = this.game.ticks;
     this.history.set(t, intents);
     if (this.history.size > 3000) this.history.delete(t - 3000);
@@ -1163,13 +1209,22 @@ export class NetSync {
     }
   }
 
-  _guestStep(intents) {
+  _guestStep(intents, deadline = Infinity) {
     for (const raw of intents) {
       const clean = cleanIntent(raw);
       if (clean && Number.isInteger(raw.playerId)) this.game.queueIntent({ ...clean, playerId: raw.playerId, by: slotOf(raw.u) });
       if (raw && typeof raw.u === 'string') this.outbox.delete(raw.u);
     }
-    this.game.tick();
+    if (!this.game.tickPart(deadline)) {
+      this._partial = {};
+      return false;
+    }
+    this._guestAfter();
+    return true;
+  }
+
+  /** Tras el turno del invitado: su hash y la comparación con el del anfitrión. */
+  _guestAfter() {
     const t = this.game.ticks;
     if (t % HASH_EVERY === 0) {
       const h = stateHash(this.game);
@@ -1210,11 +1265,12 @@ export class NetSync {
     return n;
   }
 
-  _playNext() {
+  /** Juega el siguiente turno (o lo empieza, si no cabe antes de `deadline`). Devuelve si ha terminado. */
+  _playNext(deadline = Infinity) {
     const t = this.game.ticks + 1;
     const intents = this.turns.get(t);
     this.turns.delete(t);
-    this._guestStep(intents);
+    return this._guestStep(intents, deadline);
   }
 
   /** Llamar en cada frame: avanza la simulación al ritmo que toque. */
@@ -1239,25 +1295,35 @@ export class NetSync {
       else if (this.status === OFFLINE_NOTE) this.status = '';
       this.acc += Math.min(1000, now - this.last);
       this.last = now;
+      const deadline = this._deadline(this.acc >= 2 * TICK_MS ? this.slice?.behindMs : this.slice?.ms);
+      // El turno que quedó a medias va primero (su tiempo ya se descontó)
+      const hadPartial = !!this._partial;
+      if (!this._finishPartial(deadline)) return;
       let steps = 0;
-      while (this.acc >= TICK_MS && steps < 10) {
-        this._hostStep();
+      // (sin turno a medias, al menos se empieza uno aunque el plazo sea mínimo)
+      while (this.acc >= TICK_MS && steps < 10 && (performance.now() < deadline || (!steps && !hadPartial))) {
         this.acc -= TICK_MS;
         steps++;
+        if (!this._hostStep(deadline)) break;
       }
       return;
     }
+    // Invitado: el turno a medias, primero; si no se acaba, se sigue en la próxima llamada
+    const hadPartial = !!this._partial;
+    const partialDone = this._finishPartial(this._deadline(this.slice?.ms));
     let steps = 0;
-    const ready = this._ready();
+    const ready = partialDone ? this._ready() : 0;
     // Muchos turnos pendientes (tras un corte o con la pestaña en segundo plano): se recuperan de golpe
     if (ready > CATCHUP_TURNS) this.status = 'Sincronizando partida…';
     if (!this.smooth || ready > CATCHUP_TURNS) {
       // Sin suavizado, o muy por detrás: todo lo que haya (hasta 60 por llamada),
       // dejando el colchón para no quedarse sin turnos al momento siguiente
       const keep = this.smooth ? SMOOTH_BUFFER : 0;
-      while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1)) {
-        this._playNext();
+      // Con reparto, un tope de tiempo por llamada (la pantalla sigue viva mientras se recupera)
+      const deadline = this._deadline(this.slice?.catchupMs);
+      while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1) && (performance.now() < deadline || (!steps && !hadPartial))) {
         steps++;
+        if (!this._playNext(deadline)) break;
       }
       this.playAcc = 0;
     } else {
@@ -1267,15 +1333,18 @@ export class NetSync {
         this.playAcc += dt;
         // A ritmo normal, y algo más deprisa si se acumulan (hasta volver al colchón)
         const every = ready <= SMOOTH_BUFFER ? TICK_MS : ready <= 5 ? TICK_MS * 0.9 : TICK_MS * 0.75;
-        while (this.playAcc >= every && steps < ready) {
-          this._playNext();
+        const deadline = this._deadline(this.playAcc >= 2 * every ? this.slice?.behindMs : this.slice?.ms);
+        while (this.playAcc >= every && steps < ready && (performance.now() < deadline || (!steps && !hadPartial))) {
           this.playAcc -= every;
           steps++;
+          if (!this._playNext(deadline)) break;
         }
       }
     }
     this.playLast = now;
-    if (steps) {
+    // Un turno a medias también es avanzar (no hay que pedir nada ni avisar de espera)
+    const progressed = steps > 0 || hadPartial;
+    if (progressed) {
       this.lastAdvance = now;
       // (mientras se recuperan muchos turnos se sigue viendo «Sincronizando partida…»)
       if (this._ready() <= CATCHUP_TURNS) {
@@ -1289,11 +1358,11 @@ export class NetSync {
     // Falta el siguiente turno pero ya llegan otros posteriores: se ha perdido
     // un mensaje, se pide enseguida. Si no llega nada, se pide pasado un rato.
     const gap = this.turns.size > 0 && !this.turns.has(this.game.ticks + 1);
-    if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !steps && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
+    if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !progressed && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
       this.lastResendAsk = now;
       this.room.emit('resend', { r: this.ronda, from: this.game.ticks + 1 }).catch(() => {});
     }
-    if (!steps) {
+    if (!progressed) {
       if (offline) this.status = OFFLINE_NOTE;
       else if (now - this.lastAdvance > 4000) this.status = 'Esperando al anfitrión…';
       else if (this.status === OFFLINE_NOTE) this.status = '';

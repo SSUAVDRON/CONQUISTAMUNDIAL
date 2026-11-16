@@ -164,6 +164,9 @@ export class Game {
     // Cerco: casillas ya vistas en este tick que no forman bolsa (tick en que se vio)
     this._annexFail = new Uint32Array(map.size);
     this._annexBudget = 0;
+    this._annexRound = 0;
+    // (nunca 0, que es lo que tienen las casillas sin marcar, ni un turno)
+    this._annexBig = 0x80000000;
   }
 
   // ---------------------------------------------------------------- jugadores
@@ -2246,6 +2249,9 @@ export class Game {
   _flushAnnex(atk) {
     const q = atk.annexQ;
     if (!q || !q.length) return;
+    // Marca de esta comprobación para las bolsas «demasiado grandes para una
+    // colonia» (ver _tryAnnex): con el bit alto, no se confunde con un turno
+    this._annexBig = (0x80000001 + (this._annexRound++ % 0x7ffffffe)) >>> 0;
     const aid = atk.attacker.id;
     const owner = this.owner;
     for (let i = 0; i < q.length; i++) {
@@ -2268,7 +2274,8 @@ export class Game {
       const n = nb[k];
       const o = this.owner[n];
       if (o === aid || map.terrain[n] === 0 || (o !== tid && o !== 0)) continue;
-      if (this._annexFail[n] === this.ticks) continue;
+      const f = this._annexFail[n];
+      if (f === this.ticks || f === this._annexBig) continue;
       this._tryAnnex(n, aid);
       if (this._annexBudget <= 0) return;
     }
@@ -2285,6 +2292,7 @@ export class Game {
     const seen = this._stampArr;
     const queue = this._queue;
     const fail = this._annexFail;
+    const big = this._annexBig;
     const nb = (this._annexNb2 ??= new Int32Array(4));
     const max = this.players[aid].weak ? ANNEX_MAX_COLONY : ANNEX_MAX_TILES;
     let tooBig = false;
@@ -2327,6 +2335,11 @@ export class Game {
           ok = false; // toca a otro o ya se vio que escapa
           break;
         }
+        if (fail[v] === big) {
+          ok = false; // la misma bolsa grande de antes (solo la marca una colonia)
+          tooBig = true;
+          break;
+        }
         if (seen[v] !== stamp && tail >= max) {
           ok = false; // demasiado grande para este jugador
           tooBig = max < ANNEX_MAX_TILES;
@@ -2340,8 +2353,14 @@ export class Game {
     }
     this._annexBudget -= tail + probeSteps;
     if (!ok) {
-      // (si solo era grande para una colonia, una nación aún puede cercarla)
-      if (!tooBig) for (let i = 0; i < tail; i++) fail[queue[i]] = this.ticks;
+      // Si solo era grande para una colonia, una nación aún puede cercarla: se
+      // marca solo para esta comprobación (la de un ataque de esa colonia).
+      // Antes no se marcaba y cada casilla del frente la volvía a recorrer
+      // entera (casi la mitad del turno al principio de la partida). Mientras
+      // dura una comprobación solo cambian de dueño bolsas cercadas enteras,
+      // que no tocan a esta: el resultado es el mismo
+      const mark = tooBig ? big : this.ticks;
+      for (let i = 0; i < tail; i++) fail[queue[i]] = mark;
       return false;
     }
     const tiles = Array.from(queue.subarray(0, tail));
@@ -3944,14 +3963,48 @@ export class Game {
     this.nationAvgTiles = n ? sum / n : 0;
   }
 
+  /** Un turno entero. */
   tick() {
-    if (this.phase === 'ended') return;
+    // Si había un turno a medias (tickPart), se termina ese
+    if (!this._midTick && !this._tickStart()) return;
+    this._midTick = false;
+    this._tickAttacks(Infinity);
+    this._tickFinish();
+  }
+
+  /**
+   * Un turno por partes, para repartirlo entre fotogramas (en solitario): hace
+   * lo que quepa hasta `deadline` (performance.now()) y devuelve si ha
+   * terminado el turno. Cada llamada procesa al menos un ataque, en el mismo
+   * orden que tick(): el resultado es idéntico. Entre partes la interfaz solo
+   * lee (con sus propias cachés, como en línea) y las órdenes se encolan para
+   * el turno siguiente, igual que entre dos turnos.
+   */
+  tickPart(deadline) {
+    if (!this._midTick) {
+      if (!this._tickStart()) return true;
+      this._midTick = true;
+    }
+    if (!this._tickAttacks(deadline)) return false;
+    this._midTick = false;
+    this._tickFinish();
+    return true;
+  }
+
+  /** ¿Hay un turno a medias (tickPart)? */
+  get midTick() {
+    return !!this._midTick;
+  }
+
+  /** Principio del turno: órdenes, oro, tropas y la lista de ataques. Devuelve si sigue (en juego). */
+  _tickStart() {
+    if (this.phase === 'ended') return false;
     this.ticks++;
     this._applyIntents();
 
     if (this.phase === 'spawn') {
       if (this.ticks >= CONFIG.spawnTicks) this._beginPlaying();
-      return;
+      return false;
     }
 
     // Orden del tick (documento, 06.3): 1) órdenes (arriba); 2) oro pasivo;
@@ -3980,9 +4033,25 @@ export class Game {
     // empezaba el mismo ataque, las bolsas de los demás podían no
     // comprobarse nunca
     this._annexBudget = ANNEX_VISITS_PER_TICK;
-    const na = this.attacks.length;
-    const first = na ? this.ticks % na : 0;
-    for (let k = 0; k < na; k++) this._processAttack(this.attacks[(first + k) % na]);
+    this._atkN = this.attacks.length;
+    this._atkFirst = this._atkN ? this.ticks % this._atkN : 0;
+    this._atkK = 0;
+    return true;
+  }
+
+  /** Los ataques del turno, en orden rotatorio, hasta `deadline`. Devuelve si están todos. */
+  _tickAttacks(deadline) {
+    const na = this._atkN;
+    const first = this._atkFirst;
+    while (this._atkK < na) {
+      this._processAttack(this.attacks[(first + this._atkK++) % na]);
+      if (deadline !== Infinity && this._atkK < na && performance.now() >= deadline) return false;
+    }
+    return true;
+  }
+
+  /** El resto del turno: obras, barcos, comercio, misiles, trenes, bots y final. */
+  _tickFinish() {
     this.attacks = this.attacks.filter((a) => !a.done);
 
     this._updateSites();

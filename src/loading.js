@@ -37,13 +37,18 @@ export const TIPS = [
 /** Espera a que el navegador pinte (para que la barra avance de verdad). */
 const nextPaint = () =>
   new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+/** Dos fotogramas: el primero pinta la pantalla de carga y el segundo arranca su animación en la gráfica. */
+const twoPaints = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))));
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Ejecuta `steps` ([{ label, run }]) mostrando la pantalla de carga.
- * Devuelve lo que devuelva el último paso.
+ * Devuelve lo que devuelva el último paso. `onReady(result)` se llama con la
+ * pantalla todavía tapándolo todo, justo antes de desvanecerse: es el momento
+ * de quitar lo de debajo (el menú, la sala), para que al irse no reaparezca
+ * la pantalla anterior ni un fotograma.
  */
-export async function withLoading(title, steps, { minMs = 1300 } = {}) {
+export async function withLoading(title, steps, { minMs = 1300, onReady = null } = {}) {
   const box = $('carga');
   const started = performance.now();
   $('carga-mapa').textContent = title;
@@ -53,7 +58,10 @@ export async function withLoading(title, steps, { minMs = 1300 } = {}) {
   clearTimeout(box._fuera);
   mostrar(box, { y: 0, scale: 1.02, ms: 260 });
   let result;
+  let ok = false;
   try {
+    // Que se vea de verdad antes del primer paso pesado (que bloquea el hilo)
+    await twoPaints();
     for (let i = 0; i < steps.length; i++) {
       $('carga-paso').textContent = steps[i].label;
       $('carga-progreso').style.width = `${Math.round((i / steps.length) * 100)}%`;
@@ -62,9 +70,22 @@ export async function withLoading(title, steps, { minMs = 1300 } = {}) {
     }
     $('carga-paso').textContent = '¡A las trincheras!';
     $('carga-progreso').style.width = '100%';
+    // Un par de fotogramas con la carga aún delante: el primer dibujo del
+    // mapa nuevo (el más caro: sube el territorio a la gráfica) pasa aquí y
+    // no al desvanecerse la carga
+    await twoPaints();
+    await twoPaints();
     const left = minMs - (performance.now() - started);
     if (left > 0) await wait(left);
+    ok = true;
   } finally {
+    if (ok && onReady) {
+      try {
+        onReady(result);
+      } catch {
+        /* lo de debajo se queda como está */
+      }
+    }
     box.classList.add('saliendo');
     box._fuera = setTimeout(() => {
       box.hidden = true;

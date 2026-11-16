@@ -171,6 +171,7 @@ export class MqttClient {
       return;
     }
     this.ws = ws;
+    this._openedAt = Date.now();
     ws.binaryType = 'arraybuffer';
     // Al reconectar no hay tiempo límite de connect(): si no llega el CONNACK, otro intento
     clearTimeout(this._hung);
@@ -256,7 +257,13 @@ export class MqttClient {
   check() {
     if (this.closed) return;
     if (!this.isConnected) {
-      if (!this.ws) this._schedule(0);
+      // Sin intento en marcha, o uno que lleva rato colgado (empezó sin red):
+      // otro ya, desde cero (antes podía esperar hasta 8 s a que caducara)
+      if (!this.ws || Date.now() - (this._openedAt || 0) > 1500) {
+        this._drop();
+        this.retry = 0;
+        this._schedule(0);
+      }
       return;
     }
     const sent = Date.now();

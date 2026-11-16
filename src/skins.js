@@ -12,7 +12,6 @@ export const RARITIES = {
   epico: { id: 'epico', name: 'Épico', color: '#b866ff', order: 3 },
   legendario: { id: 'legendario', name: 'Legendario', color: '#ff9d2e', order: 4 },
 };
-export const RARITY_IDS = Object.keys(RARITIES);
 
 /** Logros de prestigio: lo que desbloquean es épico. */
 const EPIC_ACHIEVEMENTS = new Set(['emperador', 'gran_victoria', 'millonario', 'almirante', 'magnate_oro', 'liga_maestro', 'imperio', 'urbanista', 'lluvia_fuego']);

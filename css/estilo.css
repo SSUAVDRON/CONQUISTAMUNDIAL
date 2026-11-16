@@ -683,10 +683,6 @@ select option:checked { background-color: #2a3550; color: #fff; }
   color: var(--acento);
   flex: none;
 }
-.nivel-datos { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.nivel-barra { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
-.nivel-barra span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--acento), var(--oro-200)); }
-.nivel-datos small { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
 .estadisticas { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; }
 .estadisticas dt { color: var(--texto-suave); }
 .estadisticas dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -708,9 +704,7 @@ select option:checked { background-color: #2a3550; color: #fff; }
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid transparent;
 }
-.logros li:not(.conseguido) .logro-icono { filter: grayscale(1); opacity: 0.45; }
 .logros li.conseguido { border-color: rgba(242, 179, 61, 0.45); background: rgba(242, 179, 61, 0.08); }
-.logro-icono { font-size: 26px; text-align: center; }
 .logro-texto { display: flex; flex-direction: column; min-width: 0; }
 .logro-texto span { color: var(--texto-suave); font-size: 13px; }
 .logro-texto small { color: var(--acento); font-size: 11px; margin-top: 2px; }
@@ -749,7 +743,7 @@ select option:checked { background-color: #2a3550; color: #fff; }
 body.sin-animaciones .fin-logro { animation: none; }
 
 @media (max-width: 760px) {
-  .jugar-rejilla, .perfil-rejilla { grid-template-columns: 1fr; }
+  .perfil-rejilla { grid-template-columns: 1fr; }
   .chip-barra { width: 90px; }
   .identidad canvas { width: 76px; height: 76px; }
   .logros { grid-template-columns: 1fr; }
@@ -963,7 +957,6 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 
 /* ---------- Panel del jugador ---------- */
 .etq { display: inline-flex; align-items: center; gap: 4px; }
-.etq-icono { width: 12px; height: 12px; opacity: 0.8; }
 .cifras .valor .max { color: var(--texto-suave); font-weight: 500; font-size: 0.82em; }
 .barra { position: relative; height: 8px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
 #pj-barra {
@@ -1215,7 +1208,6 @@ body.con-tutorial #eventos { top: auto; }
 #hud:not([hidden]) #panel-jugador { animation: hudSube 0.5s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes hudSube { from { opacity: 0; transform: translateY(18px); } }
 .pj-col { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.pj-resumen { flex: 1.15 1 0; }
 .pj-ataque { flex: 0.6 1 0; padding: 0 14px; border-left: 1px solid rgba(255, 255, 255, 0.07); border-right: 1px solid rgba(255, 255, 255, 0.07); transition: flex-grow 0.35s ease; }
 .pj-obras { flex: 1.75 1 0; transition: flex-grow 0.35s ease, opacity 0.25s ease, margin 0.35s ease; }
 #panel-jugador .cabecera { margin-bottom: 5px; }
@@ -1289,7 +1281,6 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador.plegado .cabecera, #panel-jugador.plegado .ratio-titulo, #panel-jugador.plegado .cifras .sub { display: none; }
 #panel-jugador.plegado .barra { margin-bottom: 5px; }
 #panel-jugador.plegado .etq { font-size: 0; gap: 0; }
-#panel-jugador.plegado .etq-icono { width: 13px; height: 13px; }
 #panel-jugador.plegado .cifras div { flex-direction: row; align-items: center; gap: 5px; }
 #panel-jugador.plegado .ratio-cifra strong { font-size: 16px; }
 #panel-jugador.plegado #ratio { margin: 2px 0 0; }
@@ -1301,14 +1292,12 @@ body.con-tutorial #eventos { top: auto; }
 }
 @media (max-width: 860px) {
   #panel-jugador { flex-wrap: wrap; row-gap: 8px; }
-  .pj-resumen { flex: 1 1 58%; }
   .pj-ataque { flex: 1 1 28%; border-right: none; padding-right: 0; }
   .pj-obras { flex: 1 1 100%; }
   #panel-jugador.plegado .pj-obras { display: none; }
 }
 @media (max-width: 720px) {
   #panel-jugador { left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); padding: 8px 36px 9px 10px; gap: 8px; }
-  .pj-resumen { flex: 1 1 100%; }
   .pj-ataque { flex: 1 1 100%; padding: 0; border: none; }
   .ratio-cifra strong { font-size: 16px; }
   #hud .obra { height: 38px; }
@@ -1528,7 +1517,6 @@ body.con-tutorial #eventos { top: auto; }
 
 /* Panel central más estrecho y compacto (mismos textos e iconos) */
 #panel-jugador { gap: 10px; padding: 7px 36px 7px 12px; }
-.pj-resumen { flex: 1.1 1 0; }
 .pj-ataque { flex: 0.55 1 0; padding: 0 10px; }
 .pj-obras { flex: 1.6 1 0; }
 #panel-jugador .cabecera { margin-bottom: 3px; }
@@ -1544,7 +1532,6 @@ body.con-tutorial #eventos { top: auto; }
 @media (min-width: 1500px) {
   #panel-jugador { width: min(940px, calc(100vw - 660px)); }
 }
-#panel-jugador .pj-resumen { flex: 1.35 1 0; }
 #panel-jugador .pj-obras { flex: 1.45 1 0; }
 #panel-jugador .cifras { grid-template-columns: 1.55fr 1.05fr 0.9fr 0.7fr; }
 #panel-jugador .cifras .valor { overflow: hidden; text-overflow: ellipsis; }
@@ -1688,24 +1675,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .chip-perfil[class*="est-"] { border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
 .chip-perfil[class*="est-"]:hover { filter: brightness(1.1); }
 .chip-perfil canvas { width: 44px; height: 44px; }
-
-/* Tarjeta de perfil */
-.tarjeta-perfil {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 16px 22px;
-  margin-bottom: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-  animation: subir 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.tarjeta-perfil::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent 60%); pointer-events: none; }
-.tarjeta-perfil canvas { position: relative; z-index: 1; width: 110px; height: 110px; flex: none; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
-.tp-textos { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .tp-titulo { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.75); }
 .tp-nombre { font-family: var(--serif); font-weight: 800; font-size: 32px; line-height: 1.1; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tp-datos { font-size: 13px; color: rgba(255, 255, 255, 0.82); }
@@ -1737,8 +1706,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 }
 @media (max-width: 520px) {
   .portada-titulo { font-size: 28px; }
-  .tarjeta-perfil { padding: 12px 14px; gap: 12px; }
-  .tarjeta-perfil canvas { width: 76px; height: 76px; }
   .tp-nombre { font-size: 22px; }
   .tp-nivel { width: 44px; height: 44px; font-size: 18px; right: 10px; }
 }
@@ -1782,7 +1749,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .pista.good { border-color: rgba(95, 211, 141, 0.5); color: #c9f9dc; }
 
 /* Resumen del jugador más compacto; el máximo de tropas, bien legible */
-#panel-jugador .pj-resumen { flex: 1.2 1 0; }
 #panel-jugador .cabecera { margin-bottom: 2px; }
 #panel-jugador .barra { height: 6px; margin-bottom: 4px; }
 #panel-jugador .cifras { gap: 2px 6px; grid-template-columns: 1.95fr 1fr 0.85fr 0.62fr; }
@@ -1862,14 +1828,13 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
     margin: 0;
     border-radius: 12px;
   }
-  #panel-jugador .pj-resumen, #panel-jugador .pj-ataque, #panel-jugador .pj-obras { padding: 0; border: 0; }
+  #panel-jugador .pj-ataque, #panel-jugador .pj-obras { padding: 0; border: 0; }
   #panel-jugador .cabecera { margin-bottom: 2px; padding-right: 26px; min-height: 18px; }
   #panel-jugador .cabecera strong { font-size: 12.5px; }
   #panel-jugador .barra { height: 5px; margin-bottom: 4px; }
   #panel-jugador .cifras { gap: 1px 6px; grid-template-columns: 1.75fr 1fr 0.9fr 0.62fr; }
   #panel-jugador .cifras .valor { font-size: 13px; }
   #panel-jugador .etq { font-size: 9px; letter-spacing: 0.02em; }
-  #panel-jugador .etq-icono { width: 10px; height: 10px; }
   #panel-jugador .cifras .sub { font-size: 10px; min-height: 12px; }
   .pj-plegar { top: 4px; right: 4px; width: 24px; height: 24px; }
   /* Fuerza de ataque en una línea: cifra a la izquierda y barra a la derecha */
@@ -1913,11 +1878,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 /* Móvil en horizontal: una sola fila baja */
 @media (max-height: 500px) and (orientation: landscape) {
   #panel-jugador { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; padding: 5px 34px 6px 8px; }
-  #panel-jugador .pj-resumen { flex: 1.35 1 0; }
   #panel-jugador .pj-ataque { flex: 0.62 1 0; }
   #panel-jugador .pj-obras { flex: 1.8 1 0; }
   #panel-jugador .cabecera { display: none; }
-  #panel-jugador .etq-icono { display: none; }
   #panel-jugador .ratio { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
   #hud .obra { height: 40px; }
   #barra-superior { top: calc(6px + env(safe-area-inset-top, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); gap: 6px; padding: 3px 5px; }
@@ -1972,12 +1935,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 #panel-jugador .barra::before { left: 33%; width: 20%; }
 #panel-jugador .cifras .sub.baja { color: var(--peligro); }
-#panel-jugador .cifras .sub-trab { color: #7fd8c9; }
-#panel-jugador .cifras .sub-tropas { display: flex; gap: 6px; white-space: nowrap; overflow: hidden; }
 #pj-crec.baja { color: var(--peligro); }
 #panel-jugador .sub-comp { color: #ffb36b; overflow: hidden; text-overflow: ellipsis; }
 #panel-jugador .sub-comp:empty { display: none; }
-#panel-jugador .cifras .sub-barcos { color: var(--texto-suave); }
 /* Dos controles en la columna de ataque: fuerza de ataque y reparto */
 #panel-jugador .pj-ataque { justify-content: center; gap: 4px; }
 #panel-jugador .pj-ataque .ratio { gap: 1px; }
@@ -2002,7 +1962,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #reparto::-webkit-slider-thumb { width: 22px; height: 22px; }
   #panel-jugador .pj-ataque { gap: 5px; }
 }
-#panel-jugador .cifras .sub-barcos { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #panel-jugador .pj-ataque .ratio-cifra { overflow: hidden; text-overflow: ellipsis; }
 @media (max-height: 500px) and (orientation: landscape) {
   /* En horizontal, solo las cifras: el deslizador ya muestra el reparto */
@@ -2016,7 +1975,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 
 /* Tooltip: punto estratégico cercano y estimación del ataque */
 #tooltip .tip-punto { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 240px; white-space: normal; }
-#tooltip .tip-estim { margin-top: 2px; color: #ffd98a; font-size: 11px; }
 
 /* ===================================================== Mejoras estratégicas */
 /* Botón de desarrollo en la barra superior, con un punto si puedes investigar */
@@ -2167,8 +2125,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 .retos-bonus { margin: 10px 0 0; font-size: 13px; color: var(--texto-suave); }
 .retos-bonus.bien { color: var(--ok); font-weight: 700; }
 .logro-estado { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.logro-monedas { font-size: 12px; color: var(--oro-200); }
-.logros li:not(.conseguido) .logro-monedas { opacity: 0.75; }
 @media (max-width: 560px) {
   .chip-monedas { font-size: 12px; padding: 3px 7px; }
   .bolsa { flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; }
@@ -2213,7 +2169,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   gap: 9px;
   padding: 10px 14px 12px;
 }
-#hud.escritorio .pj-resumen, #hud.escritorio .pj-ataque { flex: none; }
+#hud.escritorio .pj-ataque { flex: none; }
 #hud.escritorio .pj-ataque { padding: 9px 0 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.07); }
 #hud.escritorio #panel-jugador .cabecera { padding-right: 26px; }
 #hud.escritorio #panel-jugador .cifras { grid-template-columns: 1fr 1fr; row-gap: 7px; }
@@ -3264,12 +3220,10 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 #inicio .logros li.pendiente { background: rgba(255, 255, 255, 0.025); border-color: var(--borde-1); }
 #inicio .logros li.pendiente .logro-texto strong { color: var(--texto-2); }
 #inicio .logros li.conseguido { border-color: rgba(233, 185, 85, 0.5); background: linear-gradient(135deg, rgba(233, 185, 85, 0.14), rgba(233, 185, 85, 0.03)); }
-#inicio .logros li.conseguido .logro-icono { filter: drop-shadow(0 0 8px rgba(233, 185, 85, 0.5)); }
 .logro-progreso { display: flex; align-items: center; gap: var(--e2); margin-top: 4px; }
 .logro-barra { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .logro-barra > span { background: linear-gradient(90deg, var(--oro-700), var(--oro-400)); border-radius: 3px; }
 .logro-progreso small { font-size: 11px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
-.logro-premio { color: var(--texto-3); }
 .logro-fecha { font-size: 11px; color: var(--texto-3); white-space: nowrap; }
 .logros li.conseguido .logro-fecha { color: var(--ok); font-weight: 700; }
 
@@ -3434,10 +3388,6 @@ body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }
 .crear-clasif { margin: 0; padding: var(--e3) var(--e4); border-radius: var(--r-m); background: rgba(196, 126, 255, 0.1); border: 1px solid rgba(196, 126, 255, 0.35); color: var(--texto-1); font-size: 14px; line-height: 1.45; }
 .crear-clasif[hidden], #crear-mapas[hidden], #crear-avanzadas[hidden] { display: none; }
 .chip-sala.chip-clasif { border-color: rgba(196, 126, 255, 0.55); color: #e3d0ff; }
-
-/* ===================================================== Progresión y social (fase 3) */
-.semana-bloque { background: linear-gradient(120deg, rgba(196, 126, 255, 0.14), transparent 60%), var(--panel); }
-.semana-bloque .reto-barra span { background: linear-gradient(90deg, #8f5cff, #d6b8ff); }
 .perfil-clasif .pc-cab { display: flex; align-items: center; gap: var(--e3); }
 .perfil-clasif canvas.fin-grafica { margin-top: var(--e2); }
 .fila-boton { cursor: pointer; transition: background var(--dur-1); }
@@ -4547,7 +4497,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .pj-banco { display: flex; align-items: center; gap: 7px; margin-top: 8px; padding: 4px 4px 4px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 11.5px; line-height: 1; }
 .pj-banco[hidden], #panel-jugador.plegado .pj-banco { display: none; }
 .banco-etq { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); cursor: help; }
-.banco-etq .etq-icono { width: 13px; height: 13px; color: var(--acento); }
 .banco-barra { position: relative; flex: 1 1 auto; min-width: 24px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 #banco-relleno { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, #b8862a, var(--acento)); transition: width 0.3s ease; }
 .banco-cifra { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -4806,10 +4755,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 /* =========================================================== Perfil renovado (con amigos y clan) */
 /* Cabecera: estandarte, emblema, nombre, chapas (clan, amigos, liga) y anillo de nivel */
 #inicio .tarjeta-perfil { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 20px 24px; min-height: 150px; }
-.tarjeta-perfil::after { background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.15) 55%, rgba(0, 0, 0, 0.35)); }
-.tarjeta-perfil::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 50%); }
-.tarjeta-perfil canvas { width: 118px; height: 118px; }
-.tp-textos { gap: 5px; }
 .tp-titulo { color: var(--oro-200, #ffe3a1); }
 .tp-nombre { font-size: 34px; }
 .tp-chapas { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 1px; }
@@ -4822,21 +4767,10 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .chapa-amigos i { width: 7px; height: 7px; border-radius: 50%; background: #6b7587; }
 .chapa-amigos i.punto-linea { background: #5fd38d; box-shadow: 0 0 0 3px rgba(95, 211, 141, 0.2); }
 .tp-datos { color: rgba(255, 255, 255, 0.86); }
-/* Anillo de experiencia con el nivel dentro */
-.tp-anillo { position: relative; z-index: 2; display: grid; place-items: center; width: 92px; height: 92px; flex: none; }
-.tp-anillo svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5)); }
-.tpa-fondo { fill: rgba(8, 12, 22, 0.72); stroke: rgba(255, 255, 255, 0.14); stroke-width: 6; }
-.tpa-relleno { fill: none; stroke: #f2b33d; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 0 100; transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); filter: drop-shadow(0 0 4px rgba(242, 179, 61, 0.6)); }
-#inicio .tp-anillo .tp-nivel { position: static; transform: none; width: auto; height: auto; margin-top: -8px; font-size: 30px; font-weight: 900; color: #ffe08a; background: none; box-shadow: none; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 .tp-xp { position: absolute; bottom: 19px; font-size: 9.5px; font-weight: 700; color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) {
-  #inicio .tarjeta-perfil { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; }
-  .tarjeta-perfil canvas { width: 72px; height: 72px; }
   .tp-nombre { font-size: 23px; }
-  .tp-anillo { position: absolute; top: 10px; right: 10px; width: 64px; height: 64px; }
-  #inicio .tp-anillo .tp-nivel { font-size: 21px; margin-top: -5px; }
   .tp-xp { bottom: 12px; font-size: 8px; }
-  .tp-textos { padding-right: 62px; }
   .tp-datos { font-size: 12px; }
 }
 

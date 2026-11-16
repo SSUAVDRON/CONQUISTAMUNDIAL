@@ -140,16 +140,6 @@ export class Account {
     }
   }
 
-  /** Proveedores externos activos (Google, Apple…) según el servidor. */
-  async providers() {
-    try {
-      const body = await this._post('proveedores');
-      return Array.isArray(body.proveedores) ? body.proveedores : [];
-    } catch {
-      return [];
-    }
-  }
-
   /**
    * Une el perfil de la cuenta con el de este dispositivo y guarda el
    * resultado en los dos. Si otro dispositivo guardó a la vez (409), vuelve a

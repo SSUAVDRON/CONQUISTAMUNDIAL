@@ -85,7 +85,7 @@ function card(p, i, size) {
  *         nations: [{ name, color, flag }], nationTotal, ranked, ms, skippable, sound }
  */
 export async function presentMatch(opts) {
-  const { kicker = '', title = '', details = '', players = [], ai = null, nations = [], nationTotal = nations.length, ranked = false, ms = 6500, skippable = true, sound = null } = opts;
+  const { kicker = '', title = '', details = '', players = [], ai = null, nations = [], nationTotal = nations.length, ranked = false, ms = 6500, skippable = true, sound = null, onEnd = null } = opts;
   const still = sinMovimiento();
   // Tú primero; el resto, en el orden de la sala; la tarjeta de la IA (contra la IA), al final
   const ordered = [...players.filter((p) => p.me), ...players.filter((p) => !p.me), ...(ai ? [{ ...ai, ai: true }] : [])];
@@ -139,6 +139,12 @@ export async function presentMatch(opts) {
   await finished;
   clearInterval(timer);
   window.removeEventListener('keydown', onKey, true);
+  // Lo de debajo (la partida) entra antes de que la presentación se desvanezca
+  try {
+    onEnd?.();
+  } catch {
+    /* la presentación se va igual */
+  }
   box.classList.add('saliendo');
   await wait(still ? 0 : 320);
   box.remove();

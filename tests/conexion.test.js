@@ -257,3 +257,53 @@ test('invitado: si falta un turno pero llegan los siguientes, lo pide enseguida;
     guest.stop();
   }
 });
+
+test('turnos repartidos entre fotogramas (slice): anfitrión e invitado siguen idénticos y sin desincronizarse', () => {
+  const net = heldNetwork();
+  const hostGame = makeGame(33);
+  const guestGame = makeGame(33);
+  const refGame = makeGame(33); // la misma partida con turnos enteros y sin red
+  const peerToPlayer = new Map([['h', 1], ['g', 2]]);
+  let clock = 1000;
+  const now = () => clock;
+  // Plazo mínimo: cada llamada hace un solo ataque (lo más troceado posible)
+  const slice = { ms: 1e-6, behindMs: 1e-6, catchupMs: 1e-6 };
+  const host = new NetSync(net.channel('h'), hostGame, { isHost: true, hostPeer: 'h', myPlayerId: 1, peerToPlayer, myPeer: 'h', smooth: true, now, slice });
+  const guest = new NetSync(net.channel('g'), guestGame, { isHost: false, hostPeer: 'h', myPlayerId: 2, peerToPlayer, myPeer: 'g', smooth: true, now, slice });
+  host._stopTicker();
+  try {
+    net.deliver(); // «cargado»
+    let split = 0;
+    for (let f = 0; f < 6000 && hostGame.ticks < 400; f++) {
+      clock += 16;
+      host.update();
+      if (hostGame.midTick) split++;
+      net.deliver();
+      guest.update();
+      net.deliver();
+    }
+    assert.equal(hostGame.ticks >= 400, true, `el anfitrión avanza (${hostGame.ticks})`);
+    assert.ok(split > 50, `turnos troceados en el anfitrión (${split})`);
+    // El invitado alcanza al anfitrión (turnos terminados)
+    for (let f = 0; f < 3000 && (guestGame.ticks < hostGame.ticks || guestGame.midTick || hostGame.midTick); f++) {
+      clock += 16;
+      if (hostGame.midTick) host.update();
+      net.deliver();
+      guest.update();
+      net.deliver();
+    }
+    assert.ok(!hostGame.midTick && !guestGame.midTick);
+    assert.equal(guestGame.ticks, hostGame.ticks);
+    assert.equal(guest.desynced, false, 'los hashes coinciden');
+    while (refGame.ticks < hostGame.ticks) refGame.tick();
+    const fp = (g) => JSON.stringify([g.ticks, Array.from(g.owner.subarray(0, 4000)).join(','), g.players.filter(Boolean).map((p) => [p.tiles, Math.round(p.troops), Math.round(p.gold)])]);
+    assert.equal(fp(hostGame), fp(refGame), 'el anfitrión troceado = turnos enteros');
+    assert.equal(fp(guestGame), fp(refGame), 'el invitado troceado = turnos enteros');
+    let h = 0;
+    for (let i = 0; i < hostGame.owner.length; i++) if (hostGame.owner[i] !== refGame.owner[i]) h++;
+    assert.equal(h, 0, 'mismas casillas en todo el mapa');
+  } finally {
+    host.stop();
+    guest.stop();
+  }
+});

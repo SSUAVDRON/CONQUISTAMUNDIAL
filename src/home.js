@@ -1892,9 +1892,9 @@ export class Home {
   }
 
   /**
-   * ¿Tapa el menú del todo la partida de fondo? Sus pantallas tienen fondo
-   * opaco: mientras se ven quietas (sin entrar ni salir), dibujarla detrás
-   * era trabajo tirado y quitaba fluidez a las pestañas y a las páginas.
+   * ¿Tapa el menú todo el mapa? Sus pantallas tienen fondo opaco: mientras se
+   * ven quietas (sin entrar ni salir), lo de detrás no se ve (al salir de una
+   * partida, su último fotograma se borra entonces).
    */
   menuCovers() {
     // (Sin getAnimations: obliga a recalcular estilos y, en cada fotograma, salía caro)

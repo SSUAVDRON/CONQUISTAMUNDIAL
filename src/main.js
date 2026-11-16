@@ -57,7 +57,7 @@ const state = {
   game: null,
   renderer: null,
   human: null,
-  demo: true, // partida de fondo entre bots mientras se ve el inicio
+  demo: true, // en el menú (sin partida en juego)
   online: false,
   sala: null,
   net: null,
@@ -172,7 +172,7 @@ function myIdentity() {
 
 /**
  * Crea una partida. `humans`: identidades en orden (ids 1..n); `localIndex`:
- * cuál es este navegador (-1 = nadie, como en la demo del inicio).
+ * cuál es este navegador (-1 = nadie: solo bots).
  */
 function loadMap(mapSize, seed) {
   if (REAL_MAPS[mapSize]) return loadRealMap(mapSize); // los bots serán países reales
@@ -181,8 +181,8 @@ function loadMap(mapSize, seed) {
 }
 
 /**
- * Suelta la partida que hubiera (la de fondo del menú o la anterior) antes
- * de crear otra: si no, durante un momento convivían dos o tres partidas del
+ * Suelta la partida que hubiera (la anterior) antes de crear otra o al volver
+ * al menú: si no, durante un momento convivían dos o tres partidas del
  * mundo en memoria, y en el móvil el navegador acababa descartando lienzos
  * (el mapa en negro) o cerrando la pestaña.
  */
@@ -264,6 +264,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   // Diagnóstico local: ?diag=1 registra la partida (exportar con Ctrl+Mayús+D o __trinchera.diag.exportar())
   state.diag = DIAG ? new Diagnostico(game, { build: RULES_FINGERPRINT, mechVersion: MECH_VERSION, ruleset: roomRuleset(game.rules) }) : null;
   state.renderer = new Renderer(canvas, game, camera);
+  state.backdrop = false;
   // Si el navegador descartó los lienzos y el mapa se ha rehecho, también el
   // minimapa y los iconos del panel (que se dibujan una sola vez)
   state.renderer.onRestored = () => {
@@ -285,11 +286,12 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
 }
 
 /**
- * Partida de fondo del menú. `background`: solo se cambia la partida de
- * fondo (al arrancar o cuando termina la anterior), sin salir de la sala ni
- * tapar la ficha de una invitación o la sala que estén a la vista.
+ * Vuelta al menú: suelta la partida (el menú, opaco, no necesita nada detrás)
+ * y enseña el inicio. `background`: sin salir de la sala ni tapar la ficha de
+ * una invitación o la sala que estén a la vista (al arrancar o al volver al
+ * vestíbulo).
  */
-function startDemo({ background = false } = {}) {
+function backToMenu({ background = false } = {}) {
   state.holdSim = false;
   if (!background) {
     leaveOnline();
@@ -297,8 +299,12 @@ function startDemo({ background = false } = {}) {
     home.closeLayer('partida');
   }
   state.demo = true;
-  newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
-  // La partida de fondo del menú va a velocidad normal (gasta menos)
+  // El menú es opaco: detrás no hace falta ninguna partida. Antes se creaba
+  // un mundo con 30 naciones (casi 1 s parado al salir de cada partida, con
+  // el mapa pelado a la vista) y se simulaba sin verse. Ahora se suelta la
+  // partida: el menú entra sobre su último fotograma y después se limpia
+  releaseGame();
+  state.backdrop = true;
   state.speed = 1;
   ui.hideHud();
   ui.closeNation();
@@ -310,7 +316,7 @@ function startDemo({ background = false } = {}) {
   home.show();
 }
 
-// Minimapa abajo a la izquierda (oculto en el menú y en la partida de fondo)
+// Minimapa abajo a la izquierda (oculto en el menú)
 const minimap = new Minimap(document.getElementById('minimapa-lienzo'), (wx, wy, first) => {
   if (first) camera.flyTo(wx, wy, camera.zoom, 380);
   else camera.centerOn(wx, wy);
@@ -377,6 +383,18 @@ function enterGame(game) {
   ui.showHud();
 }
 
+/**
+ * Al acabar la carga, con la pantalla aún tapándolo todo: fuera el menú, la
+ * sala y el informe final, para que detrás quede el mapa de la partida nueva
+ * (y no reaparezca la pantalla anterior al desvanecerse la carga ni la
+ * presentación).
+ */
+function hideScreensForGame() {
+  home.hide();
+  home.hideLobby();
+  ui.hideEnd?.();
+}
+
 /** Partida contra la IA, con su pantalla de carga. */
 async function startGame(opts) {
   if (state.loading) return;
@@ -404,13 +422,20 @@ async function startGame(opts) {
           newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficulty, rules: opts.rules, humans: [myIdentity()], localIndex: 0, loaded }),
       },
       { label: 'Cavando trincheras…', run: (game) => game },
-    ]);
+    ], { onReady: hideScreensForGame });
     // Qué partida es (para repetirla desde el historial)
     if (state.config) state.config.modo = opts.tutorial ? 'tutorial' : opts.ranked ? 'clasificatoria' : opts.challenge ? 'reto' : 'ia';
-    // Antes de empezar: tu tarjeta frente a la IA y las naciones en juego (el tutorial va directo)
-    if (!opts.tutorial) await presentMatch(soloPresentation(game, opts));
+    // Antes de empezar: tu tarjeta frente a la IA y las naciones en juego (el
+    // tutorial va directo). La partida entra mientras la presentación se va
+    let entered = false;
+    const enter = () => {
+      if (entered || state.game !== game) return;
+      entered = true;
+      enterGame(game);
+    };
+    if (!opts.tutorial) await presentMatch({ ...soloPresentation(game, opts), onEnd: enter });
     if (state.game !== game) return;
-    enterGame(game);
+    enter();
     if (opts.tutorial) tutorial.start(tutorialState());
   } finally {
     state.loading = false;
@@ -618,7 +643,7 @@ function backToRoom() {
   state.net = null;
   state.online = false;
   state.ranked = null;
-  startDemo({ background: true });
+  backToMenu({ background: true });
   home.showLobby();
 }
 
@@ -966,13 +991,22 @@ async function beginOnlineGame(sala, payload, hostPeer) {
             loaded,
           }),
       },
+      // Los rangos de los demás (para la presentación), con la carga aún delante:
+      // antes se esperaban después y el mapa pelado asomaba hasta casi 1 s
+      { label: 'Pasando revista…', run: async (game) => (await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]), game) },
     ],
-    { minMs: 500 }, // online no hay que hacer esperar al resto
+    { minMs: 500, onReady: hideScreensForGame }, // online no hay que hacer esperar al resto
   );
   if (state.sala !== sala) return;
+  // La partida entra (red y HUD) mientras la presentación se desvanece, una sola vez
+  let entered = false;
+  const enter = () => {
+    if (entered || state.sala !== sala || state.game !== game) return;
+    entered = true;
+    startOnlineGame(sala, game, payload, { index, hostPeer, myPeer });
+  };
   // Presentación: los participantes de la sala (y su rango en la clasificatoria) y las naciones.
   // Dura lo mismo para todos; el anfitrión espera además a que todos hayan cargado.
-  await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]);
   {
     const nations = nationsOf(game);
     const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
@@ -991,15 +1025,20 @@ async function beginOnlineGame(sala, payload, hostPeer) {
       ranked,
       skippable: false,
       sound,
+      onEnd: enter,
     });
   }
-  if (state.sala !== sala || state.game !== game) return;
+  enter();
+}
+
+/** La red de la partida en línea (lockstep), sus avisos y la entrada en partida. */
+function startOnlineGame(sala, game, payload, { index, hostPeer, myPeer }) {
   // Los humanos se añaden primero: el jugador i tiene id i + 1 (en cooperativo,
   // cada pareja comparte el id de su nación)
   const groups = coopGroups(payload.players.length, game.rules.coop);
   const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
   const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true, ronda: payload.ronda || 1 });
+  state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true, ronda: payload.ronda || 1, slice: NET_SLICE });
   // Rivales humanos para el Elo: su MMR (verificado) y su puesto al acabar
   state.rankedRivals = () =>
     payload.players
@@ -2077,7 +2116,7 @@ ui.on({
     const wasOnline = state.online;
     finishGame();
     tutorial.stop();
-    startDemo();
+    backToMenu();
     if (wasOnline) home.returnTo('multijugador');
   },
   /** Revancha: misma partida contra la IA; en línea, la revancha de grupo en la misma sala. */
@@ -2088,12 +2127,13 @@ ui.on({
       return;
     }
     finishGame();
-    ui.hideEnd();
-    if (state.online || !state.lastOpts) {
+    if (!state.lastOpts) {
+      ui.hideEnd();
       tutorial.stop();
-      startDemo();
+      backToMenu();
       return;
     }
+    // El informe final se quita con la carga ya delante (si no, asomaba el mapa acabado)
     if (state.lastOpts.ranked === 'ia') startRanked();
     else startGame(state.lastOpts);
   },
@@ -2121,6 +2161,12 @@ ui.on({
 // partida va un pelín más lenta en vez de dar tirones intentando recuperar
 // (en el móvil, 2: un fotograma con 3 turnos y el dibujo se notaba)
 const MAX_TICKS_PER_FRAME = TOUCH ? 2 : 3;
+// Tiempo de simulación por fotograma (ms): el turno se reparte entre fotogramas.
+// Con la simulación atrasada, más (para que no se vaya quedando lenta)
+const SIM_SLICE_MS = 4;
+const SIM_SLICE_BEHIND_MS = TOUCH ? 12 : 14;
+// En línea, lo mismo (y al recuperar turnos atrasados, hasta 40 ms por fotograma)
+const NET_SLICE = { ms: SIM_SLICE_MS, behindMs: SIM_SLICE_BEHIND_MS, catchupMs: 40 };
 
 /**
  * Un fotograma. El siguiente se pide lo primero y cada parte va por separado:
@@ -2142,16 +2188,24 @@ function frame(now) {
       } else if (tutorial.holds() && !state.holdSim) {
         // Tutorial en un paso de lectura o práctica: el tiempo no corre, pero en
         // el despliegue tu elección de sitio se aplica igual (DEV02)
+        if (game.midTick) game.tick();
         if (game.phase === 'spawn') game.applyIntentsNow();
       } else if (state.speed > 0 && !state.holdSim) {
         state.acc += dt * state.speed;
+        // El turno se reparte entre fotogramas (tickPart, mismo resultado):
+        // unos milisegundos por fotograma en vez de un turno entero de golpe.
+        // Antes, con el mundo en plena expansión, cada turno (10 por segundo)
+        // alargaba un fotograma: un tirón constante. Si la simulación se queda
+        // atrás, el presupuesto crece para alcanzarla
+        const deadline = performance.now() + (state.acc >= 2 * TICK_MS ? SIM_SLICE_BEHIND_MS : SIM_SLICE_MS);
         let steps = 0;
-        while (state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
+        if (game.midTick && game.tickPart(deadline)) steps++;
+        while (!game.midTick && state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME && performance.now() < deadline) {
           state.acc -= TICK_MS;
-          steps++;
-          game.tick();
+          if (game.tickPart(deadline)) steps++;
         }
-        if (steps === MAX_TICKS_PER_FRAME) state.acc = Math.min(state.acc, TICK_MS);
+        // Si el equipo no da para más, la partida va un pelín más lenta en vez de acumular deuda
+        if (state.acc > MAX_TICKS_PER_FRAME * TICK_MS) state.acc = MAX_TICKS_PER_FRAME * TICK_MS;
       }
     }
   } catch (err) {
@@ -2162,19 +2216,21 @@ function frame(now) {
   } catch (err) {
     reportError(err, 'cámara y sonido');
   }
-  // La partida de fondo del menú se ve atenuada y tapada: se dibuja a 20 fps
-  // (15 en el móvil). Cada dibujo hace recomponer la pantalla entera, y a 60
-  // fps era casi la mitad del trabajo del menú. Y si el menú la tapa del todo
-  // (fondo opaco y quieto), ni se dibuja
-  state.frameNo = (state.frameNo || 0) + 1;
-  const demoGap = TOUCH ? 62 : 46;
-  if (!state.demo || (now - (state.lastDemoDraw || 0) >= demoGap && !home.menuCovers())) {
-    if (state.demo) state.lastDemoDraw = now;
+  // (en el menú no hay partida que dibujar)
+  if (!state.demo) {
     try {
       state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping, spawn: state.spawnPreview });
     } catch (err) {
       reportError(err, 'dibujo del mapa');
     }
+  }
+  // Sin partida detrás del menú: el último fotograma de la anterior se borra en
+  // cuanto el menú la tapa, para que no asome en las transiciones entre pantallas
+  if (state.backdrop && !state.game && home.menuCovers()) {
+    state.backdrop = false;
+    const g = canvas.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
   }
   try {
     if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
@@ -2205,7 +2261,8 @@ function frame(now) {
 
 /** Lo que va entre la simulación y el dibujo: resumen, cuenta atrás, demo, cámara y paneles vivos. */
 function frameWorld(now, dt, game) {
-  if (!state.demo && state.rec && state.rec.game === game) state.rec.update();
+  // (con el turno a medias se espera a que termine: el resumen ve turnos enteros)
+  if (!state.demo && state.rec && state.rec.game === game && !game.midTick) state.rec.update();
   // Últimos 5 s del despliegue: un «tic» por segundo
   if (game && !state.demo && game.phase === 'spawn' && state.human?.alive) {
     const left = Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000);
@@ -2214,8 +2271,6 @@ function frameWorld(now, dt, game) {
       if (left >= 1 && left <= 5) sound.play('tick', left === 1 ? 1 : 0.75, 0);
     }
   }
-  // En la demo, al terminar una partida empieza otra
-  if (state.demo && game && game.phase === 'ended') startDemo({ background: true });
   // Empieza la conquista: la cámara vuela a tu zona y se acerca hasta ver la
   // región (unas 80 casillas originales de ancho), aunque el mapa sea el mundo
   if (game && !state.demo && state.lastPhase === 'spawn' && game.phase === 'playing') {
@@ -2270,7 +2325,7 @@ document.getElementById('mp-salir').addEventListener('click', () => {
   else {
     finishGame();
     tutorial.stop();
-    startDemo();
+    backToMenu();
   }
 });
 
@@ -2320,7 +2375,7 @@ installGlobalHandlers();
 
 // Arranque: la pantalla de carga (ya en el HTML) cubre todo mientras se
 // preparan las fuentes, las banderas, el mapa del mundo, su terreno, la
-// cuenta, el menú y la partida de fondo; después entra el menú. Lo que salía
+// cuenta y el menú; después entra el menú. Lo que salía
 // al abrir (un reto, una clasificatoria a medias…) espera a que acabe.
 state.demo = true;
 state.booted = false;
@@ -2379,7 +2434,7 @@ async function boot() {
     loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300, 'terreno');
     await paint();
     await paint();
-    paintTerrain(map); // queda guardado: la partida de fondo lo reutiliza
+    paintTerrain(map); // queda guardado: la primera partida del mundo lo reutiliza
     loader?.step('Sincronizando tu perfil…', 0.74, 500, 'perfil');
     await paint();
     await atMost(syncAtBoot(), 2500);
@@ -2399,14 +2454,14 @@ async function boot() {
     home.renderAll();
     loader?.step('Desplegando el frente…', 0.96, 700, 'frente');
     await paint();
-    if (!state.game) startDemo({ background: true });
+    if (!state.game) backToMenu({ background: true });
     await paint();
   } catch (err) {
     reportError(err, 'arranque');
     // Que el menú salga igualmente
     try {
       home.renderAll();
-      if (!state.game) startDemo({ background: true });
+      if (!state.game) backToMenu({ background: true });
     } catch (err2) {
       reportError(err2, 'arranque (menú)');
     }

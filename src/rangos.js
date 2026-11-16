@@ -94,8 +94,6 @@ export function seasonEnd(id) {
  * cada partida, para saber con qué reglas se consiguió.
  */
 export const RANKED_VERSION = 'clasico';
-/** Colas con progresión propia (DEV07). */
-export const QUEUES = { ia: 'Contra la IA', online: 'En línea' };
 /** Partidas aplicadas que se recuerdan (para no aplicar dos veces el mismo final). */
 const APPLIED = 40;
 

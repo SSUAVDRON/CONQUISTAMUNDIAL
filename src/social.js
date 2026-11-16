@@ -130,11 +130,6 @@ export class Social {
     }, ms);
   }
 
-  /** Dónde estás: 'menu', 'sala' o 'partida' (lo ven tus amigos). */
-  setEstado(estado) {
-    this.estado = estado;
-  }
-
   /** Olvida la última ficha mandada (al cambiar de cuenta, para mandar la nueva). */
   forgetCard() {
     this._cardJson = '';
