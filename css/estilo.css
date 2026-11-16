@@ -6442,3 +6442,67 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
 /* Mientras arrastras un edificio al mapa, la bandeja se aparta */
 #hud.arrastrando-obra .bandeja-obras { opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.12s, transform 0.12s; }
 #hud .obra { touch-action: none; }
+
+/* =====================================================================
+   Pantallas de carga (arranque y partida): estilo de juego móvil, propio.
+   Logo grande que entra con rebote y flota, rayos que giran detrás, una
+   tarjeta gruesa con el consejo y una barra gruesa con rayas y el
+   porcentaje dentro. Sin filas de iconos. Solo transform y opacity en lo
+   que se anima (sigue fluido aunque la carga ocupe el navegador).
+   ===================================================================== */
+.arranque { place-items: stretch center; }
+.arranque .arr-centro { align-self: stretch; justify-content: space-between; gap: 16px; width: min(520px, 100%); max-height: 900px; margin: 0 auto; padding: 5vh 0 2px; }
+.arr-rayos { position: absolute; left: 50%; top: 24%; width: 620px; height: 620px; margin: -310px 0 0 -310px; z-index: -1; pointer-events: none; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255, 207, 102, 0.13) 0deg 7deg, transparent 7deg 20deg); -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 30%, transparent 68%); mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 30%, transparent 68%); animation: rayosGira 48s linear infinite; }
+@keyframes rayosGira { to { transform: rotate(360deg); } }
+.arranque .arr-logo { flex: 1; justify-content: center; gap: 10px; animation: logoPop 0.85s cubic-bezier(0.18, 1.45, 0.4, 1) both; }
+@keyframes logoPop { 0% { opacity: 0; transform: scale(0.35) translateY(40px); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.arranque .arr-logo .logo-marca { width: clamp(108px, 30vw, 150px); height: clamp(108px, 30vw, 150px); filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 30px rgba(255, 196, 80, 0.32)); animation: logoFlota 3.4s 1s ease-in-out infinite; }
+@keyframes logoFlota { 50% { transform: translateY(-7px) rotate(-2.5deg); } }
+.arranque .arr-logo .logo-texto { font-size: clamp(44px, 12vw, 84px); letter-spacing: 0.05em; filter: drop-shadow(2px 0 0 #2b1706) drop-shadow(-2px 0 0 #2b1706) drop-shadow(0 -2px 0 #2b1706) drop-shadow(0 6px 0 rgba(0, 0, 0, 0.55)); }
+.arranque .arr-lema { padding: 5px 14px; border-radius: 999px; background: rgba(4, 8, 18, 0.55); border: 2px solid rgba(255, 211, 107, 0.28); color: #e9eefb; font-size: 10.5px; letter-spacing: 0.18em; }
+.arr-pie { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* Tarjeta del consejo: panel grueso con su pestaña dorada */
+.arranque .arr-consejos, .carga .arr-consejos { position: relative; width: 100%; max-width: 480px; margin: 14px 0 2px; padding: 20px 16px 12px; border-radius: 18px; background: linear-gradient(180deg, #24406f 0%, #182c51 100%); border: 3px solid #070c19; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.16), inset 0 -4px 0 rgba(0, 0, 0, 0.22), 0 6px 0 rgba(0, 0, 0, 0.38), 0 16px 30px rgba(0, 0, 0, 0.35); animation: tarjetaSube 0.6s 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes tarjetaSube { 0% { opacity: 0; transform: translateY(26px) scale(0.92); } 100% { opacity: 1; transform: none; } }
+.arranque .arr-consejos-titulo, .carga .arr-consejos-titulo { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); display: block; padding: 4px 16px 5px; border-radius: 999px; background: linear-gradient(180deg, #ffe7a0 0%, #ffcc55 45%, #d98e1d 100%); border: 2px solid #070c19; color: #3a2207; font: 900 11px/1.15 system-ui, sans-serif; letter-spacing: 0.16em; text-transform: uppercase; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.7); white-space: nowrap; }
+.arranque .arr-tip, .carga .carga-tip { font-size: 14px; font-weight: 600; line-height: 1.4; color: #f1f5ff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); }
+.arranque .arr-tips { min-height: 42px; margin-top: 2px; }
+.carga .carga-tip { margin: 2px 0 0; min-height: 40px; animation: none; }
+.arranque .arr-puntos i { background: rgba(0, 0, 0, 0.35); }
+
+/* Texto del paso, encima de la barra */
+.arranque .arr-paso, .carga .arr-paso { margin: 2px 0 0; min-height: 18px; font: 800 14px/1.2 system-ui, sans-serif; color: #fff; letter-spacing: 0.02em; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55); }
+
+/* Barra gruesa: pista hundida y relleno dorado con rayas que avanzan */
+.arranque .arr-progreso, .carga .arr-progreso { width: 100%; max-width: 480px; display: block; }
+.barra-gruesa { position: relative; width: 100%; height: 30px; flex: none; }
+.barra-gruesa .arr-barra { position: absolute; inset: 0; height: auto; border-radius: 13px; background: linear-gradient(180deg, #050913, #0d1528); border: 3px solid #04070f; box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.65), 0 4px 0 rgba(0, 0, 0, 0.38), 0 0 0 2px rgba(255, 211, 107, 0.28); overflow: hidden; }
+.barra-gruesa .arr-barra::after { display: none; }
+.barra-gruesa .arr-barra span { position: absolute; inset: 0; height: auto; border-radius: 10px; overflow: hidden; transform: translateX(-98%); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); background: linear-gradient(180deg, #fff3c2 0%, #ffd56e 28%, #f5ac2f 62%, #c97812 100%); box-shadow: inset 0 -4px 0 rgba(130, 64, 0, 0.32), inset 0 2px 0 rgba(255, 255, 255, 0.6); }
+.barra-gruesa .arr-barra span::before { content: ""; position: absolute; top: 0; bottom: 0; left: -40px; right: 0; background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.24) 0 9px, transparent 9px 18px); animation: rayasBarra 0.7s linear infinite; }
+@keyframes rayasBarra { to { transform: translateX(25.46px); } }
+.barra-gruesa .barra-punta { inset: 3px 3px; }
+.barra-gruesa .barra-punta::before { width: 26px; height: 26px; margin-top: -13px; right: -13px; }
+.barra-gruesa .barra-punta::after { display: none; }
+.barra-gruesa .arr-pct { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; min-width: 0; text-align: center; font: 900 14px/1 system-ui, sans-serif; color: #fff; letter-spacing: 0.03em; text-shadow: 0 2px 0 #5a3205, 1px 0 0 #5a3205, -1px 0 0 #5a3205, 0 -1px 0 #5a3205; pointer-events: none; }
+
+/* Carga de la partida: escudo, nombre del mapa grande y el campo de batalla enmarcado */
+.carga .carga-centro { width: min(520px, 100%); gap: 14px; }
+.carga .arr-rayos { top: 12%; }
+.carga .carga-cab { flex-direction: column; gap: 6px; animation: logoPop 0.7s cubic-bezier(0.18, 1.45, 0.4, 1) both; }
+.carga .carga-escudo { width: 66px; height: 66px; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 22px rgba(255, 196, 80, 0.3)); animation: logoFlota 3.4s 0.8s ease-in-out infinite; }
+.carga .carga-titulos { text-align: center; }
+.carga .carga-kicker { display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(4, 8, 18, 0.55); border: 2px solid rgba(255, 211, 107, 0.3); color: #ffd36b; font-size: 10.5px; }
+.carga .carga-mapa { margin-top: 6px; font-size: clamp(36px, 10vw, 54px); filter: drop-shadow(2px 0 0 #2b1706) drop-shadow(-2px 0 0 #2b1706) drop-shadow(0 -2px 0 #2b1706) drop-shadow(0 5px 0 rgba(0, 0, 0, 0.55)); }
+.carga .carga-vista { border-radius: 18px; border: 3px solid #04070f; box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.32), 0 6px 0 rgba(0, 0, 0, 0.38), 0 18px 40px rgba(0, 0, 0, 0.45); }
+.carga .arr-pie { gap: 10px; }
+@media (max-height: 640px) {
+  .arranque .arr-logo .logo-marca { width: 84px; height: 84px; }
+  .arranque .arr-logo .logo-texto { font-size: 44px; }
+  .carga .carga-escudo { width: 46px; height: 46px; }
+  .carga .carga-mapa { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arr-rayos, .barra-gruesa .arr-barra span::before, .arranque .arr-logo .logo-marca, .carga .carga-escudo { animation: none; }
+}

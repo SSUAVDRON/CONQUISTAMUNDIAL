@@ -45,9 +45,9 @@
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=03eed180fc",
       "./src/ladder.js": "./src/ladder.js?v=fae0703183",
-      "./src/loading.js": "./src/loading.js?v=a6d871f13d",
+      "./src/loading.js": "./src/loading.js?v=cd1bc1beef",
       "./src/lugares.js": "./src/lugares.js?v=554cb7b327",
-      "./src/main.js": "./src/main.js?v=89fd851d52",
+      "./src/main.js": "./src/main.js?v=9823fb9716",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=87bade7d81",
@@ -86,7 +86,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=cf9a10c64d">
+  <link rel="stylesheet" href="css/estilo.css?v=0ac05923f9">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo, siluetas e iconos de las pantallas de carga) -->
@@ -134,6 +134,7 @@
       </svg>
     </div>
     <div class="arr-centro">
+      <span class="arr-rayos" aria-hidden="true"></span>
       <div class="logo logo-grande arr-logo" role="img" aria-label="Trinchera">
         <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
           <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
@@ -145,35 +146,20 @@
         <span class="logo-texto">TRINCHERA</span>
         <span class="arr-lema">Conquista el mundo, casilla a casilla</span>
       </div>
-      <div class="arr-mapa" aria-hidden="true">
-        <canvas id="arr-lienzo" width="480" height="230"></canvas>
-        <span class="arr-velo"><span class="arr-escaner"></span></span>
-        <span class="arr-radar"></span>
-        <div class="arr-pines" id="arr-pines"></div>
-        <span class="arr-brillo-mapa"></span>
-        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
-        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
-      </div>
-      <div class="arr-progreso">
-        <div class="barra-oro" aria-hidden="true">
-          <div class="arr-barra"><span id="arr-progreso"></span></div>
-          <span class="barra-punta" id="arr-punta"></span>
+      <div class="arr-pie">
+        <div class="arr-consejos" id="arr-consejos">
+          <span class="arr-consejos-titulo">Consejo</span>
+          <div class="arr-tips" id="arr-tips"></div>
+          <div class="arr-puntos" id="arr-puntos" aria-hidden="true"></div>
         </div>
-        <b class="arr-pct" id="arr-pct" aria-hidden="true"></b>
-      </div>
-      <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
-      <ol class="arr-pasos insignias" id="arr-pasos" aria-hidden="true" style="--n: 6">
-        <li data-paso="cuartel"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-cuartel"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Cuartel</span></li>
-        <li data-paso="banderas"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-banderas"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Banderas</span></li>
-        <li data-paso="mapa"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-mapa"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Mapa</span></li>
-        <li data-paso="terreno"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-terreno"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Terreno</span></li>
-        <li data-paso="perfil"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-perfil"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Perfil</span></li>
-        <li data-paso="frente"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-frente"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Frente</span></li>
-      </ol>
-      <div class="arr-consejos" id="arr-consejos">
-        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
-        <div class="arr-tips" id="arr-tips"></div>
-        <div class="arr-puntos" id="arr-puntos" aria-hidden="true"></div>
+        <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
+        <div class="arr-progreso">
+          <div class="barra-oro barra-gruesa" aria-hidden="true">
+            <div class="arr-barra"><span id="arr-progreso"></span></div>
+            <span class="barra-punta" id="arr-punta"></span>
+            <b class="arr-pct" id="arr-pct"></b>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -765,6 +751,7 @@
       </svg>
     </div>
     <div class="carga-centro">
+      <span class="arr-rayos" aria-hidden="true"></span>
       <header class="carga-cab">
         <svg class="carga-escudo" viewBox="0 0 64 64" aria-hidden="true">
           <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
@@ -784,21 +771,20 @@
         <span class="arr-radar"></span>
         <div class="arr-pines" id="carga-pines"></div>
         <span class="arr-brillo-mapa"></span>
-        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
-        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
       </div>
-      <div class="arr-progreso">
-        <div class="barra-oro" aria-hidden="true">
-          <div class="arr-barra"><span id="carga-progreso"></span></div>
-          <span class="barra-punta" id="carga-punta"></span>
+      <div class="arr-pie">
+        <div class="arr-consejos carga-consejos">
+          <span class="arr-consejos-titulo">Consejo</span>
+          <p id="carga-consejo" class="carga-tip"></p>
         </div>
-        <b class="arr-pct" id="carga-pct" aria-hidden="true"></b>
-      </div>
-      <p id="carga-paso" class="arr-paso carga-paso"></p>
-      <ol class="insignias" id="carga-pasos" aria-hidden="true"></ol>
-      <div class="arr-consejos carga-consejos">
-        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
-        <p id="carga-consejo" class="carga-tip"></p>
+        <p id="carga-paso" class="arr-paso carga-paso"></p>
+        <div class="arr-progreso">
+          <div class="barra-oro barra-gruesa" aria-hidden="true">
+            <div class="arr-barra"><span id="carga-progreso"></span></div>
+            <span class="barra-punta" id="carga-punta"></span>
+            <b class="arr-pct" id="carga-pct"></b>
+          </div>
+        </div>
       </div>
     </div>
   </div>

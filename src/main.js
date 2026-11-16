@@ -16,7 +16,7 @@ import { fmtTroops, formatNumber, formatPercent, formatTime } from './format.js'
 import { grantAchievement, levelInfo, loadProfile, mergeProfiles, ownedEmojis, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { bootLoader, withLoading } from './loading.js';
 import { loadMapData } from './mapas-carga.js';
-import { paintMapPreview, paintTerrain } from './terreno.js';
+import { paintTerrain } from './terreno.js';
 import { Account } from './cuenta.js';
 import { AccountUI } from './cuenta-ui.js';
 import { Social } from './social.js';
@@ -2685,17 +2685,7 @@ async function boot() {
       }
     }
     await paint();
-    const { map, countries } = loadRealMap('mundo');
-    const cropH = Math.min(map.height, Math.round((map.width * 230) / 480));
-    // Banderas de algunos países repartidos por el mundo, sobre su sitio real
-    const PIN_ISOS = ['us', 'ca', 'mx', 'br', 'ar', 'gb', 'fr', 'es', 'de', 'ru', 'tr', 'eg', 'ng', 'za', 'sa', 'in', 'cn', 'jp', 'id', 'au'];
-    const pins = countries
-      .filter((c) => PIN_ISOS.includes(c.iso) && map.y(c.tile) < cropH)
-      .map((c) => ({ iso: c.iso, x: (map.x(c.tile) + 0.5) / map.width, y: (map.y(c.tile) + 0.5) / cropH }));
-    loader?.map((canvas) => {
-      const data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river, lat: map.lat };
-      paintMapPreview(canvas, data, [0, 0, map.width, cropH]);
-    }, pins);
+    const { map } = loadRealMap('mundo');
     loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300, 'terreno');
     await paint();
     await paint();
