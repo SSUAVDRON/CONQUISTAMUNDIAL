@@ -6506,3 +6506,49 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
 @media (prefers-reduced-motion: reduce) {
   .arr-rayos, .barra-gruesa .arr-barra span::before, .arranque .arr-logo .logo-marca, .carga .carga-escudo { animation: none; }
 }
+
+/* =====================================================================
+   Menús en el móvil: más contenido a la vista. Rellenos y márgenes más
+   contenidos, títulos de sección y cifras grandes un punto más pequeños, y
+   las fichas del Arsenal y de los puntos de interés más compactas.
+   ===================================================================== */
+@media (max-width: 600px) {
+  .bloque { padding: 12px 12px 13px; border-radius: 14px; }
+  .bloque h2 { font-size: 16px; gap: 8px; }
+  .bloque h3 { font-size: 14px; }
+  /* Portada: la ilustración ocupa menos y el título baja de tamaño */
+  .heroe-texto { padding: 56px 12px 12px; gap: 6px; }
+  .heroe .portada-titulo { font-size: 24px; }
+  .portada-titulo { font-size: 24px; }
+  /* Competitivo */
+  #pg-comp-h1 { font-size: 20px; }
+  .cp-liga { font-size: 19px; }
+  .cp-meta-tit { font-size: 16px; }
+  .cp-vest-pie { padding: 12px 10px 8px; }
+  /* Iconos de las listas (retos, gestas, diario) */
+  .ev-icono { width: 40px; height: 40px; font-size: 20px; }
+  .reto-icono { font-size: 21px; }
+  .casi-icono { font-size: 20px; }
+  .pg-m-icono { font-size: 17px; }
+  /* Perfil: el estandarte de la ficha, algo más bajo */
+  .fc-estandarte canvas { width: 100px; height: 100px; }
+  /* Arsenal */
+  .arsenal-intro { font-size: 12.5px; line-height: 1.4; }
+  .arsenal-grupo { font-size: 16px; gap: 9px; }
+  .arsenal-grupo small { font-size: 11.5px; }
+  .arsenal-grupo .arsenal-cat-icono { width: 34px; height: 34px; }
+  .arsenal-grupo .arsenal-cat-icono canvas { width: 27px; height: 27px; }
+  .arsenal-vista .arma { padding: 8px 5px 8px; gap: 2px; }
+  .arsenal-vista .arma-dibujo { width: 46px; height: 46px; }
+  .arsenal-vista .arma-dibujo canvas { width: 44px; height: 44px; }
+  .arsenal-vista .arma strong { font-size: 12.5px; }
+  .arsenal-vista .arma-texto { font-size: 11px; line-height: 1.25; }
+  .puntos-rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .punto-ficha { padding: 10px 8px 11px; gap: 4px; }
+  .pf-dibujo canvas { width: 46px; height: 46px; }
+  .punto-ficha strong { font-size: 13px; }
+  .pf-chip { font-size: 11px; padding: 2px 8px; }
+  .punto-ficha p { font-size: 11.5px; line-height: 1.35; }
+  /* Aspecto: los emojis de la tienda, cinco por fila */
+  .selector-emojis { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 6px !important; }
+}
