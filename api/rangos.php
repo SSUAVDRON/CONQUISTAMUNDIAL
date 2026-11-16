@@ -76,7 +76,7 @@ function emblema($e): string {
         'symbol' => $palabra($e['symbol'] ?? null, 'estrella'),
         'bg' => color($e['bg'] ?? null),
         'fg' => color($e['fg'] ?? null),
-        'flag' => is_string($e['flag'] ?? null) && preg_match('/^[a-z]{2,3}$/', $e['flag']) ? $e['flag'] : '',
+        'flag' => is_string($e['flag'] ?? null) && preg_match('/^[a-z]{2,3}(-[a-z0-9]{2,5})?$/', $e['flag']) ? $e['flag'] : '',
     ];
     return json_encode($limpio);
 }
