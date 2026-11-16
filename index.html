@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="1992d69 2026-11-16 20:01 UTC">
+<meta name="trinchera-build" content="a050ff8 2026-11-16 20:56 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -2785,7 +2785,7 @@ body.sin-animaciones .novedad { transition: none; }
 .pantalla-sala .sala-pie button:disabled { opacity: 0.55; }
 .pantalla-sala .sala-pie .secundario { padding: 12px 20px; color: var(--marfil); }
 #btn-listo.secundario { background: transparent; border: 1.5px solid var(--marfil); min-width: 230px; padding: 14px 28px; font-size: 16px; font-weight: 900; text-transform: uppercase; }
-.sala-cuenta-atras { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; background: rgba(4, 8, 16, 0.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.sala-cuenta-atras { position: fixed; inset: 0; z-index: 70; display: grid; place-content: center; justify-items: center; gap: 6px; background: rgba(4, 8, 16, 0.72); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 .sala-cuenta-atras small { font-size: 18px; color: var(--marfil); letter-spacing: 0.06em; text-transform: uppercase; }
 .sala-cuenta-atras strong { font-family: var(--serif); font-weight: 800; font-size: 140px; line-height: 1; color: var(--oro-claro); text-shadow: 0 8px 40px rgba(233, 185, 85, 0.5); animation: latido 1s ease-in-out infinite; }
 @keyframes latido { 50% { transform: scale(1.08); } }
@@ -4013,43 +4013,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .vista.pagina[hidden] { display: none; }
 
 /* ---------- Competitivo ---------- */
-.cp-portada {
-  --liga: 244, 196, 78;
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(200px, 0.9fr) minmax(260px, 1.2fr) minmax(260px, 1fr);
-  align-items: center;
-  gap: 24px;
-  padding: 26px;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(var(--liga), 0.45);
-  background:
-    radial-gradient(ellipse 45% 70% at 50% 42%, rgba(var(--liga), 0.2), transparent 70%),
-    linear-gradient(160deg, #170d29, #0b1222 55%, #140a20);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.35);
-}
-.cp-portada::before { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(var(--liga), 0.16); border-radius: 13px; pointer-events: none; }
-.cp-portada.en-colocacion { --liga: 196, 170, 120; }
-/* Tu comandante: un estandarte con tu emblema */
-.cp-comandante {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  padding: 22px 14px 40px;
-  text-align: center;
-  clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-.cp-comandante::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.45)); pointer-events: none; }
-.cp-comandante > * { position: relative; z-index: 1; }
-.cp-comandante canvas { width: 108px; height: 108px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55)); }
-#cp-nombre { max-width: 100%; font-family: var(--serif); font-size: 22px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
-.cp-titulo { color: rgba(255, 255, 255, 0.78); font-size: 13px; }
-.cp-nivel { margin-top: 6px; padding: 3px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.5); color: var(--oro-claro); font-size: 12px; font-weight: 800; }
 /* El rango: insignia grande con su luz */
 .cp-rango { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
 .cp-halo { position: relative; width: 210px; height: 210px; display: grid; place-items: center; }
@@ -4074,13 +4037,8 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .cp-v { color: var(--ok); font-weight: 800; }
 .cp-d { color: var(--peligro); font-weight: 800; }
 /* Cola y «Buscar partida» */
-.cp-cola { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 18px; border-radius: 14px; background: rgba(0, 0, 0, 0.32); border: 1px solid var(--oro-linea); }
-.cp-cola h2 { margin: 0; font-family: var(--serif); font-size: 19px; color: var(--oro-claro); }
 .cp-colas button { flex: 1; }
-.cp-cola-nota { margin: 0; min-height: 3.9em; color: var(--texto-2); font-size: 13px; line-height: 1.45; }
-.cp-buscar { width: 100%; padding: 16px 18px; font-family: var(--serif); font-size: 19px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.cp-cola-extra { color: var(--texto-3); font-size: 12px; line-height: 1.4; }
-/* Escalera de ligas */
+
 .cp-ligas { position: relative; list-style: none; margin: 4px 0 0; padding: 10px 0 0; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
 .cp-ligas::before { content: ""; position: absolute; left: 5%; right: 5%; top: 46px; height: 2px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(233, 185, 85, 0.35), rgba(255, 255, 255, 0.04)); }
 .cp-liga-item { --liga: 244, 196, 78; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 12px; text-align: center; }
@@ -4162,8 +4120,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 #inicio .modos .modo-corto { font-variant-numeric: tabular-nums; }
 
 @media (max-width: 1100px) {
-  .cp-portada { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .cp-cola { grid-column: 1 / -1; }
   .cp-rejilla { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
@@ -4180,13 +4136,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
   .pagina-titulos small { font-size: 10px; }
   .pagina-extra { font-size: 12px; }
   .vista.pagina { gap: 14px; }
-  .cp-portada { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 18px 14px; }
-  .cp-comandante { display: grid; grid-template-columns: 56px minmax(0, 1fr); grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 1px; align-items: center; padding: 10px 14px; text-align: left; clip-path: none; border-radius: 12px; }
-  .cp-comandante canvas { grid-row: 1 / 4; width: 56px; height: 56px; }
-  .cp-comandante #cp-nombre { font-size: 18px; }
-  .cp-nivel { margin: 2px 0 0; justify-self: start; }
-  .cp-halo, .cp-halo canvas { width: 170px; height: 170px; }
-  .cp-liga { font-size: 25px; }
   .cp-ligas { grid-template-columns: repeat(9, 66px); overflow-x: auto; padding: 12px 2px 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
   .cp-ligas::-webkit-scrollbar { display: none; }
   .cp-ligas::before { left: 0; right: 0; }
@@ -5715,15 +5664,10 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
    Competitivo: rangos animados, menos texto (fichas emergentes) y amigos
    ===================================================================== */
 .cp-info { display: inline-grid; place-items: center; width: 20px; height: 20px; min-height: 0; margin-left: 6px; padding: 0; vertical-align: middle; border-radius: 50%; border: 1px solid rgba(227, 194, 122, 0.5); background: rgba(0, 0, 0, 0.35); color: var(--oro-200); font-size: 12px; font-weight: 900; cursor: help; }
-.cp-amigos { width: 100%; margin-top: 8px; }
-.cp-cola-nota { font-size: 12.5px; color: var(--texto-2); }
 /* Insignia: destello que la cruza, chispas que suben y halo que respira */
 .cp-halo { isolation: isolate; }
 .cp-halo::before { animation: cpRespira 3.2s ease-in-out infinite; }
 @keyframes cpRespira { 0%, 100% { opacity: 0.7; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.06); } }
-.cp-brillo { position: absolute; inset: 14%; border-radius: 50%; overflow: hidden; pointer-events: none; mix-blend-mode: screen; }
-.cp-brillo::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 34%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent); transform: skewX(-18deg); animation: cpDestello 4.8s ease-in-out infinite; }
-@keyframes cpDestello { 0%, 55% { left: -60%; } 80%, 100% { left: 130%; } }
 .cp-chispas { position: absolute; inset: 0; pointer-events: none; }
 .cp-chispas i { position: absolute; bottom: 22%; left: 50%; width: 4px; height: 4px; border-radius: 50%; background: rgb(var(--liga)); box-shadow: 0 0 8px rgb(var(--liga)); opacity: 0; animation: cpChispa 3.6s ease-out infinite; }
 .cp-chispas i:nth-child(1) { --dx: -60px; animation-delay: 0s; }
@@ -5733,7 +5677,7 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
 .cp-chispas i:nth-child(5) { --dx: -78px; animation-delay: 2.4s; }
 .cp-chispas i:nth-child(6) { --dx: 20px; animation-delay: 3s; }
 @keyframes cpChispa { 0% { opacity: 0; transform: translate(0, 0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -150px) scale(1.2); } }
-.en-colocacion .cp-chispas, .en-colocacion .cp-brillo { display: none; }
+.en-colocacion .cp-chispas { display: none; }
 /* Ascenso: la insignia estalla en luz y la liga late */
 .cp-rango.ascenso .cp-halo canvas { animation: cpAscenso 1.4s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .cp-rango.ascenso .cp-halo::after { content: ""; position: absolute; inset: -10%; border-radius: 50%; border: 3px solid rgb(var(--liga)); box-shadow: 0 0 30px rgb(var(--liga)); animation: cpOnda 1.6s ease-out both; pointer-events: none; }
@@ -5749,7 +5693,7 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
 .cp-liga-item.pendiente canvas { filter: grayscale(0.7) brightness(0.7); }
 .cp-partida { cursor: help; }
 @media (prefers-reduced-motion: reduce) {
-  .cp-halo::before, .cp-brillo::after, .cp-chispas i, .cp-liga-item.actual canvas, .cp-rango.ascenso * { animation: none !important; }
+  .cp-halo::before, .cp-chispas i, .cp-liga-item.actual canvas, .cp-rango.ascenso * { animation: none !important; }
 }
 
 /* ---------- Sala clasificatoria: espera, amigos y rango de cada jugador ---------- */
@@ -6061,6 +6005,317 @@ label.aj-fila { cursor: pointer; }
 }
 body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias li.activo .ins-ico, .insignias li.hecho .ins-medalla, .insignias li.hecho::after, .arr-paso::before, .barra-punta::before, .mapa-rosa) { animation: none; }
 
+/* =====================================================================
+   Competitivo: vestíbulo de escuadra (tú en el centro, tus amigos a los
+   lados con su estandarte e insignia, «+» para invitar) y «Buscar partida»
+   ===================================================================== */
+.cp-vestibulo {
+  --liga: 244, 196, 78;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(var(--liga), 0.42);
+  background: linear-gradient(180deg, #130b24, #0a1121 58%, #0d0819);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 22px 50px rgba(0, 0, 0, 0.4);
+}
+.cp-vestibulo::before { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(var(--liga), 0.14); border-radius: 15px; pointer-events: none; }
+.cp-vestibulo.en-colocacion { --liga: 196, 170, 120; }
+/* Fondo: luz de tu liga detrás de ti, haces que bajan y una mesa de guerra cuadriculada */
+.cp-fondo-luz {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 34% 58% at 50% 44%, rgba(var(--liga), 0.28), transparent 72%),
+    radial-gradient(ellipse 80% 36% at 50% 104%, rgba(var(--liga), 0.14), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 56px);
+}
+.cp-fondo-luz::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -40%;
+  width: 140%;
+  height: 150%;
+  transform: translateX(-50%);
+  background: conic-gradient(from 180deg at 50% 0%, transparent 0deg 158deg, rgba(var(--liga), 0.11) 166deg, transparent 173deg, rgba(var(--liga), 0.07) 181deg, transparent 188deg, rgba(var(--liga), 0.1) 196deg, transparent 204deg 360deg);
+  animation: cpHaces 10s ease-in-out infinite alternate;
+}
+.cp-fondo-luz::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.5)); }
+@keyframes cpHaces { from { transform: translateX(-50%) rotate(-4deg); opacity: 0.75; } to { transform: translateX(-50%) rotate(4deg); opacity: 1; } }
+
+/* Cabecera: la cola, su mapa y el «?» */
+.cp-vest-cab { position: relative; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.cp-modo { display: flex; align-items: center; gap: 12px; }
+.cp-modo-tit { font-family: var(--serif); font-size: 13px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--oro-claro); text-shadow: 0 0 12px rgba(233, 185, 85, 0.35); }
+.cp-colas { min-width: 240px; }
+.cp-colas button[disabled] { opacity: 0.45; cursor: not-allowed; }
+.cp-vest-cab .cp-cola-nota { flex: 1; min-width: 0; margin: 0; color: var(--texto-2); font-size: 12.5px; }
+.cp-vest-cab .cp-info { margin-left: auto; }
+
+/* La escuadra */
+.cp-escuadra { display: grid; grid-template-columns: minmax(0, 2fr) minmax(230px, 1.25fr) minmax(0, 2fr); align-items: start; gap: 14px; padding-top: 6px; }
+.cp-huecos { list-style: none; margin: 0; padding: 34px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cp-hueco { --liga: 196, 170, 120; position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; padding-top: 8px; }
+/* La barra de la que cuelga cada estandarte */
+.cp-hueco::before, .cp-yo::before { content: ""; position: absolute; top: 3px; left: 50%; z-index: 1; width: min(168px, 110%); height: 7px; transform: translateX(-50%); border-radius: 4px; background: linear-gradient(180deg, #ffe7a6, #b8862a 60%, #6e4d12); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.cp-hueco.vacio::before { background: linear-gradient(180deg, rgba(255, 231, 166, 0.35), rgba(110, 77, 18, 0.35)); box-shadow: none; }
+.cp-hueco-est {
+  position: relative;
+  width: min(150px, 100%);
+  height: 196px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 8px 40px;
+  clip-path: polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 -40px 40px -20px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.cp-hueco-est canvas { width: 74px; height: 74px; filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.55)); }
+.cp-hueco-nombre { max-width: 100%; margin-top: 4px; font-family: var(--serif); font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); }
+.cp-hueco-titulo { max-width: 100%; color: rgba(255, 255, 255, 0.75); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-hueco-nivel { margin-top: 3px; padding: 1px 9px; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: var(--oro-claro); font-size: 11px; font-weight: 800; }
+.cp-hueco-corona { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); padding: 1px 8px; border-radius: 999px; background: linear-gradient(180deg, #ffe08a, #c08a1e); color: #2a1a00; font-size: 10px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.cp-hueco-rango { display: flex; flex-direction: column; align-items: center; margin-top: -36px; }
+.cp-hueco-rango canvas { width: 84px; height: 84px; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 10px rgba(var(--liga), 0.35)); }
+.cp-hueco-rango strong { margin-top: -2px; font-size: 12px; color: rgb(var(--liga)); text-shadow: 0 0 10px rgba(var(--liga), 0.4); white-space: nowrap; }
+.cp-hueco-estado { margin-top: 5px; padding: 1px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; background: rgba(255, 255, 255, 0.06); color: var(--texto-2); }
+.cp-hueco-estado.listo { color: var(--ok); background: rgba(95, 211, 141, 0.12); }
+.cp-hueco-estado.lider { color: var(--oro-claro); background: rgba(233, 185, 85, 0.14); }
+.cp-hueco-estado.aviso { color: #ffcf6b; background: rgba(255, 190, 70, 0.12); }
+.cp-hueco.miembro { cursor: pointer; }
+.cp-hueco.miembro:hover .cp-hueco-est, .cp-hueco.miembro:focus-visible .cp-hueco-est { filter: brightness(1.12); }
+.cp-hueco.desconectado { opacity: 0.6; }
+.cp-hueco.entra .cp-hueco-est { transform-origin: 50% 0; animation: cpDespliega 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.cp-hueco.entra .cp-hueco-rango { animation: cpCaeInsignia 0.5s 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes cpDespliega { from { transform: scaleY(0.08); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cpCaeInsignia { from { transform: translateY(-16px) scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Hueco libre: estandarte de trazo discontinuo con un «+» que late */
+.cp-hueco-mas {
+  width: min(150px, 100%);
+  height: 196px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px 34px;
+  border: 0;
+  border-radius: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 196' preserveAspectRatio='none'%3E%3Cpath d='M1 1H149V164L75 195L1 164Z' fill='rgba(255,255,255,0.035)' stroke='rgba(233,185,85,0.55)' stroke-width='1.5' stroke-dasharray='7 6' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  box-shadow: none;
+  color: var(--texto-2);
+  cursor: pointer;
+  transition: transform var(--dur-2) var(--ease-out), color var(--dur-2);
+}
+.cp-hueco .cp-hueco-mas:hover, .cp-hueco .cp-hueco-mas:focus, .cp-hueco .cp-hueco-mas:active { background-color: transparent; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 196' preserveAspectRatio='none'%3E%3Cpath d='M1 1H149V164L75 195L1 164Z' fill='rgba(233,185,85,0.07)' stroke='rgba(255,224,138,0.8)' stroke-width='1.5' stroke-dasharray='7 6' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E"); box-shadow: none; outline: none; }
+.cp-hueco-mas:hover:not(:disabled), .cp-hueco-mas:focus-visible { transform: translateY(-3px); color: var(--oro-claro); }
+.cp-hueco-mas:focus-visible .cp-mas-aro { box-shadow: 0 0 0 3px rgba(255, 224, 138, 0.7); }
+.cp-hueco-mas:disabled { cursor: default; opacity: 0.55; }
+.cp-mas-aro { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: 1.5px solid rgba(233, 185, 85, 0.7); background: radial-gradient(circle, rgba(233, 185, 85, 0.22), rgba(233, 185, 85, 0.04) 70%); color: var(--oro-claro); box-shadow: 0 0 0 0 rgba(233, 185, 85, 0.45); animation: cpMasLate 2.6s ease-out infinite; }
+.cp-mas-aro svg { width: 26px; height: 26px; }
+.cp-hueco-mas:disabled .cp-mas-aro { animation: none; filter: grayscale(0.8); }
+.cp-hueco-mas strong { margin-top: 6px; font-family: var(--serif); font-size: 15px; letter-spacing: 0.04em; color: inherit; }
+.cp-hueco-mas small { font-size: 11px; color: var(--texto-3); }
+@keyframes cpMasLate { 0% { box-shadow: 0 0 0 0 rgba(233, 185, 85, 0.45); } 70%, 100% { box-shadow: 0 0 0 14px rgba(233, 185, 85, 0); } }
+
+/* Tú: el estandarte grande del centro con tu insignia colgando */
+.cp-yo { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; padding-top: 8px; }
+.cp-yo::before { width: min(236px, 112%); height: 9px; top: 2px; }
+.cp-yo .cp-comandante {
+  position: relative;
+  width: min(210px, 100%);
+  height: 262px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 18px 12px 64px;
+  text-align: center;
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), inset 0 -50px 50px -24px rgba(0, 0, 0, 0.55);
+}
+.cp-yo .cp-comandante > * { position: relative; z-index: 1; flex-shrink: 0; }
+.cp-hueco-est > * { flex-shrink: 0; }
+.cp-yo .cp-comandante canvas { width: 104px; height: 104px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55)); }
+#cp-nombre { max-width: 100%; font-family: var(--serif); font-size: 21px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); }
+.cp-titulo { max-width: 100%; color: rgba(255, 255, 255, 0.78); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-nivel { margin-top: 4px; padding: 2px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: var(--oro-claro); font-size: 12px; font-weight: 800; }
+.cp-lider { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); padding: 1px 9px; border-radius: 999px; background: linear-gradient(180deg, #ffe08a, #c08a1e); color: #2a1a00; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+.cp-yo .cp-rango { gap: 4px; margin-top: -56px; }
+.cp-yo .cp-halo, .cp-yo .cp-halo canvas { width: 176px; height: 176px; }
+.cp-yo .cp-liga { font-size: 27px; line-height: 1.1; }
+.cp-yo .cp-cola-rango { margin: 0; }
+.cp-yo .cp-barra { width: min(220px, 90%); }
+.cp-yo .cp-vd { font-size: 12px; }
+
+/* Pie: «Buscar partida» grande en el centro, entre dos líneas doradas */
+.cp-vest-pie { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 10px; text-align: center; }
+.cp-vest-pie::before { content: ""; position: absolute; top: 40px; left: 4%; right: 4%; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--liga), 0.55) 30%, transparent 42%, transparent 58%, rgba(var(--liga), 0.55) 70%, transparent); pointer-events: none; }
+.cp-vest-pie .cp-buscando { width: min(440px, 100%); background: rgba(10, 8, 20, 0.85); }
+.cp-vest-pie:has(.cp-buscando:not([hidden]))::before { display: none; }
+.cp-vest-pie .cp-buscar { position: relative; width: auto; min-width: min(360px, 100%); padding: 17px 34px; font-family: var(--serif); font-size: 21px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.cp-buscar.principal:not(:disabled) { box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.5), 0 10px 30px rgba(233, 185, 85, 0.28), 0 0 40px rgba(var(--liga), 0.25); }
+.cp-cola-extra { color: var(--texto-3); font-size: 12px; line-height: 1.4; }
+.cp-pie-enlaces { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; }
+.cp-salir-grupo { color: var(--peligro); }
+
+/* Ventana de invitar */
+.cp-invitar {
+  --tx: -50%;
+  position: absolute;
+  left: 50%;
+  top: 58px;
+  z-index: 5;
+  width: min(400px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(233, 185, 85, 0.5);
+  background: linear-gradient(180deg, rgba(30, 22, 48, 0.98), rgba(12, 14, 26, 0.98));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(233, 185, 85, 0.12);
+  transform: translateX(var(--tx));
+  animation: cpInvEntra 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes cpInvEntra { from { opacity: 0; transform: translate(var(--tx), 10px) scale(0.97); } to { opacity: 1; transform: translate(var(--tx), 0); } }
+.cp-invitar-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cp-invitar-cab strong { font-family: var(--serif); font-size: 18px; color: var(--oro-claro); }
+.cp-invitar-cerrar { min-height: 0; width: 30px; height: 30px; padding: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.06); border: 0; box-shadow: none; color: var(--texto-2); }
+.cp-invitar-nota { margin: 0; font-size: 12.5px; color: var(--texto-2); line-height: 1.45; }
+.cp-invitar-enlace { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); }
+.cp-invitar-codigo { display: flex; flex-direction: column; }
+.cp-invitar-codigo small { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto-3); }
+.cp-invitar-codigo b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 22px; letter-spacing: 0.22em; color: var(--texto-1); }
+.cp-invitar-amigos { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; }
+.cp-invitar-amigos:empty { display: none; }
+.cp-invitar-amigos .nota { margin: 0; }
+
+/* Cómo funcionan los PL */
+.cp-guia .cp-bloque-cab { margin-bottom: 12px; }
+.cp-guia-cola { color: var(--texto-3); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.cp-guia-arriba { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.cp-guia-sub { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.cp-guia-sub strong { font-family: var(--serif); font-size: 16px; color: var(--texto-1); }
+.cp-guia-sub small { color: var(--texto-2); font-size: 12.5px; }
+.cp-ejemplos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cp-ej { display: grid; grid-template-columns: 150px minmax(0, 1fr) 66px; align-items: center; gap: 12px; }
+.cp-ej-puesto { display: flex; flex-direction: column; min-width: 0; }
+.cp-ej-puesto strong { font-size: 14px; color: var(--texto-1); }
+.cp-ej-puesto small { font-size: 11px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp-ej-pista { position: relative; height: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.cp-ej-pista::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: rgba(255, 255, 255, 0.28); }
+.cp-ej-barra { position: absolute; top: 0; bottom: 0; width: calc(var(--w) * 50%); border-radius: 999px; animation: cpEjCrece 0.7s calc(var(--i) * 70ms + 0.1s) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.cp-ej.sube .cp-ej-barra { left: 50%; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(95, 211, 141, 0.55), #6ee39b); box-shadow: 0 0 10px rgba(95, 211, 141, 0.45); }
+.cp-ej.baja .cp-ej-barra { right: 50%; transform-origin: 100% 50%; background: linear-gradient(270deg, rgba(255, 107, 107, 0.55), #ff7a7a); box-shadow: 0 0 10px rgba(255, 107, 107, 0.4); }
+.cp-ej-pl { text-align: right; font-variant-numeric: tabular-nums; font-size: 15px; }
+.cp-ej.sube .cp-ej-pl { color: #7beaa6; }
+.cp-ej.baja .cp-ej-pl { color: #ff8a8a; }
+.cp-ej.igual .cp-ej-pl { color: var(--texto-2); }
+@keyframes cpEjCrece { from { transform: scaleX(0); } to { transform: none; } }
+.cp-guia-meta { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 14px; background: radial-gradient(ellipse at 20% 0%, rgba(233, 185, 85, 0.12), transparent 60%), rgba(255, 255, 255, 0.03); border: 1px solid rgba(233, 185, 85, 0.22); }
+.cp-guia-meta p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--texto-2); }
+.cp-meta-cab { display: flex; align-items: center; gap: 10px; }
+.cp-meta-cab canvas { width: 64px; height: 64px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+.cp-meta-cab span { display: flex; flex-direction: column; }
+.cp-meta-cab small { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-3); }
+.cp-meta-tit { font-family: var(--serif); font-size: 20px; font-weight: 800; color: var(--oro-claro); }
+.cp-colocacion { display: flex; gap: 8px; }
+.cp-colocacion i { width: 18px; height: 18px; transform: rotate(45deg); border-radius: 3px; border: 1.5px solid rgba(233, 185, 85, 0.6); background: rgba(255, 255, 255, 0.04); }
+.cp-colocacion i.hecha { background: linear-gradient(135deg, #ffe08a, #c08a1e); box-shadow: 0 0 10px rgba(233, 185, 85, 0.5); }
+.cp-meta-nivel, .cp-meta-escudo { display: flex; align-items: flex-start; gap: 8px; }
+.cp-meta-nivel svg, .cp-meta-escudo svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--texto-3); }
+.cp-meta-nivel.bien svg { color: var(--ok); }
+.cp-meta-nivel.mal svg { color: var(--peligro); }
+.cp-meta-escudo svg { color: #8fd3ff; }
+.cp-guia-reglas { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+#cp-pl-guia { scroll-margin-top: 96px; }
+.cp-regla { display: grid; grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto 1fr; align-content: start; column-gap: 10px; row-gap: 2px; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); }
+.cp-regla-ico { grid-row: 1 / 3; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(180deg, rgba(233, 185, 85, 0.24), rgba(233, 185, 85, 0.08)); color: var(--oro-claro); box-shadow: inset 0 0 0 1px rgba(233, 185, 85, 0.35); }
+.cp-regla-ico svg { width: 20px; height: 20px; }
+.cp-regla strong { font-size: 14px; color: var(--texto-1); }
+.cp-regla p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--texto-2); }
+
+/* Aviso flotante: buscando partida, buscando rivales o tu escuadra */
+.bp-escuadra { margin-right: 2px; padding: 1px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.busqueda-pill[data-modo="escuadra"] { border-color: rgba(233, 185, 85, 0.55); background: linear-gradient(180deg, rgba(40, 30, 14, 0.97), rgba(18, 13, 6, 0.97)); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(233, 185, 85, 0.2); }
+.busqueda-pill[data-modo="escuadra"] .bp-punto { animation: none; background: var(--oro); box-shadow: none; }
+
+@media (max-width: 1100px) {
+  .cp-escuadra { grid-template-columns: minmax(0, 1fr) minmax(210px, 1.2fr) minmax(0, 1fr); }
+  .cp-huecos { grid-template-columns: minmax(0, 1fr); padding-top: 0; }
+  .cp-huecos .cp-hueco-est, .cp-huecos .cp-hueco-mas { height: 150px; padding-bottom: 30px; }
+  .cp-huecos .cp-hueco-est canvas { width: 52px; height: 52px; }
+  .cp-huecos .cp-hueco-titulo { display: none; }
+  .cp-huecos .cp-hueco-rango canvas { width: 64px; height: 64px; }
+  .cp-guia-arriba { grid-template-columns: minmax(0, 1fr); }
+  .cp-guia-reglas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .cp-vestibulo { padding: 12px 12px 16px; border-radius: 16px; }
+  .cp-vest-cab { gap: 8px; padding-right: 28px; }
+  .cp-vest-cab .cp-info { position: absolute; top: 2px; right: 0; }
+  .cp-modo { width: 100%; flex-wrap: wrap; gap: 6px 10px; }
+  .cp-modo-tit { flex-basis: 100%; font-size: 12px; }
+  .cp-colas { flex: 1; min-width: 0; }
+  .cp-escuadra { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "yo yo" "izq der"; gap: 10px; }
+  .cp-yo { grid-area: yo; }
+  .cp-huecos.izq { grid-area: izq; }
+  .cp-huecos.der { grid-area: der; }
+  .cp-huecos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .cp-yo .cp-comandante { width: 170px; height: 214px; padding: 14px 10px 50px; }
+  .cp-yo .cp-comandante canvas { width: 76px; height: 76px; }
+  #cp-nombre { font-size: 17px; }
+  .cp-yo .cp-rango { margin-top: -44px; }
+  .cp-yo .cp-halo, .cp-yo .cp-halo canvas { width: 146px; height: 146px; }
+  .cp-yo .cp-liga { font-size: 23px; }
+  .cp-hueco::before { width: 104%; height: 5px; top: 4px; }
+  .cp-huecos .cp-hueco-est, .cp-huecos .cp-hueco-mas { height: 112px; padding: 10px 4px 24px; }
+  .cp-huecos .cp-hueco-est canvas { width: 40px; height: 40px; }
+  .cp-hueco-nombre { font-size: 12px; }
+  .cp-huecos .cp-hueco-nivel, .cp-huecos .cp-hueco-corona { display: none; }
+  .cp-hueco-rango { margin-top: -18px; }
+  .cp-huecos .cp-hueco-rango canvas { width: 48px; height: 48px; }
+  .cp-hueco-rango strong { font-size: 10.5px; }
+  .cp-hueco-estado { display: none; }
+  .cp-mas-aro { width: 38px; height: 38px; }
+  .cp-mas-aro svg { width: 20px; height: 20px; }
+  .cp-hueco-mas strong { margin-top: 2px; font-size: 12px; }
+  .cp-hueco-mas small { display: none; }
+  .cp-vest-pie::before { display: none; }
+  /* «Buscar partida» siempre a mano: se queda pegado abajo mientras se ve el vestíbulo */
+  .cp-vest-pie { position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 3; gap: 6px; margin: 0 -12px -16px; padding: 18px 12px 10px; border-radius: 0 0 16px 16px; background: linear-gradient(180deg, rgba(10, 8, 20, 0), rgba(10, 8, 20, 0.95) 22%); }
+  .cp-vest-pie .cp-cola-extra { display: none; }
+  .cp-pie-enlaces { font-size: 12.5px; }
+  .cp-vest-pie .cp-buscar { width: 100%; font-size: 18px; padding: 15px 18px; }
+  .cp-invitar { --tx: 0; position: fixed; left: 8px; right: 8px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: auto; z-index: 45; max-height: 70vh; overflow-y: auto; }
+  .cp-ej { grid-template-columns: 92px minmax(0, 1fr) 58px; gap: 8px; }
+  .cp-ej-puesto small { display: none; }
+  .cp-guia-reglas { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-fondo-luz::before, .cp-mas-aro, .cp-hueco.entra .cp-hueco-est, .cp-hueco.entra .cp-hueco-rango, .cp-ej-barra, .cp-invitar { animation: none; }
+}
+.cp-yo .cp-comandante > .cp-lider { position: absolute; }
+
+/* Fundar la capital: el botón (y su grupo, en el móvil) late hasta que la tengas */
+#hud .obra.fundar { filter: none; opacity: 1; border-color: rgba(255, 224, 138, 0.9); box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.7), 0 0 18px rgba(233, 185, 85, 0.55); animation: obraFundar 1.6s ease-in-out infinite; }
+#hud .obra.fundar .b-coste { color: #ffe08a; font-weight: 800; }
+#hud:not(.escritorio) .g-tab.fundar { box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.7), 0 0 16px rgba(233, 185, 85, 0.5); animation: obraFundar 1.6s ease-in-out infinite; }
+@keyframes obraFundar { 50% { box-shadow: 0 0 0 2px rgba(255, 224, 138, 0.95), 0 0 26px rgba(233, 185, 85, 0.8); } }
+@media (prefers-reduced-motion: reduce) { #hud .obra.fundar, #hud .g-tab.fundar { animation: none; } }
+
 </style>
 <link rel="preload" href="mapas-6c16c49b00a7.json" as="fetch" crossorigin="anonymous">
 </head>
@@ -6158,9 +6413,11 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
 
   <!-- Buscando partida (cola de la clasificatoria en línea): sigue mientras navegas por el menú -->
   <div id="busqueda-pill" class="busqueda-pill" hidden>
-    <button type="button" class="bp-ir" id="bp-ir"><span class="bp-punto" aria-hidden="true"></span><span>Buscando partida</span><b id="bp-tiempo">0:00</b></button>
+    <button type="button" class="bp-ir" id="bp-ir"><span class="bp-punto" aria-hidden="true"></span><span class="bp-escuadra" id="bp-escuadra" hidden></span><span id="bp-texto">Buscando partida</span><b id="bp-tiempo">0:00</b></button>
     <button type="button" class="bp-cancelar" id="bp-cancelar" aria-label="Cancelar la búsqueda">✕</button>
   </div>
+  <!-- Cuenta atrás de la partida que empieza: sobre la sala o sobre cualquier página del menú (escuadra) -->
+  <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
 
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">
@@ -6322,38 +6579,69 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
           <div class="pagina-titulos"><small id="cp-temporada"></small><h1 id="pg-comp-h1">Competitivo</h1></div>
           <span class="pagina-extra" id="cp-fin"></span>
         </header>
-        <div class="cp-portada">
-          <div class="cp-comandante" id="cp-comandante">
-            <canvas id="cp-emblema" width="200" height="200" aria-hidden="true"></canvas>
-            <strong id="cp-nombre"></strong>
-            <span id="cp-titulo" class="cp-titulo"></span>
-            <span id="cp-nivel" class="cp-nivel"></span>
-          </div>
-          <div class="cp-rango">
-            <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><span class="cp-chispas"><i></i><i></i><i></i><i></i><i></i><i></i></span><canvas id="cp-insignia" width="300" height="300"></canvas><span class="cp-brillo"></span></div>
-            <small id="cp-cola-rango" class="cp-cola-rango"></small>
-            <strong id="cp-liga" class="cp-liga"></strong>
-            <span id="cp-pl" class="cp-pl"></span>
-            <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
-            <small id="cp-vd" class="cp-vd"></small>
-          </div>
-          <div class="cp-cola">
-            <h2>Buscar partida <button type="button" class="cp-info" id="cp-info" aria-label="Cómo se puntúa">?</button></h2>
-            <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
+        <!-- Vestíbulo: tu escuadra (tú en el centro y hasta 4 amigos), la cola y «Buscar partida» -->
+        <div class="cp-portada cp-vestibulo" id="cp-vestibulo">
+          <span class="cp-fondo-luz" aria-hidden="true"></span>
+          <div class="cp-vest-cab">
+            <div class="cp-modo">
+              <small class="cp-modo-tit">Clasificatoria</small>
+              <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
+            </div>
             <p id="cp-cola-nota" class="cp-cola-nota"></p>
+            <button type="button" class="cp-info" id="cp-info" aria-label="Cómo se puntúa">?</button>
+          </div>
+          <div class="cp-escuadra" aria-label="Tu escuadra">
+            <ol class="cp-huecos izq" id="cp-huecos-izq"></ol>
+            <article class="cp-yo" id="cp-yo">
+              <div class="cp-comandante cp-estandarte" id="cp-comandante">
+                <span class="cp-lider" id="cp-lider" hidden>Líder</span>
+                <canvas id="cp-emblema" width="200" height="200" aria-hidden="true"></canvas>
+                <strong id="cp-nombre"></strong>
+                <span id="cp-titulo" class="cp-titulo"></span>
+                <span id="cp-nivel" class="cp-nivel"></span>
+              </div>
+              <div class="cp-rango">
+                <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><span class="cp-chispas"><i></i><i></i><i></i><i></i><i></i><i></i></span><canvas id="cp-insignia" width="300" height="300"></canvas></div>
+                <small id="cp-cola-rango" class="cp-cola-rango"></small>
+                <strong id="cp-liga" class="cp-liga"></strong>
+                <span id="cp-pl" class="cp-pl"></span>
+                <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
+                <small id="cp-vd" class="cp-vd"></small>
+              </div>
+            </article>
+            <ol class="cp-huecos der" id="cp-huecos-der"></ol>
+          </div>
+          <div class="cp-vest-pie">
             <div class="cp-buscando" id="cp-buscando" hidden>
               <span class="cp-radar" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="cp-busca-textos"><strong>Buscando partida <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
+              <span class="cp-busca-textos"><strong><span id="cp-busca-titulo">Buscando partida</span> <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
             </div>
             <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
-            <button type="button" class="secundario cp-amigos" id="cp-amigos" hidden>👥 Jugar con amigos</button>
             <small id="cp-cola-extra" class="cp-cola-extra"></small>
+            <div class="cp-pie-enlaces">
+              <button type="button" class="enlace-ini" id="cp-ver-pl">¿Cómo funcionan los PL? <span aria-hidden="true">›</span></button>
+              <button type="button" class="enlace-ini cp-salir-grupo" id="cp-salir-grupo" hidden>Salir de la escuadra</button>
+            </div>
+          </div>
+          <div class="cp-invitar" id="cp-invitar" role="dialog" aria-labelledby="cp-invitar-tit" hidden>
+            <div class="cp-invitar-cab"><strong id="cp-invitar-tit">Invita a tu escuadra</strong><button type="button" class="cp-invitar-cerrar" id="cp-invitar-cerrar" aria-label="Cerrar">✕</button></div>
+            <p class="cp-invitar-nota" id="cp-invitar-nota"></p>
+            <div class="cp-invitar-enlace" id="cp-invitar-enlace">
+              <span class="cp-invitar-codigo"><small>Código</small><b id="cp-invitar-codigo">·····</b></span>
+              <button type="button" class="secundario" id="cp-invitar-copiar">Copiar enlace</button>
+            </div>
+            <div class="cp-invitar-amigos" id="cp-invitar-amigos"></div>
           </div>
         </div>
-        <!-- Colas separadas (DEV07): cómo se obtienen los puntos y el rango mixto de antes -->
-        <section class="bloque cp-como" aria-labelledby="cp-como-tit">
-          <h2 id="cp-como-tit">Cómo se puntúa</h2>
-          <p id="cp-como" class="cp-como-texto"></p>
+        <!-- Cómo funcionan los PL: lo que te daría tu próxima partida (calculado con tu rango) y las reglas -->
+        <section class="bloque cp-guia" id="cp-pl-guia" aria-labelledby="cp-guia-tit">
+          <div class="cp-bloque-cab"><h2 id="cp-guia-tit">Cómo funcionan los PL</h2><small class="cp-guia-cola" id="cp-guia-cola"></small></div>
+          <div class="cp-guia-arriba">
+            <div class="cp-guia-ejemplos" id="cp-guia-ejemplos"></div>
+            <div class="cp-guia-meta" id="cp-guia-meta"></div>
+          </div>
+          <ol class="cp-guia-reglas" id="cp-guia-reglas"></ol>
+          <p id="cp-como" class="cp-como-texto" hidden></p>
           <div id="cp-historico" class="cp-historico" hidden></div>
         </section>
         <section class="bloque cp-escalera" aria-labelledby="cp-ligas-tit">
@@ -6834,7 +7122,6 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
         <div class="borrador-botones"><button type="button" class="secundario" id="sala-descartar">Descartar</button><button type="button" class="principal" id="sala-aplicar">Aplicar cambios</button></div>
       </div>
     </footer>
-    <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
   </div>
 
   <!-- Interfaz de partida -->
@@ -7306,7 +7593,7 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "1992d69 2026-11-16 20:01 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "a050ff8 2026-11-16 20:56 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-6c16c49b00a7.json";</script>
 <script>
 (function () {
@@ -9059,6 +9346,225 @@ return out;
 
 return { hslToRgb, botColor, hexToRgb, rgbToCss, rgbToHsl, vividRgb, mutedRgb, shadeRgb, rgbToLab, deltaE, territoryRgb, NATION_PALETTE, assignNationColors };
 });
+__define('competitivo-ui', function () {
+const { LEAGUES, PLACEMENT_GAMES, RANKED_AI, SHIELD_GAMES, drawBadge, inPlacement, nextGoal, previewResults, rankOf, seasonReward } = __require('rangos');
+const { drawEmblem, drawFrame } = __require('icons');
+const { sinMovimiento } = __require('movimiento');
+const { nameColorOf } = __require('profile');
+const SQUAD = 5;
+function el(tag, attrs = {}, ...children) {
+const node = document.createElement(tag);
+for (const [k, v] of Object.entries(attrs)) {
+if (k === 'class') node.className = v;
+else if (k === 'text') node.textContent = v;
+else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+else if (v !== false && v != null) node.setAttribute(k, v === true ? '' : v);
+}
+for (const c of children) if (c != null && c !== false) node.append(c);
+return node;
+}
+const SVG = 'http://www.w3.org/2000/svg';
+function icon(d) {
+const s = document.createElementNS(SVG, 'svg');
+s.setAttribute('viewBox', '0 0 24 24');
+s.setAttribute('aria-hidden', 'true');
+const p = document.createElementNS(SVG, 'path');
+p.setAttribute('d', d);
+p.setAttribute('fill', 'none');
+p.setAttribute('stroke', 'currentColor');
+p.setAttribute('stroke-width', '1.8');
+p.setAttribute('stroke-linecap', 'round');
+p.setAttribute('stroke-linejoin', 'round');
+s.append(p);
+return s;
+}
+const ICONS = {
+escalera: 'M3 20h4v-4h4v-4h4V8h4V4M15 4h4v4',
+escudo: 'M12 3l7 3v5c0 4.4-3 7.8-7 9-4-1.2-7-4.6-7-9V6zM9 12l2 2 4-4',
+diana: 'M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18M12 16.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9M12 12.6v-1.2',
+ojo: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6',
+podio: 'M3 20h18M4 20v-6h5v6M9 20V9h6v11M15 20v-8h5v8M12 4.5l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z',
+balanza: 'M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z',
+corona: 'M3 18h18M4 18 3 7l5 4 4-7 4 7 5-4-1 11',
+calendario: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h2M12 14h2M16 14h0M8 17h2',
+mas: 'M12 5v14M5 12h14',
+};
+function emblemCanvas(emblem, frame, px) {
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+const c = el('canvas', { width: String(Math.round(px * dpr)), height: String(Math.round(px * dpr)), 'aria-hidden': 'true' });
+c.style.width = c.style.height = `${px}px`;
+const ctx = c.getContext('2d');
+const s = c.width;
+drawEmblem(ctx, emblem, s / 2, s / 2, s * 0.62);
+if (frame) drawFrame(ctx, frame, s / 2, s / 2, s * 0.62);
+return c;
+}
+function crestCanvas(points, px) {
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+const c = el('canvas', { width: String(Math.round(px * dpr)), height: String(Math.round(px * dpr)), 'aria-hidden': 'true', class: 'cp-hueco-insignia' });
+const k = Number.isFinite(points) && points > 0 ? rankOf(points) : null;
+drawBadge(c.getContext('2d'), c.width / 2, c.height * 0.54, c.height * 0.72, k ? k.league : null, k ? k.div : 0);
+return c;
+}
+function memberCard(p, { points = null, leader = false, fresh = false, onOpen = null } = {}) {
+const k = Number.isFinite(points) && points > 0 ? rankOf(points) : null;
+const banner = /^[a-z0-9-]{1,24}$/.test(p.banner || '') ? p.banner : 'noche';
+const state = p.stale ? ['Reconectando…', 'aviso'] : leader ? ['Líder', 'lider'] : ['En la escuadra', 'listo'];
+const li = el(
+'li',
+{ class: `cp-hueco miembro${fresh ? ' entra' : ''}${p.stale ? ' desconectado' : ''}`, style: `--liga: ${(k ? k.league.color : [196, 170, 120]).join(', ')}`, tabindex: '0' },
+el(
+'div',
+{ class: `cp-hueco-est est-${banner}` },
+leader ? el('span', { class: 'cp-hueco-corona', title: 'Líder de la escuadra', text: 'Líder' }) : null,
+emblemCanvas(p.emblem, p.frame, 74),
+el('strong', { class: 'cp-hueco-nombre', text: p.name, style: `color: ${nameColorOf({ colorNombre: p.nameColor, color: p.color })}` }),
+p.title ? el('small', { class: 'cp-hueco-titulo', text: p.title }) : null,
+el('span', { class: 'cp-hueco-nivel', text: `Nv ${p.level || 1}` }),
+),
+el('div', { class: 'cp-hueco-rango' }, crestCanvas(points, 84), el('strong', { text: k ? k.label : 'Sin clasificar' })),
+el('span', { class: `cp-hueco-estado ${state[1]}`, text: state[0] }),
+);
+if (onOpen) {
+li.classList.add('fila-boton');
+li.addEventListener('click', onOpen);
+li.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen()));
+}
+return li;
+}
+function emptySlot({ onInvite, disabled = false, hint = '' } = {}) {
+const b = el(
+'button',
+{ type: 'button', class: 'cp-hueco-mas', disabled, title: hint || 'Invitar a un amigo a tu escuadra', 'aria-label': hint || 'Invitar a un amigo a tu escuadra' },
+el('span', { class: 'cp-mas-aro', 'aria-hidden': 'true' }, icon(ICONS.mas)),
+el('strong', { text: 'Invitar' }),
+el('small', { text: hint ? hint : 'a un amigo' }),
+);
+if (onInvite) b.addEventListener('click', onInvite);
+return el('li', { class: 'cp-hueco vacio' }, b);
+}
+const sign = (v) => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '±0');
+function renderPlGuide(r, queue) {
+const box = document.getElementById('cp-guia-ejemplos');
+if (!box) return;
+const online = queue === 'sala';
+const prev = previewResults(r, online ? 'sala' : 'ia');
+const placing = inPlacement(r);
+document.getElementById('cp-guia-cola').textContent = online ? 'Cola en línea' : 'Cola contra la IA';
+const max = 50;
+const rows = prev.rows.map((row, i) =>
+el(
+'li',
+{ class: `cp-ej ${row.delta > 0 ? 'sube' : row.delta < 0 ? 'baja' : 'igual'}`, style: `--w: ${Math.min(1, Math.abs(row.delta) / max).toFixed(3)}; --i: ${i}` },
+el('span', { class: 'cp-ej-puesto' }, el('strong', { text: row.label }), el('small', { text: row.sub })),
+el('span', { class: 'cp-ej-pista', 'aria-hidden': 'true' }, el('span', { class: 'cp-ej-barra' })),
+el('b', { class: 'cp-ej-pl', text: `${sign(row.delta)} PL` }),
+),
+);
+box.replaceChildren(
+el('div', { class: 'cp-guia-sub' },
+el('strong', { text: placing ? 'Al acabar la colocación' : 'Tu próxima partida' }),
+el('small', { text: placing ? `Con tu nivel de ahora entrarías en ${prev.estimate}. Esto es lo que te daría después cada resultado:` : online ? 'Contra 4 personas de tu nivel, calculado con tu rango de ahora:' : `Según tu puesto entre las ${RANKED_AI.bots + 1} naciones, calculado con tu rango de ahora:` })),
+el('ol', { class: 'cp-ejemplos' }, ...rows),
+);
+const meta = document.getElementById('cp-guia-meta');
+const parts = [];
+if (placing) {
+parts.push(
+el('strong', { class: 'cp-meta-tit', text: 'Partidas de colocación' }),
+el('div', { class: 'cp-colocacion', 'aria-label': `${r.colocacion} de ${PLACEMENT_GAMES} jugadas` }, ...Array.from({ length: PLACEMENT_GAMES }, (_, i) => el('i', { class: i < r.colocacion ? 'hecha' : '' }))),
+el('p', { text: `Llevas ${r.colocacion} de ${PLACEMENT_GAMES}. Miden tu nivel: al acabarlas entras en la liga que te corresponde (ahora mismo, ${prev.estimate}).` }),
+);
+} else {
+const goal = nextGoal(r);
+const win = prev.rows[0].delta;
+if (goal) {
+const wins = Math.max(1, Math.ceil(goal.need / Math.max(1, win)));
+const c = el('canvas', { width: '96', height: '96', 'aria-hidden': 'true' });
+const g = rankOf(r.puntos + goal.need);
+drawBadge(c.getContext('2d'), 48, 52, 70, g.league, g.div);
+parts.push(
+el('div', { class: 'cp-meta-cab' }, c, el('span', {}, el('small', { text: goal.promotion ? 'Siguiente liga' : 'Siguiente objetivo' }), el('strong', { class: 'cp-meta-tit', text: goal.label, style: `color: rgb(${g.league.color.join(',')})` }))),
+el('p', { text: `Te faltan ${goal.need} PL: unas ${wins} ${wins === 1 ? 'victoria' : 'victorias'} (${sign(win)} PL cada una).` }),
+);
+} else parts.push(el('strong', { class: 'cp-meta-tit', text: 'Estás en la cima' }), el('p', { text: 'Leyenda no tiene techo: cada victoria suma a tu marca de la temporada.' }));
+}
+const lag = prev.lag;
+parts.push(
+el('p', { class: `cp-meta-nivel ${lag > 0 ? 'bien' : lag < 0 ? 'mal' : ''}` },
+icon(ICONS.ojo),
+el('span', { text: lag > 0 ? `Tu nivel oculto va por delante de tu rango: ganas ${lag} PL más y pierdes ${lag} menos en cada partida.` : lag < 0 ? `Tu nivel oculto va por detrás de tu rango: ganas ${-lag} PL menos y pierdes ${-lag} más hasta que se igualen.` : 'Tu rango y tu nivel oculto van a la par.' })),
+);
+if (r.escudo > 0) parts.push(el('p', { class: 'cp-meta-escudo' }, icon(ICONS.escudo), el('span', { text: `Escudo: ${r.escudo} ${r.escudo === 1 ? 'partida' : 'partidas'} en las que no puedes bajar de división.` })));
+meta.replaceChildren(...parts);
+const legend = LEAGUES[LEAGUES.length - 1];
+const rule = (ico, title, text) => el('li', { class: 'cp-regla' }, el('span', { class: 'cp-regla-ico' }, icon(ICONS[ico])), el('strong', { text: title }), el('p', { text }));
+document.getElementById('cp-guia-reglas').replaceChildren(
+rule('escalera', 'Divisiones de 100 PL', 'Cada liga tiene 4 divisiones, de IV a I. Llega a 100 PL y subes a la siguiente; baja de 0 y caes a la anterior.'),
+rule('escudo', 'Escudo al subir', `Tras subir de división tienes ${SHIELD_GAMES} partidas de escudo: puedes perder PL, pero no bajar.`),
+rule('diana', 'Colocación', `Las ${PLACEMENT_GAMES} primeras partidas de la temporada no dan PL: miden tu nivel y te colocan en tu liga.`),
+rule('ojo', 'Nivel oculto', 'Además de los PL hay un nivel oculto que mide cómo juegas. Si va por delante de tu rango, ganas más y pierdes menos (hasta 10 PL).'),
+online
+? rule('podio', 'Qué cuenta en línea', 'Quién queda por delante de quién entre las personas de la sala, y un poco tu puesto entre todas las naciones. Ganar a gente de más nivel da más.')
+: rule('podio', 'Qué cuenta contra la IA', `Tu puesto entre las ${RANKED_AI.bots + 1} naciones, comparado con lo que se espera de tu liga. La IA sube de nivel contigo: de Fácil a Imposible.`),
+rule('balanza', 'Límites', 'Ganar da +8 PL extra. Ninguna partida da más de +50 ni quita más de 35, y hacerlo mejor de lo esperado nunca resta. Abandonar cuenta como quedar el último.'),
+rule('corona', 'Ligas de élite', 'Maestro, Gran Maestro y Leyenda no tienen divisiones: los PL siguen sumando. Gran Maestro empieza a 200 PL de Maestro y Leyenda, a 300 de Gran Maestro.'),
+rule('calendario', 'Temporadas', `Duran dos meses. Al acabar ganas monedas según tu mejor liga (de ${seasonReward(0).coins} en Hierro a ${seasonReward(legend.base).coins} en Leyenda) y empiezas con 2 partidas de colocación cerca de tu nivel.`),
+);
+}
+class BadgeShine {
+constructor(canvas, visible) {
+this.c = canvas;
+this.visible = visible;
+this.draw = null;
+this.raf = 0;
+this.timer = 0;
+}
+set(draw) {
+this.draw = draw;
+this._paint(NaN);
+if (!this.timer && !this.raf) this._wait(1800);
+}
+stop() {
+cancelAnimationFrame(this.raf);
+clearTimeout(this.timer);
+this.raf = 0;
+this.timer = 0;
+}
+_paint(shine) {
+if (!this.draw) return;
+const ctx = this.c.getContext('2d');
+ctx.clearRect(0, 0, this.c.width, this.c.height);
+this.draw(ctx, shine);
+}
+_wait(ms) {
+this.timer = setTimeout(() => {
+this.timer = 0;
+this._sweep();
+}, ms);
+}
+_sweep() {
+if (!this.draw || sinMovimiento() || !this.visible() || document.visibilityState !== 'visible') {
+this._wait(2500);
+return;
+}
+const t0 = performance.now();
+const dur = 1100;
+const step = (now) => {
+const t = Math.min(1, (now - t0) / dur);
+this._paint(t < 1 ? 0.5 - 0.5 * Math.cos(Math.PI * t) : NaN);
+if (t < 1) this.raf = requestAnimationFrame(step);
+else {
+this.raf = 0;
+this._wait(4200 + Math.random() * 1800);
+}
+};
+this.raf = requestAnimationFrame(step);
+}
+}
+
+return { SQUAD, memberCard, emptySlot, renderPlGuide, BadgeShine };
+});
 __define('config', function () {
 const TICK_MS = 100;
 const RES = 4;
@@ -10380,6 +10886,21 @@ const where = def.coastal ? 'en tu costa' : 'en tu territorio';
 const upHow = `Sobre ${def.fem ? 'una tuya' : 'uno tuyo'}: sube de nivel (hasta ${CONFIG.maxLevel}).`;
 card.time = buildTicks(p, kind);
 switch (kind) {
+case 'capital': {
+const C = MECH.capital;
+card.tag = 'Tu primer edificio';
+card.cost = 0;
+card.time = 0;
+card.summary = 'Elige dónde fundarla, dentro de tu territorio. Hasta que la tengas no puedes construir nada más.';
+card.gives.push(
+{ icon: 'muralla', label: 'Murallas', value: `×${dec(C.wallMult)}`, note: 'defensa dentro; también refuerza las afueras' },
+{ icon: 'banco', label: 'Banco de tropas', value: '', note: 'guarda soldados que defienden la capital' },
+{ icon: 'escudo', label: 'Escudo antimisiles', value: '', note: 'derriba bombas que vengan a por ella' },
+{ icon: 'oro', label: 'Mejoras', value: '', note: '«Mejorar la capital»: más oro, banco y murallas' },
+);
+card.how = 'Gratis y al momento. Lejos de la frontera es más difícil de tomar; si cae, la corte se traslada.';
+break;
+}
 case 'capUp': {
 const C = MECH.capital;
 const cap = p.capital;
@@ -12092,23 +12613,47 @@ if (!this.profile.points) return;
 for (let i = 1; i < this.players.length; i++) {
 const p = this.players[i];
 if (!p.alive || p.weak || p.spawnTile < 0) continue;
-let t = p.spawnTile;
-if (this.pointAt.has(t)) continue;
+if (this.rules.capitals && !p.capital) continue;
+this._capitalPoint(p, p.capital ? p.capital.tile : p.spawnTile, false);
+}
+for (let i = 1; i < this.players.length; i++) this._refreshMods(this.players[i]);
+}
+_capitalPoint(p, t, refresh = true) {
+if (this.pointAt.has(t)) return;
 p.capitalTile = t;
 const pt = { id: this.points.length + 1, kind: 'capital', tile: t, x: this.map.x(t), y: this.map.y(t), name: `Capital de ${p.name}`, nation: p.id };
 this.points.push(pt);
 this.pointAt.set(t, pt);
-}
-for (let i = 1; i < this.players.length; i++) this._refreshMods(this.players[i]);
+if (refresh) this._refreshMods(p);
 }
 _foundCapitals() {
 if (!this.rules.capitals) return;
 for (let i = 1; i < this.players.length; i++) {
 const p = this.players[i];
-if (!p.alive || p.weak || p.spawnTile < 0 || p.capital) continue;
+if (!p.alive || p.weak || p.spawnTile < 0 || p.capital || p.isHuman) continue;
 if (this.buildingAt.has(p.spawnTile)) continue;
 this._newCapital(p, p.spawnTile, 0);
 }
+}
+_canFoundCapital(p, tile) {
+if (!this.rules.capitals) return { ok: false, reason: 'En esta partida no hay capitales' };
+if (p.weak) return { ok: false, reason: 'Las colonias no tienen capital' };
+if (p.capital) return { ok: false, reason: 'Ya tienes capital' };
+if (this.phase !== 'playing') return { ok: false, reason: 'Funda tu capital cuando empiece la conquista' };
+const map = this.map;
+if (tile == null || tile < 0 || tile >= map.size || this.owner[tile] !== p.id) return { ok: false, reason: 'Funda tu capital dentro de tu territorio' };
+if (this.pointAt.has(tile)) return { ok: false, reason: 'Ahí hay un lugar de interés: elige otra casilla' };
+const near = this.buildingAt.get(tile) || this.buildingNear(tile, CONFIG.buildingMinDist);
+if (near) return { ok: false, reason: `Demasiado cerca de otro edificio (${BUILDINGS[near.kind].name})` };
+return { ok: true, reason: '', cost: 0, found: true };
+}
+_foundCapital(p, tile) {
+const b = this._newCapital(p, tile, 0);
+if (this.profile.points) this._capitalPoint(p, tile);
+const map = this.map;
+this.effects.push({ kind: 'capitalFound', x: map.x(tile) + 0.5, y: map.y(tile) + 0.5, owner: p.id, tick: this.ticks });
+if (p === this.human) this._emit('🏰 ¡Capital fundada! Ya puedes construir', 'good', { sfx: 'start', tile });
+return !!b;
 }
 _newCapital(p, tile, up) {
 const b = { id: this._nextBuildingId++, kind: 'capital', tile, owner: p.id, level: 1, target: 0, up, bank: 0, work: null, ammo: null, readyAt: 0 };
@@ -13473,6 +14018,7 @@ return true;
 }
 buildCost(p, kind) {
 const def = BUILDINGS[kind];
+if (kind === 'capital') return 0;
 if (def && def.unit === 'capital') return this.capitalCost(p);
 const n = p.owned;
 n.warship = 0;
@@ -13503,7 +14049,9 @@ const map = this.map;
 const def = BUILDINGS[kind];
 if (!def) return { ok: false, reason: 'Edificio desconocido' };
 if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
+if (kind === 'capital') return this._canFoundCapital(p, tile);
 if (def.unique) return { ok: false, reason: `${def.name}: no se construye` };
+if (this.rules.capitals && !p.weak && !p.capital && p.isHuman) return { ok: false, reason: 'Primero funda tu capital', needCapital: true };
 if (def.unit === 'capital') return this._canUpgradeCapital(p);
 if (def.unit === 'ship') return this._canBuildWarship(p, tile);
 if (def.unit === 'missile') return this._canLaunchMissile(p, tile, kind);
@@ -13554,6 +14102,7 @@ build(p, kind, tile) {
 const check = this.canBuild(p, kind, tile);
 if (!check.ok) return false;
 const def = BUILDINGS[kind];
+if (check.found) return this._foundCapital(p, tile);
 if (def.unit === 'capital') return this._startCapitalWork(p);
 if (check.upgrade) return this._startUpgrade(p, check.upgrade);
 const price = this.buildCost(p, kind);
@@ -14814,6 +15363,8 @@ this._placeCapitals();
 this._placeLugares();
 for (const bot of this.bots) bot.nextThink = this.ticks + this.rng.int(1, CONFIG.botThinkMax);
 this._emit('¡Comienza la conquista!', 'good', { sfx: 'start' });
+const h = this.human;
+if (h && h.alive && this.rules.capitals && !h.capital) this._emit('🏰 Funda tu capital: pulsa «Capital» y elige dónde, dentro de tu territorio. Hasta entonces no puedes construir', 'info', { capital: true });
 }
 _checkEliminations() {
 for (let i = 1; i < this.players.length; i++) {
@@ -15366,7 +15917,7 @@ items: [
 ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
 ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de tierra (52 casillas del documento: 87 de las de ahora, más pequeñas) y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
 ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: ocultar la barra de abajo. I: desarrollo. Mayús (mantenida): más detalles en las fichas, el tooltip y la clasificación. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
+['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z fundar y luego mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
 ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
 ],
 },
@@ -15375,7 +15926,7 @@ id: 'economia',
 name: 'Economía',
 items: [
 ['moneda', 'Oro', 'Ganas 100 de oro por turno pase lo que pase y, además, tu territorio produce: cuanto más grande, más (medio mundo da unas diez veces el oro base). Suman también pueblos, pesqueros, mercantes, trenes, regalos de aliados y el botín de quien elimines.'],
-['corona', 'Tu capital', 'Naces con tu capital amurallada: dentro de las murallas conquistarte cuesta seis veces más, en las afueras dos veces y media, las bombas no arrasan lo que hay dentro y su escudo derriba los misiles que se acercan. Su muralla se ve en el mapa como una frontera de píxeles del metal de su nivel. Mejorarla es clave pero cuesta oro y tropas, cada vez más (Z, o toca su emblema en el panel): cada nivel da +20 % de oro, mucho más banco y murallas más fuertes, y los niveles 3 a 12 traen premios (escudo, afueras, crecimiento, barcos, techo, comercio). Del 1 al 12 su emblema pasa de piedra a bronce, plata, oro y oro real; el 12, la ciudadela dorada, es muy difícil.'],
+['corona', 'Tu capital', 'Lo primero es fundar tu capital amurallada: pulsa «Fundar capital» (Economía) y elige dónde, dentro de tu territorio; es gratis y, hasta tenerla, no puedes construir nada más. Dentro de las murallas conquistarte cuesta seis veces más, en las afueras dos veces y media, las bombas no arrasan lo que hay dentro y su escudo derriba los misiles que se acercan. Su muralla se ve en el mapa como una frontera de píxeles del metal de su nivel. Mejorarla es clave pero cuesta oro y tropas, cada vez más (Z, o toca su emblema en el panel): cada nivel da +20 % de oro, mucho más banco y murallas más fuertes, y los niveles 3 a 12 traen premios (escudo, afueras, crecimiento, barcos, techo, comercio). Del 1 al 12 su emblema pasa de piedra a bronce, plata, oro y oro real; el 12, la ciudadela dorada, es muy difícil.'],
 ['corona', 'Banco de tropas', 'Guarda soldados en tu capital con el botón Guardar (o X: el 25 % de tus soldados cada vez) y sácalos cuando los necesites (Sacar todo o Mayús + X). Lo guardado no ataca ni frena tu regeneración y, cuantas más tropas guardes, más fuertes son las murallas (y más gruesas en el mapa); con tus tropas al tope, la capital sigue reclutando hacia el banco. Si cae, quien la toma se lleva botín y la mitad del banco, y la refundas con la mitad de las mejoras.'],
 ['tropas', 'Trabajadores', 'Con la regla «Economía con trabajadores», el deslizador «Reparto» divide tu población entre soldados (atacan y defienden) y trabajadores (dan oro).'],
 ['ciudad', 'Edificios', 'Pueblos (B): baratos, +300 de oro/s y +6 000 de techo por nivel. Ciudades: +25 000 de techo de tropas por nivel. Puertos: pesqueros que vuelven con oro (tantos como su nivel) y mercantes a puertos de otros países que os pagan a los dos. Fábricas: vías a varias estaciones a la vez (o la vía que pisan) y trenes que dan oro en cada estación; cuantas más fábricas, más trenes. Las obras tardan unos segundos.'],
@@ -15573,6 +16124,7 @@ const { ACH_CATEGORIES, achCategory, achPoints, attachTip, esc, hideTip, itemTip
 const { LOBBY_WAIT_MS } = __require('emparejamiento');
 const { SECTIONS, sectionKeys } = __require('ajustes');
 const { SettingsUI } = __require('ajustes-ui');
+const { BadgeShine, SQUAD, emptySlot, memberCard, renderPlGuide } = __require('competitivo-ui');
 const COLLECTION = [
 { cat: 'forma', col: 'emblema', name: 'Forma', type: 'Forma del emblema', list: SHAPES, desc: 'La forma de tu emblema.' },
 { cat: 'simbolo', col: 'emblema', name: 'Símbolo', type: 'Símbolo del emblema', list: SYMBOLS, desc: 'El símbolo de tu emblema.' },
@@ -15613,6 +16165,8 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Partida', title: 'Funda tu capital', text: 'Ahora cada jugador coloca su capital como un edificio: al empezar la conquista, pulsa «Fundar capital» y elige dónde, dentro de tu territorio (es gratis y ves sus murallas antes de colocarla). Hasta tenerla no puedes construir nada más. Las naciones de la IA nacen con la suya.', art: 2 },
+{ tag: 'Competitivo', title: 'Tu escuadra y emblemas nuevos', text: 'Competitivo renovado: tu estandarte en el centro y cuatro huecos para tu escuadra. Pulsa «+» para invitar con un enlace (sin cuenta) o a tus amigos, y buscad partida juntos. Mientras buscas puedes moverte por el menú: un aviso flotante te sigue. Insignias de liga redibujadas y una guía de los PL con lo que te daría tu próxima partida.', art: 1 },
 { tag: 'Diseño', title: 'Pantallas de carga renovadas', text: 'Los pasos de la carga (cuartel, banderas, mapa, terreno…) son ahora insignias con su icono que se doran con un sello al terminar, unidas por una línea que se llena. Barra dorada con punta luminosa, mapa con marco y rosa de los vientos, y antes de cada partida, la vista previa de tu mapa con las banderas de sus países.', art: 2 },
 { tag: 'Ajustes', title: 'Ajustes gráficos y más fluidez', text: 'Ajustes renovados por secciones: calidad gráfica en un toque (Ahorro, Rendimiento, Equilibrada o Máxima), resolución del mapa, límite de fps, partículas, temblor, viñeta y contador de fps; qué nombres se ven en el mapa, tamaño de los paneles, volumen general, velocidad de la cámara y atajos de teclado. Y la partida va más fluida: el turno se reparte entre fotogramas, salir al menú es instantáneo y la conexión se recupera antes tras un corte.', art: 0 },
 { tag: 'Mapas', title: 'Mapas con más píxeles', text: 'Todos los mapas tienen ahora 1,78 veces más casillas (el mundo, 4000 × 2000) con la misma geografía: costas, ríos y fronteras más finos. La partida va al mismo ritmo: el techo de tropas, la zona inicial y el coste de conquistar cuentan superficie, no píxeles.', art: 2 },
@@ -15625,7 +16179,7 @@ const NEWS = [
 { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
 { tag: 'Capital', title: 'Una capital que crece hasta el nivel 12', text: 'Murallas de píxeles que se engrosan con las tropas del banco, un botón para guardar y un emblema que pasa de piedra a oro. Cada nivel cuesta oro y tropas y trae premios que ves por adelantado.', art: 1 },
 { tag: 'Defensa', title: 'Capital con banco de tropas', text: 'Guarda soldados en tu capital y sácalos cuando los necesites. Una sola mejora le da oro y más banco; sus murallas, afueras y escudo antimisiles la hacen mucho más dura. Los antimisiles disparan salvas y casi no fallan.', art: 1 },
-{ tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Naces con una capital amurallada que mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
+{ tag: 'Economía', title: 'Tu capital y un territorio que produce', text: 'Cuanto más grande, más oro. Fundas tu capital amurallada donde quieras y la mejoras sin llenar el mapa de edificios; hay pueblos, pesqueros y lugares de interés con premios.', art: 1 },
 { tag: 'Mapa', title: 'Frentes en rojo', text: 'Las fronteras donde se lucha se ponen rojas, los barcos marcan dónde van a desembarcar y el tooltip es más pequeño y claro.', art: 2 },
 { tag: 'Mapa', title: 'Colores y banderas', text: 'Cada país se distingue de sus vecinos, los barcos llevan su bandera y los territorios sueltos de una nación, también.', art: 2 },
 { tag: 'Mapas', title: 'Seis regiones nuevas', text: 'Mediterráneo, Oriente Medio, Centroamérica y el Caribe, Sudeste Asiático, Extremo Oriente y Asia del Sur: más detalle por país y partidas más cortas.', art: 2 },
@@ -16058,6 +16612,10 @@ countryCache = [...seen].sort((a, b) => a[1].localeCompare(b[1], 'es'));
 }
 return countryCache;
 }
+function clock(ms) {
+const sec = Math.max(0, Math.floor(ms / 1000));
+return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+}
 function emblemCanvas(emblem, size = 32) {
 const c = el('canvas', { width: size * 2, height: size * 2, class: 'emblema', 'aria-hidden': 'true' });
 c.style.width = c.style.height = `${size}px`;
@@ -16261,13 +16819,19 @@ this._flash('Ajustes restablecidos.', true);
 });
 $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
 this.queue = this.profile.ajustes.colaClasif === 'sala' ? 'sala' : 'ia';
-segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => {
-this.queue = v;
-this.profile.ajustes.colaClasif = v;
-this.h.onProfileChange?.(false);
-this.renderCompetitive();
-});
+this.party = null;
+segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => this._setQueue(v));
 $('cp-buscar').addEventListener('click', () => this._findMatch());
+$('cp-ver-pl').addEventListener('click', () => $('cp-pl-guia').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }));
+$('cp-salir-grupo').addEventListener('click', () => this.h.onPartyLeave?.());
+$('cp-invitar-cerrar').addEventListener('click', () => this._closeInvite());
+$('cp-invitar-copiar').addEventListener('click', () => this.h.onPartyCopy?.());
+document.addEventListener('pointerdown', (e) => {
+const box = $('cp-invitar');
+if (!box.hidden && !box.contains(e.target) && !e.target.closest?.('.cp-hueco-mas')) this._closeInvite();
+});
+document.addEventListener('keydown', (e) => e.key === 'Escape' && !$('cp-invitar').hidden && this._closeInvite());
+this._shine = new BadgeShine($('cp-insignia'), () => this.view === 'competitivo' && this.menuVisible());
 this.search = null;
 $('bp-ir').addEventListener('click', () => this.go('competitivo'));
 $('bp-cancelar').addEventListener('click', () => this.h.onFindMatch?.());
@@ -16346,7 +16910,6 @@ if (bar) new ResizeObserver(() => { if (bar.offsetHeight) $('inicio').style.setP
 }
 $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
 $('btn-rivales').addEventListener('click', () => this.h.onSearchRivals?.());
-$('cp-amigos')?.addEventListener('click', () => this.h.onRankedGroup?.());
 $('btn-empezar').addEventListener('click', () => {
 if (this.draftPending()) {
 this._notice('Tienes cambios sin aplicar en las reglas: pulsa «Aplicar cambios» o «Descartar» antes de empezar.', 'aviso');
@@ -17165,10 +17728,12 @@ if (was) this._slideIn($('inicio'), from ? -1 : 0);
 this.renderAll();
 if (this.view === 'jugar' || !this.view) this.cover?.start();
 requestAnimationFrame(() => this._paintHero());
+this._renderPill();
 }
 hide() {
 $('inicio').hidden = true;
 this.cover?.stop();
+$('busqueda-pill').hidden = true;
 }
 setView(view) {
 if (view === 'apariencia') {
@@ -17195,7 +17760,7 @@ prepared = true;
 if (view === 'clasificacion') this.renderTable();
 if (view === 'competitivo') this.renderCompetitive();
 };
-if (this.search) this.setSearch(this.search);
+this._renderPill();
 if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
 else this.cover?.stop();
 const secs = Array.from(document.querySelectorAll('.vista[data-vista]'));
@@ -17304,7 +17869,8 @@ $('cp-nombre').textContent = p.nombre || 'Sin nombre';
 $('cp-nombre').style.color = nameColorOf(p);
 $('cp-titulo').textContent = titleName(p) || 'Recluta';
 $('cp-nivel').textContent = `Nivel ${levelInfo(p.xp).level}`;
-paintBadge($('cp-insignia'), r);
+const big = $('cp-insignia');
+this._shine.set((ctx, shine) => drawBadge(ctx, big.width / 2, big.height * 0.54, big.height * 0.72, placing ? null : k.league, placing ? 0 : k.div, { shine: placing ? NaN : shine }));
 this._rankMotion(r, placing, k);
 const col = placing ? [196, 170, 120] : k.league.color;
 const band = document.querySelector('.cp-portada');
@@ -17324,6 +17890,8 @@ el('span', { class: 'cp-d', text: `${losses} D` }),
 ` · ${pct} % de victorias`,
 r.escudo ? el('span', { class: 'cp-escudo', title: 'No bajas de división en estas partidas', text: ` · 🛡 escudo ${r.escudo}` }) : '',
 );
+this._squadKey = null;
+this._renderSquad();
 this.renderQueue();
 this._renderHow(r);
 this._renderLeagues(r);
@@ -17361,8 +17929,7 @@ if (!this._howTip) {
 this._howTip = true;
 attachTip($('cp-info'), () => `<div class="rt-cab"><strong class="rt-nombre" style="color:#ffe08a">Cómo se puntúa</strong><div class="rt-fila"><span>${this.queue === 'sala' ? 'En línea' : 'Contra la IA'}</span><span class="rt-tipo">${esc(seasonName(this._queueRank().temporada))}</span></div></div><p class="rt-desc">${esc($('cp-como').textContent)}</p><p class="rt-linea">${esc(this._queueNote || '')}</p>`);
 }
-$('cp-como').closest('section').hidden = !this.profile.rangoHistorico;
-$('cp-como').hidden = true;
+renderPlGuide(r, this.queue);
 $('cp-como').textContent = online
 ? `En línea: tus puntos salen de quién queda por delante de quién entre las personas de la sala (Elo, con el nivel de cada una) y, un poco, de tu puesto entre todas las naciones. Abandonar cuenta como quedar el último. Si se pierde al anfitrión, la partida se anula: no cuenta para nadie. Las ${PLACEMENT_GAMES} primeras partidas de la temporada son de colocación.`
 : `Contra la IA: cuenta tu puesto final entre las ${RANKED_AI.bots + 1} naciones, comparado con lo que se espera de tu nivel frente a esa dificultad (la IA se ajusta a tu liga). Abandonar cuenta como quedar el último. Es el rango de la tabla de la temporada. Las ${PLACEMENT_GAMES} primeras partidas son de colocación.`;
@@ -17377,51 +17944,94 @@ el('div', { class: 'cp-historico-cab' }, badgeCanvas(h, 28), el('span', {}, el('
 el('p', { class: 'nota', text: 'Antes, las partidas contra la IA y en línea sumaban al mismo rango. Ahora cada cola tiene el suyo: el mixto se queda aquí tal cual, y las dos colas empezaron sus colocaciones con tu nivel de entonces como punto de partida.' }),
 );
 }
+_setQueue(v) {
+if (v === 'ia' && this.party) {
+this._flash('En escuadra se juega en línea: sal de la escuadra para jugar contra la IA.');
+v = 'sala';
+}
+this.queue = v;
+for (const b of $('cp-colas').children) b.setAttribute('aria-checked', String(b === $('cp-colas').children[v === 'ia' ? 0 : 1]));
+rodar($('cp-colas'));
+if (this.profile.ajustes.colaClasif !== v) {
+this.profile.ajustes.colaClasif = v;
+this.h.onProfileChange?.(false);
+}
+this.renderCompetitive();
+}
 renderQueue() {
 if (!$('cp-buscar')) return;
 const r = this._queueRank();
 const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
 const btn = $('cp-buscar');
+const sala = this.party?.sala || null;
+const ia = $('cp-colas').children[0];
+if (ia) {
+ia.disabled = !!sala;
+ia.title = sala ? 'En escuadra se juega en línea' : '';
+}
+$('cp-salir-grupo').hidden = !sala;
+btn.hidden = false;
+const setBtn = (text, { primary = true, disabled = false } = {}) => {
+btn.textContent = text;
+btn.disabled = disabled;
+btn.classList.toggle('principal', primary);
+btn.classList.toggle('secundario', !primary);
+btn.classList.toggle('btn-brillo', primary && !disabled);
+};
+const extra = (text) => ($('cp-cola-extra').textContent = text);
 if (this.queue === 'ia') {
 this._queueNote = `${mapLabel(RANKED_AI.mapSize)}, ${RANKED_AI.bots} naciones, perfil Clásico, contra la IA ${dif}. Cuenta tu puesto final; abandonar cuenta como derrota.`;
 $('cp-cola-nota').textContent = `🗺 ${mapLabel(RANKED_AI.mapSize)} · ${RANKED_AI.bots} naciones · IA ${dif}`;
-$('cp-amigos').hidden = true;
-$('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
-btn.disabled = false;
-btn.textContent = 'Buscar partida';
-btn.classList.add('principal', 'btn-brillo');
-btn.classList.remove('secundario');
+extra(inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga. Para ir con amigos, pulsa «+».');
 $('cp-buscando').hidden = true;
+setBtn('Buscar partida');
 return;
 }
 const net = this.netKind;
-const searching = !!this.search;
-$('cp-buscando').hidden = !searching;
-btn.classList.toggle('secundario', searching);
-btn.classList.toggle('principal', !searching);
-btn.classList.toggle('btn-brillo', !searching);
 this._queueNote = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores. Al encontrar sala, se espera 30 s a que entre más gente.`;
 $('cp-cola-nota').textContent = `🗺 ${mapLabel(RANKED_ROOM.mapSize)} · ${RANKED_ROOM.bots} naciones · hasta 8 jugadores`;
-$('cp-amigos').hidden = searching || !net || net === 'none' || net === 'connecting';
-if (searching) {
-btn.disabled = false;
-btn.textContent = 'Cancelar búsqueda';
-$('cp-cola-extra').textContent = 'Puedes moverte por el menú mientras buscas.';
+if (sala) {
+const st = sala.status();
+const members = this._squadMembers(sala, st);
+const hunt = this._partyHunt(sala);
+$('cp-busca-titulo').textContent = 'Buscando rivales';
+$('cp-buscando').hidden = !hunt;
+if (hunt) {
+this._partyTick();
+setBtn('Buscando rivales…', { primary: false, disabled: true });
+btn.hidden = true;
+extra('Puedes moverte por el menú: la partida empezará sola.');
+} else if (sala.isHost) {
+setBtn('Buscar partida', { disabled: !!sala.countdown });
+extra(this.party.status || (members.length > 1 ? `Escuadra de ${members.length}: completamos la sala con rivales de rango parecido durante 30 s.` : 'Invita con «+» o busca partida tú solo.'));
+} else {
+setBtn('Esperando al líder…', { primary: false, disabled: true });
+extra(this.party.status || (st.host ? 'El líder de la escuadra busca la partida. Mientras, puedes moverte por el menú.' : 'Buscando al líder de la escuadra…'));
+}
 return;
 }
-if (!net || net === 'none') {
-btn.disabled = true;
-$('cp-cola-extra').textContent = 'Sin conexión con el servidor de salas.';
+const searching = !!this.search;
+$('cp-busca-titulo').textContent = 'Buscando partida';
+$('cp-buscando').hidden = !searching;
+if (searching) {
+setBtn('Cancelar búsqueda', { primary: false });
+extra('Puedes moverte por el menú mientras buscas: personaliza tu perfil, mira el arsenal…');
+} else if (!net || net === 'none') {
+setBtn('Buscar partida', { disabled: true });
+extra('Sin conexión con el servidor de salas.');
 } else if (net === 'connecting') {
-btn.disabled = true;
-$('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
+setBtn('Buscar partida', { disabled: true });
+extra('Conectando con el servidor de salas…');
 } else {
-btn.disabled = false;
-$('cp-cola-extra').textContent = 'Rivales de rango parecido; la partida empieza sola.';
+setBtn('Buscar partida');
+extra('Rivales de rango parecido; la partida empieza sola.');
 }
-btn.textContent = 'Buscar partida';
 }
 _findMatch() {
+if (this.party) {
+this.h.onPartySearch?.();
+return;
+}
 if (this.queue === 'ia') {
 this.h.onRanked?.('ia');
 return;
@@ -17430,23 +18040,165 @@ this.h.onFindMatch?.();
 }
 setSearch(info, estado = '') {
 this.search = info;
-const fmt = (ms) => {
-const s = Math.floor(ms / 1000);
-return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-};
-const pill = $('busqueda-pill');
 if (info) {
 const r = this.profile.rangoOnline;
 const lo = rankOf(pointsFromMmr(r.mmr - info.window)).label;
 const hi = rankOf(pointsFromMmr(r.mmr + info.window)).label;
-$('cp-busca-tiempo').textContent = fmt(info.waited);
+$('cp-busca-tiempo').textContent = clock(info.waited);
 $('cp-busca-info').textContent = `${lo === hi ? `Rivales de ${lo}` : `Rivales entre ${lo} y ${hi}`} · ${info.inQueue} en cola`;
-$('bp-tiempo').textContent = fmt(info.waited);
 }
-const show = !!info && this.menuVisible() && this.view !== 'competitivo';
-if (pill.hidden === show) pill.hidden = !show;
+this._renderPill();
 if (estado === 'encontrada') this._flash('¡Partida encontrada! Entrando en la sala…', true);
 if (this.view === 'competitivo') this.renderQueue();
+}
+_renderPill() {
+const pill = $('busqueda-pill');
+const sala = this.party?.sala || null;
+const hunt = sala ? this._partyHunt(sala) : null;
+const mode = this.search ? 'buscar' : hunt ? 'rivales' : sala ? 'escuadra' : '';
+const show = !!mode && this.menuVisible() && this.view !== 'competitivo';
+if (pill.hidden === show) pill.hidden = !show;
+if (!mode) return;
+pill.dataset.modo = mode;
+$('bp-texto').textContent = mode === 'buscar' ? 'Buscando partida' : mode === 'rivales' ? 'Buscando rivales' : 'Tu escuadra';
+$('bp-cancelar').hidden = mode !== 'buscar';
+$('bp-tiempo').hidden = mode === 'escuadra';
+const n = sala ? this._squadMembers(sala).length : 0;
+$('bp-escuadra').hidden = !sala;
+$('bp-escuadra').textContent = `${n}/${SQUAD}`;
+if (mode === 'buscar') $('bp-tiempo').textContent = clock(this.search.waited);
+else if (mode === 'rivales') $('bp-tiempo').textContent = clock(Date.now() - hunt.start);
+}
+_squadMembers(sala, st = sala.status()) {
+const list = sala.roomInfo().escuadra;
+const squad = list && list.length ? new Set(list) : null;
+return st.players.filter((p) => p.isMe || !squad || squad.has(p.peer));
+}
+_partyHunt(sala) {
+const info = sala.roomInfo();
+return info.espera > 0 ? { deadline: info.espera, start: info.espera - LOBBY_WAIT_MS } : null;
+}
+_partyTick() {
+const sala = this.party?.sala;
+const hunt = sala ? this._partyHunt(sala) : null;
+if (!hunt) {
+clearInterval(this._partyTimer);
+this._partyTimer = 0;
+return;
+}
+const st = sala.status();
+const left = Math.max(0, Math.ceil((hunt.deadline - Date.now()) / 1000));
+$('cp-busca-tiempo').textContent = clock(Date.now() - hunt.start);
+$('cp-busca-info').textContent = `Escuadra de ${this._squadMembers(sala, st).length} · ${st.total}/${st.seats} en la sala · ${left > 0 ? `empieza en ${left} s` : 'empezando…'}`;
+this._renderPill();
+}
+renderParty(sala, kind = this.netKind, status = '') {
+const had = !!this.party;
+this.party = sala ? { sala, kind, status } : null;
+if (sala && this.queue !== 'sala') {
+this.queue = 'sala';
+for (const b of $('cp-colas').children) b.setAttribute('aria-checked', String(b === $('cp-colas').children[1]));
+rodar($('cp-colas'));
+if (this.view === 'competitivo') this.renderCompetitive();
+}
+if (!sala) {
+$('cp-invitar').hidden = true;
+this._inviteWanted = false;
+}
+clearInterval(this._partyTimer);
+this._partyTimer = sala && this._partyHunt(sala) ? setInterval(() => this._partyTick(), 500) : 0;
+if (this.view === 'competitivo') {
+this._renderSquad();
+this.renderQueue();
+if (!$('cp-invitar').hidden) this._renderInvite();
+}
+this._renderPill();
+if (had && !sala && this.view === 'competitivo') this.renderCompetitive();
+}
+enterParty() {
+const fromLayer = !$('sala').hidden;
+if (fromLayer) {
+$('sala').hidden = true;
+this.closeLayer('sala');
+}
+if ($('inicio').hidden) this.show();
+if (this.view === 'competitivo') return;
+if (fromLayer) {
+this.setView('competitivo');
+this.returnTo('competitivo');
+} else this.go('competitivo');
+}
+_renderSquad() {
+if (!$('cp-huecos-izq')) return;
+const sala = this.party?.sala || null;
+const st = sala ? sala.status() : null;
+const others = sala ? this._squadMembers(sala, st).filter((p) => !p.isMe) : [];
+const claims = sala && sala.rankClaims ? sala.rankClaims() : new Map();
+const hunt = sala ? this._partyHunt(sala) : null;
+const net = this.netKind;
+const netOk = net === 'claude' || net === 'mqtt' || net === 'local';
+$('cp-lider').hidden = !(sala && sala.isHost && others.length);
+const key = JSON.stringify([!!sala, !!hunt, netOk, net, others.map((p) => [p.peer, p.name, p.stale, p.host, p.level, p.banner, p.frame, p.title, p.nameColor, claims.get(p.peer)?.puntos ?? null])]);
+if (key === this._squadKey) return;
+this._squadKey = key;
+const seen = this._squadPeers;
+this._squadPeers = new Set(others.map((p) => p.peer));
+const cards = others.map((p) => {
+const claim = claims.get(p.peer);
+const pts = claim && Number.isFinite(claim.puntos) ? claim.puntos : null;
+return memberCard(p, { points: pts, leader: !!p.host, fresh: !!seen && !seen.has(p.peer), onOpen: () => this.openPlayerCard({ ...p, rank: pts != null ? rankOf(pts).label : '' }, 'sala') });
+});
+const hint = !netOk ? (net === 'connecting' || net === undefined ? 'Conectando…' : 'Sin conexión') : hunt ? 'Buscando rivales' : '';
+for (let i = cards.length; i < SQUAD - 1; i++) cards.push(emptySlot({ onInvite: () => this._openInvite(), disabled: !!hint, hint }));
+$('cp-huecos-izq').replaceChildren(...cards.slice(0, 2).reverse());
+$('cp-huecos-der').replaceChildren(...cards.slice(2));
+if (seen && others.some((p) => !seen.has(p.peer))) this.h.sound?.('listo');
+}
+_openInvite() {
+if (!this.party) {
+if (this.queue !== 'sala') this._setQueue('sala');
+this.h.onPartyCreate?.();
+}
+$('cp-invitar').hidden = false;
+this._inviteAt = 0;
+this._renderInvite();
+}
+_closeInvite() {
+$('cp-invitar').hidden = true;
+}
+_renderInvite() {
+const sala = this.party?.sala || null;
+const kind = this.party?.kind || this.netKind;
+$('cp-invitar-codigo').textContent = sala ? sala.code.toUpperCase() : '·····';
+const copy = $('cp-invitar-copiar');
+copy.disabled = !sala;
+if (!this._copyPartyT) copy.textContent = kind === 'mqtt' ? 'Copiar enlace' : 'Copiar código';
+$('cp-invitar-nota').textContent = !sala
+? 'Preparando tu escuadra…'
+: kind === 'local'
+? 'Prueba entre pestañas: abre otra pestaña de este navegador y entra con el código en Multijugador.'
+: kind === 'claude'
+? 'Pásale el código: lo escribe en Multijugador → Unirse y entra en tu escuadra.'
+: 'Envíale el enlace: al abrirlo entra en tu escuadra, aunque no tenga cuenta.';
+const friends = $('cp-invitar-amigos');
+if (!sala) friends.replaceChildren();
+else if (!this._inviteAt || performance.now() - this._inviteAt > 10000) {
+this._inviteAt = performance.now();
+this.h.onInvitePicker?.(friends);
+}
+}
+partyCopied(ok, text = '') {
+const b = $('cp-invitar-copiar');
+if (ok) {
+b.textContent = '¡Copiado!';
+clearTimeout(this._copyPartyT);
+this._copyPartyT = setTimeout(() => {
+this._copyPartyT = 0;
+this._renderInvite();
+}, 1800);
+return;
+}
+$('cp-invitar-nota').textContent = `Cópialo a mano: ${text}`;
 }
 _renderLeagues(r) {
 const placing = inPlacement(r);
@@ -18624,6 +19376,7 @@ this._lobbyMode = null;
 this._lobbyPeers = null;
 this._lobbyReady = null;
 $('inicio').hidden = true;
+$('busqueda-pill').hidden = true;
 $('crear-sala').hidden = true;
 if ($('sala').hidden) {
 $('sala').hidden = false;
@@ -22008,6 +22761,7 @@ else sala.leave();
 }
 state.sala = null;
 state.online = false;
+if (home.party) home.renderParty(null);
 }
 function onlineEndActions(ended) {
 if (!state.online) return {};
@@ -22126,20 +22880,38 @@ function rankedRoomSettings() {
 return { bots: RANKED_ROOM.bots, mapSize: RANKED_ROOM.mapSize, difficulty: RANKED_ROOM.difficulty, rules: { ...DEFAULT_RULES, profile: RANKED_ROOM.profile }, clasificatoria: true };
 }
 function startRankedGroup() {
+if (state.sala && home.party) return;
 if (!transport) {
-home.flash?.('Sin conexión con el servidor de salas.');
+home.flash?.(connecting ? 'Conectando con el servidor de salas… inténtalo en un momento.' : 'Sin conexión con el servidor de salas.');
+home.renderParty(null);
 return;
 }
-if (state.mm) stopMatchmaking();
+if (state.mm) {
+stopMatchmaking();
+home.flash?.('Búsqueda cancelada: invita a tu escuadra y buscad juntos.');
+}
 const code = newRoomCode();
 state.match = { code, host: true, group: true, expect: [], deadline: 0 };
 openSala(code, true, {
 settings: rankedRoomSettings(),
-info: { nombre: `Clasificatoria de ${roomName(profile.nombre, RECRUIT_TAG)}`.slice(0, 28), visibilidad: 'enlace', plazas: MATCH_SEATS, grupo: true },
+info: { nombre: `Escuadra de ${roomName(profile.nombre, RECRUIT_TAG)}`.slice(0, 28), visibilidad: 'enlace', plazas: MATCH_SEATS, grupo: true },
+party: true,
 }).catch(() => {
 state.match = null;
-home.flash?.('No se ha podido crear la sala.');
+home.renderParty(null);
+home.flash?.('No se ha podido crear la escuadra. Revisa la conexión y vuelve a intentarlo.');
 });
+}
+function searchAsParty() {
+const sala = state.sala;
+if (!sala || !sala.isHost || !home.party) return;
+if (sala.status().players.length <= 1) {
+state.match = null;
+leaveOnline();
+toggleMatchmaking();
+return;
+}
+searchRivals();
 }
 function searchRivals() {
 const sala = state.sala;
@@ -22155,8 +22927,9 @@ const already = sala.status().players.filter((p) => !p.isMe).map((p) => p.peer);
 stopRecruiter();
 state.recruiter = new Matchmaker(transport, { version: RULES_FINGERPRINT, mmr, newCode: newRoomCode });
 state.recruiter.recruit(sala.code, { para: already, until: deadline, seats: sala.info.plazas, onRecruit: (peers) => state.match?.code === sala.code && state.match.expect.push(...peers) });
-sala.setInfo({ espera: deadline });
+sala.setInfo({ espera: deadline, escuadra: sala.status().players.map((p) => p.peer) });
 sound.play('listo', 0.7, 0);
+if (home.party) home.renderParty(sala, transport.kind);
 }
 function autoMatch(sala) {
 const m = state.match;
@@ -22181,7 +22954,7 @@ home.go('competitivo', { replace: true });
 toggleMatchmaking();
 }
 }
-async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
+async function openSala(code, isHost, { settings = null, info = null, auto = true, party = false } = {}) {
 if (!transport) throw new Error('Sin conexión para el multijugador.');
 if (state.match?.code !== code) {
 state.match = null;
@@ -22198,6 +22971,12 @@ if (signed) sala.rankClaim = { mmr: Math.round(r.mmr), puntos: r.puntos, ...sign
 } catch {
 }
 const kind = transport.kind;
+const isParty = () => {
+if (party) return true;
+if (sala.isHost || (state.match && state.match.code === code)) return false;
+const s = sala.hostSettings();
+return !!(s && s.clasificatoria && sala.roomInfo().grupo);
+};
 const render = (status = '') => {
 if (state.sala !== sala || sala.started) return;
 if (sala.observer) {
@@ -22207,6 +22986,21 @@ sala.join().then(() => render());
 return;
 }
 home.renderEntry(sala, entry);
+} else if (isParty()) {
+if (!sala.isHost && !sala.myReadyValid()) sala.setReady(true);
+if (!home.party) {
+state.pendingEntry = null;
+const clean = () => {
+if (!new URLSearchParams(location.search).has('sala')) return;
+const url = new URL(location.href);
+for (const k of ['sala', 'b']) url.searchParams.delete(k);
+history.replaceState(history.state, '', url);
+};
+home.enterParty();
+clean();
+setTimeout(clean, 700);
+}
+home.renderParty(sala, kind, status);
 } else home.renderLobby(sala, kind, status);
 };
 sala.onChange = () => {
@@ -22241,7 +23035,8 @@ sala.onVersionMismatch = (theirs, mine) => {
 if (state.sala !== sala) return;
 render(`La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
 };
-home.showLobby();
+if (party) home.renderParty(sala, kind, 'Preparando tu escuadra…');
+else home.showLobby();
 if (!isHost) home.renderEntry(sala, { estado: 'buscando' });
 try {
 await sala.open({ observer: !isHost });
@@ -22255,7 +23050,8 @@ c === 'not_permitted'
 ? 'Hay demasiadas salas abiertas ahora mismo. Inténtalo en un momento.'
 : 'No se ha podido abrir la sala.';
 if (isHost) {
-home.hideLobby();
+if (party) home.renderParty(null);
+else home.hideLobby();
 throw new Error(why);
 }
 if (!state.pendingEntry) state.pendingEntry = code;
@@ -22289,6 +23085,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
 if (state.sala !== sala) return;
 state.match = null;
 clearInterval(state.matchTimer);
+home.renderParty(null);
 const myPeer = sala.myPeer();
 const index = payload.players.findIndex((p) => p.peer === myPeer);
 if (index < 0) {
@@ -22462,6 +23259,7 @@ const red = /^b=\d{1,2}$/.test(inv.red || '') ? inv.red : '';
 inv = { ...inv, red };
 if (transport && (inv.red || '') === roomNet() && !(state.game && !state.demo)) {
 state.pendingEntry = code;
+state.autoEntry = code;
 home.showLobby();
 home.renderEntry(entryStub(code), { estado: 'buscando' });
 openEntry();
@@ -22802,7 +23600,21 @@ sound: (name) => sound.play(name, 0.9, 0),
 onFindMatch() {
 toggleMatchmaking();
 },
-onRankedGroup: () => startRankedGroup(),
+onPartyCreate: () => startRankedGroup(),
+onPartySearch: () => searchAsParty(),
+onPartyLeave() {
+state.match = null;
+leaveOnline();
+home.renderParty(null);
+},
+onPartyCopy() {
+const sala = state.sala;
+if (!sala) return;
+const code = sala.code.toUpperCase();
+const link = transport && transport.kind === 'mqtt' ? inviteLink(sala) : null;
+const text = link || (transport && transport.kind === 'local' ? code : `Únete a mi escuadra de Trinchera con el código ${code}`);
+copyText(text, () => home.partyCopied(true), () => home.partyCopied(false, link || code));
+},
 onSearchRivals: () => searchRivals(),
 onInvitePicker: (box) => socialUI.renderInvitePicker(box),
 onRanked(kind) {
@@ -23156,6 +23968,7 @@ const MILITARY_BUILDS = new Set(['fort', 'warship', 'missile', 'hbomb', 'mirv', 
 const ROLE_NAMES = { militar: 'mando militar', economia: 'economía y diplomacia' };
 function roleAllows(role, intent) {
 if (!role) return true;
+if (intent.type === 'build' && intent.kind === 'capital') return true;
 if (intent.type === 'build') return (role === 'militar') === MILITARY_BUILDS.has(intent.kind);
 return ROLE_TYPES[role].has(intent.type);
 }
@@ -23179,9 +23992,16 @@ const { game, human } = state;
 if (state.demo || !human || !human.alive || game.phase !== 'playing' || !human.capital) return;
 humanIntent({ type: 'bank', op, ratio: op === 'in' ? BANK_STEP : 1 });
 }
+function needsCapital(game, p) {
+return !!(game && p && game.rules.capitals && !p.weak && !p.capital && p.alive);
+}
 function setBuildMode(kind) {
 const { game, human } = state;
 if (state.demo || !human || !human.alive || game.phase !== 'playing') return;
+if (needsCapital(game, human)) {
+if (kind !== 'capital' && BUILDINGS[kind]?.unit !== 'capital') ui.hint('Primero funda tu capital: elige dónde, dentro de tu territorio', 'warn');
+kind = 'capital';
+}
 if (BUILDINGS[kind] && BUILDINGS[kind].unit === 'capital') {
 state.buildMode = null;
 humanIntent({ type: 'build', kind });
@@ -23673,7 +24493,7 @@ if (!transport) {
 home.renderEntry(entryStub(code), { estado: 'sinred' });
 return;
 }
-openSala(code, false, { auto: false }).catch((err) => {
+openSala(code, false, { auto: state.autoEntry === code }).catch((err) => {
 if (state.pendingEntry === code) home.renderEntry(entryStub(code), { estado: 'error', detalle: err && err.message });
 });
 }
@@ -24474,8 +25294,8 @@ return { REAL_MAP_DATA };
 __define('mecanicas', function () {
 const MECH_VERSION = 'doc-2.0';
 const PROFILES = {
-clasico: { id: 'clasico-10', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-trinchera: { id: 'trinchera-9', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+clasico: { id: 'clasico-11', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+trinchera: { id: 'trinchera-10', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 function profileOf(rules) {
 return PROFILES[rules && rules.profile] || PROFILES.trinchera;
@@ -25635,6 +26455,7 @@ visibilidad: VISIBILITIES.includes(r.visibilidad) ? r.visibilidad : 'enlace',
 plazas: Number.isFinite(seats) ? Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, seats)) : 4,
 espera: Number.isFinite(Number(r.espera)) && Number(r.espera) > 0 ? Math.round(Number(r.espera)) : 0,
 grupo: r.grupo === true,
+escuadra: Array.isArray(r.escuadra) ? r.escuadra.filter((x) => typeof x === 'string' && x.length > 0 && x.length <= 64).slice(0, MAX_HUMANS) : [],
 };
 }
 function roomName(profileName, tag) {
@@ -26211,7 +27032,7 @@ if (typeof raw.on === 'boolean') out.on = raw.on;
 if (typeof raw.tribute === 'number' && raw.tribute >= 0 && raw.tribute <= 0.5) out.tribute = raw.tribute;
 if (typeof raw.accept === 'boolean') out.accept = raw.accept;
 if (raw.op === 'in' || raw.op === 'out') out.op = raw.op;
-if (typeof raw.kind === 'string' && BUILDING_KINDS.includes(raw.kind)) out.kind = raw.kind;
+if (typeof raw.kind === 'string' && (BUILDING_KINDS.includes(raw.kind) || raw.kind === 'capital')) out.kind = raw.kind;
 if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
 if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
 return out;
@@ -29074,6 +29895,62 @@ won,
 info: { tipo: 'sala', puesto: abandon ? 0 : place.place, de: place ? place.of : 0, rivales: humans.length, abandono: abandon || undefined, partida: partida || undefined },
 });
 }
+function mmrLag(r) {
+return Math.round(clamp((r.mmr - mmrFromPoints(r.puntos)) / 50, -10, 10));
+}
+function previewResults(r, kind = 'ia') {
+const base = normalizeRank(JSON.parse(JSON.stringify(r)), r.modalidad);
+base.aplicadas = [];
+const placing = inPlacement(base);
+if (placing) {
+base.colocacion = PLACEMENT_GAMES;
+base.puntos = Math.max(base.puntos, pointsFromMmr(base.mmr));
+}
+const run = (fn) => {
+const c = JSON.parse(JSON.stringify(base));
+const out = fn(c);
+return out ? out.delta : 0;
+};
+let rows;
+if (kind === 'sala') {
+const total = RANKED_ROOM.bots + 5;
+const spots = [
+{ human: 1, place: 1, label: '1.º de 5', sub: 'ganas la partida' },
+{ human: 2, place: 4, label: '2.º de 5', sub: 'por delante de 3' },
+{ human: 3, place: 9, label: '3.º de 5', sub: 'a media tabla' },
+{ human: 5, place: 26, label: '5.º de 5', sub: 'el último de las personas' },
+];
+rows = spots.map((sp) => ({
+label: sp.label,
+sub: sp.sub,
+delta: run((c) => applyRoomResult(c, { place: sp.place, of: total }, [1, 2, 3, 4, 5].filter((h) => h !== sp.human).map((h) => ({ mmr: base.mmr, place: h < sp.human ? h : h + 30 })))),
+}));
+rows.push({ label: 'Abandonar', sub: 'cuenta como quedar el último', delta: run((c) => applyRoomResult(c, { place: total, of: total }, [1, 2, 3, 4].map((h) => ({ mmr: base.mmr, place: h })), { abandon: true })) });
+} else {
+const total = RANKED_AI.bots + 1;
+const mid = Math.round(total / 2);
+const spots = [
+[1, '1.º', 'ganas la partida'],
+[5, '5.º', 'entre los mejores'],
+[15, '15.º', 'primer sexto'],
+[mid, `${mid}.º`, 'a media tabla'],
+[total, `${total}.º`, 'el último o abandonar'],
+];
+rows = spots.map(([place, label, sub]) => ({ label, sub, delta: run((c) => applyAiResult(c, { place, of: total })) }));
+}
+return { rows, placing, estimate: placing ? rankOf(base.puntos).label : '', lag: mmrLag(base), shield: base.escudo };
+}
+function nextGoal(r) {
+const k = rankOf(r.puntos);
+if (k.league.id === 'leyenda') return null;
+if (k.league.apex) {
+const L = LEAGUES[k.index + 1];
+return { label: L.name, need: L.base - k.points, league: L };
+}
+const nextPts = Math.floor(k.points / 100) * 100 + 100;
+const n = rankOf(nextPts);
+return { label: n.label, need: nextPts - k.points, league: n.league, promotion: n.index > k.index };
+}
 function rankText(r) {
 if (inPlacement(r)) return `Colocación ${r.colocacion}/${PLACEMENT_GAMES}`;
 const k = rankOf(r.puntos);
@@ -29081,110 +29958,379 @@ return `${k.label} · ${k.pl} PL`;
 }
 const rgb = (c, a = 1) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
 const mix = (c, k) => c.map((v) => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)));
-function drawBadge(ctx, cx, cy, size, league, div = 0) {
+const TAU = Math.PI * 2;
+function drawBadge(ctx, cx, cy, size, league, div = 0, opts = {}) {
 const s = size / 100;
 ctx.save();
 ctx.translate(cx, cy);
 ctx.scale(s, s);
-const L = league || { color: [120, 130, 150], dark: [40, 46, 60], id: 'colocacion', base: -1 };
-const tier = Math.max(0, LEAGUES.indexOf(league));
-if (league && tier >= 5) {
-ctx.fillStyle = rgb(mix(L.color, -0.15));
+const L = league || { color: [150, 158, 174], dark: [52, 58, 72], id: 'colocacion', base: -1 };
+const tier = league ? Math.max(0, LEAGUES.indexOf(league)) : -1;
+const C = L.color;
+const D = L.dark;
+const lite = mix(C, 0.55);
+const deep = mix(D, -0.35);
+const medal = tier <= 1;
+const apex = !!(league && league.apex);
+if (tier >= 4) {
+const g = ctx.createRadialGradient(0, -2, 8, 0, -2, 70);
+g.addColorStop(0, rgb(C, tier >= 6 ? 0.55 : 0.35));
+g.addColorStop(1, rgb(C, 0));
+ctx.fillStyle = g;
+ctx.beginPath();
+ctx.arc(0, -2, 70, 0, TAU);
+ctx.fill();
+}
+if (apex) {
+const n = 16;
+for (let i = 0; i < n; i++) {
+const a = (i / n) * TAU - Math.PI / 2;
+const len = i % 2 ? 54 : 66;
+const w = 0.09;
+const g = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+g.addColorStop(0, rgb(lite, 0.5));
+g.addColorStop(1, rgb(lite, 0));
+ctx.fillStyle = g;
+ctx.beginPath();
+ctx.moveTo(Math.cos(a - w) * 18, Math.sin(a - w) * 18 - 2);
+ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len - 2);
+ctx.lineTo(Math.cos(a + w) * 18, Math.sin(a + w) * 18 - 2);
+ctx.closePath();
+ctx.fill();
+}
+}
+if (tier >= 4) {
+const feathers = tier >= 7 ? 7 : tier >= 5 ? 6 : 5;
+const reach = 40 + Math.min(4, tier - 4) * 2.5;
 for (const side of [-1, 1]) {
 ctx.save();
 ctx.scale(side, 1);
+for (let i = 0; i < feathers; i++) {
+const t = i / (feathers - 1);
+const rx = 22;
+const ry = -12 + t * 6;
+const a = -1.3 + t * 1.6;
+const len = reach - t * 14;
+const tx = rx + Math.cos(a) * len;
+const ty = ry + Math.sin(a) * len;
+const nx = -Math.sin(a);
+const ny = Math.cos(a);
+const w = 6.5;
+const g = ctx.createLinearGradient(rx, ry, tx, ty);
+g.addColorStop(0, rgb(deep));
+g.addColorStop(0.45, rgb(C));
+g.addColorStop(1, rgb(lite));
+ctx.fillStyle = g;
+ctx.strokeStyle = rgb(mix(D, -0.6), 0.95);
+ctx.lineWidth = 1.3;
+const mx = rx + (tx - rx) * 0.62;
+const my = ry + (ty - ry) * 0.62;
 ctx.beginPath();
-ctx.moveTo(18, -18);
-ctx.quadraticCurveTo(52, -40, 58, -6);
-ctx.quadraticCurveTo(46, -10, 40, 2);
-ctx.quadraticCurveTo(50, 6, 48, 22);
-ctx.quadraticCurveTo(36, 12, 22, 18);
+ctx.moveTo(rx - nx * 3, ry - ny * 3);
+ctx.quadraticCurveTo(mx - nx * w * 1.2, my - ny * w * 1.2, tx - nx * 1.5, ty - ny * 1.5);
+ctx.quadraticCurveTo(tx + Math.cos(a) * 4, ty + Math.sin(a) * 4, tx + nx * 2, ty + ny * 2);
+ctx.quadraticCurveTo(mx + nx * w, my + ny * w, rx + nx * 3, ry + ny * 3);
 ctx.closePath();
 ctx.fill();
+ctx.stroke();
+ctx.strokeStyle = rgb(lite, 0.55);
+ctx.lineWidth = 0.9;
+ctx.beginPath();
+ctx.moveTo(rx + Math.cos(a) * 6, ry + Math.sin(a) * 6);
+ctx.lineTo(tx - Math.cos(a) * 4, ty - Math.sin(a) * 4);
+ctx.stroke();
+}
 ctx.restore();
 }
-} else if (league && tier >= 3) {
-ctx.strokeStyle = rgb(mix(L.color, -0.2));
-ctx.lineWidth = 3;
+} else if (tier === 2 || tier === 3) {
+const leaves = tier === 3 ? 7 : 6;
 for (const side of [-1, 1]) {
-for (let k = 0; k < 5; k++) {
-const a = Math.PI * 0.55 + k * 0.28;
-const x = side * Math.cos(a) * -40;
-const y = Math.sin(a) * 40 - 6;
+ctx.save();
+ctx.scale(side, 1);
+ctx.strokeStyle = rgb(deep);
+ctx.lineWidth = 2;
 ctx.beginPath();
-ctx.ellipse(x, y, 7, 3.2, side * (a + Math.PI / 2), 0, Math.PI * 2);
+ctx.arc(0, -4, 44, Math.PI * 0.42, Math.PI * 0.92);
 ctx.stroke();
-}
-}
-}
-const shield = () => {
-ctx.beginPath();
-ctx.moveTo(0, -44);
-ctx.lineTo(34, -30);
-ctx.lineTo(32, 8);
-ctx.quadraticCurveTo(26, 34, 0, 46);
-ctx.quadraticCurveTo(-26, 34, -32, 8);
-ctx.lineTo(-34, -30);
-ctx.closePath();
-};
-shield();
-const g = ctx.createLinearGradient(-34, -44, 34, 46);
-g.addColorStop(0, rgb(mix(L.color, 0.45)));
-g.addColorStop(0.45, rgb(L.color));
-g.addColorStop(1, rgb(L.dark));
+for (let k = 0; k < leaves; k++) {
+const a = Math.PI * 0.44 + (k / (leaves - 1)) * Math.PI * 0.5;
+const x = Math.cos(a) * 44;
+const y = Math.sin(a) * 44 - 4;
+ctx.save();
+ctx.translate(x, y);
+ctx.rotate(a + Math.PI * 0.62);
+const g = ctx.createLinearGradient(-8, 0, 8, 0);
+g.addColorStop(0, rgb(C));
+g.addColorStop(1, rgb(lite));
 ctx.fillStyle = g;
-ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-ctx.shadowBlur = 8;
-ctx.shadowOffsetY = 3;
+ctx.strokeStyle = rgb(deep);
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.ellipse(0, 0, 8.5, 3.6, 0, 0, TAU);
 ctx.fill();
-ctx.shadowColor = 'transparent';
-ctx.lineWidth = 3;
-ctx.strokeStyle = rgb(mix(L.dark, -0.3));
 ctx.stroke();
+ctx.restore();
+}
+ctx.restore();
+}
+} else if (tier === 1) {
+ctx.strokeStyle = rgb(deep);
+ctx.lineWidth = 1.4;
+for (let k = 0; k < 8; k++) {
+ctx.save();
+ctx.rotate((k * Math.PI) / 4);
+const g = ctx.createLinearGradient(0, -30, 0, -48);
+g.addColorStop(0, rgb(mix(C, -0.25)));
+g.addColorStop(1, rgb(lite));
+ctx.fillStyle = g;
 ctx.beginPath();
-ctx.moveTo(0, -44);
-ctx.lineTo(34, -30);
-ctx.lineTo(0, -6);
+ctx.moveTo(-7, -31);
+ctx.lineTo(0, k % 2 ? -44 : -49);
+ctx.lineTo(7, -31);
 ctx.closePath();
-ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
 ctx.fill();
-ctx.beginPath();
-ctx.moveTo(0, -22);
-ctx.lineTo(16, -4);
-ctx.lineTo(0, 22);
-ctx.lineTo(-16, -4);
-ctx.closePath();
-ctx.fillStyle = rgb(mix(L.dark, -0.35), 0.85);
-ctx.fill();
-ctx.lineWidth = 2;
-ctx.strokeStyle = rgb(mix(L.color, 0.5));
 ctx.stroke();
-if (league && tier >= 7) {
+ctx.restore();
+}
+}
+const body = () => {
 ctx.beginPath();
-ctx.moveTo(-20, -46);
-ctx.lineTo(-20, -60);
-ctx.lineTo(-10, -52);
-ctx.lineTo(0, -64);
-ctx.lineTo(10, -52);
-ctx.lineTo(20, -60);
-ctx.lineTo(20, -46);
+if (medal) ctx.arc(0, 0, 37, 0, TAU);
+else {
+ctx.moveTo(0, -46);
+ctx.bezierCurveTo(13, -46, 26, -42, 36, -36);
+ctx.lineTo(36, -6);
+ctx.bezierCurveTo(36, 18, 22, 36, 0, 48);
+ctx.bezierCurveTo(-22, 36, -36, 18, -36, -6);
+ctx.lineTo(-36, -36);
+ctx.bezierCurveTo(-26, -42, -13, -46, 0, -46);
 ctx.closePath();
-ctx.fillStyle = rgb(mix(L.color, 0.25));
+}
+};
+const inset = (k, dy = 0) => {
+ctx.save();
+ctx.translate(0, dy);
+ctx.scale(k, k);
+body();
+ctx.restore();
+};
+ctx.save();
+ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+ctx.shadowBlur = 10;
+ctx.shadowOffsetY = 4;
+body();
+const metal = ctx.createLinearGradient(-30, -46, 30, 48);
+metal.addColorStop(0, rgb(lite));
+metal.addColorStop(0.38, rgb(C));
+metal.addColorStop(0.72, rgb(D));
+metal.addColorStop(1, rgb(deep));
+ctx.fillStyle = metal;
 ctx.fill();
-ctx.strokeStyle = rgb(L.dark);
-ctx.lineWidth = 2;
+ctx.restore();
+ctx.lineWidth = 3.5;
+ctx.strokeStyle = rgb(mix(D, -0.6));
+body();
+ctx.stroke();
+ctx.lineWidth = 1.6;
+ctx.strokeStyle = rgb(lite, 0.75);
+inset(0.9, medal ? 0 : -1);
+ctx.stroke();
+inset(0.72, medal ? 0 : -2);
+const plate = ctx.createLinearGradient(0, -34, 0, 34);
+plate.addColorStop(0, rgb(mix(D, -0.15)));
+plate.addColorStop(1, rgb(mix(D, -0.6)));
+ctx.fillStyle = plate;
+ctx.fill();
+ctx.lineWidth = 1.2;
+ctx.strokeStyle = rgb(mix(C, 0.2), 0.55);
+ctx.stroke();
+if (medal) {
+ctx.fillStyle = rgb(lite);
+for (let k = 0; k < 12; k++) {
+const a = (k / 12) * TAU;
+ctx.beginPath();
+ctx.arc(Math.cos(a) * 32.5, Math.sin(a) * 32.5, 1.7, 0, TAU);
+ctx.fill();
+}
+} else {
+ctx.strokeStyle = rgb(mix(C, 0.35), 0.4);
+ctx.lineWidth = 1.6;
+for (const y of [16, 22]) {
+ctx.beginPath();
+ctx.moveTo(-13, y - 5);
+ctx.lineTo(0, y + 2);
+ctx.lineTo(13, y - 5);
 ctx.stroke();
 }
-const label = !league ? '?' : div ? DIVISIONS[4 - div] : '';
-if (label) {
-ctx.font = `900 ${label.length > 2 ? 18 : 22}px Georgia, serif`;
+}
+if (!league) {
+ctx.font = '900 34px Georgia, serif';
 ctx.textAlign = 'center';
 ctx.textBaseline = 'middle';
 ctx.lineWidth = 4;
 ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-ctx.strokeText(label, 0, 1);
-ctx.fillStyle = '#ffffff';
-ctx.fillText(label, 0, 1);
+ctx.strokeText('?', 0, 2);
+ctx.fillStyle = '#f2f4f8';
+ctx.fillText('?', 0, 2);
+} else {
+const gy = medal ? 0 : -6;
+const sides = tier >= 6 ? 8 : tier >= 4 ? 6 : 4;
+const R = 11 + tier * 1.25;
+const pts = [];
+for (let k = 0; k < sides; k++) {
+const a = (k / sides) * TAU - Math.PI / 2;
+const rr = sides === 8 && k % 2 ? R * 0.62 : R;
+pts.push([Math.cos(a) * rr, gy + Math.sin(a) * rr * (sides === 4 ? 1.25 : 1)]);
+}
+const gLite = mix(C, 0.75);
+const gDark = mix(D, -0.25);
+ctx.save();
+ctx.shadowColor = rgb(C, 0.9);
+ctx.shadowBlur = tier >= 4 ? 14 : 6;
+ctx.beginPath();
+pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+ctx.closePath();
+ctx.fillStyle = rgb(C);
+ctx.fill();
+ctx.restore();
+for (let k = 0; k < sides; k++) {
+const [x1, y1] = pts[k];
+const [x2, y2] = pts[(k + 1) % sides];
+const mid = Math.atan2((y1 + y2) / 2 - gy, (x1 + x2) / 2);
+const light = (Math.cos(mid - (-Math.PI * 0.75)) + 1) / 2;
+const col = gDark.map((v, i) => Math.round(v + (gLite[i] - v) * light));
+ctx.beginPath();
+ctx.moveTo(0, gy);
+ctx.lineTo(x1, y1);
+ctx.lineTo(x2, y2);
+ctx.closePath();
+ctx.fillStyle = rgb(col);
+ctx.fill();
+}
+ctx.beginPath();
+pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+ctx.closePath();
+ctx.lineWidth = 1.4;
+ctx.strokeStyle = rgb(mix(C, 0.85), 0.9);
+ctx.stroke();
+const sx = -R * 0.35;
+const sy = gy - R * 0.45;
+ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+ctx.beginPath();
+ctx.moveTo(sx, sy - 5);
+ctx.quadraticCurveTo(sx + 0.8, sy - 0.8, sx + 5, sy);
+ctx.quadraticCurveTo(sx + 0.8, sy + 0.8, sx, sy + 5);
+ctx.quadraticCurveTo(sx - 0.8, sy + 0.8, sx - 5, sy);
+ctx.quadraticCurveTo(sx - 0.8, sy - 0.8, sx, sy - 5);
+ctx.fill();
+}
+if (tier === 6) {
+ctx.fillStyle = rgb(lite);
+ctx.strokeStyle = rgb(deep);
+ctx.lineWidth = 1.4;
+for (const [x, h] of [[-12, 9], [0, 15], [12, 9]]) {
+ctx.beginPath();
+ctx.moveTo(x - 5, -44);
+ctx.lineTo(x, -44 - h);
+ctx.lineTo(x + 5, -44);
+ctx.closePath();
+ctx.fill();
+ctx.stroke();
+}
+} else if (tier >= 7) {
+const gold = tier === 8 ? [255, 236, 170] : [255, 200, 110];
+const g = ctx.createLinearGradient(0, -66, 0, -44);
+g.addColorStop(0, rgb(mix(gold, 0.5)));
+g.addColorStop(1, rgb(mix(gold, -0.35)));
+ctx.fillStyle = g;
+ctx.strokeStyle = rgb(mix(gold, -0.65));
+ctx.lineWidth = 1.6;
+ctx.beginPath();
+ctx.moveTo(-22, -44);
+ctx.lineTo(-24, -60);
+ctx.lineTo(-12, -51);
+ctx.lineTo(0, -66);
+ctx.lineTo(12, -51);
+ctx.lineTo(24, -60);
+ctx.lineTo(22, -44);
+ctx.closePath();
+ctx.fill();
+ctx.stroke();
+ctx.fillStyle = rgb(C);
+for (const [x, y] of [[-24, -61], [0, -67], [24, -61]]) {
+ctx.beginPath();
+ctx.arc(x, y, 2.6, 0, TAU);
+ctx.fill();
+}
+}
+const shine = Number(opts.shine);
+if (shine >= 0 && shine <= 1) {
+ctx.save();
+body();
+ctx.clip();
+const x = -90 + shine * 180;
+const g = ctx.createLinearGradient(x - 22, -50, x + 22, 50);
+g.addColorStop(0, 'rgba(255, 255, 255, 0)');
+g.addColorStop(0.5, 'rgba(255, 255, 255, 0.42)');
+g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+ctx.fillStyle = g;
+ctx.fillRect(-60, -60, 120, 120);
+ctx.restore();
+}
+const label = league && div ? DIVISIONS[4 - div] : '';
+if (label) {
+const y = medal ? 30 : 34;
+ctx.save();
+ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+ctx.shadowBlur = 4;
+ctx.shadowOffsetY = 2;
+const tail = (dir) => {
+ctx.beginPath();
+ctx.moveTo(dir * 18, y + 2);
+ctx.lineTo(dir * 32, y + 2);
+ctx.lineTo(dir * 27, y + 8);
+ctx.lineTo(dir * 32, y + 14);
+ctx.lineTo(dir * 18, y + 14);
+ctx.closePath();
+ctx.fillStyle = rgb(mix(D, -0.55));
+ctx.fill();
+};
+tail(-1);
+tail(1);
+ctx.beginPath();
+ctx.moveTo(-22, y - 1);
+ctx.lineTo(22, y - 1);
+ctx.lineTo(24, y + 6);
+ctx.lineTo(22, y + 13);
+ctx.lineTo(-22, y + 13);
+ctx.lineTo(-24, y + 6);
+ctx.closePath();
+const rib = ctx.createLinearGradient(0, y - 1, 0, y + 13);
+rib.addColorStop(0, rgb(mix(D, -0.1)));
+rib.addColorStop(1, rgb(mix(D, -0.5)));
+ctx.fillStyle = rib;
+ctx.fill();
+ctx.restore();
+ctx.lineWidth = 1.3;
+ctx.strokeStyle = rgb(lite, 0.9);
+ctx.stroke();
+ctx.font = '900 12px Georgia, serif';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillStyle = '#fff6dc';
+ctx.fillText(label, 0, y + 6.5);
+}
+if (tier === 8) {
+ctx.fillStyle = 'rgba(255, 250, 230, 0.95)';
+for (const [x, y, r] of [[-46, -34, 5], [48, -22, 4], [-40, 30, 3.5], [44, 34, 4.5]]) {
+ctx.beginPath();
+ctx.moveTo(x, y - r);
+ctx.quadraticCurveTo(x + r * 0.15, y - r * 0.15, x + r, y);
+ctx.quadraticCurveTo(x + r * 0.15, y + r * 0.15, x, y + r);
+ctx.quadraticCurveTo(x - r * 0.15, y + r * 0.15, x - r, y);
+ctx.quadraticCurveTo(x - r * 0.15, y - r * 0.15, x, y - r);
+ctx.fill();
+}
 }
 ctx.restore();
 }
@@ -29207,7 +30353,7 @@ const k = rankOf(typeof r === 'number' ? r : r ? r.puntos : 0);
 drawBadge(ctx, c.width / 2, c.height * 0.54, c.height * 0.72, placing ? null : k.league, placing ? 0 : k.div);
 }
 
-return { LEAGUES, DIVISIONS, PLACEMENT_GAMES, SHIELD_GAMES, MMR_START, MAX_POINTS, AI_RATING, RANKED_AI, RANKED_ROOM, rankOf, divisionIndex, divisionFloor, pointsFromMmr, mmrFromPoints, seasonOf, seasonName, seasonEnd, RANKED_VERSION, newRank, normalizeRank, inPlacement, aiDifficultyFor, expectedPerf, seasonReward, ensureSeason, alreadyApplied, voidResult, splitRanks, applyAiResult, applyRoomResult, rankText, drawBadge, badgeCanvas, paintBadge };
+return { LEAGUES, DIVISIONS, PLACEMENT_GAMES, SHIELD_GAMES, MMR_START, MAX_POINTS, AI_RATING, RANKED_AI, RANKED_ROOM, rankOf, divisionIndex, divisionFloor, pointsFromMmr, mmrFromPoints, seasonOf, seasonName, seasonEnd, RANKED_VERSION, newRank, normalizeRank, inPlacement, aiDifficultyFor, expectedPerf, seasonReward, ensureSeason, alreadyApplied, voidResult, splitRanks, applyAiResult, applyRoomResult, mmrLag, previewResults, nextGoal, rankText, drawBadge, badgeCanvas, paintBadge };
 });
 __define('render', function () {
 const { BUILDINGS, CONFIG, RES, TICK_MS } = __require('config');
@@ -31145,6 +32291,13 @@ fx.capture(e.x, e.y, p ? pcss(p) : '#ffd76a');
 fx.label(e.x, e.y - 1.6 * RES, `${LUGARES[e.lugar].icon} ${LUGARES[e.lugar].name}`, '#ffe3a1', 13, 2.2);
 continue;
 }
+if (e.kind === 'capitalFound') {
+if (!visible) continue;
+const p = game.players[e.owner];
+fx.capture(e.x, e.y, p ? pcss(p) : '#ffd76a');
+if (game.human && e.owner === game.human.id) fx.label(e.x, e.y - 2 * RES, '🏰 ¡Capital fundada!', '#ffe3a1', 15, 2.6);
+continue;
+}
 if (e.kind === 'capitalFall') {
 if (!visible) continue;
 const p = game.players[e.owner];
@@ -31467,6 +32620,25 @@ ctx.lineWidth = 2;
 ctx.strokeStyle = color;
 ctx.stroke();
 ctx.setLineDash([]);
+}
+if (kind === 'capital') {
+const { wall, outer } = game.capitalRadii(null);
+ctx.beginPath();
+ctx.arc(sx, sy, outer * camera.zoom, 0, Math.PI * 2);
+ctx.setLineDash([6, 5]);
+ctx.lineWidth = 1.5;
+ctx.strokeStyle = color;
+ctx.globalAlpha = 0.6;
+ctx.stroke();
+ctx.setLineDash([]);
+ctx.globalAlpha = 1;
+ctx.beginPath();
+ctx.arc(sx, sy, wall * camera.zoom, 0, Math.PI * 2);
+ctx.fillStyle = ok ? 'rgba(255, 224, 138, 0.12)' : 'rgba(255, 107, 107, 0.08)';
+ctx.fill();
+ctx.lineWidth = 2.5;
+ctx.strokeStyle = ok ? '#ffe08a' : color;
+ctx.stroke();
 }
 const size = Math.max(18, this._buildingSize());
 ctx.globalAlpha = 0.9;
@@ -34665,6 +35837,12 @@ pause: true,
 leave: (s, tut) => tut.onStartNow?.(),
 },
 {
+text: 'Funda tu capital: pulsa «Fundar capital» (en Economía) y haz clic donde quieras dentro de tu territorio. Es gratis y tiene murallas, banco de tropas y escudo antimisiles. Hasta que la tengas no puedes construir nada más; lejos de la frontera es más difícil de tomar.',
+highlight: '#hud [data-kind="capUp"]',
+enter: () => openGroup('economia'),
+check: (s) => !s.game.rules.capitals || !!s.human.capital,
+},
+{
 text: 'Expándete: haz clic en tierra libre junto a tu territorio. Conquistarla cuesta pocas tropas.',
 enter: (s, step) => {
 step.startTiles = s.human.tiles;
@@ -35141,7 +36319,7 @@ this._ficha = new FichaUI($('hud'), {
 iconFor: (k) => {
 this._iconUrls ??= new Map();
 if (!this._iconUrls.has(k)) {
-const c = this._buildIcons.get(k);
+const c = this._buildIcons.get(k === 'capital' ? 'capUp' : k);
 this._iconUrls.set(k, c ? c.toDataURL() : '');
 }
 return this._iconUrls.get(k);
@@ -35825,7 +37003,9 @@ ocultar(aviso, { y: -6, base: 'translateX(-50%)' });
 const def = BUILDINGS[buildMode];
 const cost = formatNumber(game.buildCost(human, buildMode));
 const what = shortEffect(game, human, buildMode);
-if (def.unit === 'missile') {
+if (buildMode === 'capital') {
+setAviso('Toca dentro de tu territorio para fundar tu capital (gratis). Lejos de la frontera es más difícil de tomar. Esc para cancelar');
+} else if (def.unit === 'missile') {
 setAviso(`Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`);
 } else if (def.unit === 'ship') {
 setAviso(`Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`);
@@ -35919,12 +37099,29 @@ txt('ratio-valor', `${Math.round(ratio * 100)}%`);
 cssProp($('ratio'), '--valor', `${Math.round(ratio * 100)}%`);
 const works = {};
 for (const b of game.sites) if (b.owner === human.id) works[b.kind] = (works[b.kind] || 0) + 1;
+const needCap = !!(game.rules.capitals && !human.weak && !human.capital && human.alive);
+$('construir').classList.toggle('sin-capital', needCap && playing);
+if (needCap && playing && this._capGame !== game) {
+this._capGame = game;
+if (!$('hud').classList.contains('escritorio')) this.openGroup('economia');
+}
 for (const [kind, btn] of this._buildButtons) {
 const cost = game.buildCost(human, kind);
 let unavailable = human.gold < cost;
 btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
 btn.classList.toggle('en-obras', !!works[kind]);
-if (BUILDINGS[kind].unit === 'capital') {
+const founding = needCap && BUILDINGS[kind].unit === 'capital';
+if (btn.classList.contains('fundar') !== founding) {
+btn.classList.toggle('fundar', founding);
+btn.querySelector('.b-nombre').textContent = founding ? 'Fundar capital' : BUILDINGS[kind].short || BUILDINGS[kind].name;
+btn.setAttribute('aria-label', founding ? 'Fundar tu capital' : BUILDINGS[kind].name);
+}
+if (founding) {
+btn.style.setProperty('--progreso', '100%');
+btn.querySelector('.b-coste').textContent = 'Gratis';
+btn.querySelector('.b-num').textContent = '';
+unavailable = false;
+} else if (BUILDINGS[kind].unit === 'capital') {
 const cap = human.capital;
 const lvl = cap ? cap.up || 0 : 0;
 const working = !!(cap && cap.work);
@@ -35949,9 +37146,10 @@ btn.classList.add('ya-puedes');
 clearTimeout(btn._yaT);
 btn._yaT = setTimeout(() => btn.classList.remove('ya-puedes'), 1000);
 }
+if (needCap && !founding) unavailable = true;
 btn.classList.toggle('caro', unavailable);
 btn.hidden = !game.isAllowed(kind);
-btn.classList.toggle('activo', buildMode === kind);
+btn.classList.toggle('activo', buildMode === kind || (founding && buildMode === 'capital'));
 btn.disabled = !playing || !human.alive;
 }
 this._buildSeen = playing;
@@ -35960,7 +37158,8 @@ const btns = g.group.kinds.map((k) => this._buildButtons.get(k));
 const visible = btns.filter((b) => !b.hidden);
 g.box.hidden = !visible.length;
 g.tab.classList.toggle('listo', playing && visible.some((b) => !b.classList.contains('caro')));
-const active = g.group.kinds.includes(buildMode) ? buildMode : null;
+const active = g.group.kinds.includes(buildMode) ? buildMode : buildMode === 'capital' && g.group.id === 'economia' ? 'capital' : null;
+g.tab.classList.toggle('fundar', needCap && playing && g.group.id === 'economia');
 g.tab.classList.toggle('activo', !!active);
 const want = active || g.group.icon;
 if (g.shown !== want) {
@@ -36004,7 +37203,7 @@ if (now - (this._fichasAt || 0) < 500) return;
 this._fichasAt = now;
 for (const [kind, btn] of this._buildButtons) {
 const el = btn.querySelector('.b-efecto');
-const t = shortEffect(game, human, kind);
+const t = btn.classList.contains('fundar') ? 'Murallas y banco' : shortEffect(game, human, kind);
 if (el.textContent !== t) el.textContent = t;
 }
 const box = $('pj-bonos');
