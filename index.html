@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="ccbf8ab 2026-11-16 19:44 UTC">
+<meta name="trinchera-build" content="1992d69 2026-11-16 20:01 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -870,36 +870,7 @@ body.sin-animaciones .fin-logro { animation: none; }
 .interruptor input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 .botones-izq { display: flex; gap: 8px; }
 
-/* ---------- Pantalla de carga ---------- */
-.carga {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: radial-gradient(ellipse at 50% 40%, #1b2a44 0%, #0a1222 70%);
-  transition: opacity 0.35s;
-  overflow: hidden;
-}
-.carga.saliendo { opacity: 0; }
-.carga-centro { display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(460px, 100%); text-align: center; }
-.carga-mapa { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.04em; }
-.carga-barra { width: 100%; height: 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
-.carga-barra span {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: repeating-linear-gradient(-45deg, #f2b33d 0 10px, #d99a2b 10px 20px);
-  background-size: 28px 28px;
-  animation: avance 0.8s linear infinite;
-  transition: width 0.35s ease-out;
-}
-@keyframes avance { to { background-position: 28px 0; } }
-.carga-paso { margin: 0; color: var(--texto-suave); font-size: 14px; min-height: 20px; }
-.carga-consejo { margin: 8px 0 0; padding: 10px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); color: var(--texto); font-size: 14px; max-width: 420px; }
-.carga-consejo::before { content: "Consejo · "; color: var(--acento); font-weight: 700; }
-.carga-frente { position: absolute; left: 0; right: 0; bottom: 8%; width: 200%; height: 60px; opacity: 0.35; animation: marcha 6s linear infinite; }
+/* ---------- Pantalla de carga de partida (estilos al final, con las del arranque) ---------- */
 @keyframes marcha { to { transform: translateX(-50%); } }
 
 /* ---------- Tutorial ---------- */
@@ -3694,7 +3665,6 @@ body.sin-animaciones .despliegue { animation: none; }
 .arr-frente { position: absolute; left: 0; bottom: 0; width: 200%; height: 90px; animation: marcha 60s linear infinite; }
 .arr-lejos { bottom: 26px; height: 70px; color: #0e1726; fill: #0e1726; opacity: 0.9; animation-duration: 110s; }
 .arr-cerca { color: #04070e; fill: #04070e; animation-duration: 55s; }
-@keyframes marcha { to { transform: translateX(-50%); } }
 /* Brasas que suben */
 .arr-brasas i { position: absolute; bottom: -10px; width: 4px; height: 4px; border-radius: 50%; background: #ffbf5e; box-shadow: 0 0 8px 2px rgba(255, 160, 60, 0.6); opacity: 0; animation: brasa 7s linear infinite; }
 .arr-brasas i:nth-child(1) { left: 8%; animation-delay: 0.2s; }
@@ -3735,11 +3705,11 @@ body.sin-animaciones .despliegue { animation: none; }
   animation: arrEntra 0.7s 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
 .arr-mapa canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 0.25s; }
-.arranque.con-mapa .arr-mapa canvas { opacity: 1; }
+.con-mapa .arr-mapa canvas { opacity: 1; }
 .arr-velo { position: absolute; inset: 0; background: #0c1930; z-index: 1; }
-.arranque.con-mapa .arr-velo { transform: translateX(101%); transition: transform 1.7s cubic-bezier(0.45, 0.05, 0.25, 1); }
+.con-mapa .arr-velo { transform: translateX(101%); transition: transform var(--revela, 1.7s) cubic-bezier(0.45, 0.05, 0.25, 1); }
 .arr-escaner { position: absolute; left: -2px; top: 0; bottom: 0; width: 3px; background: #ffd36b; box-shadow: 0 0 14px 4px rgba(242, 179, 61, 0.55), 0 0 44px 12px rgba(242, 179, 61, 0.16); opacity: 0; }
-.arranque.con-mapa .arr-escaner { opacity: 1; }
+.con-mapa .arr-escaner { opacity: 1; }
 .arr-radar {
   position: absolute;
   left: 50%;
@@ -3753,7 +3723,7 @@ body.sin-animaciones .despliegue { animation: none; }
   transition: opacity 0.9s;
   z-index: 2;
 }
-.arranque.con-mapa .arr-radar { opacity: 0; }
+.con-mapa .arr-radar { opacity: 0; }
 @keyframes arrGira { to { transform: translate(-50%, -50%) rotate(360deg); } }
 /* Banderas de los países sobre el mapa: caen cuando pasa el escáner */
 .arr-pines { position: absolute; inset: 0; z-index: 3; }
@@ -3765,7 +3735,7 @@ body.sin-animaciones .despliegue { animation: none; }
 @keyframes pinAsta { to { opacity: 1; } }
 @keyframes pinOnda { 0% { opacity: 0.9; transform: scale(0.2); } 70%, 100% { opacity: 0; transform: scale(1.6); } }
 .arr-brillo-mapa { position: absolute; inset: 0; z-index: 4; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.12) 48%, transparent 60%); transform: translateX(-100%); pointer-events: none; }
-.arranque.listo .arr-brillo-mapa { animation: brilloMapa 1.1s ease-in-out forwards; }
+:is(.arranque, .carga).listo .arr-brillo-mapa { animation: brilloMapa 1.1s ease-in-out forwards; }
 @keyframes brilloMapa { to { transform: translateX(100%); } }
 /* Barra y porcentaje: crece con transform (sigue moviéndose aunque el navegador esté ocupado) */
 .arr-progreso { width: 100%; display: flex; align-items: center; gap: 12px; animation: arrEntra 0.7s 0.2s both; }
@@ -3778,16 +3748,9 @@ body.sin-animaciones .despliegue { animation: none; }
 .arr-pct::after { content: counter(pct) " %"; }
 .arr-paso { margin: -4px 0 0; min-height: 20px; font-size: 14px; color: var(--texto-2); letter-spacing: 0.02em; }
 .arr-paso.cambia { animation: arrTexto 0.35s ease-out; }
-@keyframes arrTexto { from { opacity: 0; transform: translateY(5px); } }
-/* Lista de pasos: se van marcando */
-.arr-pasos { list-style: none; margin: -4px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; animation: arrEntra 0.7s 0.25s both; }
-.arr-pasos li { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; color: var(--texto-3); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); transition: color 0.3s, background 0.3s, border-color 0.3s; }
-.arr-pasos li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); transition: background 0.3s, transform 0.3s; }
-.arr-pasos li.activo { color: var(--oro-200); border-color: rgba(242, 179, 61, 0.4); background: rgba(242, 179, 61, 0.08); }
-.arr-pasos li.activo::before { background: #ffd36b; animation: pasoLatido 0.9s ease-in-out infinite; }
-.arr-pasos li.hecho { color: #c9f5da; border-color: rgba(95, 211, 141, 0.35); background: rgba(95, 211, 141, 0.08); }
-.arr-pasos li.hecho::before { background: #5fd38d; transform: scale(1.15); }
-@keyframes pasoLatido { 50% { transform: scale(1.6); opacity: 0.6; } }
+/* (Sin opacidad: si el paso siguiente ocupa el navegador, la animación se
+   queda en su primer fotograma; con opacidad 0, el texto no se veía) */
+@keyframes arrTexto { from { transform: translateY(6px) scale(0.97); } }
 /* Consejos: rotan solos con CSS (no se paran aunque la carga ocupe el navegador) */
 .arr-consejos { position: relative; width: 100%; max-width: 460px; margin-top: 2px; padding: 12px 16px 10px; border-radius: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)); border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); animation: arrEntra 0.7s 0.3s both; }
 .arr-consejos-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro-400); }
@@ -3810,10 +3773,9 @@ body.sin-animaciones .despliegue { animation: none; }
   .arr-centro { gap: 9px; }
   .arr-mapa { width: min(100%, 380px); }
   .arr-logo .logo-marca { width: 60px; height: 60px; }
-  .arr-lema, .arr-pasos { display: none; }
+  .arr-lema, .insignias .ins-nombre { display: none; }
 }
 @media (max-width: 480px) {
-  .arr-pasos li { padding: 3px 8px 3px 7px; font-size: 10.5px; }
   .arr-tip { font-size: 13px; }
   .arr-tips { min-height: 58px; }
 }
@@ -6009,17 +5971,121 @@ label.aj-fila { cursor: pointer; }
   .aj-fila-sonido .aj-control { width: 100%; }
 }
 
+/* =================== Pantallas de carga: pasos, barra y mapa =================== */
+/* Pasos como insignias unidas por una línea que se llena: la activa con un
+   anillo que gira y la hecha con su sello. Todo con transform y opacity (sigue
+   moviéndose aunque el paso ocupe el navegador) */
+.insignias { --n: 3; --avance: 0; position: relative; list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); animation: arrEntra 0.7s 0.25s both; }
+.insignias::before, .insignias::after { content: ""; position: absolute; top: 19px; left: calc(50% / var(--n)); right: calc(50% / var(--n)); height: 2px; border-radius: 2px; }
+.insignias::before { background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0 6px, transparent 6px 10px); }
+.insignias::after { background: linear-gradient(90deg, #b47f22, #ffd36b); box-shadow: 0 0 10px rgba(242, 179, 61, 0.65); transform-origin: left center; transform: scaleX(var(--avance)); transition: transform 0.7s cubic-bezier(0.3, 0.7, 0.3, 1); }
+.insignias li { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+.ins-medalla { position: relative; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; color: #6f7b92; background: radial-gradient(circle at 50% 30%, #1f2b44, #0b1222 75%); border: 1.5px solid rgba(255, 255, 255, 0.13); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06); transition: color 0.35s, background 0.35s, border-color 0.35s, box-shadow 0.35s; }
+.ins-medalla svg { grid-area: 1 / 1; width: 19px; height: 19px; transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1), opacity 0.25s; }
+/* Anillo que gira (estela dorada) mientras el paso está en marcha */
+.ins-medalla::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 55%, rgba(255, 211, 107, 0.15) 70%, #ffd36b 100%); -webkit-mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 2px)); mask: radial-gradient(circle, transparent calc(50% - 3px), #000 calc(50% - 2px)); opacity: 0; transition: opacity 0.3s; }
+/* Sello verde de «hecho», arriba a la derecha */
+.ins-hecho { position: absolute; top: -5px; right: -6px; width: 17px !important; height: 17px !important; padding: 2.5px; border-radius: 50%; color: #08260f; background: #5fd38d; box-shadow: 0 0 0 2px #0b1222, 0 2px 6px rgba(0, 0, 0, 0.5); opacity: 0; transform: scale(0.2) rotate(-40deg); }
+.ins-nombre { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-3); transition: color 0.3s; }
+.insignias li.activo .ins-medalla { color: #ffe39a; border-color: rgba(255, 211, 107, 0.9); background: radial-gradient(circle at 50% 30%, #4a3612, #1a1309 75%); box-shadow: 0 0 0 4px rgba(242, 179, 61, 0.1), 0 0 24px rgba(242, 179, 61, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.insignias li.activo .ins-medalla::before { opacity: 1; animation: insGira 1.1s linear infinite; }
+.insignias li.activo .ins-ico { animation: insFlota 1.4s ease-in-out infinite; }
+.insignias li.activo .ins-nombre { color: var(--oro-200); }
+.insignias li.hecho .ins-medalla { color: #2a1d05; border-color: #ffe39a; background: radial-gradient(circle at 50% 28%, #fff1c4, #f2b33d 55%, #b47f22 100%); box-shadow: 0 0 16px rgba(242, 179, 61, 0.35), inset 0 -2px 4px rgba(120, 70, 0, 0.35); animation: insSello 0.55s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.insignias li.hecho .ins-hecho { opacity: 1; transform: none; transition: transform 0.45s 0.1s cubic-bezier(0.3, 1.8, 0.5, 1), opacity 0.2s 0.1s; }
+.insignias li.hecho .ins-nombre { color: #f1e4c2; }
+/* Onda que sale al completarse */
+.insignias li.hecho::after { content: ""; position: absolute; top: 0; left: 50%; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; border: 2px solid rgba(255, 211, 107, 0.8); pointer-events: none; animation: insOnda 0.8s ease-out forwards; }
+@keyframes insGira { to { transform: rotate(360deg); } }
+@keyframes insFlota { 50% { transform: translateY(-2px) scale(1.06); } }
+@keyframes insSello { 0% { transform: scale(0.82); } 60% { transform: scale(1.12); } 100% { transform: none; } }
+@keyframes insOnda { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.9); } }
+
+/* Texto del paso: con un pequeño anillo que gira delante */
+.arr-paso { display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: 15px; font-weight: 600; color: var(--texto-1); letter-spacing: 0.01em; }
+.arr-paso::before { content: ""; flex: none; width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255, 211, 107, 0.25); border-top-color: #ffd36b; animation: insGira 0.8s linear infinite; }
+:is(.arranque, .carga).listo .arr-paso::before, .arranque.esperando .arr-paso::before { border-color: #5fd38d; border-top-color: #5fd38d; animation: none; }
+
+/* Barra dorada con la punta que brilla (va en una capa del ancho de la barra
+   que se desplaza: transform, igual que el relleno) */
+.barra-oro { position: relative; flex: 1; height: 10px; }
+.barra-oro .arr-barra { position: absolute; inset: 0; height: auto; border-radius: 999px; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.07); }
+.barra-oro .arr-barra span { border-radius: 999px; background: linear-gradient(180deg, #ffe7a6 0%, #f2b33d 45%, #c58a26 100%); }
+.barra-punta { position: absolute; inset: 0; transform: translateX(-98%); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); pointer-events: none; }
+.barra-punta::before { content: ""; position: absolute; right: -9px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: radial-gradient(circle, #fffbe8 0 18%, rgba(255, 220, 130, 0.9) 30%, rgba(242, 179, 61, 0) 70%); animation: puntaLate 0.9s ease-in-out infinite; }
+.barra-punta::after { content: ""; position: absolute; right: -1px; top: 50%; width: 46px; height: 2px; margin-top: -1px; background: linear-gradient(90deg, transparent, rgba(255, 243, 207, 0.9)); border-radius: 2px; }
+@keyframes puntaLate { 50% { transform: scale(1.35); opacity: 0.75; } }
+:is(.arranque, .carga).listo .barra-punta::before { animation: none; }
+
+/* Marco del mapa: esquinas doradas y rosa de los vientos */
+.mapa-esquinas { position: absolute; inset: 7px; z-index: 5; pointer-events: none; }
+.mapa-esquinas i { position: absolute; width: 16px; height: 16px; border: 2px solid rgba(255, 211, 107, 0.75); filter: drop-shadow(0 0 4px rgba(242, 179, 61, 0.5)); }
+.mapa-esquinas i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+.mapa-esquinas i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+.mapa-esquinas i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+.mapa-esquinas i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+.mapa-rosa { position: absolute; right: 14px; bottom: 14px; z-index: 5; width: 30px; height: 30px; color: rgba(255, 211, 107, 0.85); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); animation: rosaGira 14s linear infinite; pointer-events: none; }
+@keyframes rosaGira { to { transform: rotate(360deg); } }
+
+/* ---------- Carga de partida: el mismo estilo que el arranque ---------- */
+.carga { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px)); color: var(--texto-1); background: radial-gradient(ellipse at 50% 38%, #1c2c48 0%, #0b1426 55%, #060b16 100%); transition: opacity 0.35s; overflow: hidden; }
+.carga.saliendo { opacity: 0; }
+.carga-fondo .arr-frente { bottom: 0; }
+.carga-centro { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 13px; width: min(520px, 100%); text-align: center; transition: transform 0.35s cubic-bezier(0.5, 0, 0.75, 0); }
+.carga.saliendo .carga-centro { transform: scale(0.96); }
+.carga-cab { display: flex; align-items: center; gap: 14px; animation: arrEntra 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.carga-escudo { width: 54px; height: 54px; flex: none; filter: drop-shadow(0 6px 16px rgba(242, 179, 61, 0.3)); }
+.carga-titulos { text-align: left; }
+.carga-kicker { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--oro-400); }
+.carga-mapa { margin: 2px 0 0; font: 700 clamp(26px, 6vw, 36px)/1.05 var(--serif); letter-spacing: 0.03em; background: linear-gradient(180deg, #fff3cf, #f2b33d 70%, #c58a26); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
+.carga-vista { --revela: 1.1s; }
+.carga-vista canvas { image-rendering: auto; }
+.carga-consejos { max-width: 480px; }
+.carga-tip { margin: 6px 0 0; min-height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1.45; color: var(--texto-1); animation: arrEntra 0.6s 0.35s both; }
+@media (max-height: 640px) {
+  .carga-centro { gap: 8px; }
+  .carga-vista { width: min(100%, 380px); }
+  .carga-escudo { width: 40px; height: 40px; }
+  .carga-consejos { display: none; }
+}
+@media (max-width: 480px) {
+  .ins-medalla { width: 34px; height: 34px; }
+  .ins-medalla svg { width: 16px; height: 16px; }
+  .insignias::before, .insignias::after { top: 16px; }
+  .insignias li.hecho::after { width: 34px; height: 34px; margin-left: -17px; }
+  .ins-nombre { font-size: 9px; letter-spacing: 0.06em; }
+  .arr-paso { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .insignias li.activo .ins-medalla::before, .insignias li.activo .ins-ico, .insignias li.hecho .ins-medalla, .insignias li.hecho::after, .arr-paso::before, .barra-punta::before, .mapa-rosa { animation: none; }
+}
+body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias li.activo .ins-ico, .insignias li.hecho .ins-medalla, .insignias li.hecho::after, .arr-paso::before, .barra-punta::before, .mapa-rosa) { animation: none; }
+
 </style>
 <link rel="preload" href="mapas-6c16c49b00a7.json" as="fetch" crossorigin="anonymous">
 </head>
 <body>
-<!-- Definiciones gráficas compartidas (degradado del logotipo) -->
+<!-- Definiciones gráficas compartidas (degradado del logotipo, siluetas e iconos de las pantallas de carga) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="lg-oro" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#ffe39a"/>
         <stop offset="1" stop-color="#d99a2b"/>
       </linearGradient>
+      <!-- Siluetas del frente (arranque y carga de partida) -->
+          <g id="arr-soldado"><path d="M-5.5 -33 q5.5 -7.5 11 0 z"/><circle cx="0" cy="-30" r="3.6"/><path d="M-4 -26 h8 l2 13 h-3 l-1 13 h-3 l-1 -10 l-1 10 h-3 l1 -13 h-2 z"/><path d="M2 -23 l15 -9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+          <g id="arr-poste"><path d="M0 0 v-22 M-14 -18 q7 4 14 0 q7 -4 14 0 M-14 -10 q7 4 14 0 q7 -4 14 0" fill="none" stroke="currentColor" stroke-width="1.6"/></g>
+          <g id="arr-bandera"><path d="M0 0 v-38" stroke="currentColor" stroke-width="2"/><path d="M1 -38 l16 5 l-16 5 z"/></g>
+      <!-- Iconos de los pasos de las pantallas de carga (trazo del color del texto) -->
+      <symbol id="ico-cuartel" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 13.6 L8 4.4 L14.5 13.6 Z" fill="currentColor" fill-opacity="0.18"/><path d="M6 13.6 L8 10.2 L10 13.6"/><path d="M8 4.4 V1.5"/><path d="M8 1.6 L11.4 2.6 L8 3.6" fill="currentColor"/></g></symbol>
+      <symbol id="ico-banderas" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 14.6 V1.8"/><path d="M3.5 2.4 C6.2 1 8.4 3.8 12.6 2.4 V8.7 C8.4 10.1 6.2 7.3 3.5 8.7" fill="currentColor" fill-opacity="0.22"/></g></symbol>
+      <symbol id="ico-mapa" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.3"/><path d="M1.7 8 H14.3"/><path d="M8 1.7 C5.2 4.6 5.2 11.4 8 14.3 M8 1.7 C10.8 4.6 10.8 11.4 8 14.3"/><path d="M2.8 4.9 H13.2 M2.8 11.1 H13.2" stroke-opacity="0.55"/></g></symbol>
+      <symbol id="ico-terreno" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 13.6 L5.6 5.4 L8.7 10.2 L10.7 7.3 L15 13.6 Z" fill="currentColor" fill-opacity="0.2"/><path d="M4.2 7.9 L5.6 9 L6.9 7.9"/></g></symbol>
+      <symbol id="ico-perfil" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.6 L13.6 3.6 V8 C13.6 11.1 11.2 13.5 8 14.5 C4.8 13.5 2.4 11.1 2.4 8 V3.6 Z"/><path d="M8 4.9 L8.9 6.8 L11 7 L9.4 8.4 L9.9 10.5 L8 9.4 L6.1 10.5 L6.6 8.4 L5 7 L7.1 6.8 Z" fill="currentColor" stroke-width="0.7"/></g></symbol>
+      <symbol id="ico-frente" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.4 L11.3 10.7 M13 2.4 L4.7 10.7"/><path d="M9.9 12.1 L12.1 9.9 M6.1 12.1 L3.9 9.9"/><path d="M11.1 11.1 L13.6 13.6 M4.9 11.1 L2.4 13.6"/></g></symbol>
+      <symbol id="ico-revista" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 3.4 L8 6 L12.4 3.4 M3.6 7.2 L8 9.8 L12.4 7.2 M3.6 11 L8 13.6 L12.4 11"/></g></symbol>
+      <symbol id="ico-hecho" viewBox="0 0 16 16"><path d="M3.6 8.4 L6.6 11.4 L12.6 4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="ico-rosa" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.4" fill="none" stroke="currentColor" stroke-width="0.9" stroke-opacity="0.55"/><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="0.6" stroke-opacity="0.35" stroke-dasharray="1.2 1.6"/><path d="M12 1.8 L13.7 12 L12 22.2 L10.3 12 Z" fill="currentColor"/><path d="M1.8 12 L12 10.3 L22.2 12 L12 13.7 Z" fill="currentColor" fill-opacity="0.5"/><path d="M12 1.8 L13.7 12 L12 12 Z" fill="#fff3cf"/></symbol>
     </defs>
   </svg>
 
@@ -6035,11 +6101,6 @@ label.aj-fila { cursor: pointer; }
       <span class="arr-horizonte"></span>
       <span class="arr-brasas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <svg class="arr-frente arr-lejos" viewBox="0 0 2400 90" preserveAspectRatio="xMidYMax slice">
-        <defs>
-          <g id="arr-soldado"><path d="M-5.5 -33 q5.5 -7.5 11 0 z"/><circle cx="0" cy="-30" r="3.6"/><path d="M-4 -26 h8 l2 13 h-3 l-1 13 h-3 l-1 -10 l-1 10 h-3 l1 -13 h-2 z"/><path d="M2 -23 l15 -9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
-          <g id="arr-poste"><path d="M0 0 v-22 M-14 -18 q7 4 14 0 q7 -4 14 0 M-14 -10 q7 4 14 0 q7 -4 14 0" fill="none" stroke="currentColor" stroke-width="1.6"/></g>
-          <g id="arr-bandera"><path d="M0 0 v-38" stroke="currentColor" stroke-width="2"/><path d="M1 -38 l16 5 l-16 5 z"/></g>
-        </defs>
         <path d="M0 70 Q 60 58 120 66 T 240 64 T 360 68 T 480 62 T 600 67 T 720 63 T 840 68 T 960 62 T 1080 66 T 1200 64 T 1320 66 T 1440 64 T 1560 68 T 1680 62 T 1800 67 T 1920 63 T 2040 68 T 2160 62 T 2280 66 T 2400 64 V 90 H 0 Z"/>
         <g><use href="#arr-soldado" transform="translate(20 64) scale(1.036057306323988)"/><use href="#arr-poste" transform="translate(85.89686165836555 66)"/><use href="#arr-soldado" transform="translate(169.69728294592932 64) scale(0.9032919978887186)"/><use href="#arr-soldado" transform="translate(268.3201186926815 64) scale(0.9585827402616741)"/><use href="#arr-poste" transform="translate(378.0152571784139 66)"/><use href="#arr-poste" transform="translate(476.5675587676211 66)"/><use href="#arr-soldado" transform="translate(561.3023286057124 64) scale(1.058715164571297)"/><use href="#arr-poste" transform="translate(662.0655001057432 66)"/><use href="#arr-poste" transform="translate(753.9531300398476 66)"/><use href="#arr-bandera" transform="translate(798.4353307157373 64)"/><use href="#arr-soldado" transform="translate(879.8123015209296 64) scale(0.9077529378674375)"/><use href="#arr-poste" transform="translate(980.3992081094558 66)"/></g><g transform="translate(1200 0)"><use href="#arr-soldado" transform="translate(20 64) scale(1.036057306323988)"/><use href="#arr-poste" transform="translate(85.89686165836555 66)"/><use href="#arr-soldado" transform="translate(169.69728294592932 64) scale(0.9032919978887186)"/><use href="#arr-soldado" transform="translate(268.3201186926815 64) scale(0.9585827402616741)"/><use href="#arr-poste" transform="translate(378.0152571784139 66)"/><use href="#arr-poste" transform="translate(476.5675587676211 66)"/><use href="#arr-soldado" transform="translate(561.3023286057124 64) scale(1.058715164571297)"/><use href="#arr-poste" transform="translate(662.0655001057432 66)"/><use href="#arr-poste" transform="translate(753.9531300398476 66)"/><use href="#arr-bandera" transform="translate(798.4353307157373 64)"/><use href="#arr-soldado" transform="translate(879.8123015209296 64) scale(0.9077529378674375)"/><use href="#arr-poste" transform="translate(980.3992081094558 66)"/></g>
       </svg>
@@ -6066,19 +6127,24 @@ label.aj-fila { cursor: pointer; }
         <span class="arr-radar"></span>
         <div class="arr-pines" id="arr-pines"></div>
         <span class="arr-brillo-mapa"></span>
+        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
+        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
       </div>
       <div class="arr-progreso">
-        <div class="arr-barra" aria-hidden="true"><span id="arr-progreso"></span></div>
+        <div class="barra-oro" aria-hidden="true">
+          <div class="arr-barra"><span id="arr-progreso"></span></div>
+          <span class="barra-punta" id="arr-punta"></span>
+        </div>
         <b class="arr-pct" id="arr-pct" aria-hidden="true"></b>
       </div>
       <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
-      <ol class="arr-pasos" id="arr-pasos" aria-hidden="true">
-        <li data-paso="cuartel">Cuartel</li>
-        <li data-paso="banderas">Banderas</li>
-        <li data-paso="mapa">Mapa</li>
-        <li data-paso="terreno">Terreno</li>
-        <li data-paso="perfil">Perfil</li>
-        <li data-paso="frente">Frente</li>
+      <ol class="arr-pasos insignias" id="arr-pasos" aria-hidden="true" style="--n: 6">
+        <li data-paso="cuartel"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-cuartel"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Cuartel</span></li>
+        <li data-paso="banderas"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-banderas"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Banderas</span></li>
+        <li data-paso="mapa"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-mapa"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Mapa</span></li>
+        <li data-paso="terreno"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-terreno"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Terreno</span></li>
+        <li data-paso="perfil"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-perfil"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Perfil</span></li>
+        <li data-paso="frente"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-frente"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Frente</span></li>
       </ol>
       <div class="arr-consejos" id="arr-consejos">
         <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
@@ -6614,25 +6680,53 @@ label.aj-fila { cursor: pointer; }
 
   <!-- Pantalla de carga -->
   <div id="carga" class="carga" hidden aria-live="polite">
-    <div class="carga-centro">
-      <div class="logo logo-grande" role="img" aria-label="Trinchera">
-        <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
-            <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
-            <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
-            <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
-            <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
-          </svg>
-        <span class="logo-texto">TRINCHERA</span>
-      </div>
-      <p id="carga-mapa" class="carga-mapa"></p>
-      <div class="carga-barra"><span id="carga-progreso"></span></div>
-      <p id="carga-paso" class="carga-paso"></p>
-      <p id="carga-consejo" class="carga-consejo"></p>
+    <div class="arr-fondo carga-fondo" aria-hidden="true">
+      <span class="arr-rejilla"></span>
+      <span class="arr-halo"></span>
+      <span class="arr-horizonte"></span>
+      <span class="arr-brasas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <svg class="arr-frente arr-cerca" viewBox="0 0 2400 90" preserveAspectRatio="xMidYMax slice">
+        <path d="M0 74 Q 50 62 100 70 T 200 68 T 300 72 T 400 66 T 500 71 T 600 67 T 700 72 T 800 66 T 900 70 T 1000 68 T 1100 71 T 1200 68 T 1300 70 T 1400 68 T 1500 72 T 1600 66 T 1700 71 T 1800 67 T 1900 72 T 2000 66 T 2100 70 T 2200 68 T 2300 71 T 2400 68 V 90 H 0 Z"/>
+        <g><use href="#arr-poste" transform="translate(20 66)"/><use href="#arr-poste" transform="translate(171.77957193261886 66)"/><use href="#arr-soldado" transform="translate(252.89650995211164 64) scale(1.0279771597604515)"/><use href="#arr-bandera" transform="translate(336.98830036728776 64)"/><use href="#arr-soldado" transform="translate(383.57694230333306 64) scale(0.9226676343729598)"/><use href="#arr-poste" transform="translate(480.2520597090355 66)"/><use href="#arr-poste" transform="translate(630.7167279337144 66)"/><use href="#arr-soldado" transform="translate(713.8061172542143 64) scale(0.9037501842374013)"/><use href="#arr-soldado" transform="translate(790.7928058861478 64) scale(0.9475520656994822)"/><use href="#arr-soldado" transform="translate(847.7288168427128 64) scale(1.0159836153058213)"/><use href="#arr-bandera" transform="translate(918.5659950086788 64)"/><use href="#arr-poste" transform="translate(994.9046830421642 66)"/><use href="#arr-poste" transform="translate(1069.8888036966396 66)"/><use href="#arr-soldado" transform="translate(1141.9018954086087 64) scale(1.149414050115771)"/></g><g transform="translate(1200 0)"><use href="#arr-poste" transform="translate(20 66)"/><use href="#arr-poste" transform="translate(171.77957193261886 66)"/><use href="#arr-soldado" transform="translate(252.89650995211164 64) scale(1.0279771597604515)"/><use href="#arr-bandera" transform="translate(336.98830036728776 64)"/><use href="#arr-soldado" transform="translate(383.57694230333306 64) scale(0.9226676343729598)"/><use href="#arr-poste" transform="translate(480.2520597090355 66)"/><use href="#arr-poste" transform="translate(630.7167279337144 66)"/><use href="#arr-soldado" transform="translate(713.8061172542143 64) scale(0.9037501842374013)"/><use href="#arr-soldado" transform="translate(790.7928058861478 64) scale(0.9475520656994822)"/><use href="#arr-soldado" transform="translate(847.7288168427128 64) scale(1.0159836153058213)"/><use href="#arr-bandera" transform="translate(918.5659950086788 64)"/><use href="#arr-poste" transform="translate(994.9046830421642 66)"/><use href="#arr-poste" transform="translate(1069.8888036966396 66)"/><use href="#arr-soldado" transform="translate(1141.9018954086087 64) scale(1.149414050115771)"/></g>
+      </svg>
     </div>
-    <svg class="carga-frente" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 40 L40 22 L80 40 L120 22 L160 40 L200 22 L240 40 L280 22 L320 40 L360 22 L400 40 L440 22 L480 40 L520 22 L560 40 L600 22 L640 40 L680 22 L720 40 L760 22 L800 40 L840 22 L880 40 L920 22 L960 40 L1000 22 L1040 40 L1080 22 L1120 40 L1160 22 L1200 40" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linejoin="round"/>
-    </svg>
+    <div class="carga-centro">
+      <header class="carga-cab">
+        <svg class="carga-escudo" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
+          <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
+          <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <div class="carga-titulos">
+          <p class="carga-kicker">Preparando la batalla</p>
+          <h2 id="carga-mapa" class="carga-mapa"></h2>
+        </div>
+      </header>
+      <div class="arr-mapa carga-vista" id="carga-vista" aria-hidden="true">
+        <canvas id="carga-lienzo" width="480" height="240"></canvas>
+        <span class="arr-velo"><span class="arr-escaner"></span></span>
+        <span class="arr-radar"></span>
+        <div class="arr-pines" id="carga-pines"></div>
+        <span class="arr-brillo-mapa"></span>
+        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
+        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
+      </div>
+      <div class="arr-progreso">
+        <div class="barra-oro" aria-hidden="true">
+          <div class="arr-barra"><span id="carga-progreso"></span></div>
+          <span class="barra-punta" id="carga-punta"></span>
+        </div>
+        <b class="arr-pct" id="carga-pct" aria-hidden="true"></b>
+      </div>
+      <p id="carga-paso" class="arr-paso carga-paso"></p>
+      <ol class="insignias" id="carga-pasos" aria-hidden="true"></ol>
+      <div class="arr-consejos carga-consejos">
+        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
+        <p id="carga-consejo" class="carga-tip"></p>
+      </div>
+    </div>
   </div>
 
   <!-- Sala multijugador -->
@@ -7212,7 +7306,7 @@ label.aj-fila { cursor: pointer; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "ccbf8ab 2026-11-16 19:44 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "1992d69 2026-11-16 20:01 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-6c16c49b00a7.json";</script>
 <script>
 (function () {
@@ -15519,6 +15613,7 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Diseño', title: 'Pantallas de carga renovadas', text: 'Los pasos de la carga (cuartel, banderas, mapa, terreno…) son ahora insignias con su icono que se doran con un sello al terminar, unidas por una línea que se llena. Barra dorada con punta luminosa, mapa con marco y rosa de los vientos, y antes de cada partida, la vista previa de tu mapa con las banderas de sus países.', art: 2 },
 { tag: 'Ajustes', title: 'Ajustes gráficos y más fluidez', text: 'Ajustes renovados por secciones: calidad gráfica en un toque (Ahorro, Rendimiento, Equilibrada o Máxima), resolución del mapa, límite de fps, partículas, temblor, viñeta y contador de fps; qué nombres se ven en el mapa, tamaño de los paneles, volumen general, velocidad de la cámara y atajos de teclado. Y la partida va más fluida: el turno se reparte entre fotogramas, salir al menú es instantáneo y la conexión se recupera antes tras un corte.', art: 0 },
 { tag: 'Mapas', title: 'Mapas con más píxeles', text: 'Todos los mapas tienen ahora 1,78 veces más casillas (el mundo, 4000 × 2000) con la misma geografía: costas, ríos y fronteras más finos. La partida va al mismo ritmo: el techo de tropas, la zona inicial y el coste de conquistar cuentan superficie, no píxeles.', art: 2 },
 { tag: 'Competitivo', title: 'Clasificatorias con amigos', text: 'Al encontrar partida, la sala espera 30 s a que entre más gente de tu rango. Juega con amigos: abre una clasificatoria de grupo, invítales y busca rivales. Salas de competición sin código, rangos animados que estallan al subir y menos texto: lo demás, al pasar el ratón. En partida, la clasificación también por economía.', art: 1 },
@@ -21123,6 +21218,7 @@ return { rankRow, cleanRankRow, apiIdentity, setApiIdentity, Ladder };
 __define('loading', function () {
 const { mostrar } = __require('movimiento');
 const { flagCss, hasFlag } = __require('icons');
+const { paintMapPreview } = __require('terreno');
 const $ = (id) => document.getElementById(id);
 const TIPS = [
 'Las montañas y mesetas cuestan más tropas y tiempo: rodéalas.',
@@ -21155,27 +21251,123 @@ const nextPaint = () =>
 new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 const twoPaints = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))));
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function markSteps(ol, index) {
+if (!ol) return;
+const items = [...ol.children];
+items.forEach((li, i) => {
+li.classList.toggle('hecho', i < index);
+li.classList.toggle('activo', i === index);
+});
+const n = items.length;
+ol.style.setProperty('--avance', String(n > 1 ? Math.min(1, Math.max(0, index) / (n - 1)) : 1));
+}
+function setBar(bar, tip, pct, f, ms) {
+f = Math.max(0.02, Math.min(1, f));
+for (const el of [bar, tip]) if (el) el.style.transitionDuration = `${ms}ms`;
+bar.style.transform = `scaleX(${f})`;
+if (tip) tip.style.transform = `translateX(${((f - 1) * 100).toFixed(2)}%)`;
+pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
+}
+function stepBadge(name, icon, key = '') {
+const li = document.createElement('li');
+if (key) li.dataset.paso = key;
+li.innerHTML = `<span class="ins-medalla"><svg class="ins-ico"><use href="#ico-${icon}"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre"></span>`;
+li.querySelector('.ins-nombre').textContent = name;
+return li;
+}
+function dropPins(layer, pins, span = 1.35) {
+layer.replaceChildren(
+...pins.filter((p) => hasFlag(p.iso)).map((p) => {
+const pin = document.createElement('span');
+pin.className = 'arr-pin';
+pin.style.left = `${(p.x * 100).toFixed(2)}%`;
+pin.style.top = `${(p.y * 100).toFixed(2)}%`;
+pin.style.setProperty('--d', `${(0.2 + p.x * span).toFixed(2)}s`);
+const flag = document.createElement('i');
+flag.className = 'bandera';
+flag.style.cssText = flagCss(p.iso, 18);
+pin.append(flag);
+return pin;
+}),
+);
+}
+function paintPreview(box, loaded) {
+const map = loaded && loaded.map;
+if (!map || !map.terrain) return false;
+const canvas = $('carga-lienzo');
+const W = 480;
+const ratio = map.height / map.width;
+const H = Math.round(W * Math.min(0.62, Math.max(0.36, ratio)));
+canvas.width = W;
+canvas.height = H;
+$('carga-vista').style.aspectRatio = `${W} / ${H}`;
+const cropH = Math.min(map.height, Math.round((map.width * H) / W));
+const y0 = Math.max(0, Math.round((map.height - cropH) / 2));
+paintMapPreview(canvas, { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: (map.tileKm || 1) * 3, river: map.river, lat: map.lat }, [0, y0, map.width, y0 + cropH]);
+const all = (loaded.countries || []).filter((c) => c.iso && c.tile >= 0 && hasFlag(c.iso)).sort((a, b) => (b.area || 0) - (a.area || 0));
+const pins = [];
+const gap = all.length > 60 ? 0.085 : 0.11;
+for (const c of all) {
+const x = (map.x(c.tile) + 0.5) / map.width;
+const y = (map.y(c.tile) - y0) / cropH;
+if (y < 0.13 || y > 0.97 || x < 0.04 || x > 0.95) continue;
+if (pins.some((p) => Math.hypot(p.x - x, (p.y - y) * (H / W)) < gap)) continue;
+pins.push({ iso: c.iso, x, y });
+if (pins.length >= 22) break;
+}
+dropPins($('carga-pines'), pins, 0.9);
+box.classList.add('con-mapa');
+return true;
+}
 async function withLoading(title, steps, { minMs = 1300, onReady = null } = {}) {
 const box = $('carga');
 const started = performance.now();
+const bar = $('carga-progreso');
+const tip = $('carga-punta');
+const pct = $('carga-pct');
+const list = $('carga-pasos');
+const text = $('carga-paso');
 $('carga-mapa').textContent = title;
 $('carga-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
-$('carga-progreso').style.width = '0%';
-box.classList.remove('saliendo');
+const ICONS = ['terreno', 'banderas', 'frente', 'revista'];
+list.style.setProperty('--n', String(steps.length));
+list.replaceChildren(...steps.map((st, i) => stepBadge(st.name || st.label.replace(/…$/, ''), st.icon || ICONS[i % ICONS.length])));
+markSteps(list, 0);
+box.classList.remove('saliendo', 'listo', 'con-mapa');
+$('carga-pines').replaceChildren();
+setBar(bar, tip, pct, 0.02, 0);
 clearTimeout(box._fuera);
 mostrar(box, { y: 0, scale: 1.02, ms: 260 });
 let result;
 let ok = false;
+let painted = false;
+const say = (label) => {
+text.textContent = label;
+text.classList.remove('cambia');
+void text.offsetWidth;
+text.classList.add('cambia');
+};
 try {
 await twoPaints();
 for (let i = 0; i < steps.length; i++) {
-$('carga-paso').textContent = steps[i].label;
-$('carga-progreso').style.width = `${Math.round((i / steps.length) * 100)}%`;
+say(steps[i].label);
+markSteps(list, i);
+setBar(bar, tip, pct, (i + 0.85) / steps.length, 1400);
 await nextPaint();
 result = await steps[i].run(result);
+setBar(bar, tip, pct, (i + 1) / steps.length, 250);
+if (!painted) {
+try {
+painted = paintPreview(box, result);
+} catch {
+painted = true;
 }
-$('carga-paso').textContent = '¡A las trincheras!';
-$('carga-progreso').style.width = '100%';
+}
+}
+say('¡A las trincheras!');
+markSteps(list, steps.length);
+setBar(bar, tip, pct, 1, 250);
+box.classList.add('listo');
 await twoPaints();
 await twoPaints();
 const left = minMs - (performance.now() - started);
@@ -21199,8 +21391,10 @@ function bootLoader() {
 const box = $('arranque');
 if (!box) return null;
 const bar = $('arr-progreso');
+const tip = $('arr-punta');
 const text = $('arr-paso');
 const pct = $('arr-pct');
+const list = $('arr-pasos');
 const started = performance.now();
 const pool = [...TIPS];
 const tips = [];
@@ -21211,7 +21405,7 @@ $('arr-tips').replaceChildren(
 const p = document.createElement('p');
 p.className = 'arr-tip';
 p.textContent = t;
-p.style.setProperty('--d', `${i * 5}s`);
+p.style.setProperty('--d', `${i * 5 - 1}s`);
 p.style.setProperty('--ciclo', `${cycle}s`);
 return p;
 }),
@@ -21219,7 +21413,7 @@ return p;
 $('arr-puntos').replaceChildren(
 ...tips.map((_, i) => {
 const d = document.createElement('i');
-d.style.setProperty('--d', `${i * 5}s`);
+d.style.setProperty('--d', `${i * 5 - 1}s`);
 d.style.setProperty('--ciclo', `${cycle}s`);
 return d;
 }),
@@ -21231,38 +21425,16 @@ text.textContent = label;
 text.classList.remove('cambia');
 void text.offsetWidth;
 text.classList.add('cambia');
-const f = Math.max(0.02, Math.min(1, to));
-bar.style.transitionDuration = `${ms}ms`;
-bar.style.transform = `scaleX(${f})`;
-pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
+setBar(bar, tip, pct, to, ms);
 if (key) {
-let reached = false;
-for (const li of marks) {
-const here = li.dataset.paso === key;
-li.classList.toggle('activo', here);
-if (!reached && !here) li.classList.add('hecho');
-if (here) reached = true;
-}
+const i = marks.findIndex((li) => li.dataset.paso === key);
+if (i >= 0) markSteps(list, i);
 }
 },
 map(draw, pins = []) {
 try {
 draw($('arr-lienzo'));
-const layer = $('arr-pines');
-layer.replaceChildren(
-...pins.filter((p) => hasFlag(p.iso)).map((p) => {
-const pin = document.createElement('span');
-pin.className = 'arr-pin';
-pin.style.left = `${(p.x * 100).toFixed(2)}%`;
-pin.style.top = `${(p.y * 100).toFixed(2)}%`;
-pin.style.setProperty('--d', `${(0.25 + p.x * 1.35).toFixed(2)}s`);
-const flag = document.createElement('i');
-flag.className = 'bandera';
-flag.style.cssText = flagCss(p.iso, 18);
-pin.append(flag);
-return pin;
-}),
-);
+dropPins($('arr-pines'), pins, 1.4);
 box.classList.add('con-mapa');
 this.mapAt = performance.now();
 } catch {
@@ -21270,10 +21442,7 @@ this.mapAt = performance.now();
 },
 async done({ minMs = 1800, onOpen = () => {}, tap = null } = {}) {
 this.step('¡A las trincheras!', 1, 300);
-for (const li of marks) {
-li.classList.remove('activo');
-li.classList.add('hecho');
-}
+markSteps(list, marks.length);
 box.classList.add('listo');
 const now = performance.now();
 await wait(Math.max(450, minMs - (now - started), this.mapAt ? 1700 - (now - this.mapAt) : 0));
@@ -21674,13 +21843,15 @@ state.lastSeed = opts.tutorial ? null : seed;
 state.holdSim = true;
 try {
 const game = await withLoading(opts.title || mapLabel(opts.mapSize), [
-{ label: 'Levantando el relieve…', run: () => loadMap(opts.mapSize, seed) },
+{ label: 'Levantando el relieve…', name: 'Relieve', icon: 'terreno', run: () => loadMap(opts.mapSize, seed) },
 {
 label: 'Desplegando naciones…',
+name: 'Naciones',
+icon: 'banderas',
 run: (loaded) =>
 newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficulty, rules: opts.rules, humans: [myIdentity()], localIndex: 0, loaded }),
 },
-{ label: 'Cavando trincheras…', run: (game) => game },
+{ label: 'Cavando trincheras…', name: 'Trincheras', icon: 'frente', run: (game) => game },
 ], { onReady: hideScreensForGame });
 if (state.config) state.config.modo = opts.tutorial ? 'tutorial' : opts.ranked ? 'clasificatoria' : opts.challenge ? 'reto' : 'ia';
 let entered = false;
@@ -22148,9 +22319,11 @@ state.holdSim = true;
 const game = await withLoading(
 `${mapLabel(payload.settings.mapSize)}${REAL_MAPS[payload.settings.mapSize] ? '' : ` · semilla ${payload.seed >>> 0}`} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
 [
-{ label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
+{ label: 'Levantando el relieve…', name: 'Relieve', icon: 'terreno', run: () => loadMap(payload.settings.mapSize, payload.seed) },
 {
 label: 'Desplegando naciones…',
+name: 'Naciones',
+icon: 'banderas',
 run: (loaded) =>
 newGame({
 seed: payload.seed,
@@ -22163,7 +22336,7 @@ localIndex: index,
 loaded,
 }),
 },
-{ label: 'Pasando revista…', run: async (game) => (await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]), game) },
+{ label: 'Pasando revista…', name: 'Revista', icon: 'revista', run: async (game) => (await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]), game) },
 ],
 { minMs: 500, onReady: hideScreensForGame },
 );
