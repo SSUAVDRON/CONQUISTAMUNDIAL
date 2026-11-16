@@ -1,5 +1,5 @@
 // Estado de una nación (humana o bot).
-import { CONFIG, RES } from './config.js';
+import { CONFIG, GRID2, RES } from './config.js';
 import { emptyMods } from './tecnologias.js';
 import { MECH, maxTroopsFor, regenPerTick, territoryGold } from './mecanicas.js';
 
@@ -113,7 +113,8 @@ export class Player {
    * según la dificultad. No añade tropas: solo fija el límite.
    */
   maxTroops() {
-    return (maxTroopsFor(this.tiles, this.levels.city) + MECH.village.cap * (this.levels.village || 0)) * this.capMult * (1 + this.mods.cap);
+    // El techo cuenta superficie (casillas calibradas), no píxeles
+    return (maxTroopsFor(this.tiles / GRID2, this.levels.city) + MECH.village.cap * (this.levels.village || 0)) * this.capMult * (1 + this.mods.cap);
   }
 
   /**

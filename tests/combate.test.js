@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { CONFIG, RES } from '../src/config.js';
+import { CONFIG, GRID2, RES } from '../src/config.js';
 import { MECH, neutralTimeCost, pvpSpeedRatio, pvpTile } from '../src/mecanicas.js';
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps;
@@ -73,8 +73,9 @@ test('tierra libre al doble de bajas; las colonias pagan menos y su ritmo no dep
   const plain = [...map.landTiles].find((t) => map.terrain[t] === 1 && game.owner[t] === 0);
   const nation = game.conquestCost(plain, null, 5000, 10, a);
   const col = game.conquestCost(plain, null, 5000, 10, colony);
-  assert.equal(nation.loss, 32);
-  assert.ok(near(col.loss, 32 * MECH.colonyNeutralLoss));
+  // 32 por casilla calibrada (con más resolución, ÷ GRID2 por casilla: la misma superficie)
+  assert.ok(near(nation.loss * GRID2, 32));
+  assert.ok(near(col.loss * GRID2, 32 * MECH.colonyNeutralLoss));
   // Con pocas tropas, la colonia avanza como una nación con un envío normal
   const poor = game.conquestCost(plain, null, 800, 10, colony);
   const ref = game.conquestCost(plain, null, MECH.colonyRefTroops, 10, a);
@@ -85,8 +86,8 @@ test('tierra libre al doble de bajas; las colonias pagan menos y su ritmo no dep
   colony.pace = 1.25;
   assert.ok(near(game.conquestCost(plain, null, 800, 10, colony).time, poor.time / 1.25));
   // La estimación del aviso usa las mismas bajas
-  assert.equal(game.estimateAttack(a, 0, 3200).tiles, 100);
-  assert.equal(game.estimateAttack(colony, 0, 3200).tiles, Math.floor(3200 / (32 * MECH.colonyNeutralLoss)));
+  assert.equal(game.estimateAttack(a, 0, 3200).tiles, Math.floor((3200 * GRID2) / 32 + 1e-9));
+  assert.equal(game.estimateAttack(colony, 0, 3200).tiles, Math.floor((3200 * GRID2) / (32 * MECH.colonyNeutralLoss) + 1e-9));
 });
 
 test('cada colonia es algo distinta (ritmo y forma), sin gastar el azar de la partida', async () => {

@@ -81,6 +81,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Mapas', title: 'Mapas con más píxeles', text: 'Todos los mapas tienen ahora 1,78 veces más casillas (el mundo, 4000 × 2000) con la misma geografía: costas, ríos y fronteras más finos. La partida va al mismo ritmo: el techo de tropas, la zona inicial y el coste de conquistar cuentan superficie, no píxeles.', art: 2 },
   { tag: 'Competitivo', title: 'Clasificatorias con amigos', text: 'Al encontrar partida, la sala espera 30 s a que entre más gente de tu rango. Juega con amigos: abre una clasificatoria de grupo, invítales y busca rivales. Salas de competición sin código, rangos animados que estallan al subir y menos texto: lo demás, al pasar el ratón. En partida, la clasificación también por economía.', art: 1 },
   { tag: 'Partida', title: 'Interfaz de partida más limpia', text: 'Tus tropas, oro y territorio en una barra arriba; la clasificación con los tres primeros y tú; el banco aparte y la fuerza de ataque encima de los edificios. Las fichas enseñan lo esencial: mantén Mayús (o toca «Más detalles» en el móvil) para ver todo.', art: 2 },
   { tag: 'Novedades', title: 'Aspectos, gestas y ficha del comandante', text: 'Aspectos nuevos para tus edificios, barcos y bombas, que también ven los demás online. Todo lo coleccionable tiene rareza (común, poco común, rara, épica y legendaria) y una ficha al pasar el ratón o mantener pulsado. Perfil con tu ficha de comandante y Progreso renovado: camino de recompensas, diario de campaña, «casi lo tienes» y gestas por categorías con puntos.', art: 1 },
@@ -100,7 +101,7 @@ const NEWS = [
   { tag: 'Menús', title: 'Menús renovados', text: 'Transiciones suaves, Perfil y Aspecto juntos, guía de juego y un menú en partida con ajustes rápidos.', art: 0 },
   { tag: 'Reglas', title: 'Mecánicas nuevas', text: 'Techo de tropas, regeneración, combate, cerco y retirada siguen ahora la especificación al pie de la letra.', art: 0 },
   { tag: 'Arsenal', title: 'Bomba H y MIRV', text: 'El silo lanza dos bombas nuevas: la H arrasa una zona enorme y el MIRV reparte 24 cabezas por un país.', art: 1 },
-  { tag: 'Mapas', title: 'El mundo, más grande', text: 'Mapa del mundo de 3000 × 1500 casillas con 156 países y sus ríos de verdad.', art: 2 },
+  { tag: 'Mapas', title: 'El mundo, más grande', text: 'Mapa del mundo de 4000 × 2000 casillas con 156 países y sus ríos de verdad.', art: 2 },
 ];
 const NEWS_SLIDES = 3;
 

@@ -24,7 +24,7 @@
  * industria y población, pueblos, pesqueros, comercio más frecuente y
  * lugares de interés. En multijugador, versiones distintas no juegan juntas.
  */
-export const MECH_VERSION = 'doc-1.9';
+export const MECH_VERSION = 'doc-2.0'; // doc-2.0: RES 4 con las fórmulas que cuentan casillas pasadas a superficie (GRID)
 
 /**
  * Perfiles de reglas versionados (el ritmo y los añadidos de Trinchera). El
@@ -375,12 +375,13 @@ export function regenPerTick(troops, cap) {
  * (−0,5, −0,5): (x + 0,5)² + (y + 0,5)² ≤ 16 con x, y en −4..3 → 52 casillas.
  * Devuelve los desplazamientos [dx, dy] respecto a la casilla elegida.
  */
-export function startOffsets() {
-  const R = MECH.startingRadius;
+export function startOffsets(R = MECH.startingRadius) {
   const o = MECH.startingCenterOffset;
   const out = [];
-  for (let dy = -R; dy < R; dy++) {
-    for (let dx = -R; dx < R; dx++) {
+  // Radio en casillas (con más resolución, mayor: la misma superficie)
+  const n = Math.ceil(R);
+  for (let dy = -n; dy < n; dy++) {
+    for (let dx = -n; dx < n; dx++) {
       if ((dx - o) * (dx - o) + (dy - o) * (dy - o) <= R * R) out.push([dx, dy]);
     }
   }

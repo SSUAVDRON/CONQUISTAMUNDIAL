@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { RES } from '../src/config.js';
+import { GRID2, RES } from '../src/config.js';
 import { MECH } from '../src/mecanicas.js';
 
 /** Una sola nación en mitad de la mayor masa de tierra, ya en juego. */
@@ -55,8 +55,9 @@ test('con pocas tropas se expande poco y con muchas, mucho más', () => {
   // altura: el doble que el documento, doc-1.2)
   const plainLoss = MECH.terrain[1].mag / MECH.neutralLossDiv;
   assert.equal(plainLoss, 32);
-  assert.ok(few <= 300 / plainLoss + 1, `${few} casillas con 300 tropas`);
-  assert.ok(many <= 1500 / plainLoss + 1);
+  // (por casilla calibrada: con más resolución, GRID2 casillas por cada una)
+  assert.ok(few <= (300 / plainLoss + 1) * GRID2, `${few} casillas con 300 tropas`);
+  assert.ok(many <= (1500 / plainLoss + 1) * GRID2);
 });
 
 test('HUD (TR03): reserva y próximo envío salen del mismo turno y cuadran tras un ataque al 20 % con caída brusca', async () => {

@@ -9,8 +9,19 @@ export const TICK_MS = 100; // 10 ticks por segundo de simulación
  * adaptan con estos factores: distancias y velocidades × RES, valores por
  * casilla ÷ AREA (así una misma superficie vale lo mismo en tropas y oro).
  */
-export const RES = 3;
+export const RES = 4;
 export const AREA = RES * RES;
+/**
+ * Resolución con la que se calibraron las fórmulas que cuentan casillas (el
+ * techo de tropas, la zona inicial y el coste y las bajas de cada casilla
+ * conquistada). Con más resolución hay más casillas en la misma superficie:
+ * GRID casillas por casilla calibrada en cada eje y GRID2 en superficie, y
+ * esas fórmulas se pasan a superficie, así que la partida es la misma, solo
+ * con más píxeles.
+ */
+export const CALIB_RES = 3;
+export const GRID = RES / CALIB_RES;
+export const GRID2 = GRID * GRID;
 
 export const TERRAIN = { WATER: 0, PLAINS: 1, HIGHLAND: 2, MOUNTAIN: 3 };
 export const TERRAIN_NAMES = ['Agua', 'Llanura', 'Meseta', 'Montaña'];

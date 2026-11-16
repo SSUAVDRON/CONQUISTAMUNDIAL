@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildNow, terminarObras, DOC } from './ayuda.js';
-import { BUILDINGS, CONFIG, RES } from '../src/config.js';
+import { BUILDINGS, CONFIG, GRID2, RES } from '../src/config.js';
 import { MECH, PROFILES, regenPerTick } from '../src/mecanicas.js';
 
 /** Partida con un humano ya desplegado en la mayor masa de tierra. */
@@ -75,7 +75,7 @@ test('tropas: techo y regeneraciÃ³n del documento; con trabajadores, la poblaciÃ
   const { game, human } = setup();
   human.mods.cap = 0;
   human.mods.growth = 0;
-  assert.equal(human.maxTroops(), maxTroopsFor(human.tiles, 0));
+  assert.equal(human.maxTroops(), maxTroopsFor(human.tiles / GRID2, 0));
   const max = human.maxTroops();
   const at = (x) => {
     human.troops = max * x;

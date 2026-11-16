@@ -111,6 +111,7 @@ test('los antimisiles derriban casi todos los misiles: salvas de varios intercep
     a.gold = 1e7;
     silo.readyAt = 0;
     sam.readyAt = 0;
+    sam.ammo = 0; // salva entera (si no, la del misil anterior puede quedar a medias)
     const t0 = game.ticks;
     assert.ok(buildNow(game, a, 'missile', target));
     for (let i = 0; i < 200 && game.missiles.length; i++) game.tick();
@@ -118,7 +119,10 @@ test('los antimisiles derriban casi todos los misiles: salvas de varios intercep
     rounds++;
     shots += fired.length;
     hits += fired.filter((e) => e.kind === 'intercept').length;
-    if (fired.length > 1 && fired[0].kind === 'miss') retried++;
+    // Tras un fallo, la salva lanza otro proyectil (aunque, si el misil ya
+    // cae, no siempre llegue a tiempo)
+    const launches = game.effects.filter((e) => e.tick > t0 && e.kind === 'samLaunch').length;
+    if (fired.length && fired[0].kind === 'miss' && launches > 1) retried++;
   }
   assert.ok(game.buildings.includes(sam), 'la batería sigue en pie');
   assert.ok(rounds >= 8 && shots >= rounds, `la batería debería disparar a cada misil que pasa: ${shots} disparos, ${rounds} misiles`);

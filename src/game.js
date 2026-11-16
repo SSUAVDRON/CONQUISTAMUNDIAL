@@ -1,6 +1,6 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { AREA, BUILDINGS, CONFIG, EMOJIS, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } from './config.js';
+import { AREA, BUILDINGS, CONFIG, EMOJIS, GRID, GRID2, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } from './config.js';
 import { fmtTroops, formatNumber } from './format.js';
 import { Rng, hashString } from './rng.js';
 import { MinHeap } from './heap.js';
@@ -14,8 +14,9 @@ import { LUGARES, LUGAR_CFG, pickLugar } from './lugares.js';
 import { SPECS, TECHS, addMods, emptyMods, techAvailable } from './tecnologias.js';
 import { bankShare, bigEmpireBonus, capitalPerks, capitalPrice, MECH, neutralTimeCost, priceFor, profileOf, pvpTile, regenPerTick, startOffsets, tradeGold, tradeSpawnChance } from './mecanicas.js';
 
-/** Desplazamientos de la zona inicial: las 52 casillas del disco de radio 4 (documento, 02.2). */
-const START_OFFSETS = startOffsets();
+/** Desplazamientos de la zona inicial: el disco de radio 4 del documento (02.2: 52 casillas calibradas), × GRID con más resolución. */
+// La zona inicial: el disco del documento, con la misma superficie a cualquier resolución
+const START_OFFSETS = startOffsets(MECH.startingRadius * GRID);
 
 // Buffers de vecinos, uno por función para evitar reentradas
 const NB_SET = new Int32Array(4);
@@ -1721,18 +1722,22 @@ export class Game {
       // (doc-1.9) y frenan al pasar del 80 % de la nación media, para que no
       // encabecen la clasificación
       const colony = attacker && attacker.weak;
+      // A superficie (GRID): el presupuesto ya crece con el ancho del frente
+      // (× GRID), así que cada casilla cuesta ÷ GRID de tiempo y ÷ GRID2 de bajas
       const time = colony
         ? neutralTimeCost(T.tileCost, Math.max(troops, MECH.colonyRefTroops)) / speed / MECH.colonyNeutralSpeed / (attacker.pace || 1) / this._colonyBrake(attacker)
         : neutralTimeCost(T.tileCost, troops) / speed;
-      return { time, loss: (T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1), defLoss: 0 };
+      return { time: time / GRID, loss: ((T.mag / MECH.neutralLossDiv) * lossMul * (colony ? MECH.colonyNeutralLoss : 1)) / GRID2, defLoss: 0 };
     }
     const mult = this.defenseMult(target, t);
-    const c = pvpTile(this.defenders(target), troops, target.tiles, front, {
+    // Densidad del defensor por casilla calibrada; tiempo y bajas por casilla
+    // pasadas a superficie (como en tierra libre)
+    const c = pvpTile(this.defenders(target), troops, target.tiles / GRID2, front / GRID, {
       traitor: this.isTraitor(target),
       bigAttacker: bigEmpireBonus(attacker, this),
       bigDefender: bigEmpireBonus(target, this),
     });
-    return { time: (c.perFront * T.tileCost * mult) / speed, loss: T.mag * c.attackerLossPerMag * mult * lossMul, defLoss: c.defenderLoss };
+    return { time: (c.perFront * T.tileCost * mult) / speed / GRID2, loss: (T.mag * c.attackerLossPerMag * mult * lossMul) / GRID2, defLoss: c.defenderLoss / GRID2 };
   }
 
   /** Multiplicador defensivo si `t` está en el radio de una fortaleza del defensor. */
@@ -1781,10 +1786,10 @@ export class Game {
     const lossMul = Math.max(0.3, 1 + p.mods.attackCost);
     const plain = MECH.terrain[1];
     let perTile;
-    if (!target) perTile = (plain.mag / MECH.neutralLossDiv) * lossMul * (p.weak ? MECH.colonyNeutralLoss : 1);
+    if (!target) perTile = ((plain.mag / MECH.neutralLossDiv) * lossMul * (p.weak ? MECH.colonyNeutralLoss : 1)) / GRID2;
     else {
-      const c = pvpTile(this.defenders(target), troops, target.tiles, 1, { traitor: this.isTraitor(target) });
-      perTile = plain.mag * c.attackerLossPerMag * Math.max(0.2, 1 + target.mods.defense) * lossMul;
+      const c = pvpTile(this.defenders(target), troops, target.tiles / GRID2, 1, { traitor: this.isTraitor(target) });
+      perTile = (plain.mag * c.attackerLossPerMag * Math.max(0.2, 1 + target.mods.defense) * lossMul) / GRID2;
     }
     let tiles = Math.floor(troops / Math.max(0.01, perTile));
     if (target) tiles = Math.min(tiles, target.tiles);

@@ -5,6 +5,7 @@
 //
 // Todo pasa en la simulación con el azar de la partida: el mismo resultado en
 // todos los navegadores de una partida en línea.
+import { AREA } from './config.js';
 
 /**
  * Tipos. `weight`: lo frecuente que sale. `instant`: premio al momento;
@@ -24,7 +25,7 @@ export const LUGAR_IDS = Object.keys(LUGARES);
 
 /** Parámetros: cuántos hay (uno cada `landPer` casillas de tierra, entre min y max) y cada cuánto reaparecen. */
 export const LUGAR_CFG = {
-  landPer: 81000, // casillas de tierra por lugar (con RES 3: unos 16 en el mundo, 10 en el Mediterráneo)
+  landPer: 9000 * AREA, // casillas de tierra por lugar (81.000 con RES 3: unos 16 en el mundo, 10 en el Mediterráneo; la misma superficie a cualquier resolución)
   min: 6,
   max: 30,
   spacing: 25, // separación mínima entre lugares y con las salidas (casillas de la rejilla original, × RES)

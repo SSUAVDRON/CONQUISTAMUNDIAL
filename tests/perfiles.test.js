@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { DEFAULT_RULES, RES, cleanRules, migrateRules } from '../src/config.js';
+import { DEFAULT_RULES, GRID2, RES, cleanRules, migrateRules } from '../src/config.js';
 import { MECH, PROFILES, maxTroopsFor, profileOf, regenPerTick, rulesetId } from '../src/mecanicas.js';
 import { defaultProfile, normalizeProfile } from '../src/profile.js';
 import { checkStartPayload, roomRuleset } from '../src/multiplayer.js';
@@ -60,7 +60,7 @@ test('perfil Clásico: sin capitales (ni victoria por capitales ni botín), sin 
   // Regeneración: la fórmula base, sin multiplicadores (ni ritmo ni bonos de capital)
   h.troops = 50000;
   assert.ok(Math.abs(h.growthPerTick() - regenPerTick(50000, h.maxTroops())) < 1e-9);
-  assert.ok(Math.abs(h.maxTroops() - maxTroopsFor(h.tiles, 0)) < 1e-6);
+  assert.ok(Math.abs(h.maxTroops() - maxTroopsFor(h.tiles / GRID2, 0)) < 1e-6);
   // Oro: 100 por turno exactos (1000/s), todo «base», sin bonos
   const g0 = h.gold;
   const i0 = { ...h.income };

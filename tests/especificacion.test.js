@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
-import { RES } from '../src/config.js';
+import { GRID, GRID2, RES } from '../src/config.js';
 import { MECH, PROFILES, detPow, maxTroopsFor, neutralTimeCost, priceFor, regenPerTick, startOffsets } from '../src/mecanicas.js';
 import { buildNow, DOC } from './ayuda.js';
 
@@ -23,9 +23,12 @@ function setup({ seed = 21, rules = {}, place = null } = {}) {
   return { map, game, human, other, tile };
 }
 
-/** Casilla con las 52 del disco inicial en tierra de la misma masa (y sin costa cerca). */
+/** La zona inicial en casillas de esta resolución (52 con la calibrada; la misma superficie con más). */
+const START = startOffsets(MECH.startingRadius * GRID);
+
+/** Casilla con todo el disco inicial en tierra de la misma masa (y sin costa cerca). */
 function interior(map) {
-  const offs = startOffsets();
+  const offs = START;
   const body = map.landBodySizes.indexOf(Math.max(...map.landBodySizes));
   return [...map.landTiles].find((t) => {
     if (map.landBody[t] !== body) return false;
@@ -48,7 +51,10 @@ test('T01: aparición interior válida (radio 4, desplazamiento −0,5) → exac
   for (const [, dy] of startOffsets()) rows.set(dy, (rows.get(dy) || 0) + 1);
   assert.deepEqual([...rows.keys()].sort((a, b) => a - b).map((k) => rows.get(k)), [4, 6, 8, 8, 8, 8, 6, 4]);
   const { human } = setup();
-  assert.equal(human.tiles, 52);
+  // Con más resolución, la misma superficie: 52 casillas calibradas (± el redondeo del disco)
+  assert.equal(human.tiles, START.length);
+  if (GRID === 1) assert.equal(human.tiles, 52);
+  else assert.ok(Math.abs(human.tiles / GRID2 - 52) < 52 * 0.08, `${human.tiles} casillas = ${human.tiles / GRID2} calibradas`);
   assert.equal(human.troops, 25000);
   assert.equal(human.workers, 0);
 });
@@ -57,7 +63,9 @@ test('T02: 52 casillas sin ciudades → techo ≈ 121 410,76', () => {
   assert.ok(near(maxTroopsFor(52, 0), 121410.76));
   const { human } = setup();
   human.mods.cap = 0;
-  assert.ok(near(human.maxTroops(), 121410.76));
+  // El techo cuenta superficie: las casillas de la partida ÷ GRID2
+  assert.ok(near(human.maxTroops(), maxTroopsFor(human.tiles / GRID2, 0)));
+  if (GRID === 1) assert.ok(near(human.maxTroops(), 121410.76));
   // Tabla de la sección 03.1
   for (const [t, c, v] of [[100, 0, 131697.86], [500, 0, 183255.32], [1000, 0, 226191.47], [10000, 0, 602377.29], [52, 3, 871410.76], [10000, 3, 1352377.29]]) {
     assert.ok(near(maxTroopsFor(t, c), v), `${t} casillas y ${c} niveles: ${maxTroopsFor(t, c)}`);
@@ -73,7 +81,7 @@ test('T03: 52 casillas y una ciudad terminada → techo ≈ 371 410,76, sin aña
   assert.ok(buildNow(game, human, 'city', tile));
   assert.equal(human.levels.city, 1);
   assert.ok(near(maxTroopsFor(52, 1), 371410.76));
-  assert.ok(near(human.maxTroops(), maxTroopsFor(human.tiles, 1)));
+  assert.ok(near(human.maxTroops(), maxTroopsFor(human.tiles / GRID2, 1)));
   assert.equal(human.troops, troops, 'el techo no son tropas');
 });
 
@@ -85,7 +93,8 @@ test('T04: 52 casillas y 25 000 tropas → ≈ 330,27 por tick, ≈ 3302,74 por 
   human.mods.growth = 0;
   human.mods.cap = 0;
   // En juego se aplica el ritmo (PROFILES.trinchera.paceRegen) sobre la fórmula del documento
-  assert.ok(near(human.growthPerTick(), 330.27 * PROFILES.trinchera.paceRegen));
+  assert.ok(near(human.growthPerTick(), regenPerTick(25000, human.maxTroops()) * PROFILES.trinchera.paceRegen));
+  if (GRID === 1) assert.ok(near(human.growthPerTick(), 330.27 * PROFILES.trinchera.paceRegen));
   // Tabla de la sección 03.2 (por segundo, según la ocupación del techo)
   for (const [f, v] of [[0.2, 3259], [0.4, 4015], [0.42, 4019], [0.6, 3585], [0.8, 2206]]) {
     assert.ok(Math.abs(10 * regenPerTick(cap * f, cap) - v) < 1, `${f}: ${10 * regenPerTick(cap * f, cap)}`);
@@ -145,8 +154,10 @@ test('T08: 5000 tropas atacantes en llanura neutral → coste de tiempo 6,6 por 
   const plain = game.map.terrain[t] === 1;
   const c = game.conquestCost(t, null, 5000, 10, null);
   if (plain) {
-    assert.ok(near(c.time, 6.6, 1e-9));
-    assert.equal(c.loss, 32);
+    // Por casilla calibrada; con más resolución, ÷ GRID de tiempo (el
+    // presupuesto ya crece con el frente) y ÷ GRID2 de bajas
+    assert.ok(near(c.time * GRID, 6.6, 1e-9));
+    assert.ok(near(c.loss * GRID2, 32, 1e-9));
   }
   // Ejemplo del documento: frente de 10 casillas → presupuesto 20 por tick → unas 3 casillas
   assert.equal(MECH.neutralBudgetPerFront * 10, 20);
