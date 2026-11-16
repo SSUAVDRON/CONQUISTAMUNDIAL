@@ -63,6 +63,22 @@ export function buildingCard(game, p, kind) {
   card.time = buildTicks(p, kind);
 
   switch (kind) {
+    case 'capital': {
+      // Fundar la capital: el primer edificio de cada jugador
+      const C = MECH.capital;
+      card.tag = 'Tu primer edificio';
+      card.cost = 0;
+      card.time = 0;
+      card.summary = 'Elige dónde fundarla, dentro de tu territorio. Hasta que la tengas no puedes construir nada más.';
+      card.gives.push(
+        { icon: 'muralla', label: 'Murallas', value: `×${dec(C.wallMult)}`, note: 'defensa dentro; también refuerza las afueras' },
+        { icon: 'banco', label: 'Banco de tropas', value: '', note: 'guarda soldados que defienden la capital' },
+        { icon: 'escudo', label: 'Escudo antimisiles', value: '', note: 'derriba bombas que vengan a por ella' },
+        { icon: 'oro', label: 'Mejoras', value: '', note: '«Mejorar la capital»: más oro, banco y murallas' },
+      );
+      card.how = 'Gratis y al momento. Lejos de la frontera es más difícil de tomar; si cae, la corte se traslada.';
+      break;
+    }
     case 'capUp': {
       const C = MECH.capital;
       const cap = p.capital;

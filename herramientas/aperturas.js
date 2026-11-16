@@ -161,6 +161,8 @@ function play(seed, profile, spawnKind, strategy) {
   const info = game.spawnInfo(h, tile);
   game.spawnPlayer(h, tile);
   while (game.phase === 'spawn') game.tick();
+  // Los jugadores fundan su capital donde se desplegaron (sin ella no construyen)
+  for (const p of game.players) if (p && p.isHuman && p.alive && !p.capital && game.rules.capitals) game.build(p, 'capital', p.spawnTile);
   const t0 = game.ticks;
   const marks = {};
   const log = { first: null };

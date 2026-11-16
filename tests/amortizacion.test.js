@@ -8,7 +8,7 @@ import { RES, TICK_MS } from '../src/config.js';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { buildingCard, minSec } from '../src/fichas.js';
-import { casillaPara, terminarObras } from './ayuda.js';
+import { casillaPara, terminarObras, fundarCapitales } from './ayuda.js';
 
 function playing(seed = 31) {
   const map = generateMap(160 * RES, 100 * RES, seed);
@@ -18,6 +18,7 @@ function playing(seed = 31) {
   game.start();
   game.spawnPlayer(h, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
+  fundarCapitales(game);
   return { game, h };
 }
 

@@ -37,6 +37,12 @@ const STEPS = [
     leave: (s, tut) => tut.onStartNow?.(),
   },
   {
+    text: 'Funda tu capital: pulsa «Fundar capital» (en Economía) y haz clic donde quieras dentro de tu territorio. Es gratis y tiene murallas, banco de tropas y escudo antimisiles. Hasta que la tengas no puedes construir nada más; lejos de la frontera es más difícil de tomar.',
+    highlight: '#hud [data-kind="capUp"]',
+    enter: () => openGroup('economia'),
+    check: (s) => !s.game.rules.capitals || !!s.human.capital,
+  },
+  {
     text: 'Expándete: haz clic en tierra libre junto a tu territorio. Conquistarla cuesta pocas tropas.',
     enter: (s, step) => {
       step.startTiles = s.human.tiles;

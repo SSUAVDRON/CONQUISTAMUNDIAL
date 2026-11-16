@@ -7,7 +7,7 @@ import { RES } from '../src/config.js';
 import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { priceFor } from '../src/mecanicas.js';
-import { buildNow, casillaPara } from './ayuda.js';
+import { buildNow, casillaPara, fundarCapitales } from './ayuda.js';
 
 function playing(seed = 41) {
   const map = generateMap(160 * RES, 100 * RES, seed);
@@ -17,6 +17,7 @@ function playing(seed = 41) {
   game.start();
   game.spawnPlayer(h, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
+  fundarCapitales(game);
   return { game, h };
 }
 

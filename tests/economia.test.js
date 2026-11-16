@@ -8,7 +8,7 @@ import { Game } from '../src/game.js';
 import { CONFIG, RES } from '../src/config.js';
 import { MECH, bankShare, capitalPerks, capitalPrice, territoryGold } from '../src/mecanicas.js';
 import { LUGARES } from '../src/lugares.js';
-import { buildNow } from './ayuda.js';
+import { buildNow, fundarCapitales } from './ayuda.js';
 
 function play(rules = {}) {
   const map = generateMap(220 * RES, 130 * RES, 9);
@@ -20,6 +20,7 @@ function play(rules = {}) {
   game.spawnPlayer(h, game.findSpawnTile());
   game.spawnPlayer(o, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
+  fundarCapitales(game);
   game.bots.length = 0;
   return { game, h, o, map };
 }
@@ -41,14 +42,57 @@ test('economía: el territorio produce oro (más cuanto más grande, con rendimi
   assert.equal(play({ taxes: false }).h.goldBreakdown().tax, 0);
 });
 
-test('capital: nace donde te despliegas (naciones y jugadores, no colonias) y no se construye', () => {
-  const { game, h, o } = play();
-  assert.ok(h.capital && o.capital, 'cada nación tiene la suya');
-  assert.equal(h.capital.tile, h.spawnTile);
-  assert.equal(game.buildingAt.get(h.spawnTile), h.capital);
-  assert.ok(game.players.filter((p) => p && p.weak).every((p) => !p.capital), 'las colonias no');
+test('capital: las naciones de la IA nacen con ella; el jugador la funda donde quiera de su territorio y, hasta entonces, no construye', () => {
+  const map = generateMap(220 * RES, 130 * RES, 9);
+  const game = new Game({ map, seed: 9, rules: { profile: 'trinchera' } });
+  const h = game.addPlayer('Yo', [0, 0, 255], true);
+  const o = game.addPlayer('Otro', [255, 0, 0], false);
+  game.addColonies(3);
+  game.human = h;
+  game.start();
+  game.spawnPlayer(h, game.findSpawnTile());
+  game.spawnPlayer(o, game.findSpawnTile());
+  // En el despliegue aún no se funda
   assert.equal(game.canBuild(h, 'capital', h.spawnTile).ok, false);
-  assert.ok(!play({ capitals: false }).h.capital, 'sin la regla, sin capital');
+  while (game.phase === 'spawn') game.tick();
+  game.bots.length = 0;
+  assert.ok(o.capital, 'la IA la tiene desde el principio');
+  assert.equal(o.capital.tile, o.spawnTile);
+  assert.ok(game.players.filter((p) => p && p.weak).every((p) => !p.capital), 'las colonias no');
+  assert.ok(!h.capital, 'el jugador, todavía no');
+  assert.ok(game.eventLog.some((e) => /Funda tu capital/.test(e.text)), 'se le avisa');
+  // Sin capital no se construye nada (ni con oro de sobra)
+  h.gold = 1e9;
+  // Una casilla propia lejos de donde se desplegó (en el borde de lo suyo)
+  const d = (t) => Math.hypot(map.x(t) - map.x(h.spawnTile), map.y(t) - map.y(h.spawnTile));
+  const spot = [...map.landTiles].filter((t) => game.owner[t] === h.id).sort((a, b) => d(b) - d(a))[0];
+  assert.ok(spot !== undefined && d(spot) > RES);
+  const city = game.canBuild(h, 'city', spot);
+  assert.equal(city.ok, false);
+  assert.ok(city.needCapital);
+  assert.equal(game.canBuild(h, 'capUp').ok, false);
+  // Fuera de su territorio, no
+  const foreign = [...map.landTiles].find((t) => game.owner[t] === o.id);
+  assert.equal(game.canBuild(h, 'capital', foreign).ok, false);
+  // Gratis y al momento, donde elija (con la orden de la partida, como en línea)
+  const g0 = h.gold;
+  game.queueIntent({ type: 'build', kind: 'capital', tile: spot, playerId: h.id });
+  game.tick();
+  assert.ok(h.capital, 'fundada');
+  assert.equal(h.capital.tile, spot);
+  assert.equal(game.buildingAt.get(spot), h.capital);
+  assert.ok(h.gold >= g0, 'no cuesta oro');
+  // Su punto estratégico va con ella (perfil Trinchera)
+  assert.equal(game.pointAt.get(spot)?.kind, 'capital');
+  assert.equal(game.pointAt.get(spot).nation, h.id);
+  // Una sola, y ya se puede construir
+  assert.equal(game.canBuild(h, 'capital', h.spawnTile).ok, false);
+  assert.equal(game.canBuild(h, 'capUp').ok, true);
+  assert.ok(game.canBuild(h, 'city', h.spawnTile).ok || game.canBuild(h, 'city', h.spawnTile).reason !== 'Primero funda tu capital');
+  // Sin la regla, ni capital ni bloqueo
+  const sin = play({ capitals: false });
+  assert.ok(!sin.h.capital && !sin.o.capital);
+  assert.notEqual(sin.game.canBuild(sin.h, 'city', sin.h.spawnTile).reason, 'Primero funda tu capital');
 });
 
 test('capital: una sola mejora, sin elegir sitio; cuesta oro y tropas, tarda, encarece, llega al 12 y da oro y sitio en el banco', () => {

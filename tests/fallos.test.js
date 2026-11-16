@@ -5,7 +5,7 @@ import { generateMap } from '../src/map.js';
 import { Game } from '../src/game.js';
 import { CONFIG, RES } from '../src/config.js';
 import { MECH } from '../src/mecanicas.js';
-import { buildNow, casillaPara } from './ayuda.js';
+import { buildNow, casillaPara, fundarCapitales } from './ayuda.js';
 
 /** Dos naciones pegadas (A humana, B bot), ya en juego; un tercero opcional. */
 function duelo(seed = 11, rules = null, { third = false } = {}) {
@@ -27,6 +27,7 @@ function duelo(seed = 11, rules = null, { third = false } = {}) {
   assert.ok(game.spawnPlayer(b, tb));
   if (c) assert.ok(game.spawnPlayer(c, game.findSpawnTile()));
   while (game.phase === 'spawn') game.tick();
+  fundarCapitales(game);
   for (let i = 0; i < 40 && !game.hasLandBorder(a, b.id); i++) {
     a.troops = 1e5;
     game.launchAttack(a, 0, 20000);

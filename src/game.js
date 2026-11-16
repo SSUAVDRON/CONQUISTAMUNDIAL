@@ -710,36 +710,71 @@ export class Game {
     }
   }
 
-  /** Al empezar: cada nación (no las colonias) tiene su capital donde se desplegó. */
+  /**
+   * Al empezar: el punto estratégico «capital» de cada nación (no las
+   * colonias). Con capitales amuralladas va donde está la suya (los jugadores
+   * lo tienen al fundarla); sin ellas, donde se desplegó.
+   */
   _placeCapitals() {
     if (!this.profile.points) return; // Clásico: sin capitales
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
       if (!p.alive || p.weak || p.spawnTile < 0) continue;
-      let t = p.spawnTile;
-      if (this.pointAt.has(t)) continue;
-      p.capitalTile = t;
-      const pt = { id: this.points.length + 1, kind: 'capital', tile: t, x: this.map.x(t), y: this.map.y(t), name: `Capital de ${p.name}`, nation: p.id };
-      this.points.push(pt);
-      this.pointAt.set(t, pt);
+      if (this.rules.capitals && !p.capital) continue;
+      this._capitalPoint(p, p.capital ? p.capital.tile : p.spawnTile, false);
     }
     for (let i = 1; i < this.players.length; i++) this._refreshMods(this.players[i]);
+  }
+
+  /** Punto estratégico de la capital de `p` en `t` (si no hay otro allí). */
+  _capitalPoint(p, t, refresh = true) {
+    if (this.pointAt.has(t)) return;
+    p.capitalTile = t;
+    const pt = { id: this.points.length + 1, kind: 'capital', tile: t, x: this.map.x(t), y: this.map.y(t), name: `Capital de ${p.name}`, nation: p.id };
+    this.points.push(pt);
+    this.pointAt.set(t, pt);
+    if (refresh) this._refreshMods(p);
   }
 
   // ------------------------------------------------------------- capital
 
   /**
-   * Al empezar la partida, cada nación (también los jugadores; no las
-   * colonias) funda su capital donde se desplegó (doc-1.6).
+   * Al empezar la partida, cada nación de la IA (no las colonias) funda su
+   * capital donde se desplegó (doc-1.6). Los jugadores la colocan ellos, como
+   * un edificio más («Fundar capital»): hasta entonces no pueden construir.
    */
   _foundCapitals() {
     if (!this.rules.capitals) return;
     for (let i = 1; i < this.players.length; i++) {
       const p = this.players[i];
-      if (!p.alive || p.weak || p.spawnTile < 0 || p.capital) continue;
+      if (!p.alive || p.weak || p.spawnTile < 0 || p.capital || p.isHuman) continue;
       if (this.buildingAt.has(p.spawnTile)) continue;
       this._newCapital(p, p.spawnTile, 0);
     }
+  }
+
+  /** ¿Puede `p` fundar su capital en `tile`? (gratis; una por nación, donde quiera de su territorio) */
+  _canFoundCapital(p, tile) {
+    if (!this.rules.capitals) return { ok: false, reason: 'En esta partida no hay capitales' };
+    if (p.weak) return { ok: false, reason: 'Las colonias no tienen capital' };
+    if (p.capital) return { ok: false, reason: 'Ya tienes capital' };
+    if (this.phase !== 'playing') return { ok: false, reason: 'Funda tu capital cuando empiece la conquista' };
+    const map = this.map;
+    if (tile == null || tile < 0 || tile >= map.size || this.owner[tile] !== p.id) return { ok: false, reason: 'Funda tu capital dentro de tu territorio' };
+    if (this.pointAt.has(tile)) return { ok: false, reason: 'Ahí hay un lugar de interés: elige otra casilla' };
+    const near = this.buildingAt.get(tile) || this.buildingNear(tile, CONFIG.buildingMinDist);
+    if (near) return { ok: false, reason: `Demasiado cerca de otro edificio (${BUILDINGS[near.kind].name})` };
+    return { ok: true, reason: '', cost: 0, found: true };
+  }
+
+  /** Funda la capital de `p` en `tile`: al momento, con sus murallas, su banco y su punto estratégico. */
+  _foundCapital(p, tile) {
+    const b = this._newCapital(p, tile, 0);
+    if (this.profile.points) this._capitalPoint(p, tile);
+    const map = this.map;
+    this.effects.push({ kind: 'capitalFound', x: map.x(tile) + 0.5, y: map.y(tile) + 0.5, owner: p.id, tick: this.ticks });
+    if (p === this.human) this._emit('🏰 ¡Capital fundada! Ya puedes construir', 'good', { sfx: 'start', tile });
+    return !!b;
   }
 
   /** `up`: nivel de la mejora (0-10); `bank`: tropas guardadas; `ammo`/`readyAt`: su escudo antimisiles. */
@@ -2495,6 +2530,7 @@ export class Game {
    */
   buildCost(p, kind) {
     const def = BUILDINGS[kind];
+    if (kind === 'capital') return 0; // fundarla es gratis
     if (def && def.unit === 'capital') return this.capitalCost(p);
     const n = p.owned;
     n.warship = 0;
@@ -2535,7 +2571,10 @@ export class Game {
     const def = BUILDINGS[kind];
     if (!def) return { ok: false, reason: 'Edificio desconocido' };
     if (!this.isAllowed(kind)) return { ok: false, reason: 'Desactivado en esta partida' };
+    if (kind === 'capital') return this._canFoundCapital(p, tile);
     if (def.unique) return { ok: false, reason: `${def.name}: no se construye` };
+    // Sin capital no se construye nada (las colonias no tienen: no les afecta)
+    if (this.rules.capitals && !p.weak && !p.capital && p.isHuman) return { ok: false, reason: 'Primero funda tu capital', needCapital: true };
     if (def.unit === 'capital') return this._canUpgradeCapital(p);
     if (def.unit === 'ship') return this._canBuildWarship(p, tile);
     if (def.unit === 'missile') return this._canLaunchMissile(p, tile, kind);
@@ -2595,6 +2634,7 @@ export class Game {
     const check = this.canBuild(p, kind, tile);
     if (!check.ok) return false;
     const def = BUILDINGS[kind];
+    if (check.found) return this._foundCapital(p, tile);
     if (def.unit === 'capital') return this._startCapitalWork(p);
     if (check.upgrade) return this._startUpgrade(p, check.upgrade);
     const price = this.buildCost(p, kind);
@@ -4101,6 +4141,8 @@ export class Game {
     this._placeLugares();
     for (const bot of this.bots) bot.nextThink = this.ticks + this.rng.int(1, CONFIG.botThinkMax);
     this._emit('¡Comienza la conquista!', 'good', { sfx: 'start' });
+    const h = this.human;
+    if (h && h.alive && this.rules.capitals && !h.capital) this._emit('🏰 Funda tu capital: pulsa «Capital» y elige dónde, dentro de tu territorio. Hasta entonces no puedes construir', 'info', { capital: true });
   }
 
   _checkEliminations() {

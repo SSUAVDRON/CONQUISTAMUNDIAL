@@ -2084,6 +2084,8 @@ const ROLE_NAMES = { militar: 'mando militar', economia: 'economía y diplomacia
 
 function roleAllows(role, intent) {
   if (!role) return true;
+  // La capital la funda cualquiera de los dos (sin ella nadie construye)
+  if (intent.type === 'build' && intent.kind === 'capital') return true;
   if (intent.type === 'build') return (role === 'militar') === MILITARY_BUILDS.has(intent.kind);
   return ROLE_TYPES[role].has(intent.type);
 }
@@ -2112,10 +2114,20 @@ function bankTroops(op) {
   humanIntent({ type: 'bank', op, ratio: op === 'in' ? BANK_STEP : 1 });
 }
 
+/** ¿Le falta al jugador fundar su capital? (sin ella no se construye nada) */
+function needsCapital(game, p) {
+  return !!(game && p && game.rules.capitals && !p.weak && !p.capital && p.alive);
+}
+
 /** Activa (o desactiva si ya estaba) el modo de colocar un edificio. */
 function setBuildMode(kind) {
   const { game, human } = state;
   if (state.demo || !human || !human.alive || game.phase !== 'playing') return;
+  // Sin capital, el botón de la capital (o cualquier otro) sirve para fundarla: se coloca en el mapa
+  if (needsCapital(game, human)) {
+    if (kind !== 'capital' && BUILDINGS[kind]?.unit !== 'capital') ui.hint('Primero funda tu capital: elige dónde, dentro de tu territorio', 'warn');
+    kind = 'capital';
+  }
   // Las mejoras de la capital no se colocan: se piden al momento
   if (BUILDINGS[kind] && BUILDINGS[kind].unit === 'capital') {
     state.buildMode = null;

@@ -13,6 +13,16 @@ export function buildNow(game, p, kind, tile) {
   return ok;
 }
 
+/**
+ * Cada jugador funda su capital (sin ella no construye): los tests que no
+ * miran eso la fundan donde se desplegaron, como hacían antes las naciones.
+ */
+export function fundarCapitales(game) {
+  for (const p of game.players) {
+    if (p && p.isHuman && p.alive && !p.capital && game.rules.capitals) game.build(p, 'capital', p.spawnTile);
+  }
+}
+
 /** Una casilla propia de `p` donde se puede construir `kind` (o -1). */
 export function casillaPara(game, p, kind) {
   for (const t of game.map.landTiles) {

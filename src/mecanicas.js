@@ -37,7 +37,7 @@ export const MECH_VERSION = 'doc-2.0'; // doc-2.0: RES 4 con las fórmulas que c
  *   comparables de FrontWars. clasico-2: paceNeutral a la mitad (0,5 → 0,25),
  *   a petición, porque la expansión inicial iba demasiado rápida. clasico-3: con
  *   las fórmulas de doc-1.2 (mismos ritmos); clasico-4, con las de doc-1.3;
- *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7; clasico-9, con las de doc-1.8; clasico-10, con las de doc-1.9. Sin puntos estratégicos (ni bonos ni botín de
+ *   clasico-5, con las de doc-1.4; clasico-6, con las de doc-1.5; clasico-7, con las de doc-1.6; clasico-8, con las de doc-1.7; clasico-9, con las de doc-1.8; clasico-10, con las de doc-1.9; clasico-11, con la capital que funda cada jugador. Sin puntos estratégicos (ni bonos ni botín de
  *   capitales) y sin tecnologías ni especializaciones.
  * - trinchera: el ritmo lento pedido antes (×0,07 tierra libre, ×0,5 guerras,
  *   ×0,6 regeneración) con puntos estratégicos y tecnologías. Es también el
@@ -47,8 +47,8 @@ export const MECH_VERSION = 'doc-2.0'; // doc-2.0: RES 4 con las fórmulas que c
  * (contra tierra libre y contra países); paceRegen, la regeneración.
  */
 export const PROFILES = {
-  clasico: { id: 'clasico-10', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-  trinchera: { id: 'trinchera-9', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+  clasico: { id: 'clasico-11', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: false, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+  trinchera: { id: 'trinchera-10', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 
 /** Perfil de unas reglas (sin perfil válido, el histórico: trinchera). */

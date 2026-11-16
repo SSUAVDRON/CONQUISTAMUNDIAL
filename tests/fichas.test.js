@@ -8,6 +8,7 @@ import { BUILDING_KINDS, RES } from '../src/config.js';
 import { MECH } from '../src/mecanicas.js';
 import { LUGARES } from '../src/lugares.js';
 import { activeBonuses, buildingCard, shortEffect } from '../src/fichas.js';
+import { fundarCapitales } from './ayuda.js';
 
 function play() {
   const map = generateMap(220 * RES, 130 * RES, 9);
@@ -17,6 +18,7 @@ function play() {
   game.start();
   game.spawnPlayer(h, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
+  fundarCapitales(game);
   return { game, h };
 }
 

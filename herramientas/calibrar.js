@@ -91,6 +91,8 @@ function soloGame(seed, profile, override = {}) {
   game.spawnPlayer(h, SPAWNS[(seed - 1) % SPAWNS.length]);
   game.spawnPlayer(far, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
+  // Los jugadores fundan su capital donde se desplegaron (sin ella no construyen)
+  for (const p of game.players) if (p && p.isHuman && p.alive && !p.capital && game.rules.capitals) game.build(p, 'capital', p.spawnTile);
   game.bots.length = 0;
   far.regenMult = 0;
   return { game, h };
@@ -293,6 +295,8 @@ function duel(seed, { dA = 1, pacePvp = 1, fort = false, colony = false, retreat
   game.spawnPlayer(b, tb);
   game.spawnPlayer(c, game.findSpawnTile());
   while (game.phase === 'spawn') game.tick();
+  // Los jugadores fundan su capital donde se desplegaron (sin ella no construyen)
+  for (const p of game.players) if (p && p.isHuman && p.alive && !p.capital && game.rules.capitals) game.build(p, 'capital', p.spawnTile);
   game.bots.length = 0;
   for (let i = 0; i < 40 && !game.hasLandBorder(a, b.id); i++) {
     a.troops = 1e5;

@@ -383,7 +383,8 @@ export class UI {
       iconFor: (k) => {
         this._iconUrls ??= new Map();
         if (!this._iconUrls.has(k)) {
-          const c = this._buildIcons.get(k);
+          // (fundar la capital usa el icono del botón de la capital)
+          const c = this._buildIcons.get(k === 'capital' ? 'capUp' : k);
           this._iconUrls.set(k, c ? c.toDataURL() : '');
         }
         return this._iconUrls.get(k);
@@ -1213,7 +1214,9 @@ export class UI {
       const def = BUILDINGS[buildMode];
       const cost = formatNumber(game.buildCost(human, buildMode));
       const what = shortEffect(game, human, buildMode);
-      if (def.unit === 'missile') {
+      if (buildMode === 'capital') {
+        setAviso('Toca dentro de tu territorio para fundar tu capital (gratis). Lejos de la frontera es más difícil de tomar. Esc para cancelar');
+      } else if (def.unit === 'missile') {
         setAviso(`Elige un objetivo enemigo para el misil (${cost} de oro). Esc para cancelar`);
       } else if (def.unit === 'ship') {
         setAviso(`Haz clic en el mar donde patrullará el buque (${cost} de oro): la zona no se podrá cambiar. Esc para cancelar`);
@@ -1321,13 +1324,33 @@ export class UI {
 
     const works = {};
     for (const b of game.sites) if (b.owner === human.id) works[b.kind] = (works[b.kind] || 0) + 1;
+    // Sin capital no se construye nada: el botón de la capital sirve para fundarla (late) y el resto espera
+    const needCap = !!(game.rules.capitals && !human.weak && !human.capital && human.alive);
+    $('construir').classList.toggle('sin-capital', needCap && playing);
+    if (needCap && playing && this._capGame !== game) {
+      // En el móvil, la bandeja de Economía se abre sola con el botón a la vista
+      this._capGame = game;
+      if (!$('hud').classList.contains('escritorio')) this.openGroup('economia');
+    }
     for (const [kind, btn] of this._buildButtons) {
       const cost = game.buildCost(human, kind);
       let unavailable = human.gold < cost;
       // Lo que falta para poder pagarlo, como relleno del botón
       btn.style.setProperty('--progreso', `${Math.round(Math.min(1, human.gold / cost) * 100)}%`);
       btn.classList.toggle('en-obras', !!works[kind]);
-      if (BUILDINGS[kind].unit === 'capital') {
+      const founding = needCap && BUILDINGS[kind].unit === 'capital';
+      if (btn.classList.contains('fundar') !== founding) {
+        btn.classList.toggle('fundar', founding);
+        btn.querySelector('.b-nombre').textContent = founding ? 'Fundar capital' : BUILDINGS[kind].short || BUILDINGS[kind].name;
+        btn.setAttribute('aria-label', founding ? 'Fundar tu capital' : BUILDINGS[kind].name);
+      }
+      if (founding) {
+        // Fundar la capital: gratis, se coloca en el mapa
+        btn.style.setProperty('--progreso', '100%');
+        btn.querySelector('.b-coste').textContent = 'Gratis';
+        btn.querySelector('.b-num').textContent = '';
+        unavailable = false;
+      } else if (BUILDINGS[kind].unit === 'capital') {
         // Mejora de la capital: su nivel y si está en obras
         const cap = human.capital;
         const lvl = cap ? cap.up || 0 : 0;
@@ -1357,9 +1380,10 @@ export class UI {
         clearTimeout(btn._yaT);
         btn._yaT = setTimeout(() => btn.classList.remove('ya-puedes'), 1000);
       }
+      if (needCap && !founding) unavailable = true;
       btn.classList.toggle('caro', unavailable);
       btn.hidden = !game.isAllowed(kind);
-      btn.classList.toggle('activo', buildMode === kind);
+      btn.classList.toggle('activo', buildMode === kind || (founding && buildMode === 'capital'));
       btn.disabled = !playing || !human.alive;
     }
     this._buildSeen = playing; // (el primer repaso de la partida solo anota)
@@ -1370,7 +1394,8 @@ export class UI {
       const visible = btns.filter((b) => !b.hidden);
       g.box.hidden = !visible.length;
       g.tab.classList.toggle('listo', playing && visible.some((b) => !b.classList.contains('caro')));
-      const active = g.group.kinds.includes(buildMode) ? buildMode : null;
+      const active = g.group.kinds.includes(buildMode) ? buildMode : buildMode === 'capital' && g.group.id === 'economia' ? 'capital' : null;
+      g.tab.classList.toggle('fundar', needCap && playing && g.group.id === 'economia');
       g.tab.classList.toggle('activo', !!active);
       const want = active || g.group.icon;
       if (g.shown !== want) {
@@ -1421,7 +1446,7 @@ export class UI {
     this._fichasAt = now;
     for (const [kind, btn] of this._buildButtons) {
       const el = btn.querySelector('.b-efecto');
-      const t = shortEffect(game, human, kind);
+      const t = btn.classList.contains('fundar') ? 'Murallas y banco' : shortEffect(game, human, kind);
       if (el.textContent !== t) el.textContent = t;
     }
     // Bonos activos: una pastilla por bono (los de un rato, con su cuenta atrás)

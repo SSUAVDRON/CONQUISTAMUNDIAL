@@ -908,7 +908,8 @@ function cleanIntent(raw) {
   if (typeof raw.accept === 'boolean') out.accept = raw.accept;
   if (raw.op === 'in' || raw.op === 'out') out.op = raw.op; // banco de tropas de la capital
   // Lo que se puede pedir desde la barra (la tabla de edificios; la capital nace con la nación)
-  if (typeof raw.kind === 'string' && BUILDING_KINDS.includes(raw.kind)) out.kind = raw.kind;
+  // (también «capital»: cada jugador funda la suya)
+  if (typeof raw.kind === 'string' && (BUILDING_KINDS.includes(raw.kind) || raw.kind === 'capital')) out.kind = raw.kind;
   if (raw.resource === 'troops' || raw.resource === 'gold') out.resource = raw.resource;
   if (typeof raw.emoji === 'string' && raw.emoji.length <= 8) out.emoji = raw.emoji;
   return out;

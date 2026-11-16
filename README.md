@@ -103,11 +103,13 @@ paso entra sin opacidad, para que no se quede invisible si el paso siguiente
 bloquea el navegador.
 
 - **Competitivo** (al estilo de los clientes de juegos competitivos, con el arte
-  de Trinchera): una franja con **tu comandante** (estandarte, emblema, marco,
-  título y nivel), **tu insignia de rango en grande** con rayos de luz que giran,
-  la liga y división, la barra de PL, victorias, derrotas y escudo, y **Buscar
-  partida** con dos colas: **Contra la IA** (el mundo, 90 naciones, la IA según
-  tu liga) y **En línea**, con **emparejamiento automático**
+  de Trinchera): un **vestíbulo de escuadra** (`src/competitivo-ui.js`) con
+  **tu estandarte en el centro** (emblema, marco, título y nivel) y tu
+  **insignia de rango colgando** (rayos, chispas y un destello que la cruza,
+  pintado sobre el metal con `drawBadge(…, { shine })`), la liga y división,
+  la barra de PL, victorias, derrotas y escudo; a los lados, **cuatro huecos
+  para tu escuadra**. Arriba, la cola: **Contra la IA** (el mundo, 90 naciones,
+  la IA según tu liga) o **En línea**, con **emparejamiento automático**
   (`src/emparejamiento.js`): entras en una cola que se anuncia en el vestíbulo
   (el canal de las salas públicas) con tu MMR; manda el que más lleva esperando
   (tras 3 s, para ver a los demás), que elige a los de MMR más parecido (el
@@ -117,10 +119,34 @@ bloquea el navegador.
   los jugadores dentro (aro de cuenta atrás y un punto por plaza): mientras,
   el anfitrión sigue en la cola con su sala y avisa a más gente de rango
   parecido (`planRecruit`), hasta llenarla; al acabar la espera (o al llenarse)
-  la partida empieza sola (si no ha llegado nadie, vuelve a la cola).
-  **Jugar con amigos**: abre una clasificatoria de grupo; invitas a tus amigos
-  (con cuenta, desde la propia sala) y, cuando estéis, «Buscar rivales» la
-  completa con la cola durante 30 s y empieza sola. Las salas clasificatorias
+  la partida empieza sola (si no ha llegado nadie, vuelve a la cola). Abajo,
+  **«Buscar partida»** grande (en el móvil, pegado abajo mientras se ve el
+  vestíbulo).
+  **Escuadra**: pulsa **«+»** en un hueco y se crea (en línea, en la propia
+  página: sin pantalla de sala) una clasificatoria de grupo; la ventana de
+  invitar da el **código y el enlace** (sirve sin cuenta: quien lo abre entra
+  en tu escuadra) y tus **amigos en línea** (con cuenta). Tus amigos aparecen a
+  tu lado con su estandarte, su insignia y una animación al llegar; entrar por
+  una invitación aceptada es directo. El líder pulsa «Buscar partida»: con
+  amigos, la sala se completa con rivales de la cola durante 30 s (se anota
+  quién iba en la escuadra, `info.escuadra`, para no confundirlos con los
+  rivales) y empieza sola; solo, va a la cola normal. Mientras tanto, todos
+  pueden moverse por el menú: un **aviso flotante** dice «Tu escuadra 2/5»,
+  «Buscando rivales 0:12» o «Buscando partida» (con ✕), y la **cuenta atrás**
+  sale encima de cualquier página. «Salir de la escuadra» la deja.
+  **Cómo funcionan los PL**: un bloque con **lo que te daría tu próxima
+  partida** según cómo quedes (barras que salen del centro, calculadas con
+  `previewResults` sobre una copia de tu rango: 1.º, 5.º, 15.º, media tabla y
+  último contra la IA; 1.º a 5.º de 5 y abandonar en línea), tu **siguiente
+  objetivo** (`nextGoal`: «te faltan 50 PL, unas 2 victorias»), tu nivel oculto
+  (`mmrLag`, ±10 PL) y el escudo, y las reglas en fichas (divisiones de 100 PL,
+  escudo, colocación, nivel oculto, qué cuenta, límites, ligas de élite y
+  temporadas). **Insignias** dibujadas en lienzo (`drawBadge`): medallón
+  remachado (Hierro), sol de ocho puntas (Bronce), laureles (Plata y Oro), alas
+  de plumas que crecen (Platino y Diamante), rayos con tiara o corona (Maestro,
+  Gran Maestro y Leyenda), una gema facetada que crece con la liga y la cinta
+  con la división.
+  Las salas clasificatorias
   tienen su propio aspecto de competición: **sin código ni enlace** (se entra
   por la cola o por invitación), jugadores como tarjetas con su insignia de
   rango (animada) y plazas libres que «buscan» con un radar. Lo largo (cómo se
@@ -625,7 +651,7 @@ servidor de salas público.
 
 ## Economía, capital y lugares de interés (doc-1.6 a doc-1.9)
 
-Versión de reglas `doc-2.0` (mapas a `RES` 4 con las fórmulas por superficie; perfiles `clasico-10` y `trinchera-9`; `doc-1.6`
+Versión de reglas `doc-2.0` (mapas a `RES` 4 con las fórmulas por superficie; perfiles `clasico-11` y `trinchera-10` (la capital la funda cada jugador); `doc-1.6`
 trajo la economía, la capital y los lugares; `doc-1.7`, el banco de tropas,
 murallas, afueras y escudo más fuertes, antimisiles mucho más eficaces y
 colonias que no se quedan sin tropas; `doc-1.8`, la capital hasta el nivel 12
@@ -642,8 +668,12 @@ en `src/lugares.js`.
   +232 y medio mundo (~300.000) +1.030 por turno, diez veces el oro base. Las
   colonias, la mitad. Antes el oro pasivo era fijo y con medio mundo apenas se
   ganaba más que al empezar. Regla `taxes` (activada por defecto).
-- **Capital amurallada.** Cada nación (y cada jugador; las colonias no) nace
-  con su capital donde se despliega. Desde `doc-1.7`, mucho más dura:
+- **Capital amurallada.** Cada nación de la IA nace con su capital donde se
+  despliega; **cada jugador la funda él mismo** como un edificio más («Fundar
+  capital», gratis y al momento, donde quiera de su territorio, en cuanto
+  empieza la conquista) y, **hasta tenerla, no puede construir nada** (las
+  colonias no tienen). El punto estratégico de su capital va con ella. Desde
+  `doc-1.7`, mucho más dura:
   **murallas** hasta 10·RES casillas alrededor (antes 7), donde conquistarte
   cuesta ×6 de tiempo y bajas (+0,4 por nivel, y hasta ×1,5 más con el banco
   lleno; antes ×4), y **afueras** hasta 17·RES, a ×2,5 (+0,1 por nivel). Las
@@ -815,7 +845,7 @@ se pintan una vez y se reutilizan.
 | Propuestas | Las que recibes aparecen con Aceptar/Rechazar y caducan a los 15 s. Si te rechazan, debes esperar 1 min para volver a proponer. |
 | Traición | Romper una alianza (pide doble confirmación) te marca como traidor 60 s: conquistarte cuesta ×0,6 y los bots no se fían de ti. |
 | Victoria | Cuatro modos (en las reglas de la partida): **dominación** (el 70 % de la tierra; también 50 o 90 %), **capitales** (controlar el 40 % de todas las capitales durante 60 s), **economía** (ingresar 900.000 de oro por minuto durante 2 min) y **supervivencia** (al acabar el tiempo —20 min si no hay límite— gana la mejor puntuación entre los vivos: territorio, eliminaciones y oro ganado). En todos, también se gana siendo el último en pie o si solo quedan naciones aliadas. La barra superior muestra el objetivo del modo y, si alguien lo cumple, cuánto le falta para ganar. |
-| Puntos estratégicos | Rombos en el mapa, siempre visibles: **capitales** (corona; una por nación, donde se desplegó: conquistar una ajena da 30.000 de oro y su dueño crece un 15 % menos hasta recuperarla; cada capital que controles da +5 % de oro y de crecimiento), **núcleos industriales** (engranaje: +15 % de oro pasivo, con rendimiento decreciente), **puertos clave** (timón: +1 barco de transporte y +25 % de oro de trenes y mercantes) y **pasos de montaña** (picos: conquistar a su alrededor cuesta un 60 % más). Unos 1 por cada 75.000 casillas de tierra (entre 8 y 36), separados y colocados con la semilla. Avisos al tomarlos o perderlos; la IA los busca. |
+| Puntos estratégicos | Rombos en el mapa, siempre visibles: **capitales** (corona; una por nación, donde está su capital amurallada (la de los jugadores, donde la fundan): conquistar una ajena da 30.000 de oro y su dueño crece un 15 % menos hasta recuperarla; cada capital que controles da +5 % de oro y de crecimiento), **núcleos industriales** (engranaje: +15 % de oro pasivo, con rendimiento decreciente), **puertos clave** (timón: +1 barco de transporte y +25 % de oro de trenes y mercantes) y **pasos de montaña** (picos: conquistar a su alrededor cuesta un 60 % más). Unos 1 por cada 75.000 casillas de tierra (entre 8 y 36), separados y colocados con la semilla. Avisos al tomarlos o perderlos; la IA los busca. |
 | Perfiles de reglas | Versionados en `PROFILES` (`src/mecanicas.js`); el id viaja con la partida y se comprueba al empezar una sala. **Clásico** (`clasico-3`, el de Partida rápida y el de los jugadores nuevos): el ritmo de FrontWars, sin puntos estratégicos (ni capitales, ni su botín, ni la victoria por capitales) ni tecnologías/especialización; `paceRegen` 1 (cerrado: cuadra con el HUD de FrontWars a igual reserva y techo), `paceNeutral` **0,25** (la mitad del 0,5 de `clasico-1`, más cercano a FrontWars, porque la expansión inicial iba demasiado rápida) y `pacePvp` **1** (provisional). En el mundo de 3000×1500 con 90 naciones, contando desde que empieza la partida (con los 30 s de despliegue), la tierra ocupada va por ~1 % a los 30 s, ~28 % al minuto, ~74 % al minuto y medio y ~97 % a los 2 minutos; es decir, ~28 %, ~74 % y ~97 % a los 30, 60 y 90 s de juego (con `doc-1.2` las colonias ocupan tierra libre el doble de rápido: a los 30 s de juego tienen ~525 casillas de mediana, frente a ~2.700 de una nación). **Trinchera** (`trinchera-2`): ×0,07 en tierra libre, ×0,5 en guerras y ×0,6 de regeneración, con puntos estratégicos y tecnologías; en el mapa del mundo con 90 naciones la tierra ocupada va por ~7 % al minuto, ~40 % a los 2 y ~95 % a los 4. Las reglas guardadas antes de los perfiles se migran a `trinchera` (el valor histórico) antes de combinarse con los valores por defecto (`migrateRules`). Calibración: `node herramientas/calibrar.js` → `docs/calibracion-clasico.md`. |
 | Cifras en pantalla | Las tropas se muestran **÷ 10** (`TROOP_SCALE` en `src/format.js`), como en el juego de referencia: por dentro siguen siendo las del documento (25.000 al empezar), en pantalla 2.500; el techo con 52 casillas sale como 12,1k y una ciudad suma 25.000. El oro no cambia. |
 | Combate | Del documento (sección 05), con los cambios de `doc-1.2` (versión del motor). **Tierra libre**: presupuesto por turno = 2 × casillas del frente (× ritmo); cada casilla cuesta 2000 × coste ÷ tropas de tiempo, como mucho 100 (coste 16,5 llanura, 20 meseta, 25 montaña); por debajo de 5 (más de ~6.600 tropas en llanura) **más tropas siguen acelerando** con rendimiento decreciente, 5 × √(t ÷ 5), hasta 1,25 (×4, hacia las 100.000 tropas). El coste se recalcula con las tropas que le quedan al ataque: un ejército grande arranca rápido y frena al gastarse. Bajas: magnitud ÷ 2,5 (**32 / 40 / 48**, 3,2 / 4 / 4,8 en pantalla: el doble que el documento). Las **colonias** pagan la mitad (16 / 20 / 24) y van el doble de rápido en tierra libre. Orden de conquista: por distancia al centro del país mezclando la normal y la mayor de |dx|, |dy| (`growSquare` 0,45): crece como un cuadrado de esquinas redondeadas. **Contra otro país**: ratio = tropas del defensor ÷ del ataque; bajas del atacante por casilla = magnitud × traidor × clamp(ratio, 0,6, 2) × (0,463 + 0,0039 × tropas del defensor por casilla); el defensor pierde sus tropas ÷ casillas por cada casilla; cada casilla cuesta speedCost × coste × efectos de defensa ÷ ancho del frente (speedCost = f(ratio) × clamp(ratio ÷ 20, 1, 50) ÷ 8,55, con f = ratio entre 0,82 y 7,5; por debajo de 0,82, es decir con más de 1,22 veces las tropas del defensor, **sigue acelerando**: f = 0,82 × √(ratio ÷ 0,82), hasta ×3 más rápido; las bajas no cambian). **Retirada**: a los 20 turnos; contra otro país se pierde el 25 %. **Cerco**: una bolsa sin costa rodeada por ti (de tierra libre o del defensor) pasa a ser tuya al momento. Para no recorrer cientos de casillas de tierra abierta en cada conquista, a partir de 8 casillas una sonda en línea recta comprueba si la bolsa escapa (al borde, al agua, a otro dueño o por tamaño); da el mismo resultado que el recorrido completo, pero gasta mucho menos, así que el presupuesto del turno ya no se agota y los cercos se resuelven para todas las naciones. Desde `doc-1.5` cada ataque guarda las casillas que conquista y busca cercos alrededor de ellas cada 4 turnos (0,4 s), con su fase propia para que no coincidan todos: lo mismo que antes, pero sin tirones cuando cientos de países crecen a la vez. Los bonus de «imperio grande» del documento no tienen fórmula pública: quedan neutros (×1). Sin órdenes de ataque (rápido, preparado, fortificar ni avance continuo). |

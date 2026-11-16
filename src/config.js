@@ -192,7 +192,7 @@ export const DEFAULT_RULES = {
   coopRoles: false, // con roles: uno el mando militar y otro la economía y la diplomacia
   economy: 'fixed', // 'fixed': oro pasivo fijo (OpenFront moderno) | 'workers': tropas + trabajadores (variante FrontWars)
   profile: 'clasico', // perfil de reglas (src/mecanicas.js, PROFILES): 'clasico' | 'trinchera'
-  capitals: true, // doc-1.6: cada nación nace con su capital amurallada
+  capitals: true, // doc-1.6: cada nación tiene su capital amurallada (la IA nace con ella; los jugadores la fundan)
   taxes: true, // doc-1.6: el territorio produce oro
 };
 /** Perfiles de reglas (ver PROFILES en src/mecanicas.js). Sin perfil = 'trinchera' (valor histórico). */
@@ -265,7 +265,9 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
 export const BUILDINGS = {
   city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+25.000 de techo de tropas por nivel' },
   village: { name: 'Pueblo', fem: false, base: 40000, build: 30, key: 'KeyB', desc: 'Pequeño y barato: +300 de oro/s y +6.000 de techo de tropas por nivel' },
-  // La capital: una por nación, nace con ella (no se construye). Sus mejoras
+  // La capital: una por nación. La IA nace con ella; cada jugador la funda
+  // donde quiere de su territorio (gratis, desde el botón de la capital) y,
+  // hasta entonces, no construye nada más. Sus mejoras
   // se compran desde la barra y se aplican al momento, sin elegir sitio
   capital: { name: 'Capital', fem: true, base: 0, build: 0, key: '', unique: true, desc: 'Amurallada (defensa ×6 dentro y ×2,5 en las afueras), con escudo antimisiles y banco de tropas; las bombas no destruyen lo que hay dentro' },
   // Una sola mejora (doc-1.7): más oro y más sitio en el banco de tropas
@@ -283,7 +285,7 @@ export const BUILDINGS = {
 };
 /** Edificios de verdad (no unidades). */
 export const STRUCTURE_KINDS = ['city', 'village', 'capital', 'port', 'fort', 'factory', 'silo', 'sam'];
-/** Lo que se puede pedir desde la barra (la capital no: nace con la nación). */
+/** Lo que se puede pedir desde la barra (la capital aparte: se funda una vez, con el botón de sus mejoras). */
 export const BUILDING_KINDS = Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].unique);
 /**
  * Grupos de la barra de construcción (los mismos que el Arsenal del inicio).

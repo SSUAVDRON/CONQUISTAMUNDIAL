@@ -2343,6 +2343,14 @@ export class Renderer {
         fx.label(e.x, e.y - 1.6 * RES, `${LUGARES[e.lugar].icon} ${LUGARES[e.lugar].name}`, '#ffe3a1', 13, 2.2);
         continue;
       }
+      if (e.kind === 'capitalFound') {
+        // Capital fundada: estalla en el color de su nación (la tuya, con su rótulo)
+        if (!visible) continue;
+        const p = game.players[e.owner];
+        fx.capture(e.x, e.y, p ? pcss(p) : '#ffd76a');
+        if (game.human && e.owner === game.human.id) fx.label(e.x, e.y - 2 * RES, '🏰 ¡Capital fundada!', '#ffe3a1', 15, 2.6);
+        continue;
+      }
       if (e.kind === 'capitalFall') {
         if (!visible) continue;
         const p = game.players[e.owner];
@@ -2701,6 +2709,26 @@ export class Renderer {
       ctx.strokeStyle = color;
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+    if (kind === 'capital') {
+      // Fundar la capital: sus murallas (línea) y sus afueras (discontinua)
+      const { wall, outer } = game.capitalRadii(null);
+      ctx.beginPath();
+      ctx.arc(sx, sy, outer * camera.zoom, 0, Math.PI * 2);
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.6;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(sx, sy, wall * camera.zoom, 0, Math.PI * 2);
+      ctx.fillStyle = ok ? 'rgba(255, 224, 138, 0.12)' : 'rgba(255, 107, 107, 0.08)';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = ok ? '#ffe08a' : color;
+      ctx.stroke();
     }
     const size = Math.max(18, this._buildingSize());
     ctx.globalAlpha = 0.9;

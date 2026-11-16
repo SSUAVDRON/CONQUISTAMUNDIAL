@@ -6299,3 +6299,10 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
   .cp-fondo-luz::before, .cp-mas-aro, .cp-hueco.entra .cp-hueco-est, .cp-hueco.entra .cp-hueco-rango, .cp-ej-barra, .cp-invitar { animation: none; }
 }
 .cp-yo .cp-comandante > .cp-lider { position: absolute; }
+
+/* Fundar la capital: el botón (y su grupo, en el móvil) late hasta que la tengas */
+#hud .obra.fundar { filter: none; opacity: 1; border-color: rgba(255, 224, 138, 0.9); box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.7), 0 0 18px rgba(233, 185, 85, 0.55); animation: obraFundar 1.6s ease-in-out infinite; }
+#hud .obra.fundar .b-coste { color: #ffe08a; font-weight: 800; }
+#hud:not(.escritorio) .g-tab.fundar { box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.7), 0 0 16px rgba(233, 185, 85, 0.5); animation: obraFundar 1.6s ease-in-out infinite; }
+@keyframes obraFundar { 50% { box-shadow: 0 0 0 2px rgba(255, 224, 138, 0.95), 0 0 26px rgba(233, 185, 85, 0.8); } }
+@media (prefers-reduced-motion: reduce) { #hud .obra.fundar, #hud .g-tab.fundar { animation: none; } }
