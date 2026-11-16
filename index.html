@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="ca3d033 2026-11-16 22:08 UTC">
+<meta name="trinchera-build" content="db2da7e 2026-11-16 22:56 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -6435,6 +6435,133 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
 .opcion-emoji.bloqueada .oe-glifo { filter: grayscale(0.85) opacity(0.55); }
 .opcion-emoji.en-venta .oe-estado { color: var(--oro-claro, #ffe08a); }
 
+/* Móvil, al colocar: una franja de una línea encima del panel (la ficha entera, al mantener pulsado) */
+.ficha.ficha-dock { padding: 6px 6px 6px 7px; max-width: 460px; border-radius: 14px; }
+.ficha.ficha-dock::before { left: 22px; right: 22px; }
+.dock-fila { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dock-fila .ficha-icono { width: 34px; height: 34px; border-radius: 10px; }
+.dock-fila .ficha-icono img { width: 25px; height: 25px; }
+.dock-textos { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.15; }
+.dock-textos strong { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-textos small { font-size: 10.5px; color: var(--texto-2, #b9c2d6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-precio { flex: none; padding: 3px 8px; border-radius: 999px; background: rgba(242, 193, 78, 0.16); border: 1px solid rgba(242, 193, 78, 0.45); color: #ffe08a; font: 800 12px/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.dock-precio.caro { background: rgba(255, 107, 107, 0.14); border-color: rgba(255, 107, 107, 0.5); color: #ffb3b3; }
+.dock-cancelar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.07); color: var(--texto-1, #eef2fa); font: 800 14px/1 system-ui, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dock-cancelar:active { transform: scale(0.94); }
+/* Mientras arrastras un edificio al mapa, la bandeja se aparta */
+#hud.arrastrando-obra .bandeja-obras { opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.12s, transform 0.12s; }
+#hud .obra { touch-action: none; }
+
+/* =====================================================================
+   Pantallas de carga (arranque y partida): estilo de juego móvil, propio.
+   Logo grande que entra con rebote y flota, rayos que giran detrás, una
+   tarjeta gruesa con el consejo y una barra gruesa con rayas y el
+   porcentaje dentro. Sin filas de iconos. Solo transform y opacity en lo
+   que se anima (sigue fluido aunque la carga ocupe el navegador).
+   ===================================================================== */
+.arranque { place-items: stretch center; }
+.arranque .arr-centro { align-self: stretch; justify-content: space-between; gap: 16px; width: min(520px, 100%); max-height: 900px; margin: 0 auto; padding: 5vh 0 2px; }
+.arr-rayos { position: absolute; left: 50%; top: 24%; width: 620px; height: 620px; margin: -310px 0 0 -310px; z-index: -1; pointer-events: none; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255, 207, 102, 0.13) 0deg 7deg, transparent 7deg 20deg); -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 30%, transparent 68%); mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.6) 30%, transparent 68%); animation: rayosGira 48s linear infinite; }
+@keyframes rayosGira { to { transform: rotate(360deg); } }
+.arranque .arr-logo { flex: 1; justify-content: center; gap: 10px; animation: logoPop 0.85s cubic-bezier(0.18, 1.45, 0.4, 1) both; }
+@keyframes logoPop { 0% { opacity: 0; transform: scale(0.35) translateY(40px); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.arranque .arr-logo .logo-marca { width: clamp(108px, 30vw, 150px); height: clamp(108px, 30vw, 150px); filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 30px rgba(255, 196, 80, 0.32)); animation: logoFlota 3.4s 1s ease-in-out infinite; }
+@keyframes logoFlota { 50% { transform: translateY(-7px) rotate(-2.5deg); } }
+.arranque .arr-logo .logo-texto { font-size: clamp(44px, 12vw, 84px); letter-spacing: 0.05em; filter: drop-shadow(2px 0 0 #2b1706) drop-shadow(-2px 0 0 #2b1706) drop-shadow(0 -2px 0 #2b1706) drop-shadow(0 6px 0 rgba(0, 0, 0, 0.55)); }
+.arranque .arr-lema { padding: 5px 14px; border-radius: 999px; background: rgba(4, 8, 18, 0.55); border: 2px solid rgba(255, 211, 107, 0.28); color: #e9eefb; font-size: 10.5px; letter-spacing: 0.18em; }
+.arr-pie { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* Tarjeta del consejo: panel grueso con su pestaña dorada */
+.arranque .arr-consejos, .carga .arr-consejos { position: relative; width: 100%; max-width: 480px; margin: 14px 0 2px; padding: 20px 16px 12px; border-radius: 18px; background: linear-gradient(180deg, #24406f 0%, #182c51 100%); border: 3px solid #070c19; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.16), inset 0 -4px 0 rgba(0, 0, 0, 0.22), 0 6px 0 rgba(0, 0, 0, 0.38), 0 16px 30px rgba(0, 0, 0, 0.35); animation: tarjetaSube 0.6s 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes tarjetaSube { 0% { opacity: 0; transform: translateY(26px) scale(0.92); } 100% { opacity: 1; transform: none; } }
+.arranque .arr-consejos-titulo, .carga .arr-consejos-titulo { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); display: block; padding: 4px 16px 5px; border-radius: 999px; background: linear-gradient(180deg, #ffe7a0 0%, #ffcc55 45%, #d98e1d 100%); border: 2px solid #070c19; color: #3a2207; font: 900 11px/1.15 system-ui, sans-serif; letter-spacing: 0.16em; text-transform: uppercase; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.7); white-space: nowrap; }
+.arranque .arr-tip, .carga .carga-tip { font-size: 14px; font-weight: 600; line-height: 1.4; color: #f1f5ff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); }
+.arranque .arr-tips { min-height: 42px; margin-top: 2px; }
+.carga .carga-tip { margin: 2px 0 0; min-height: 40px; animation: none; }
+.arranque .arr-puntos i { background: rgba(0, 0, 0, 0.35); }
+
+/* Texto del paso, encima de la barra */
+.arranque .arr-paso, .carga .arr-paso { margin: 2px 0 0; min-height: 18px; font: 800 14px/1.2 system-ui, sans-serif; color: #fff; letter-spacing: 0.02em; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55); }
+
+/* Barra gruesa: pista hundida y relleno dorado con rayas que avanzan */
+.arranque .arr-progreso, .carga .arr-progreso { width: 100%; max-width: 480px; display: block; }
+.barra-gruesa { position: relative; width: 100%; height: 30px; flex: none; }
+.barra-gruesa .arr-barra { position: absolute; inset: 0; height: auto; border-radius: 13px; background: linear-gradient(180deg, #050913, #0d1528); border: 3px solid #04070f; box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.65), 0 4px 0 rgba(0, 0, 0, 0.38), 0 0 0 2px rgba(255, 211, 107, 0.28); overflow: hidden; }
+.barra-gruesa .arr-barra::after { display: none; }
+.barra-gruesa .arr-barra span { position: absolute; inset: 0; height: auto; border-radius: 10px; overflow: hidden; transform: translateX(-98%); transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.3, 1); background: linear-gradient(180deg, #fff3c2 0%, #ffd56e 28%, #f5ac2f 62%, #c97812 100%); box-shadow: inset 0 -4px 0 rgba(130, 64, 0, 0.32), inset 0 2px 0 rgba(255, 255, 255, 0.6); }
+.barra-gruesa .arr-barra span::before { content: ""; position: absolute; top: 0; bottom: 0; left: -40px; right: 0; background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.24) 0 9px, transparent 9px 18px); animation: rayasBarra 0.7s linear infinite; }
+@keyframes rayasBarra { to { transform: translateX(25.46px); } }
+.barra-gruesa .barra-punta { inset: 3px 3px; }
+.barra-gruesa .barra-punta::before { width: 26px; height: 26px; margin-top: -13px; right: -13px; }
+.barra-gruesa .barra-punta::after { display: none; }
+.barra-gruesa .arr-pct { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; min-width: 0; text-align: center; font: 900 14px/1 system-ui, sans-serif; color: #fff; letter-spacing: 0.03em; text-shadow: 0 2px 0 #5a3205, 1px 0 0 #5a3205, -1px 0 0 #5a3205, 0 -1px 0 #5a3205; pointer-events: none; }
+
+/* Carga de la partida: escudo, nombre del mapa grande y el campo de batalla enmarcado */
+.carga .carga-centro { width: min(520px, 100%); gap: 14px; }
+.carga .arr-rayos { top: 12%; }
+.carga .carga-cab { flex-direction: column; gap: 6px; animation: logoPop 0.7s cubic-bezier(0.18, 1.45, 0.4, 1) both; }
+.carga .carga-escudo { width: 66px; height: 66px; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 22px rgba(255, 196, 80, 0.3)); animation: logoFlota 3.4s 0.8s ease-in-out infinite; }
+.carga .carga-titulos { text-align: center; }
+.carga .carga-kicker { display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(4, 8, 18, 0.55); border: 2px solid rgba(255, 211, 107, 0.3); color: #ffd36b; font-size: 10.5px; }
+.carga .carga-mapa { margin-top: 6px; font-size: clamp(36px, 10vw, 54px); filter: drop-shadow(2px 0 0 #2b1706) drop-shadow(-2px 0 0 #2b1706) drop-shadow(0 -2px 0 #2b1706) drop-shadow(0 5px 0 rgba(0, 0, 0, 0.55)); }
+.carga .carga-vista { border-radius: 18px; border: 3px solid #04070f; box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.32), 0 6px 0 rgba(0, 0, 0, 0.38), 0 18px 40px rgba(0, 0, 0, 0.45); }
+.carga .arr-pie { gap: 10px; }
+@media (max-height: 640px) {
+  .arranque .arr-logo .logo-marca { width: 84px; height: 84px; }
+  .arranque .arr-logo .logo-texto { font-size: 44px; }
+  .carga .carga-escudo { width: 46px; height: 46px; }
+  .carga .carga-mapa { font-size: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arr-rayos, .barra-gruesa .arr-barra span::before, .arranque .arr-logo .logo-marca, .carga .carga-escudo { animation: none; }
+}
+
+/* =====================================================================
+   Menús en el móvil: más contenido a la vista. Rellenos y márgenes más
+   contenidos, títulos de sección y cifras grandes un punto más pequeños, y
+   las fichas del Arsenal y de los puntos de interés más compactas.
+   ===================================================================== */
+@media (max-width: 600px) {
+  .bloque { padding: 12px 12px 13px; border-radius: 14px; }
+  .bloque h2 { font-size: 16px; gap: 8px; }
+  .bloque h3 { font-size: 14px; }
+  /* Portada: la ilustración ocupa menos y el título baja de tamaño */
+  .heroe-texto { padding: 56px 12px 12px; gap: 6px; }
+  .heroe .portada-titulo { font-size: 24px; }
+  .portada-titulo { font-size: 24px; }
+  /* Competitivo */
+  #pg-comp-h1 { font-size: 20px; }
+  .cp-liga { font-size: 19px; }
+  .cp-meta-tit { font-size: 16px; }
+  .cp-vest-pie { padding: 12px 10px 8px; }
+  /* Iconos de las listas (retos, gestas, diario) */
+  .ev-icono { width: 40px; height: 40px; font-size: 20px; }
+  .reto-icono { font-size: 21px; }
+  .casi-icono { font-size: 20px; }
+  .pg-m-icono { font-size: 17px; }
+  /* Perfil: el estandarte de la ficha, algo más bajo */
+  .fc-estandarte canvas { width: 100px; height: 100px; }
+  /* Arsenal */
+  .arsenal-intro { font-size: 12.5px; line-height: 1.4; }
+  .arsenal-grupo { font-size: 16px; gap: 9px; }
+  .arsenal-grupo small { font-size: 11.5px; }
+  .arsenal-grupo .arsenal-cat-icono { width: 34px; height: 34px; }
+  .arsenal-grupo .arsenal-cat-icono canvas { width: 27px; height: 27px; }
+  .arsenal-vista .arma { padding: 8px 5px 8px; gap: 2px; }
+  .arsenal-vista .arma-dibujo { width: 46px; height: 46px; }
+  .arsenal-vista .arma-dibujo canvas { width: 44px; height: 44px; }
+  .arsenal-vista .arma strong { font-size: 12.5px; }
+  .arsenal-vista .arma-texto { font-size: 11px; line-height: 1.25; }
+  .puntos-rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .punto-ficha { padding: 10px 8px 11px; gap: 4px; }
+  .pf-dibujo canvas { width: 46px; height: 46px; }
+  .punto-ficha strong { font-size: 13px; }
+  .pf-chip { font-size: 11px; padding: 2px 8px; }
+  .punto-ficha p { font-size: 11.5px; line-height: 1.35; }
+  /* Aspecto: los emojis de la tienda, cinco por fila */
+  .selector-emojis { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 6px !important; }
+}
+
 </style>
 <link rel="preload" href="mapas-6c16c49b00a7.json" as="fetch" crossorigin="anonymous">
 </head>
@@ -6484,6 +6611,7 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
       </svg>
     </div>
     <div class="arr-centro">
+      <span class="arr-rayos" aria-hidden="true"></span>
       <div class="logo logo-grande arr-logo" role="img" aria-label="Trinchera">
         <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
           <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
@@ -6495,35 +6623,20 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
         <span class="logo-texto">TRINCHERA</span>
         <span class="arr-lema">Conquista el mundo, casilla a casilla</span>
       </div>
-      <div class="arr-mapa" aria-hidden="true">
-        <canvas id="arr-lienzo" width="480" height="230"></canvas>
-        <span class="arr-velo"><span class="arr-escaner"></span></span>
-        <span class="arr-radar"></span>
-        <div class="arr-pines" id="arr-pines"></div>
-        <span class="arr-brillo-mapa"></span>
-        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
-        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
-      </div>
-      <div class="arr-progreso">
-        <div class="barra-oro" aria-hidden="true">
-          <div class="arr-barra"><span id="arr-progreso"></span></div>
-          <span class="barra-punta" id="arr-punta"></span>
+      <div class="arr-pie">
+        <div class="arr-consejos" id="arr-consejos">
+          <span class="arr-consejos-titulo">Consejo</span>
+          <div class="arr-tips" id="arr-tips"></div>
+          <div class="arr-puntos" id="arr-puntos" aria-hidden="true"></div>
         </div>
-        <b class="arr-pct" id="arr-pct" aria-hidden="true"></b>
-      </div>
-      <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
-      <ol class="arr-pasos insignias" id="arr-pasos" aria-hidden="true" style="--n: 6">
-        <li data-paso="cuartel"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-cuartel"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Cuartel</span></li>
-        <li data-paso="banderas"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-banderas"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Banderas</span></li>
-        <li data-paso="mapa"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-mapa"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Mapa</span></li>
-        <li data-paso="terreno"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-terreno"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Terreno</span></li>
-        <li data-paso="perfil"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-perfil"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Perfil</span></li>
-        <li data-paso="frente"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-frente"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Frente</span></li>
-      </ol>
-      <div class="arr-consejos" id="arr-consejos">
-        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
-        <div class="arr-tips" id="arr-tips"></div>
-        <div class="arr-puntos" id="arr-puntos" aria-hidden="true"></div>
+        <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
+        <div class="arr-progreso">
+          <div class="barra-oro barra-gruesa" aria-hidden="true">
+            <div class="arr-barra"><span id="arr-progreso"></span></div>
+            <span class="barra-punta" id="arr-punta"></span>
+            <b class="arr-pct" id="arr-pct"></b>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -7115,6 +7228,7 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
       </svg>
     </div>
     <div class="carga-centro">
+      <span class="arr-rayos" aria-hidden="true"></span>
       <header class="carga-cab">
         <svg class="carga-escudo" viewBox="0 0 64 64" aria-hidden="true">
           <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
@@ -7134,21 +7248,20 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
         <span class="arr-radar"></span>
         <div class="arr-pines" id="carga-pines"></div>
         <span class="arr-brillo-mapa"></span>
-        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
-        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
       </div>
-      <div class="arr-progreso">
-        <div class="barra-oro" aria-hidden="true">
-          <div class="arr-barra"><span id="carga-progreso"></span></div>
-          <span class="barra-punta" id="carga-punta"></span>
+      <div class="arr-pie">
+        <div class="arr-consejos carga-consejos">
+          <span class="arr-consejos-titulo">Consejo</span>
+          <p id="carga-consejo" class="carga-tip"></p>
         </div>
-        <b class="arr-pct" id="carga-pct" aria-hidden="true"></b>
-      </div>
-      <p id="carga-paso" class="arr-paso carga-paso"></p>
-      <ol class="insignias" id="carga-pasos" aria-hidden="true"></ol>
-      <div class="arr-consejos carga-consejos">
-        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
-        <p id="carga-consejo" class="carga-tip"></p>
+        <p id="carga-paso" class="arr-paso carga-paso"></p>
+        <div class="arr-progreso">
+          <div class="barra-oro barra-gruesa" aria-hidden="true">
+            <div class="arr-barra"><span id="carga-progreso"></span></div>
+            <span class="barra-punta" id="carga-punta"></span>
+            <b class="arr-pct" id="carga-pct"></b>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -7736,7 +7849,7 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "ca3d033 2026-11-16 22:08 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "db2da7e 2026-11-16 22:56 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-6c16c49b00a7.json";</script>
 <script>
 (function () {
@@ -8110,7 +8223,7 @@ desc: 'Calidad de imagen y fluidez del mapa.',
 items: [
 { key: 'calidad', type: 'presets', label: 'Calidad' },
 { key: 'resolucion', type: 'seg', label: 'Resolución del mapa', desc: 'Automática la baja sola si el equipo no llega a ~40 fps y la vuelve a subir si va sobrado.', options: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']] },
-{ key: 'fpsMax', type: 'seg', label: 'Límite de fotogramas', desc: 'Con 30 fps el móvil gasta menos batería y se calienta menos.', options: [[0, 'Sin límite'], [60, '60 fps'], [30, '30 fps']] },
+{ key: 'fpsMax', type: 'seg', label: 'Límite de fotogramas', desc: 'Con 30 fps el móvil gasta menos batería y se calienta menos. En el móvil, «Sin límite» llega como mucho a 60.', options: [[0, 'Sin límite'], [60, '60 fps'], [30, '30 fps']] },
 { key: 'efectosMapa', type: 'toggle', label: 'Animaciones del mapa', desc: 'Olas, brillos, estelas de los barcos, humo y el avance suave del territorio.' },
 { key: 'particulas', type: 'seg', label: 'Partículas', desc: 'Chispas de los frentes, humo y restos de las explosiones.', options: [['alta', 'Muchas'], ['normal', 'Normales'], ['baja', 'Pocas']] },
 { key: 'temblor', type: 'toggle', label: 'Temblor y destellos', desc: 'La cámara tiembla y la pantalla destella con las explosiones cercanas.' },
@@ -9760,7 +9873,8 @@ economyHoldTicks: 1200,
 survivalDefaultMin: 20,
 colonyLandPer: 500 * AREA,
 colonyMax: 300,
-buildingMinDist: 5 * RES,
+buildingMinDist: 3 * RES,
+buildSnap: 3 * RES,
 portSnap: 6 * RES,
 fortRadius: 12 * RES,
 capitalWallRadius: 10 * RES,
@@ -10817,7 +10931,7 @@ return points;
 return { POI_TYPES, POI, placePoints };
 });
 __define('ficha-ui', function () {
-const { BUILD_GROUPS, TICK_MS } = __require('config');
+const { BUILDINGS, BUILD_GROUPS, TICK_MS } = __require('config');
 const { fmtTroops, formatNumber } = __require('format');
 const { buildingCard, minSec } = __require('fichas');
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
@@ -10966,6 +11080,7 @@ el.classList.toggle('debajo', top > r.top);
 _buildingHtml(c, p, mode, check = null) {
 const group = this._group(c.kind);
 const icon = this.iconFor ? this.iconFor(c.kind) : '';
+if (mode === 'dock') return this._dockHtml(c, p, icon);
 const short = p.gold < c.cost && !c.maxed;
 const shortT = c.troops && p.troops < c.troops;
 const price = c.maxed
@@ -11029,6 +11144,27 @@ return `
       ${sheet ? (c.maxed ? how : '') : how}
       ${more}
       ${cancel}`;
+}
+_dockHtml(c, p, icon) {
+const def = BUILDINGS[c.kind] || {};
+const short = p.gold < c.cost && !c.maxed;
+const what = c.kind === 'capital'
+? 'Toca dentro de tu territorio (gratis)'
+: def.unit === 'missile'
+? 'Toca el objetivo enemigo'
+: def.unit === 'ship'
+? 'Toca el mar donde patrullará'
+: def.coastal
+? 'Toca tu costa o arrástralo al mapa'
+: 'Toca tu territorio o arrástralo al mapa';
+const price = c.kind === 'capital' ? 'Gratis' : c.maxed ? 'Máx.' : formatNumber(c.cost);
+return `
+      <div class="dock-fila">
+        <span class="ficha-icono">${icon ? `<img src="${icon}" alt="">` : ''}</span>
+        <span class="dock-textos"><strong>${esc(c.name)}</strong><small>${esc(short ? `Te faltan ${formatNumber(c.cost - p.gold)} de oro` : what)}</small></span>
+        <span class="dock-precio${short ? ' caro' : ''}">${esc(price)}</span>
+        <button type="button" class="dock-cancelar" data-cancelar aria-label="Cancelar">✕</button>
+      </div>`;
 }
 _bonusHtml(b) {
 const bar = b.left != null && b.total ? `<div class="ficha-tiempo"><span style="width:${Math.round(Math.min(1, b.left / b.total) * 100)}%"></span></div><div class="ficha-meta">${ICONS.reloj}Te quedan ${b.left} s</div>` : b.left == null ? '<div class="ficha-meta">Para siempre</div>' : '';
@@ -14286,14 +14422,31 @@ return { ok: true, reason: '', cost };
 snapBuildTile(p, kind, tile) {
 const def = BUILDINGS[kind];
 const map = this.map;
-if (!def || !def.coastal || tile < 0 || tile >= map.size) return tile;
+if (!def || tile < 0 || tile >= map.size || def.unit) return tile;
 const up = this.upgradeTarget(p, kind, tile);
 if (up) return up.tile;
-const free = (t) => map.coastal[t] && this.owner[t] === p.id && !this.buildingNear(t, CONFIG.buildingMinDist);
-if (free(tile)) return tile;
-const R = CONFIG.portSnap;
+if (!def.coastal && this.owner[tile] !== p.id) return tile;
+const R = def.coastal ? CONFIG.portSnap : CONFIG.buildSnap;
+const D = CONFIG.buildingMinDist;
 const x0 = map.x(tile);
 const y0 = map.y(tile);
+const reach = (R + D) * (R + D);
+const near = [];
+for (const b of this.buildings) {
+const bx = map.x(b.tile);
+const by = map.y(b.tile);
+if ((bx - x0) ** 2 + (by - y0) ** 2 < reach) near.push(bx, by, b.kind === 'capital' ? Math.min(D, CONFIG.capitalClearance) : D);
+}
+const free = (t, x, y) => {
+if (this.owner[t] !== p.id || (def.coastal && !map.coastal[t]) || (kind === 'capital' && this.pointAt.has(t))) return false;
+for (let i = 0; i < near.length; i += 3) {
+const dx = near[i] - x;
+const dy = near[i + 1] - y;
+if (dx * dx + dy * dy < near[i + 2] * near[i + 2]) return false;
+}
+return true;
+};
+if (free(tile, x0, y0)) return tile;
 let best = -1;
 let bestD = Infinity;
 for (let dy = -R; dy <= R; dy++) {
@@ -14301,7 +14454,7 @@ for (let dx = -R; dx <= R; dx++) {
 const d = dx * dx + dy * dy;
 if (d > R * R || d >= bestD || !map.inBounds(x0 + dx, y0 + dy)) continue;
 const t = map.index(x0 + dx, y0 + dy);
-if (!free(t)) continue;
+if (!free(t, x0 + dx, y0 + dy)) continue;
 best = t;
 bestD = d;
 }
@@ -16139,7 +16292,7 @@ items: [
 ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
 ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de tierra (52 casillas del documento: 87 de las de ahora, más pequeñas) y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
 ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: ocultar la barra de abajo. I: desarrollo. Y: emojis. Mayús (mantenida): más detalles en las fichas, el tooltip y la clasificación. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
-['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z fundar y luego mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
+['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z fundar y luego mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja (o arrastra el edificio de la bandeja al mapa). Luego, clic en el mapa: si no cabe justo ahí, va al hueco libre más cercano; los círculos rojos marcan lo que ocupa cada edificio. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
 ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
 ],
 },
@@ -16395,6 +16548,7 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Móvil', title: 'Construir es más fácil', text: 'Arrastra un edificio de la bandeja al mapa y suéltalo donde lo quieras. Si tocas un sitio sin hueco, se coloca en el hueco libre más cercano, y los edificios pueden ir más juntos que antes. Al elegir uno sale una franja pequeña en vez de la ficha entera (la ficha, manteniendo pulsado). Además: menús más compactos, pantallas de carga nuevas y el juego va más fluido en el móvil.', art: 0 },
 { tag: 'Partida', title: 'Emojis en la partida', text: 'Pulsa 😀 arriba (o la tecla Y) y manda un emoji a todos: sale en un globo sobre tu nación, también en línea. Desde la ficha de una nación, solo a ella. La IA también contesta y reacciona: se enfada si la atacas, celebra las alianzas y presume al tomar una capital. Hay 10 de serie, más por nivel y por gestas, y 14 en la tienda (Perfil → Aspecto → Emojis).', art: 1 },
 { tag: 'Mapa', title: 'Puntos de interés, más claros', text: 'Los puntos estratégicos vuelven a Partida rápida (capitales, núcleos industriales, puertos clave y pasos de montaña) y hay el triple. Ahora son medallones del color de su tipo con una etiqueta de lo que dan («+15 % oro», «Defensa ×1,6»), y los lugares de interés brillan con su premio. El Arsenal tiene una sección con todos ellos, y también la capital y los pueblos.', art: 2 },
 { tag: 'Perfil', title: 'Tu nombre, tu color y tu bandera', text: 'Tu nombre se escribe en la cabecera del perfil y el color se elige justo al lado. En el emblema puedes poner una bandera eligiéndola por su dibujo: comunidades autónomas, Euskal Herria y sus territorios, la II República, reinos históricos, regiones y casi todos los países del mundo. Y sale contigo en la partida.', art: 0 },
@@ -22371,7 +22525,6 @@ return { rankRow, cleanRankRow, apiIdentity, setApiIdentity, Ladder };
 });
 __define('loading', function () {
 const { mostrar } = __require('movimiento');
-const { flagCss, hasFlag } = __require('icons');
 const { paintMapPreview } = __require('terreno');
 const $ = (id) => document.getElementById(id);
 const TIPS = [
@@ -22418,7 +22571,7 @@ ol.style.setProperty('--avance', String(n > 1 ? Math.min(1, Math.max(0, index) /
 function setBar(bar, tip, pct, f, ms) {
 f = Math.max(0.02, Math.min(1, f));
 for (const el of [bar, tip]) if (el) el.style.transitionDuration = `${ms}ms`;
-bar.style.transform = `scaleX(${f})`;
+bar.style.transform = `translateX(${((f - 1) * 100).toFixed(2)}%)`;
 if (tip) tip.style.transform = `translateX(${((f - 1) * 100).toFixed(2)}%)`;
 pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
 }
@@ -22428,22 +22581,6 @@ if (key) li.dataset.paso = key;
 li.innerHTML = `<span class="ins-medalla"><svg class="ins-ico"><use href="#ico-${icon}"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre"></span>`;
 li.querySelector('.ins-nombre').textContent = name;
 return li;
-}
-function dropPins(layer, pins, span = 1.35) {
-layer.replaceChildren(
-...pins.filter((p) => hasFlag(p.iso)).map((p) => {
-const pin = document.createElement('span');
-pin.className = 'arr-pin';
-pin.style.left = `${(p.x * 100).toFixed(2)}%`;
-pin.style.top = `${(p.y * 100).toFixed(2)}%`;
-pin.style.setProperty('--d', `${(0.2 + p.x * span).toFixed(2)}s`);
-const flag = document.createElement('i');
-flag.className = 'bandera';
-flag.style.cssText = flagCss(p.iso, 18);
-pin.append(flag);
-return pin;
-}),
-);
 }
 function paintPreview(box, loaded) {
 const map = loaded && loaded.map;
@@ -22458,18 +22595,6 @@ $('carga-vista').style.aspectRatio = `${W} / ${H}`;
 const cropH = Math.min(map.height, Math.round((map.width * H) / W));
 const y0 = Math.max(0, Math.round((map.height - cropH) / 2));
 paintMapPreview(canvas, { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: (map.tileKm || 1) * 3, river: map.river, lat: map.lat }, [0, y0, map.width, y0 + cropH]);
-const all = (loaded.countries || []).filter((c) => c.iso && c.tile >= 0 && hasFlag(c.iso)).sort((a, b) => (b.area || 0) - (a.area || 0));
-const pins = [];
-const gap = all.length > 60 ? 0.085 : 0.11;
-for (const c of all) {
-const x = (map.x(c.tile) + 0.5) / map.width;
-const y = (map.y(c.tile) - y0) / cropH;
-if (y < 0.13 || y > 0.97 || x < 0.04 || x > 0.95) continue;
-if (pins.some((p) => Math.hypot(p.x - x, (p.y - y) * (H / W)) < gap)) continue;
-pins.push({ iso: c.iso, x, y });
-if (pins.length >= 22) break;
-}
-dropPins($('carga-pines'), pins, 0.9);
 box.classList.add('con-mapa');
 return true;
 }
@@ -22483,10 +22608,12 @@ const list = $('carga-pasos');
 const text = $('carga-paso');
 $('carga-mapa').textContent = title;
 $('carga-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+if (list) {
 const ICONS = ['terreno', 'banderas', 'frente', 'revista'];
 list.style.setProperty('--n', String(steps.length));
 list.replaceChildren(...steps.map((st, i) => stepBadge(st.name || st.label.replace(/…$/, ''), st.icon || ICONS[i % ICONS.length])));
 markSteps(list, 0);
+}
 box.classList.remove('saliendo', 'listo', 'con-mapa');
 $('carga-pines').replaceChildren();
 setBar(bar, tip, pct, 0.02, 0);
@@ -22585,21 +22712,11 @@ const i = marks.findIndex((li) => li.dataset.paso === key);
 if (i >= 0) markSteps(list, i);
 }
 },
-map(draw, pins = []) {
-try {
-draw($('arr-lienzo'));
-dropPins($('arr-pines'), pins, 1.4);
-box.classList.add('con-mapa');
-this.mapAt = performance.now();
-} catch {
-}
-},
 async done({ minMs = 1800, onOpen = () => {}, tap = null } = {}) {
 this.step('¡A las trincheras!', 1, 300);
 markSteps(list, marks.length);
 box.classList.add('listo');
-const now = performance.now();
-await wait(Math.max(450, minMs - (now - started), this.mapAt ? 1700 - (now - this.mapAt) : 0));
+await wait(Math.max(450, minMs - (performance.now() - started)));
 if (tap) {
 const touch = !!window.matchMedia?.('(pointer: coarse)').matches;
 text.textContent = touch ? 'Toca para entrar' : 'Pulsa en cualquier sitio para entrar';
@@ -22682,7 +22799,7 @@ const { fmtTroops, formatNumber, formatPercent, formatTime } = __require('format
 const { grantAchievement, levelInfo, loadProfile, mergeProfiles, ownedEmojis, recordGame, saveProfile, titleName, nameColorOf } = __require('profile');
 const { bootLoader, withLoading } = __require('loading');
 const { loadMapData } = __require('mapas-carga');
-const { paintMapPreview, paintTerrain } = __require('terreno');
+const { paintTerrain } = __require('terreno');
 const { Account } = __require('cuenta');
 const { AccountUI } = __require('cuenta-ui');
 const { Social } = __require('social');
@@ -22732,12 +22849,14 @@ acc: 0,
 last: performance.now(),
 lastHud: 0,
 hover: { tile: -1, x: 0, y: 0 },
+drag: null,
+buildFail: null,
 buildMode: null,
 endShown: false,
 defeatShown: false,
 recorded: false,
 };
-const quality = { level: 0, slowMs: 0, fastMs: 0, ema: 16.7, drops: 0 };
+const quality = { level: 0, slowMs: 0, fastMs: 0, ema: 16.7, drops: 0, liteMs: 0, lite: false };
 const TOUCH = !!window.matchMedia?.('(pointer: coarse)').matches;
 function dprSteps() {
 const native = Math.min(TOUCH ? 1.5 : 2, window.devicePixelRatio || 1);
@@ -22763,6 +22882,13 @@ quality.slowMs = quality.fastMs = 0;
 resize();
 }
 } else quality.slowMs = 0;
+if (TOUCH && !quality.lite && quality.level >= steps.length - 1 && quality.ema > 30) {
+quality.liteMs += dt;
+if (quality.liteMs > 3000) {
+quality.lite = true;
+applySettings();
+}
+} else quality.liteMs = 0;
 if (quality.ema < 17.5 && quality.level > 0 && quality.drops < 2) {
 quality.fastMs += dt;
 if (quality.fastMs > 20000) {
@@ -22896,9 +23022,13 @@ if (minimap.game === game) minimap.restore();
 ui.repaintIcons();
 };
 state.renderer.setDpr(currentDpr());
+quality.lite = false;
+quality.liteMs = 0;
 applySettings();
 state.acc = 0;
 state.buildMode = null;
+state.drag = null;
+state.buildFail = null;
 state.endShown = false;
 state.defeatShown = false;
 state.recorded = false;
@@ -23127,14 +23257,14 @@ state.renderer.options = {
 badges: a.marcadores !== false,
 emojis: a.emojis !== false,
 pointer: state.pointerOn,
-animations: a.efectosMapa !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+animations: a.efectosMapa !== false && !quality.lite && !matchMedia('(prefers-reduced-motion: reduce)').matches,
 shake: a.temblor !== false,
 vignette: a.vineta !== false,
 names: a.nombres,
 flags: a.banderas !== false,
 nameColor: nameColorOf(profile),
 };
-const P = PARTICLES[a.particulas] || PARTICLES.normal;
+const P = quality.lite ? PARTICLES.baja || PARTICLES.normal : PARTICLES[a.particulas] || PARTICLES.normal;
 state.renderer.fx.max = P.max;
 state.renderer.fx.keep = P.keep;
 state.renderer.lastLabelTime = 0;
@@ -24419,6 +24549,73 @@ return;
 state.buildMode = state.buildMode === kind ? null : kind;
 ui.update(game, human, state.ratio, state.buildMode);
 }
+function placeBuilding(tile, { keep = false } = {}) {
+const { game, human } = state;
+const kind = state.buildMode;
+if (!game || !human || !kind || tile < 0) return false;
+const at = game.snapBuildTile(human, kind, tile);
+const check = game.canBuild(human, kind, at);
+if (!check.ok) {
+state.buildFail = { tile: at, until: performance.now() + 1800 };
+ui.hint(check.reason, 'warn');
+sound.play('error', 0.7, 300);
+return false;
+}
+humanIntent({ type: 'build', tile: at, kind });
+state.buildFail = null;
+if (!keep) state.buildMode = null;
+const m = game.map;
+state.ping = { x: m.x(at) + 0.5, y: m.y(at) + 0.5, t: performance.now(), danger: false, small: true };
+return true;
+}
+const DRAG_LIFT = 56;
+function buildDrag(phase, kind, cx, cy) {
+const { game, human } = state;
+if (phase === 'start') {
+if (state.demo || !game || !human || !human.alive || game.phase !== 'playing') return false;
+if (BUILDINGS[kind]?.unit === 'capital') return false;
+if (needsCapital(game, human)) kind = 'capital';
+state.buildMode = kind;
+state.buildFail = null;
+state.drag = { kind, tile: -1, x: cx, y: cy };
+ui.update(game, human, state.ratio, state.buildMode);
+return true;
+}
+const d = state.drag;
+if (!d) return false;
+const r = canvas.getBoundingClientRect();
+const over = document.elementFromPoint(cx, cy);
+const onMap = over === canvas;
+d.x = cx - r.left;
+d.y = cy - r.top;
+d.tile = onMap ? tileAt(d.x, d.y - DRAG_LIFT) : -1;
+if (phase === 'move') return true;
+state.drag = null;
+if (phase === 'end' && d.tile >= 0) placeBuilding(d.tile);
+else state.buildMode = null;
+if (game && human) ui.update(game, human, state.ratio, state.buildMode);
+return true;
+}
+function dragEdgePan(dt) {
+const d = state.drag;
+if (!d) return;
+const m = 48;
+const v = 420 * Math.min(0.05, dt / 1000);
+let dx = 0;
+let dy = 0;
+if (d.x < m) dx = v;
+else if (d.x > camera.viewW - m) dx = -v;
+if (d.y - DRAG_LIFT < m) dy = v;
+if (dx || dy) {
+camera.pan(dx, dy);
+d.tile = tileAt(d.x, d.y - DRAG_LIFT);
+}
+}
+function buildPreviewTile(now) {
+if (state.drag) return state.drag.tile;
+if (state.buildFail && now < state.buildFail.until) return state.buildFail.tile;
+return TOUCH ? -1 : state.hover.tile;
+}
 const BANK_STEP = 0.25;
 const buildKeys = Object.fromEntries(BUILDING_KINDS.map((k) => [BUILDINGS[k].key, k]));
 const input = new Input(canvas, camera, {
@@ -24427,8 +24624,7 @@ if (state.demo || !state.human || !state.human.alive) return;
 let tile = tileAt(sx, sy);
 if (tile < 0) return;
 if (state.buildMode) {
-humanIntent({ type: 'build', tile, kind: state.buildMode });
-if (!shift) state.buildMode = null;
+placeBuilding(tile, { keep: shift });
 return;
 }
 if (state.game.phase === 'playing') {
@@ -24491,6 +24687,7 @@ onRatio: setRatio,
 onShare: (share) => humanIntent({ type: 'share', share }),
 onBank: bankTroops,
 onUpgradeCapital: () => setBuildMode('capUp'),
+onBuildDrag: buildDrag,
 onSpec: (spec) => humanIntent({ type: 'spec', spec }),
 onResearch: (tech) => humanIntent({ type: 'research', tech }),
 onPact: (id, on) => humanIntent({ type: 'proposePact', targetId: id, on }),
@@ -24548,7 +24745,7 @@ const SIM_SLICE_BEHIND_MS = TOUCH ? 12 : 14;
 const NET_SLICE = { ms: SIM_SLICE_MS, behindMs: SIM_SLICE_BEHIND_MS, catchupMs: 40 };
 function frame(now) {
 requestAnimationFrame(frame);
-const cap = profile.ajustes.fpsMax;
+const cap = profile.ajustes.fpsMax || (TOUCH ? 60 : 0);
 if (cap && now - (state.shownAt || 0) < 1000 / cap - 3) return;
 state.shownAt = now;
 countFps(now);
@@ -24587,7 +24784,8 @@ reportError(err, 'cámara y sonido');
 }
 if (!state.demo) {
 try {
-state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping, spawn: state.spawnPreview });
+dragEdgePan(dt);
+state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: buildPreviewTile(now), ping: state.ping, spawn: state.spawnPreview, dragging: !!state.drag });
 } catch (err) {
 reportError(err, 'dibujo del mapa');
 }
@@ -24782,16 +24980,7 @@ await new Promise((resolve) => setTimeout(resolve, Math.min(8000, 1000 * 2 ** i)
 }
 }
 await paint();
-const { map, countries } = loadRealMap('mundo');
-const cropH = Math.min(map.height, Math.round((map.width * 230) / 480));
-const PIN_ISOS = ['us', 'ca', 'mx', 'br', 'ar', 'gb', 'fr', 'es', 'de', 'ru', 'tr', 'eg', 'ng', 'za', 'sa', 'in', 'cn', 'jp', 'id', 'au'];
-const pins = countries
-.filter((c) => PIN_ISOS.includes(c.iso) && map.y(c.tile) < cropH)
-.map((c) => ({ iso: c.iso, x: (map.x(c.tile) + 0.5) / map.width, y: (map.y(c.tile) + 0.5) / cropH }));
-loader?.map((canvas) => {
-const data = { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: map.tileKm * 3, river: map.river, lat: map.lat };
-paintMapPreview(canvas, data, [0, 0, map.width, cropH]);
-}, pins);
+const { map } = loadRealMap('mundo');
 loader?.step('Pintando relieve, costas y ríos…', 0.66, 1300, 'terreno');
 await paint();
 await paint();
@@ -25700,10 +25889,10 @@ const REAL_MAP_DATA = {"mundo":{"name":"Mundo","w":4000,"h":2000,"lon":[-180,180
 return { REAL_MAP_DATA };
 });
 __define('mecanicas', function () {
-const MECH_VERSION = 'doc-2.0';
+const MECH_VERSION = 'doc-2.1';
 const PROFILES = {
-clasico: { id: 'clasico-12', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: true, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
-trinchera: { id: 'trinchera-10', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
+clasico: { id: 'clasico-13', name: 'Clásico', paceNeutral: 0.25, pacePvp: 1, paceRegen: 1, points: true, techs: false, provisional: ['paceNeutral', 'pacePvp'] },
+trinchera: { id: 'trinchera-11', name: 'Trinchera', paceNeutral: 0.07, pacePvp: 0.5, paceRegen: 0.6, points: true, techs: true, provisional: [] },
 };
 function profileOf(rules) {
 return PROFILES[rules && rules.profile] || PROFILES.trinchera;
@@ -31339,6 +31528,29 @@ const watch = this.anim && this.camera.zoom * RES >= 1.2;
 const glowFrom = this._glow.head;
 const glowOn = this.anim && this.camera.zoom * this.dpr >= 1.2;
 const q = this._q;
+const size = shown.length;
+if (!this._rpMark || this._rpMark.length !== size) {
+this._rpMark = new Uint32Array(size);
+this._rpList = new Int32Array(4096);
+this._rpStamp = 0;
+}
+if (++this._rpStamp > 0xfffffff0) {
+this._rpMark.fill(0);
+this._rpStamp = 1;
+}
+const mark = this._rpMark;
+const stamp = this._rpStamp;
+let rpN = 0;
+const add = (i) => {
+if (i < 0 || i >= size || mark[i] === stamp) return;
+mark[i] = stamp;
+if (rpN >= this._rpList.length) {
+const a = new Int32Array(this._rpList.length * 2);
+a.set(this._rpList);
+this._rpList = a;
+}
+this._rpList[rpN++] = i;
+};
 let pending = 0;
 for (let r = 0; r < runs; r++) {
 const a = this._runA[r];
@@ -31351,20 +31563,20 @@ const o = owner[t];
 const was = shown[t];
 if (o === was) continue;
 shown[t] = o;
-this._repaint(t);
-this._repaint(t - 1);
-this._repaint(t + 1);
-this._repaint(t - W);
-this._repaint(t + W);
-this._repaint(t - W - 1);
-this._repaint(t - W + 1);
-this._repaint(t + W - 1);
-this._repaint(t + W + 1);
+add(t);
+add(t - 1);
+add(t + 1);
+add(t - W);
+add(t + W);
+add(t - W - 1);
+add(t - W + 1);
+add(t + W - 1);
+add(t + W + 1);
 if (this.ts === 1) {
-this._repaint(t - 2);
-this._repaint(t + 2);
-this._repaint(t - 2 * W);
-this._repaint(t + 2 * W);
+add(t - 2);
+add(t + 2);
+add(t - 2 * W);
+add(t + 2 * W);
 }
 const x = t % W;
 const y = (t / W) | 0;
@@ -31378,6 +31590,12 @@ this._runD[r] = Math.max(this._runD[r], target);
 pending += len - this._runD[r];
 }
 if (!pending) this._runN = 0;
+const list = this._rpList;
+for (let j = 0; j < rpN; j++) {
+const i = list[j];
+this._paintTile(i);
+this._markChunk(i % W, (i / W) | 0);
+}
 const g = this._glow;
 for (let j = glowFrom; j !== g.head; j = (j + 1) % GLOW_N) {
 const t = g.t[j];
@@ -31813,6 +32031,7 @@ this._drawAttackBadges();
 this._drawEmojis();
 if (game.phase === 'spawn' && overlay.spawn) this._drawSpawnZone(overlay.spawn);
 if (game.phase === 'spawn') this._drawSpawnMarker(now);
+if (overlay.buildMode) this._drawBuildZones(overlay.buildMode);
 if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
 if (overlay.ping) this._drawPing(now, overlay.ping);
 }
@@ -32159,16 +32378,30 @@ this.ctx.drawImage(spr, Math.round(x - w / 2), Math.round(y), w, h);
 return h;
 }
 _markerName(text, x, y, color = '#ffe3a1') {
-const { ctx } = this;
-ctx.font = '800 10.5px system-ui, sans-serif';
-ctx.textAlign = 'center';
-ctx.textBaseline = 'top';
-ctx.lineJoin = 'round';
-ctx.lineWidth = 3;
-ctx.strokeStyle = 'rgba(10, 14, 24, 0.85)';
-ctx.fillStyle = color;
-ctx.strokeText(text, x, y);
-ctx.fillText(text, x, y);
+const key = `name|${text}|${color}|${this.dpr}`;
+this._sprites ??= new Map();
+let c = this._sprites.get(key);
+if (!c) {
+if (this._sprites.size > 600) this._sprites.clear();
+const d = this.dpr;
+const font = `800 ${10.5 * d}px system-ui, sans-serif`;
+const m = makeCanvas(1, 1).getContext('2d');
+m.font = font;
+const w = Math.ceil(m.measureText(text).width + 6 * d);
+c = makeCanvas(w, Math.ceil(16 * d));
+const g = c.getContext('2d');
+g.font = font;
+g.textAlign = 'center';
+g.textBaseline = 'top';
+g.lineJoin = 'round';
+g.lineWidth = 3 * d;
+g.strokeStyle = 'rgba(10, 14, 24, 0.85)';
+g.fillStyle = color;
+g.strokeText(text, w / 2, 1.5 * d);
+g.fillText(text, w / 2, 1.5 * d);
+this._sprites.set(key, c);
+}
+this._blitChip(c, x, y - 1.5);
 }
 _drawLugares(now) {
 const { ctx, game, camera } = this;
@@ -33006,6 +33239,34 @@ ctx.strokeText(note, sx, sy - 30);
 ctx.fillStyle = '#ffffff';
 ctx.fillText(note, sx, sy - 30);
 }
+_drawBuildZones(kind) {
+const def = BUILDINGS[kind];
+if (!def || def.unit) return;
+const { ctx, game, camera } = this;
+const map = game.map;
+const z = camera.zoom;
+const R = CONFIG.buildingMinDist * z;
+if (R < 7) return;
+const capR = Math.min(CONFIG.buildingMinDist, CONFIG.capitalClearance) * z;
+ctx.beginPath();
+let any = false;
+for (const b of game.buildings) {
+const r = b.kind === 'capital' ? capR : R;
+const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+if (sx < -r || sy < -r || sx > camera.viewW + r || sy > camera.viewH + r) continue;
+ctx.moveTo(sx + r, sy);
+ctx.arc(sx, sy, r, 0, Math.PI * 2);
+any = true;
+}
+if (!any) return;
+ctx.fillStyle = 'rgba(255, 92, 92, 0.10)';
+ctx.fill();
+ctx.setLineDash([4, 4]);
+ctx.lineWidth = 1.2;
+ctx.strokeStyle = 'rgba(255, 140, 140, 0.55)';
+ctx.stroke();
+ctx.setLineDash([]);
+}
 _drawBuildPreview(kind, tile) {
 const { ctx, game, camera } = this;
 const human = game.human;
@@ -33104,6 +33365,21 @@ const size = Math.max(18, this._buildingSize());
 ctx.globalAlpha = 0.9;
 drawBuildingReal(ctx, kind, sx, sy, size, { ring: color });
 ctx.globalAlpha = 1;
+if (!check.upgrade) {
+const def = BUILDINGS[kind];
+const text = ok ? (check.cost ? `${def.short || def.name} · ${formatNumber(check.cost)}` : def.short || def.name) : String(check.reason || 'Aquí no').replace(/^Demasiado cerca de otro edificio.*$/, 'Sin hueco: hay otro edificio al lado');
+ctx.font = '800 11px system-ui, sans-serif';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+const w = Math.min(camera.viewW - 16, ctx.measureText(text).width + 14);
+const top = sy - size * 0.5 - 24;
+ctx.beginPath();
+ctx.roundRect(sx - w / 2, top, w, 18, 9);
+ctx.fillStyle = ok ? 'rgba(20, 110, 62, 0.94)' : 'rgba(150, 36, 36, 0.94)';
+ctx.fill();
+ctx.fillStyle = '#fff';
+ctx.fillText(text, sx, top + 9.5, w - 8);
+}
 if (check.upgrade) {
 ctx.font = '800 12px system-ui, sans-serif';
 ctx.textAlign = 'center';
@@ -33441,7 +33717,7 @@ _front(atk) {
 if (!atk.inFrontier.size) return null;
 const tick = this.game.ticks;
 let f = this._attackFronts.get(atk);
-if (!f || f.tick !== tick) {
+if (!f || tick - f.tick >= 3 || tick < f.tick) {
 const W = this.game.map.width;
 const n = atk.inFrontier.size;
 const stride = Math.max(1, Math.ceil(n / 160));
@@ -36758,13 +37034,45 @@ btn.addEventListener('pointerdown', (e) => {
 if (e.pointerType === 'mouse') return;
 clearTimeout(this._pressTimer);
 this._pressedKind = null;
+this._drag = { kind, id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false };
 this._pressTimer = setTimeout(() => {
-if (!this._game || !this._human) return;
+if (!this._game || !this._human || this._drag?.active) return;
 this._pressedKind = kind;
 this._ficha.showBuilding(this._game, this._human, kind, btn, 'press');
 }, 420);
 });
-for (const ev of ['pointerup', 'pointercancel']) btn.addEventListener(ev, () => clearTimeout(this._pressTimer));
+btn.addEventListener('pointermove', (e) => {
+const d = this._drag;
+if (!d || d.id !== e.pointerId || d.kind !== kind) return;
+if (!d.active) {
+if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 14) return;
+clearTimeout(this._pressTimer);
+if (this._ficha.cur?.mode === 'press') this._ficha.hide();
+if (this.handlers.onBuildDrag?.('start', kind, e.clientX, e.clientY) !== true) {
+this._drag = null;
+return;
+}
+d.active = true;
+this._pressedKind = kind;
+try {
+btn.setPointerCapture(e.pointerId);
+} catch {}
+$('hud').classList.add('arrastrando-obra');
+}
+this.handlers.onBuildDrag?.('move', kind, e.clientX, e.clientY);
+});
+const endDrag = (e, phase) => {
+clearTimeout(this._pressTimer);
+const d = this._drag;
+if (!d || d.id !== e.pointerId) return;
+this._drag = null;
+if (!d.active) return;
+$('hud').classList.remove('arrastrando-obra');
+this.handlers.onBuildDrag?.(phase, kind, e.clientX, e.clientY);
+this.openGroup(null);
+};
+btn.addEventListener('pointerup', (e) => endDrag(e, 'end'));
+btn.addEventListener('pointercancel', (e) => endDrag(e, 'cancel'));
 btn.addEventListener('contextmenu', (e) => e.preventDefault());
 list.append(btn);
 this._buildButtons.set(kind, btn);
