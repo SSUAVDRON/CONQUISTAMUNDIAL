@@ -7,6 +7,7 @@
 //
 // Si no hay ninguno, el rango se queda en el perfil (solo local).
 import { inPlacement } from './rangos.js';
+import { cleanFlag } from './config.js';
 import { titleName } from './profile.js';
 
 const API = 'api/rangos.php';
@@ -41,7 +42,7 @@ export function cleanRankRow(id, d) {
     nombre: String((d && d.nombre) || 'Jugador').slice(0, 18),
     titulo: String((d && d.titulo) || '').slice(0, 24),
     color: hex(d && d.color),
-    emblema: { shape: word(e.shape, 'escudo'), symbol: word(e.symbol, 'estrella'), bg: hex(e.bg), fg: hex(e.fg), flag: typeof e.flag === 'string' && /^[a-z]{2,3}$/.test(e.flag) ? e.flag : '' },
+    emblema: { shape: word(e.shape, 'escudo'), symbol: word(e.symbol, 'estrella'), bg: hex(e.bg), fg: hex(e.fg), flag: cleanFlag(e.flag) },
     puntos: num(d && d.puntos, 5000),
     partidas: num(d && d.partidas),
     victorias: num(d && d.victorias),

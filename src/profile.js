@@ -3,7 +3,7 @@
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
 import { SETTINGS_DEFAULTS, normalizeSettingsExtra } from './ajustes.js';
-import { DEFAULT_RULES, migrateRules } from './config.js';
+import { DEFAULT_RULES, cleanFlag, migrateRules } from './config.js';
 import { normalizeConfig } from './configurador.js';
 import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS } from './skins.js';
 import { newRank, normalizeRank, splitRanks } from './rangos.js';
@@ -456,7 +456,7 @@ export function defaultProfile() {
 
 /** Emblema válido: la bandera, solo si es un código de país (2-3 letras). */
 function cleanEmblem(e) {
-  e.flag = typeof e.flag === 'string' && /^[a-z]{2,3}$/.test(e.flag) ? e.flag : '';
+  e.flag = cleanFlag(e.flag);
   return e;
 }
 

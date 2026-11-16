@@ -262,6 +262,17 @@ export const EMOJIS = ['👍', '👎', '🤝', '😠', '😂', '😢', '🔥', '
  * Tipos de edificio. `base`: precio sin inflación; `build`: ticks de obra
  * (100 ms cada uno); `fixed`: precio fijo, sin inflación.
  */
+/**
+ * Bandera de un emblema: un país («es»), una comunidad o subdivisión
+ * («es-ct», «gb-sct») o una bandera regional o histórica («eus-bi»,
+ * «his-rep2», «reg-bre»). Se valida igual en el perfil, en las salas y en la
+ * tabla; si no está en esta versión del juego, simplemente no se dibuja.
+ */
+export const FLAG_ID = /^[a-z]{2,3}(-[a-z0-9]{2,5})?$/;
+export function cleanFlag(v) {
+  return typeof v === 'string' && FLAG_ID.test(v) ? v : '';
+}
+
 export const BUILDINGS = {
   city: { name: 'Ciudad', fem: true, base: 125000, build: 50, key: 'KeyQ', desc: '+25.000 de techo de tropas por nivel' },
   village: { name: 'Pueblo', fem: false, base: 40000, build: 30, key: 'KeyB', desc: 'Pequeño y barato: +300 de oro/s y +6.000 de techo de tropas por nivel' },

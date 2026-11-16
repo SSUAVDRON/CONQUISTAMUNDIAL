@@ -12,7 +12,7 @@ import { paintMapPreview } from './terreno.js';
 import { CoverArt } from './portada.js';
 import { drawHeroScene, drawModeArt, drawNewsArt } from './ilustraciones.js';
 import { hexToRgb } from './colors.js';
-import { PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame } from './icons.js';
+import { FLAG_CATALOG, PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame, flagCss, flagName } from './icons.js';
 import { drawTransport, drawWarship } from './barcos.js';
 import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
@@ -583,6 +583,15 @@ export function rulesSummary(r) {
   return parts.join(' · ');
 }
 
+/** Pestañas del selector de banderas del emblema (los grupos del catálogo; «org» va con los países). */
+const FLAG_GROUPS = [
+  ['es', 'Comunidades'],
+  ['eus', 'Euskal Herria'],
+  ['his', 'Históricas'],
+  ['reg', 'Regiones'],
+  ['pais', 'Países'],
+];
+
 /** Máximo de bots en un mapa real: uno por país disponible. */
 /** Máximo de naciones rivales en cualquier mapa (en los reales, las que pasen de los países son inventadas). */
 const MAX_BOTS = 200;
@@ -590,16 +599,6 @@ function maxBotsFor() {
   return MAX_BOTS;
 }
 
-/** Países de los mapas reales (sin repetir), por nombre: para elegir su bandera como emblema. */
-let countryCache = null;
-function countryList() {
-  if (!countryCache) {
-    const seen = new Map();
-    for (const m of Object.values(REAL_MAP_DATA)) for (const c of m.countries) if (c[3] && !seen.has(c[3])) seen.set(c[3], c[0]);
-    countryCache = [...seen].sort((a, b) => a[1].localeCompare(b[1], 'es'));
-  }
-  return countryCache;
-}
 
 /** «1:05» a partir de milisegundos. */
 function clock(ms) {
@@ -914,14 +913,24 @@ export class Home {
       this.profile.nombre = $('in-nombre').value.trim().slice(0, 18);
       this._profileChangedSoon();
     });
+    // Intro o Esc: listo (sale del campo)
+    $('in-nombre').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === 'Escape') $('in-nombre').blur();
+    });
     $('in-color').addEventListener('input', () => {
       this.profile.color = $('in-color').value;
+      $('tp-color').style.setProperty('--c', this.profile.color);
       this._profileChangedSoon();
     });
-    $('in-bandera').addEventListener('change', () => {
-      this.profile.emblema.flag = $('in-bandera').value;
-      this._profileChanged();
+    // El punto de color de la cabecera abre (y cierra) la paleta del territorio
+    $('tp-color').addEventListener('click', () => this._toggleColors());
+    document.addEventListener('pointerdown', (e) => {
+      if ($('tp-colores').hidden || e.target.closest?.('#tp-colores, #tp-color')) return;
+      this._toggleColors(false);
     });
+    // Bandera del emblema: pestañas por grupo y buscador (sin tildes ni mayúsculas)
+    this._flagGroup = null;
+    $('in-bandera-buscar').addEventListener('input', () => this._renderFlagPicker());
     $('in-emb-fondo').addEventListener('input', () => {
       this.profile.emblema.bg = $('in-emb-fondo').value;
       this._profileChanged();
@@ -1512,6 +1521,12 @@ export class Home {
 
   // ------------------------------------------------------ tarjeta y aspecto
 
+  /** Paleta del color del territorio bajo tu nombre (abrir, cerrar o alternar). */
+  _toggleColors(open = $('tp-colores').hidden) {
+    $('tp-colores').hidden = !open;
+    $('tp-color').setAttribute('aria-expanded', String(open));
+  }
+
   /** Tarjeta de perfil: estandarte, emblema con marco, nombre, título y nivel. */
   renderCard() {
     const p = this.profile;
@@ -1521,8 +1536,9 @@ export class Home {
     ctx.clearRect(0, 0, c.width, c.height);
     drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.62);
     drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.62);
-    $('tp-nombre').textContent = p.nombre || 'Sin nombre';
-    $('tp-nombre').style.color = nameColorOf(p);
+    if (document.activeElement !== $('in-nombre')) $('in-nombre').value = p.nombre || '';
+    $('in-nombre').style.color = nameColorOf(p);
+    $('tp-color').style.setProperty('--c', p.color);
     $('tp-titulo').textContent = titleName(p) || 'Recluta';
     const info = levelInfo(p.xp);
     $('tp-nivel').textContent = String(info.level);
@@ -2839,14 +2855,11 @@ export class Home {
     const p = this.profile;
     if (document.activeElement !== $('in-nombre')) $('in-nombre').value = p.nombre;
     $('in-color').value = p.color;
+    $('tp-color').style.setProperty('--c', p.color);
     $('in-emb-fondo').value = p.emblema.bg;
     $('in-emb-figura').value = p.emblema.fg;
 
-    const flags = $('in-bandera');
-    if (!flags.options.length) {
-      flags.replaceChildren(el('option', { value: '', text: 'Ninguna (forma y símbolo)' }), ...countryList().map(([iso, name]) => el('option', { value: iso, text: name })));
-    }
-    flags.value = p.emblema.flag || '';
+    this._renderFlagPicker();
 
     this._renderSelector($('sel-formas'), SHAPES, p.emblema.shape, (item) => ({ ...p.emblema, shape: item.id }), (id) => {
       p.emblema.shape = id;
@@ -2857,6 +2870,61 @@ export class Home {
     this._decorateCollection($('sel-formas'));
     this._decorateCollection($('sel-simbolos'));
     this._applyColFilter();
+  }
+
+  /**
+   * Bandera como emblema: una rejilla de banderas (no de nombres), por
+   * grupos (comunidades, Euskal Herria, históricas, regiones y países) o lo
+   * que se busque. El nombre, al pasar el ratón y arriba la elegida.
+   */
+  _renderFlagPicker() {
+    const box = $('bandera-rejilla');
+    if (!box) return;
+    const cur = this.profile.emblema.flag || '';
+    const groups = FLAG_GROUPS;
+    if (!this._flagGroup) {
+      // Se abre por el grupo de la bandera que llevas (o por las comunidades)
+      const g = (FLAG_CATALOG.find(([id]) => id === cur) || [])[2] || 'es';
+      this._flagGroup = g === 'org' ? 'pais' : g;
+    }
+    const fold = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const q = fold($('in-bandera-buscar').value.trim());
+    // Pestañas (se apagan mientras se busca)
+    const tabs = $('bandera-grupos');
+    if (!tabs.children.length) {
+      tabs.replaceChildren(
+        ...groups.map(([id, name]) =>
+          el('button', { type: 'button', role: 'tab', 'data-grupo': id, text: name, onclick: () => {
+            this._flagGroup = id;
+            $('in-bandera-buscar').value = '';
+            this._renderFlagPicker();
+          } }),
+        ),
+      );
+      teclasGrupo(tabs, '[role="tab"]');
+    }
+    for (const b of tabs.children) b.setAttribute('aria-selected', String(!q && b.dataset.grupo === this._flagGroup));
+    tabs.classList.toggle('buscando', !!q);
+    const list = FLAG_CATALOG.filter(([id, name, g]) => (q ? fold(name).includes(q) || id === q : g === this._flagGroup || (this._flagGroup === 'pais' && g === 'org')));
+    const pick = (id) => {
+      this.profile.emblema.flag = id;
+      this._profileChanged();
+    };
+    const option = (id, name) => {
+      const b = el('button', { type: 'button', role: 'option', class: `bandera-opcion${id === cur ? ' elegida' : ''}`, 'aria-selected': String(id === cur), title: name, 'aria-label': name, onclick: () => pick(id) });
+      if (id) b.append(el('i', { class: 'bandera', style: flagCss(id, 48), 'aria-hidden': 'true' }));
+      else b.append(el('span', { class: 'bandera-ninguna', 'aria-hidden': 'true', text: '∅' }));
+      return b;
+    };
+    const items = list.map(([id, name]) => option(id, name));
+    box.replaceChildren(...(q ? [] : [option('', 'Sin bandera (forma y símbolo)')]), ...items);
+    if (q && !items.length) box.append(el('p', { class: 'nota', text: 'No hay ninguna bandera con ese nombre.' }));
+    // La elegida, con su nombre y para quitarla
+    $('bandera-actual').replaceChildren(
+      ...(cur
+        ? [el('i', { class: 'bandera', style: flagCss(cur, 20), 'aria-hidden': 'true' }), el('strong', { text: flagName(cur) || cur }), el('button', { type: 'button', class: 'btn-mini', text: 'Quitar', onclick: () => pick('') })]
+        : [el('small', { text: 'Ninguna: se ven la forma y el símbolo' })]),
+    );
   }
 
   _renderSelector(box, items, current, preview, apply) {

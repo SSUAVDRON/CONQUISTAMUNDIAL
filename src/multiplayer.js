@@ -6,7 +6,7 @@
 // "turno". Los invitados avanzan solo cuando tienen el turno siguiente. Los
 // mensajes pueden perderse: los invitados piden reenvíos y repiten sus
 // acciones hasta verlas confirmadas en un turno.
-import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from './config.js';
+import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanFlag, cleanRules } from './config.js';
 import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
 import { cleanSkins } from './skins.js';
@@ -261,7 +261,7 @@ function cleanPlayer(raw) {
   return {
     name: String(p.name || 'Jugador').replace(/[\u0000-\u001f]/g, '').slice(0, 18) || 'Jugador',
     color: hex(p.color, '#888888'),
-    emblem: { shape: word(e.shape, 'escudo'), symbol: word(e.symbol, 'estrella'), bg: hex(e.bg, '#888888'), fg: hex(e.fg, '#ffffff'), flag: typeof e.flag === 'string' && /^[a-z]{2,3}$/.test(e.flag) ? e.flag : '' },
+    emblem: { shape: word(e.shape, 'escudo'), symbol: word(e.symbol, 'estrella'), bg: hex(e.bg, '#888888'), fg: hex(e.fg, '#ffffff'), flag: cleanFlag(e.flag) },
     pattern: word(p.pattern, 'liso'),
     level: Number.isFinite(p.level) ? Math.max(1, Math.min(999, Math.floor(p.level))) : 1,
     title: String(p.title || '').slice(0, 24),

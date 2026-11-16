@@ -13,6 +13,7 @@
       "./src/ajustes-ui.js": "./src/ajustes-ui.js?v=3f8dc8f766",
       "./src/ajustes.js": "./src/ajustes.js?v=c5ddbaf87a",
       "./src/attack.js": "./src/attack.js?v=43652095f7",
+      "./src/banderas-extra.js": "./src/banderas-extra.js?v=1722e94924",
       "./src/banderas.js": "./src/banderas.js?v=079a0c12a9",
       "./src/barcos.js": "./src/barcos.js?v=c1385c50b7",
       "./src/bot.js": "./src/bot.js?v=657e8ff174",
@@ -21,7 +22,7 @@
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=d1eab0f290",
       "./src/competitivo-ui.js": "./src/competitivo-ui.js?v=7313dda813",
-      "./src/config.js": "./src/config.js?v=2669807c44",
+      "./src/config.js": "./src/config.js?v=548a29974b",
       "./src/configurador.js": "./src/configurador.js?v=7075597e43",
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=c42820ffba",
       "./src/cuenta.js": "./src/cuenta.js?v=23ae310e71",
@@ -37,12 +38,12 @@
       "./src/game.js": "./src/game.js?v=f06ae58fb8",
       "./src/guia.js": "./src/guia.js?v=c25aeaab82",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=c7ceb332a3",
-      "./src/icons.js": "./src/icons.js?v=72c24ddc2d",
+      "./src/home.js": "./src/home.js?v=a2d76c9e4e",
+      "./src/icons.js": "./src/icons.js?v=301dfec96f",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=03eed180fc",
-      "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
+      "./src/ladder.js": "./src/ladder.js?v=fae0703183",
       "./src/loading.js": "./src/loading.js?v=a6d871f13d",
       "./src/lugares.js": "./src/lugares.js?v=4a2b8221d0",
       "./src/main.js": "./src/main.js?v=e66de81299",
@@ -53,7 +54,7 @@
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ab2918104e",
       "./src/mqtt.js": "./src/mqtt.js?v=25e77d24f7",
-      "./src/multiplayer.js": "./src/multiplayer.js?v=56e6a664cf",
+      "./src/multiplayer.js": "./src/multiplayer.js?v=19a88e9f45",
       "./src/musica.js": "./src/musica.js?v=1c7e053d4e",
       "./src/names.js": "./src/names.js?v=a3419d11bb",
       "./src/net.js": "./src/net.js?v=4c4fd542c2",
@@ -61,7 +62,7 @@
       "./src/player.js": "./src/player.js?v=38b65c9db6",
       "./src/portada.js": "./src/portada.js?v=92e46a1eb5",
       "./src/presentacion.js": "./src/presentacion.js?v=c8fb35cdb1",
-      "./src/profile.js": "./src/profile.js?v=dfe5d9a3a0",
+      "./src/profile.js": "./src/profile.js?v=c495c86f1c",
       "./src/rangos.js": "./src/rangos.js?v=eca497afe9",
       "./src/render.js": "./src/render.js?v=9739c725aa",
       "./src/repeticion.js": "./src/repeticion.js?v=5d726656a5",
@@ -84,7 +85,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=9df84ce05f">
+  <link rel="stylesheet" href="css/estilo.css?v=ff5d73e642">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo, siluetas e iconos de las pantallas de carga) -->
@@ -515,7 +516,17 @@
               </div>
               <div class="fc-nombre-caja">
                 <span class="tp-titulo" id="tp-titulo"></span>
-                <strong class="tp-nombre" id="tp-nombre"></strong>
+                <!-- Tu nombre y el color de tu territorio se cambian aquí mismo -->
+                <div class="tp-nombre-fila">
+                  <button type="button" class="tp-color" id="tp-color" aria-expanded="false" aria-controls="tp-colores" title="Color de tu territorio"><span class="tp-color-punto" aria-hidden="true"></span><span class="sr-only">Color de tu territorio</span></button>
+                  <label class="tp-nombre-campo"><span class="sr-only">Tu nombre</span><input class="tp-nombre" id="in-nombre" maxlength="18" placeholder="Escribe tu nombre" spellcheck="false" autocomplete="off" enterkeyhint="done"></label>
+                  <svg class="tp-lapiz" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.8 2.6 13.4 5.2 5.6 13 2.6 13.4 3 10.4zM9.5 3.9l2.6 2.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="tp-colores" id="tp-colores" hidden>
+                  <small>Color de tu territorio</small>
+                  <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
+                  <label class="tp-color-otro"><input id="in-color" type="color" value="#2f7dff"><span>Otro color…</span></label>
+                </div>
                 <div class="tp-chapas"><span id="tp-chapas-social" class="tp-chapas-g"></span><span id="tp-chapas-liga" class="tp-chapas-g"></span></div>
               </div>
               <div class="fc-nivel" title="Nivel y experiencia">
@@ -533,13 +544,7 @@
               <div id="estadisticas" class="est-fichas"></div>
             </div>
             <div class="bloque rpg-panel">
-              <h2>Tu nación</h2>
-              <label class="campo"><span>Nombre de tu nación</span>
-                <input id="in-nombre" maxlength="18" placeholder="Mi nación">
-              </label>
-              <label class="campo campo-color"><span>Color del territorio</span><input id="in-color" type="color" value="#2f7dff"></label>
-              <div class="muestras" id="mu-color" data-campo="in-color" role="group" aria-label="Colores rápidos"></div>
-              <button type="button" class="enlace-ini" id="ir-aspecto">Emblema, marco, estandarte y más en «Aspecto» <span aria-hidden="true">›</span></button>
+              <h2>Cuenta</h2>
               <p id="nota-nube" class="nota"></p>
               <div id="perfil-cuenta" class="perfil-cuenta" hidden>
                 <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 12.5 h7.2 a2.8 2.8 0 0 0 0.3 -5.6 a4 4 0 0 0 -7.6 -0.6 a3.1 3.1 0 0 0 0.1 6.2 z" fill="currentColor"/></svg></span>
@@ -549,6 +554,7 @@
                 </div>
                 <div class="pc-botones" id="pc-botones"></div>
               </div>
+              <button type="button" class="enlace-ini" id="ir-aspecto">Emblema, bandera, marco, estandarte y más en «Aspecto» <span aria-hidden="true">›</span></button>
             </div>
           </div>
           <div class="bloque rpg-panel perfil-clasif">
@@ -589,7 +595,14 @@
             <div class="aspecto-opciones">
               <div class="bloque rpg-panel col-bloque" data-col="emblema">
                 <h2>Emblema</h2>
-                <label class="campo"><span>Bandera de un país como emblema</span><select id="in-bandera"></select></label>
+                <!-- Bandera como emblema: países, comunidades, Euskal Herria, históricas y regiones (también sale contigo en la partida) -->
+                <div class="campo campo-banderas">
+                  <div class="bandera-cab"><span>Bandera como emblema</span><span class="bandera-actual" id="bandera-actual"></span></div>
+                  <input id="in-bandera-buscar" class="bandera-buscar" type="search" placeholder="Buscar país, comunidad o región…" aria-label="Buscar una bandera" autocomplete="off" spellcheck="false">
+                  <div class="sub-pestanas bandera-grupos" id="bandera-grupos" role="tablist" aria-label="Grupos de banderas"></div>
+                  <div class="bandera-rejilla" id="bandera-rejilla" role="listbox" aria-label="Banderas"></div>
+                  <p class="nota bandera-nota">Tu bandera sale contigo en la partida: en el mapa, en la clasificación y en tus barcos (también en línea).</p>
+                </div>
                 <h3>Forma</h3>
                 <div id="sel-formas" class="selector" role="radiogroup" aria-label="Forma"></div>
                 <h3>Símbolo</h3>

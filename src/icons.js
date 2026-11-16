@@ -2,6 +2,7 @@
 // mapa y en los botones de construcción, así siempre coinciden.
 import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { FLAG_COLS, FLAG_H, FLAG_INDEX, FLAG_SPRITE, FLAG_W } from './banderas.js';
+import { EXTRA_COLS, EXTRA_H, EXTRA_INDEX, EXTRA_SPRITE, EXTRA_W, FLAG_CATALOG } from './banderas-extra.js';
 
 const TAU = Math.PI * 2;
 
@@ -1190,14 +1191,13 @@ export function drawEmblem(ctx, e, cx, cy, size) {
   ctx.beginPath();
   (EMBLEM_SHAPES[e.shape] || EMBLEM_SHAPES.escudo)(ctx);
   // Bandera de un país como emblema: rellena la forma (si ya está cargada)
-  const flagImg = e.flag && hasFlag(e.flag) ? flagSprite() : null;
-  if (flagImg) {
+  const cell = e.flag ? flagCell(e.flag) : null;
+  if (cell) {
     ctx.save();
     ctx.clip();
-    const i = FLAG_INDEX[e.flag];
     const h = 22;
-    const w = (h * FLAG_W) / FLAG_H;
-    ctx.drawImage(flagImg, (i % FLAG_COLS) * FLAG_W, Math.floor(i / FLAG_COLS) * FLAG_H, FLAG_W, FLAG_H, -w / 2, -h / 2, w, h);
+    const w = (h * 4) / 3;
+    ctx.drawImage(cell.img, cell.sx, cell.sy, cell.sw, cell.sh, -w / 2, -h / 2, w, h);
     // Brillo suave para que parezca un escudo y no un recorte
     const g = ctx.createLinearGradient(-10, -10, 10, 10);
     g.addColorStop(0, 'rgba(255, 255, 255, 0.28)');
@@ -1292,10 +1292,18 @@ function flagSprite() {
   return flagImage && flagImage.complete && flagImage.naturalWidth ? flagImage : null;
 }
 
-/** Promesa que se cumple cuando la imagen de las banderas está lista (o falla: no bloquea). */
-export function loadFlags() {
-  flagSprite();
-  const img = flagImage;
+// Segundo atlas: comunidades, Euskal Herria, históricas, regiones y los países que no salen en los mapas
+let extraImage = null;
+function extraSprite() {
+  if (!extraImage && typeof Image !== 'undefined') {
+    extraImage = new Image();
+    extraImage.src = EXTRA_SPRITE;
+  }
+  return extraImage && extraImage.complete && extraImage.naturalWidth ? extraImage : null;
+}
+
+/** Espera a que cargue una imagen (o falle: no bloquea). */
+function imageReady(img) {
   if (!img || (img.complete && img.naturalWidth)) return Promise.resolve();
   if (typeof img.decode === 'function') return img.decode().catch(() => {});
   return new Promise((resolve) => {
@@ -1304,23 +1312,54 @@ export function loadFlags() {
   });
 }
 
+/** Promesa que se cumple cuando las imágenes de las banderas están listas (o fallan: no bloquea). */
+export function loadFlags() {
+  flagSprite();
+  extraSprite();
+  return Promise.all([imageReady(flagImage), imageReady(extraImage)]);
+}
+
+/** Dónde está la bandera `id`: { img, sx, sy, sw, sh } (o null si no hay o aún no ha cargado). */
+function flagCell(id) {
+  if (Object.hasOwn(FLAG_INDEX, id)) {
+    const img = flagSprite();
+    if (!img) return null;
+    const i = FLAG_INDEX[id];
+    return { img, sx: (i % FLAG_COLS) * FLAG_W, sy: Math.floor(i / FLAG_COLS) * FLAG_H, sw: FLAG_W, sh: FLAG_H };
+  }
+  if (Object.hasOwn(EXTRA_INDEX, id)) {
+    const img = extraSprite();
+    if (!img) return null;
+    const i = EXTRA_INDEX[id];
+    return { img, sx: (i % EXTRA_COLS) * EXTRA_W, sy: Math.floor(i / EXTRA_COLS) * EXTRA_H, sw: EXTRA_W, sh: EXTRA_H };
+  }
+  return null;
+}
+
+/** Todas las banderas que se pueden elegir: [id, nombre, grupo] (grupos: es, eus, his, reg, pais, org). */
+export { FLAG_CATALOG };
+
+const FLAG_NAMES = new Map(FLAG_CATALOG.map(([id, name]) => [id, name]));
+/** Nombre de una bandera («Cataluña», «II República Española»…), o ''. */
+export function flagName(id) {
+  return FLAG_NAMES.get(id) || '';
+}
+
 /** ¿Está ya cargada la imagen con todas las banderas? */
 export function flagReady() {
   return !!flagSprite();
 }
 
-export function hasFlag(iso) {
-  return !!iso && Object.hasOwn(FLAG_INDEX, iso);
+export function hasFlag(id) {
+  return !!id && (Object.hasOwn(FLAG_INDEX, id) || Object.hasOwn(EXTRA_INDEX, id));
 }
 
-/** Dibuja la bandera `iso` centrada en (cx, cy) con alto `h`. Devuelve false si no hay. */
+/** Dibuja la bandera `id` centrada en (cx, cy) con alto `h`. Devuelve false si no hay (o no ha cargado). */
 export function drawFlag(ctx, iso, cx, cy, h) {
-  if (!hasFlag(iso)) return false;
-  const img = flagSprite();
-  if (!img) return false;
-  const i = FLAG_INDEX[iso];
-  const w = (h * FLAG_W) / FLAG_H;
-  ctx.drawImage(img, (i % FLAG_COLS) * FLAG_W, Math.floor(i / FLAG_COLS) * FLAG_H, FLAG_W, FLAG_H, cx - w / 2, cy - h / 2, w, h);
+  const cell = iso ? flagCell(iso) : null;
+  if (!cell) return false;
+  const w = (h * 4) / 3;
+  ctx.drawImage(cell.img, cell.sx, cell.sy, cell.sw, cell.sh, cx - w / 2, cy - h / 2, w, h);
   ctx.lineWidth = 1;
   ctx.strokeStyle = 'rgba(0,0,0,0.55)';
   ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
@@ -1329,16 +1368,24 @@ export function drawFlag(ctx, iso, cx, cy, h) {
 
 /** Estilo CSS para mostrar una bandera del sprite en un elemento de `w` px de ancho. */
 export function flagCss(iso, w = 16) {
-  if (!hasFlag(iso)) return '';
-  const i = FLAG_INDEX[iso];
-  const h = (w * FLAG_H) / FLAG_W;
-  return `background-size:${FLAG_COLS * w}px auto;background-position:-${(i % FLAG_COLS) * w}px -${Math.floor(i / FLAG_COLS) * h}px`;
+  const h = (w * 3) / 4;
+  if (Object.hasOwn(FLAG_INDEX, iso)) {
+    const i = FLAG_INDEX[iso];
+    return `background-size:${FLAG_COLS * w}px auto;background-position:-${(i % FLAG_COLS) * w}px -${Math.floor(i / FLAG_COLS) * h}px`;
+  }
+  if (Object.hasOwn(EXTRA_INDEX, iso)) {
+    const i = EXTRA_INDEX[iso];
+    return `background-image:var(--banderas2);background-size:${EXTRA_COLS * w}px auto;background-position:-${(i % EXTRA_COLS) * w}px -${Math.floor(i / EXTRA_COLS) * h}px`;
+  }
+  return '';
 }
 
-/** Para las hojas de estilo: el sprite como variable CSS (se llama una vez). */
+/** Para las hojas de estilo: los dos sprites como variables CSS (se llama una vez). */
 export function installFlagSprite(root) {
   root.style.setProperty('--banderas', `url("${FLAG_SPRITE}")`);
+  root.style.setProperty('--banderas2', `url("${EXTRA_SPRITE}")`);
   flagSprite();
+  extraSprite();
 }
 
 /**

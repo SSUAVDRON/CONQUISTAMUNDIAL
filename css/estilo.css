@@ -6306,3 +6306,74 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
 #hud:not(.escritorio) .g-tab.fundar { box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.7), 0 0 16px rgba(233, 185, 85, 0.5); animation: obraFundar 1.6s ease-in-out infinite; }
 @keyframes obraFundar { 50% { box-shadow: 0 0 0 2px rgba(255, 224, 138, 0.95), 0 0 26px rgba(233, 185, 85, 0.8); } }
 @media (prefers-reduced-motion: reduce) { #hud .obra.fundar, #hud .g-tab.fundar { animation: none; } }
+
+/* Texto solo para lectores de pantalla */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Perfil: tu nombre (se escribe aquí mismo) y el color de tu territorio, en la cabecera */
+.tp-nombre-fila { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
+.tp-nombre-campo { display: block; min-width: 0; }
+#inicio .ficha-cmd input.tp-nombre {
+  display: block;
+  width: auto;
+  min-width: 6ch;
+  max-width: min(320px, 70vw);
+  field-sizing: content;
+  margin: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-bottom: 2px dashed transparent;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  cursor: text;
+  transition: border-color var(--dur-2), background var(--dur-2);
+}
+#inicio .ficha-cmd input.tp-nombre::placeholder { color: rgba(255, 255, 255, 0.4); font-style: italic; font-weight: 700; }
+#inicio .ficha-cmd input.tp-nombre:hover { border-bottom-color: rgba(233, 185, 85, 0.5); }
+#inicio .ficha-cmd input.tp-nombre:focus { outline: none; border-bottom-color: var(--oro-500, #e9b955); background: rgba(0, 0, 0, 0.3); }
+.tp-lapiz { width: 15px; height: 15px; flex: none; color: rgba(233, 185, 85, 0.75); pointer-events: none; transition: opacity var(--dur-2); }
+.tp-nombre-fila:focus-within .tp-lapiz { opacity: 0; }
+/* El punto de color: tu territorio en el mapa */
+#inicio .ficha-cmd .tp-color { flex: none; display: grid; place-items: center; width: 30px; height: 30px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.75); background: rgba(0, 0, 0, 0.35); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); cursor: pointer; transition: transform var(--dur-2) var(--ease-spring); }
+#inicio .ficha-cmd .tp-color:hover, #inicio .ficha-cmd .tp-color[aria-expanded="true"] { transform: scale(1.12); border-color: #fff; }
+.tp-color-punto { width: 20px; height: 20px; border-radius: 50%; background: var(--c, #2f7dff); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.35); }
+.tp-colores { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; padding: 10px 12px; border-radius: 12px; background: rgba(8, 10, 20, 0.92); border: 1px solid rgba(233, 185, 85, 0.4); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); animation: tpColores 0.18s ease-out both; }
+.tp-colores small { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-2); }
+.tp-colores .muestras { justify-content: center; max-width: 300px; }
+.tp-color-otro { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--texto-2); }
+.tp-color-otro input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: transparent; cursor: pointer; }
+@keyframes tpColores { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 720px) { #inicio .ficha-cmd input.tp-nombre { font-size: 21px; } }
+
+/* Bandera como emblema: rejilla de banderas por grupos, con buscador */
+.campo-banderas { display: flex; flex-direction: column; gap: 8px; }
+.bandera-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bandera-cab > span:first-child { font-weight: 700; }
+.bandera-actual { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.bandera-actual .bandera { width: 20px; height: 15px; }
+.bandera-actual strong { color: var(--oro-claro); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bandera-actual small { color: var(--texto-3); }
+.bandera-buscar { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--panel-borde); background: rgba(0, 0, 0, 0.3); color: var(--texto-1); font: inherit; }
+.bandera-grupos { flex-wrap: wrap; }
+.bandera-grupos.buscando { opacity: 0.55; }
+.bandera-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 6px; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 2px; }
+#inicio .bandera-opcion { position: relative; display: grid; place-items: center; height: 46px; min-height: 0; padding: 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); box-shadow: none; cursor: pointer; transition: transform var(--dur-2) var(--ease-spring), border-color var(--dur-2), background var(--dur-2); }
+#inicio .bandera-opcion:hover { transform: translateY(-2px) scale(1.06); border-color: rgba(233, 185, 85, 0.6); background: rgba(233, 185, 85, 0.08); }
+#inicio .bandera-opcion.elegida { border-color: var(--oro-claro, #ffe08a); background: rgba(233, 185, 85, 0.18); box-shadow: 0 0 0 1px var(--oro-claro, #ffe08a), 0 0 12px rgba(233, 185, 85, 0.45); }
+#inicio .bandera-opcion.elegida::after { content: "✓"; position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--oro-claro, #ffe08a); color: #1b1405; font-size: 10px; font-weight: 900; }
+.bandera-opcion .bandera { width: 48px; height: 36px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35); }
+.bandera-ninguna { font-size: 22px; color: var(--texto-3); }
+.bandera-nota { margin: 0; }
+.bandera-rejilla > .nota { grid-column: 1 / -1; }
+@media (max-width: 720px) {
+  .bandera-rejilla { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); max-height: 260px; }
+  #inicio .bandera-opcion { height: 42px; }
+  .bandera-opcion .bandera { width: 42px; height: 31.5px; }
+}
