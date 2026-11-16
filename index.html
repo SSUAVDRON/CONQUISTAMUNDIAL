@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="7a83427 2026-11-14 13:26 UTC">
+<meta name="trinchera-build" content="8977338 2026-11-16 17:34 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -5180,6 +5180,354 @@ body.con-tutorial #despliegue { display: none !important; }
 .cp-historico .nota { margin: 8px 0 0; }
 .cp-top-nota { margin: 0 0 10px; }
 
+/* =====================================================================
+   Estilo de RPG de fantasía: marcos ornamentados, rarezas, ficha del
+   comandante, colección, Progreso y fichas emergentes (rpg.js)
+   ===================================================================== */
+:root {
+  --rpg-fondo: linear-gradient(180deg, rgba(30, 26, 22, 0.96), rgba(14, 13, 16, 0.97));
+  --rpg-borde: #8a6a2f;
+  --rpg-borde-claro: #e3c27a;
+  --rpg-pergamino: #f1e4c3;
+  --rar-comun: #c9cdd3;
+  --rar-poco: #3fd65a;
+  --rar-raro: #3d9cff;
+  --rar-epico: #b866ff;
+  --rar-legendario: #ff9d2e;
+}
+
+/* Marco ornamentado: doble filete dorado con remates en las esquinas */
+.rpg-marco, #inicio .bloque.rpg-panel {
+  position: relative;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(233, 185, 85, 0.1), transparent 60%),
+    var(--rpg-fondo);
+  border: 1px solid var(--rpg-borde);
+  box-shadow: inset 0 0 0 3px rgba(10, 8, 6, 0.85), inset 0 0 0 4px rgba(227, 194, 122, 0.28), 0 18px 44px rgba(0, 0, 0, 0.5);
+}
+.rpg-marco::before, #inicio .bloque.rpg-panel::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, var(--rpg-borde-claro) 0 7px, transparent 7px) top left / 14px 14px no-repeat,
+    linear-gradient(225deg, var(--rpg-borde-claro) 0 7px, transparent 7px) top right / 14px 14px no-repeat,
+    linear-gradient(45deg, var(--rpg-borde-claro) 0 7px, transparent 7px) bottom left / 14px 14px no-repeat,
+    linear-gradient(315deg, var(--rpg-borde-claro) 0 7px, transparent 7px) bottom right / 14px 14px no-repeat;
+  opacity: 0.85;
+}
+#inicio .bloque.rpg-panel > h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, rgba(227, 194, 122, 0.6) 15%, rgba(227, 194, 122, 0.6) 85%, transparent) 1;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+#inicio .bloque.rpg-panel > h2 .nota-inline { margin-left: auto; font-family: system-ui, sans-serif; font-weight: 600; letter-spacing: 0; }
+.pg-sub { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 8px; font-family: var(--serif); font-size: 13px; letter-spacing: 0.06em; color: var(--oro-500); }
+.pg-sub:first-of-type { margin-top: 0; }
+.pg-sub .nota-inline { margin-left: auto; font-family: system-ui, sans-serif; letter-spacing: 0; }
+
+/* ---------- Ficha emergente de objeto (como la de un objeto en un RPG) ---------- */
+.rpg-tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 400;
+  width: max-content;
+  max-width: min(290px, calc(100vw - 16px));
+  padding: 10px 12px 11px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(14, 18, 34, 0.97), rgba(6, 8, 16, 0.97));
+  border: 1px solid rgba(196, 204, 220, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.8), 0 12px 32px rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.rpg-tip[hidden] { display: none; }
+.rpg-tip.entra { animation: rtEntra 0.14s ease-out; }
+@keyframes rtEntra { from { opacity: 0; } to { opacity: 1; } }
+.rt-cab { margin-bottom: 4px; }
+.rt-nombre { display: block; font-size: 15px; font-weight: 800; line-height: 1.2; text-shadow: 0 1px 0 #000; }
+.rt-fila { display: flex; justify-content: space-between; gap: 14px; margin-top: 2px; font-size: 12px; }
+.rt-tipo { color: #e6e6e6; }
+.rt-desc { margin: 6px 0 0; color: #ffd76a; }
+.rt-linea { margin: 3px 0 0; color: #e6e6e6; }
+.rt-linea.bien { color: #3fd65a; }
+.rt-linea.mal { color: #ff5a4f; }
+.rt-linea.aviso { color: #ffc857; }
+.rt-linea.oro { color: #fff; }
+.rt-sabor { margin: 6px 0 0; color: #ffd76a; font-style: italic; }
+
+/* ---------- Ficha del comandante (Perfil → Resumen) ---------- */
+#inicio .ficha-cmd {
+  display: grid;
+  grid-template-columns: minmax(0, 230px) minmax(0, 1fr) minmax(0, 230px);
+  gap: 18px;
+  align-items: center;
+  padding: 20px 22px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+.fc-slots { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fc-hueco {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 5px 8px 5px 5px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.15));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-1), background var(--dur-1), transform var(--dur-1);
+}
+.fc-hueco:hover, .fc-hueco:focus-visible { border-color: color-mix(in srgb, var(--rar) 60%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--rar) 16%, rgba(0, 0, 0, 0.45)), rgba(0, 0, 0, 0.15)); transform: translateX(2px); }
+.fc-der .fc-hueco { flex-direction: row-reverse; text-align: right; padding: 5px 5px 5px 8px; background: linear-gradient(270deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.15)); }
+.fc-der .fc-hueco:hover, .fc-der .fc-hueco:focus-visible { transform: translateX(-2px); background: linear-gradient(270deg, color-mix(in srgb, var(--rar) 16%, rgba(0, 0, 0, 0.45)), rgba(0, 0, 0, 0.15)); }
+.fc-icono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.6));
+  border: 2px solid var(--rar, #888);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--rar) 45%, transparent), 0 0 0 1px #000;
+  overflow: hidden;
+}
+.fc-icono > canvas, .fc-icono > span { max-width: 38px; max-height: 38px; }
+.fc-textos { display: flex; flex-direction: column; min-width: 0; }
+.fc-textos small { font-size: 10px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--texto-3); }
+.fc-textos strong { font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
+.fc-centro { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; text-align: center; }
+.fc-estandarte {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 172px;
+  clip-path: polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%);
+  box-shadow: inset 0 0 0 3px rgba(227, 194, 122, 0.55);
+}
+.fc-estandarte::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 40%, rgba(0, 0, 0, 0.35)); pointer-events: none; }
+.fc-estandarte canvas { position: relative; z-index: 1; width: 124px; height: 124px; margin-top: -14px; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.55)); }
+.fc-nombre-caja { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; max-width: 100%; }
+#inicio .ficha-cmd .tp-nombre { font-family: var(--serif); font-size: 26px; font-weight: 900; line-height: 1.1; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); overflow-wrap: anywhere; }
+#inicio .ficha-cmd .tp-titulo { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--oro-500); }
+#inicio .ficha-cmd .tp-chapas { justify-content: center; }
+.fc-nivel { display: flex; align-items: center; gap: 10px; width: min(100%, 340px); }
+.fc-nivel-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 900;
+  color: #2a1a02;
+  background: radial-gradient(circle at 35% 30%, #fff1c2, #e9b955 55%, #8a5d14);
+  box-shadow: 0 0 0 2px #2a1d08, 0 0 0 3px rgba(227, 194, 122, 0.6), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.fc-xp { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.fc-xp small { font-size: 11px; color: var(--texto-2); }
+.fc-xp-barra, .pg-xp { position: relative; height: 10px; border-radius: 3px; background: rgba(0, 0, 0, 0.6); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(227, 194, 122, 0.35); overflow: hidden; }
+.fc-xp-barra span, .pg-xp-relleno { position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--p, 0)); background: linear-gradient(180deg, #b48cff, #6a3fd0 55%, #4b2a9e); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); transition: transform 0.6s var(--ease-out); }
+.fc-pedestal { width: 100%; display: flex; justify-content: center; }
+.fc-escena { max-width: 100%; height: auto !important; border-radius: 8px; border: 1px solid rgba(227, 194, 122, 0.35); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
+#inicio .ficha-cmd .tp-datos { font-size: 12px; color: var(--texto-2); }
+@media (max-width: 860px) {
+  #inicio .ficha-cmd { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .fc-centro { grid-column: 1 / -1; order: -1; }
+  .fc-der .fc-hueco { flex-direction: row; text-align: left; padding: 5px 8px 5px 5px; background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.15)); }
+  .fc-estandarte { width: 116px; height: 134px; }
+  .fc-estandarte canvas { width: 96px; height: 96px; margin-top: -10px; }
+  #inicio .ficha-cmd .tp-nombre { font-size: 21px; }
+}
+@media (max-width: 420px) {
+  .fc-icono { width: 38px; height: 38px; }
+  .fc-icono > canvas, .fc-icono > span { max-width: 32px; max-height: 32px; }
+  .fc-textos strong { font-size: 12px; }
+}
+
+/* Iconos de objeto */
+.est-icono { display: block; border-radius: 4px; }
+.patron-icono { border-radius: 4px; }
+.color-icono { font-family: var(--serif); font-weight: 900; text-shadow: 0 1px 2px #000; line-height: 1; }
+.titulo-icono { line-height: 1; }
+
+/* ---------- Colección (Perfil → Aspecto) ---------- */
+.col-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.col-total { padding: 3px 10px; border-radius: var(--r-pildora); background: rgba(184, 102, 255, 0.14); border: 1px solid rgba(184, 102, 255, 0.4); font-size: 12px; font-weight: 800; color: #e3ccff; }
+.col-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 12px; }
+.col-pestanas { flex: 1 1 100%; min-width: 0; }
+.col-filtro button { white-space: nowrap; }
+.col-pestanas button { display: inline-flex; align-items: center; gap: 6px; }
+.col-n { padding: 1px 6px; border-radius: var(--r-pildora); background: rgba(255, 255, 255, 0.08); font-size: 10.5px; font-weight: 800; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.col-n.completa { background: rgba(255, 157, 46, 0.2); color: #ffc37d; }
+.col-filtro { flex: none; }
+.col-bloque[hidden] { display: none !important; }
+/* Rareza: borde del color de su rareza; las épicas y legendarias, con brillo */
+#perfil-aspecto [data-rareza] { border-color: color-mix(in srgb, var(--rar) 45%, transparent); position: relative; }
+#perfil-aspecto [data-rareza]:hover, #perfil-aspecto [data-rareza]:focus-visible { border-color: var(--rar); }
+#perfil-aspecto [data-rareza="epico"], #perfil-aspecto [data-rareza="legendario"] { box-shadow: inset 0 0 12px color-mix(in srgb, var(--rar) 28%, transparent); }
+#perfil-aspecto [data-rareza][aria-checked="true"] { border-color: var(--oro-400); box-shadow: 0 0 0 2px rgba(242, 179, 61, 0.35), inset 0 0 14px color-mix(in srgb, var(--rar) 30%, transparent); }
+#perfil-aspecto [data-rareza][aria-checked="true"]::after { content: "✔"; position: absolute; top: 3px; right: 5px; font-size: 11px; font-weight: 900; color: var(--oro-400); text-shadow: 0 1px 2px #000; }
+#perfil-aspecto [aria-disabled="true"] { cursor: help; }
+#perfil-aspecto [data-k][hidden] { display: none !important; }
+.selector-skin { grid-template-columns: repeat(auto-fill, minmax(122px, 1fr)); gap: 8px; }
+.opcion-skin { gap: 6px; padding: 10px 6px 8px; border-radius: 10px; background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.3)); }
+.opcion-skin canvas { width: 64px; height: 64px; }
+.skin-nombre { font-weight: 800; font-size: 12.5px; color: var(--rar, #fff); }
+.opcion-skin.bloqueada { opacity: 0.75; }
+.opcion-skin.bloqueada canvas { filter: grayscale(0.6) brightness(0.75); }
+.opcion-skin .skin-req { font-size: 11px; color: var(--texto-3); }
+.opcion-skin.en-venta .skin-req { color: var(--oro-200); font-weight: 800; }
+.vp-escena { margin-top: 8px; }
+.vp-escena canvas { width: 100% !important; height: auto !important; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); }
+.compra-skin { display: grid; place-items: center; width: 120px; height: 120px; margin: 0 auto; border-radius: 12px; border: 2px solid var(--rar); background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.5)); box-shadow: inset 0 0 18px color-mix(in srgb, var(--rar) 40%, transparent); }
+.compra-skin canvas { width: 96px; height: 96px; }
+
+/* ---------- Progreso ---------- */
+#inicio .pg-cab {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  margin-bottom: 14px;
+}
+.pg-medallon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a3a1c, #1b140a 70%);
+  box-shadow: 0 0 0 3px #b48a3a, 0 0 0 5px #2a1d08, 0 0 0 6px rgba(227, 194, 122, 0.5), 0 8px 18px rgba(0, 0, 0, 0.6);
+}
+.pg-medallon small { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--oro-500); }
+.pg-medallon strong { font-family: var(--serif); font-size: 34px; font-weight: 900; line-height: 1; color: #ffe08a; text-shadow: 0 2px 6px #000; }
+.pg-cab-centro { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pg-cab-linea { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pg-nombre { font-family: var(--serif); font-size: 22px; font-weight: 900; text-shadow: 0 2px 6px #000; }
+.pg-titulo { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-500); }
+#inicio .pg-xp { height: 18px; }
+.pg-xp-txt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11.5px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
+.pg-xp-nota { font-size: 11.5px; color: var(--texto-2); }
+.pg-marcadores { display: grid; grid-template-columns: repeat(2, minmax(110px, 1fr)); gap: 6px; }
+.pg-marcador { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(227, 194, 122, 0.18); color: inherit; text-align: left; font: inherit; }
+button.pg-marcador { cursor: pointer; }
+button.pg-marcador:hover { border-color: rgba(227, 194, 122, 0.55); }
+.pg-m-icono { grid-row: 1 / 3; font-size: 20px; }
+.pg-marcador strong { font-size: 15px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.pg-marcador small { font-size: 10.5px; color: var(--texto-3); }
+
+/* Camino de recompensas */
+.pg-camino { position: relative; display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: thin; }
+.pc-nodo { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 96px; padding: 8px 4px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--rar, #888) 40%, transparent); background: linear-gradient(180deg, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.5)); color: inherit; font: inherit; cursor: pointer; transition: transform var(--dur-1), border-color var(--dur-1); }
+.pc-nodo:not(:last-child)::after { content: ""; position: absolute; top: 20px; right: -11px; width: 12px; height: 2px; background: rgba(227, 194, 122, 0.45); }
+button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px); border-color: var(--rar); }
+.pc-nivel { display: grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: #20180b; border: 1px solid #b48a3a; font-size: 12px; font-weight: 900; color: #ffe08a; }
+.pc-actual { border-color: rgba(227, 194, 122, 0.7); background: linear-gradient(180deg, rgba(233, 185, 85, 0.22), rgba(0, 0, 0, 0.4)); justify-content: center; cursor: default; }
+.pc-actual .pc-nivel { width: 44px; height: 44px; border-radius: 50%; font-size: 18px; background: radial-gradient(circle at 35% 30%, #fff1c2, #e9b955 55%, #8a5d14); color: #2a1a02; }
+.pc-actual small { font-size: 11px; font-weight: 800; color: var(--oro-200); }
+.pc-icono { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 6px; border: 2px solid var(--rar); background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.55)); box-shadow: inset 0 0 10px color-mix(in srgb, var(--rar) 40%, transparent); overflow: hidden; }
+.pc-nombre { max-width: 100%; font-size: 11px; font-weight: 800; line-height: 1.2; text-align: center; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.pg-rejilla { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 14px; margin: 14px 0; }
+.pg-rejilla .retos { grid-template-columns: 1fr; }
+#inicio .pg-rejilla .retos li { background: rgba(0, 0, 0, 0.35); border-color: rgba(227, 194, 122, 0.14); }
+.pg-casi { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.casi-gesta, .casi-compra { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(227, 194, 122, 0.14); color: inherit; font: inherit; text-align: left; }
+.casi-compra { border-color: color-mix(in srgb, var(--rar) 40%, transparent); cursor: pointer; }
+.casi-compra:hover { border-color: var(--rar); }
+.casi-icono { display: grid; place-items: center; font-size: 24px; }
+.casi-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.casi-texto strong { font-size: 13.5px; }
+.casi-texto small { font-size: 11.5px; color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.casi-premio { padding: 2px 8px; border-radius: 6px; background: rgba(184, 102, 255, 0.16); color: #e3ccff; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.casi-premio.oro { background: rgba(242, 179, 61, 0.15); color: var(--oro-200); }
+
+/* Gestas */
+.gestas-cuerpo { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 16px; }
+.gestas-cats { display: flex; flex-direction: column; gap: 4px; }
+.gc-cat { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px; row-gap: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; background: rgba(0, 0, 0, 0.3); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background var(--dur-1), border-color var(--dur-1); }
+.gc-cat:hover { background: rgba(255, 255, 255, 0.05); }
+.gc-cat[aria-pressed="true"] { border-color: rgba(227, 194, 122, 0.6); background: linear-gradient(90deg, rgba(233, 185, 85, 0.2), rgba(0, 0, 0, 0.3)); }
+.gc-icono { grid-row: 1 / 3; font-size: 18px; text-align: center; }
+.gc-nombre { font-weight: 800; font-size: 13px; }
+.gc-n { font-size: 11px; font-weight: 800; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.gc-barra { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.gc-barra span { display: block; height: 100%; transform-origin: 0 50%; transform: scaleX(var(--p, 0)); background: linear-gradient(90deg, #b48a3a, #ffe08a); }
+.gestas-lista { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gestas-filtro { align-self: flex-start; }
+#lista-logros { grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+#inicio .logros li.gesta { grid-template-columns: 48px minmax(0, 1fr) auto; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.07); }
+#inicio .logros li.gesta.conseguido { border-color: rgba(227, 194, 122, 0.45); background: linear-gradient(90deg, rgba(233, 185, 85, 0.12), rgba(0, 0, 0, 0.3)); }
+.gesta-medallon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; font-size: 22px; background: radial-gradient(circle at 35% 30%, #3a3f4a, #12151b); box-shadow: 0 0 0 2px #4a505c, 0 2px 6px rgba(0, 0, 0, 0.6); }
+.gesta.pendiente .gesta-medallon span { filter: grayscale(1); opacity: 0.5; }
+.gesta.conseguido .gesta-medallon { background: radial-gradient(circle at 35% 30%, #6b4f1c, #21170a); box-shadow: 0 0 0 2px #c99a3c, 0 0 12px rgba(233, 185, 85, 0.35), 0 2px 6px rgba(0, 0, 0, 0.6); }
+.gesta .logro-texto strong { font-size: 14px; }
+.gesta.conseguido .logro-texto strong { color: #ffe08a; }
+.gesta-premios { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 6px; }
+.gp-etq { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-3); }
+.gp-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 3px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--rar, #888) 55%, transparent); background: rgba(0, 0, 0, 0.4); color: var(--rar, #fff); font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
+.gp-chip.oro { padding: 2px 7px; border-color: rgba(242, 179, 61, 0.4); color: var(--oro-200); cursor: default; }
+.gp-chip:hover:not(.oro) { border-color: var(--rar); }
+.gp-ico { display: grid; place-items: center; width: 18px; height: 18px; overflow: hidden; border-radius: 3px; }
+.gp-ico canvas, .gp-ico span { max-width: 18px; max-height: 18px; }
+.gesta-puntos { display: grid; place-items: center; min-width: 34px; height: 30px; padding: 0 6px; clip-path: polygon(50% 0, 100% 18%, 100% 70%, 50% 100%, 0 70%, 0 18%); background: linear-gradient(180deg, #5a4a2a, #2a2010); color: #ffe08a; font-size: 12.5px; font-weight: 900; }
+.gesta.pendiente .gesta-puntos { background: linear-gradient(180deg, #3b3f48, #1a1d23); color: var(--texto-3); }
+.gesta .logro-estado { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.gesta-vacia, .casi-vacio { list-style: none; grid-column: 1 / -1; }
+@media (max-width: 860px) {
+  #inicio .pg-cab { grid-template-columns: auto minmax(0, 1fr); padding: 14px; gap: 12px; }
+  .pg-marcadores { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pg-medallon { width: 66px; height: 66px; }
+  .pg-medallon strong { font-size: 26px; }
+  .pg-nombre { font-size: 18px; }
+  .pg-rejilla { grid-template-columns: minmax(0, 1fr); }
+  .gestas-cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .gestas-cats { flex-direction: row; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .gc-cat { flex: none; grid-template-columns: 20px auto auto; }
+  .gc-barra { display: none; }
+}
+
+/* ---------- Fichas de información en partida: el mismo marco ornamentado ---------- */
+.ficha {
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(227, 194, 122, 0.85) 0 5px, transparent 5px) top left / 10px 10px no-repeat,
+    linear-gradient(225deg, rgba(227, 194, 122, 0.85) 0 5px, transparent 5px) top right / 10px 10px no-repeat,
+    linear-gradient(45deg, rgba(227, 194, 122, 0.85) 0 5px, transparent 5px) bottom left / 10px 10px no-repeat,
+    linear-gradient(315deg, rgba(227, 194, 122, 0.85) 0 5px, transparent 5px) bottom right / 10px 10px no-repeat,
+    linear-gradient(180deg, rgba(24, 28, 42, 0.98), rgba(9, 11, 18, 0.98));
+  border: 1px solid rgba(180, 138, 58, 0.75);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.75), inset 0 0 0 3px rgba(227, 194, 122, 0.16), 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+.ficha::after { background: #0b0d15; border-color: rgba(180, 138, 58, 0.75); }
+.ficha.debajo::after { background: #181c2a; }
+.ficha-titulos strong { font-family: var(--serif); font-weight: 800; letter-spacing: 0.01em; }
+.ficha-sec h4 { color: #c9a75e; }
+.ficha-sec h4::after { background: linear-gradient(90deg, rgba(227, 194, 122, 0.35), transparent); }
+.ficha-icono { border-radius: 8px; box-shadow: 0 0 0 1px #000, inset 0 0 10px var(--g-glow); }
+
 </style>
 <link rel="preload" href="mapas-871f2c30c5db.json" as="fetch" crossorigin="anonymous">
 </head>
@@ -5555,33 +5903,33 @@ body.con-tutorial #despliegue { display: none !important; }
           <button type="button" role="tab" id="pp-aspecto" data-perfil="aspecto" aria-selected="false" aria-controls="perfil-aspecto">Aspecto</button>
         </div>
         <div id="perfil-resumen" class="perfil-panel" role="tabpanel" aria-labelledby="pp-resumen">
-          <div id="tarjeta-perfil" class="tarjeta-perfil est-noche">
-            <canvas id="tarjeta-emblema" width="240" height="240" aria-hidden="true"></canvas>
-            <div class="tp-textos">
-              <span class="tp-titulo" id="tp-titulo"></span>
-              <strong class="tp-nombre" id="tp-nombre"></strong>
-              <div class="tp-chapas"><span id="tp-chapas-social" class="tp-chapas-g"></span><span id="tp-chapas-liga" class="tp-chapas-g"></span></div>
+          <!-- Ficha del comandante: tu equipo alrededor de tu estandarte (cada hueco abre su parte de la colección) -->
+          <div id="ficha-cmd" class="ficha-cmd rpg-marco">
+            <div class="fc-slots fc-izq" id="fc-izq" aria-label="Tu emblema y tu territorio"></div>
+            <div class="fc-centro">
+              <div class="fc-estandarte est-noche" id="fc-estandarte">
+                <canvas id="tarjeta-emblema" width="260" height="260" aria-hidden="true"></canvas>
+              </div>
+              <div class="fc-nombre-caja">
+                <span class="tp-titulo" id="tp-titulo"></span>
+                <strong class="tp-nombre" id="tp-nombre"></strong>
+                <div class="tp-chapas"><span id="tp-chapas-social" class="tp-chapas-g"></span><span id="tp-chapas-liga" class="tp-chapas-g"></span></div>
+              </div>
+              <div class="fc-nivel" title="Nivel y experiencia">
+                <span class="fc-nivel-num" id="tp-nivel">1</span>
+                <div class="fc-xp"><div class="fc-xp-barra"><span id="tp-xp-barra"></span></div><small id="tp-xp"></small></div>
+              </div>
+              <div class="fc-pedestal" id="fc-pedestal" aria-label="Tus edificios, barcos y bombas tal como se ven en el mapa"></div>
               <span class="tp-datos" id="tp-datos"></span>
             </div>
-            <div class="tp-anillo" id="tp-anillo" title="Nivel y experiencia">
-              <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="tpa-fondo" cx="36" cy="36" r="31"/><circle class="tpa-relleno" id="tp-anillo-relleno" cx="36" cy="36" r="31" pathLength="100"/></svg>
-              <span class="tp-nivel" id="tp-nivel">1</span>
-              <small class="tp-xp" id="tp-xp"></small>
-            </div>
+            <div class="fc-slots fc-der" id="fc-der" aria-label="Lo que pones en el mapa"></div>
           </div>
           <div class="perfil-rejilla">
-            <div class="bloque bloque-estad">
-              <h2>Estadísticas</h2>
-              <div class="nivel">
-                <span class="nivel-num" id="perfil-nivel">1</span>
-                <div class="nivel-datos">
-                  <div class="nivel-barra llena-al-ver"><span id="perfil-xp-barra"></span></div>
-                  <small id="perfil-xp"></small>
-                </div>
-              </div>
+            <div class="bloque rpg-panel bloque-estad">
+              <h2>Atributos</h2>
               <div id="estadisticas" class="est-fichas"></div>
             </div>
-            <div class="bloque">
+            <div class="bloque rpg-panel">
               <h2>Tu nación</h2>
               <label class="campo"><span>Nombre de tu nación</span>
                 <input id="in-nombre" maxlength="18" placeholder="Mi nación">
@@ -5600,13 +5948,13 @@ body.con-tutorial #despliegue { display: none !important; }
               </div>
             </div>
           </div>
-          <div class="bloque perfil-clasif">
+          <div class="bloque rpg-panel perfil-clasif">
             <h2>Clasificatoria</h2>
             <div class="pc-cab" id="pc-cab"></div>
             <canvas class="fin-grafica baja" id="perfil-graf-pl" aria-label="Tus puntos de liga en las últimas clasificatorias"></canvas>
             <p class="nota" id="pc-nota"></p>
           </div>
-          <div class="bloque">
+          <div class="bloque rpg-panel">
             <h2>Últimas partidas</h2>
             <div id="perfil-historial"></div>
           </div>
@@ -5615,9 +5963,14 @@ body.con-tutorial #despliegue { display: none !important; }
         <div id="perfil-amigos" class="perfil-panel perfil-social" role="tabpanel" aria-labelledby="pp-amigos" hidden></div>
         <div id="perfil-clan" class="perfil-panel perfil-social" role="tabpanel" aria-labelledby="pp-clan" hidden></div>
         <div id="perfil-aspecto" class="perfil-panel" role="tabpanel" aria-labelledby="pp-aspecto" hidden>
-          <div class="bolsa">
+          <div class="bolsa col-cab">
             <span class="bolsa-monedas" id="bolsa-monedas"></span>
-            <span class="bolsa-texto">Gana monedas con partidas, logros y retos diarios. Lo marcado con 🪙 se compra; lo que tiene 🔒 se gana con logros o subiendo de nivel.</span>
+            <span class="col-total" id="col-total"></span>
+            <span class="bolsa-texto">Lo marcado con 🪙 se compra; lo que tiene 🔒 se gana con gestas o subiendo de nivel. Pasa el ratón (o mantén pulsado) sobre cualquier objeto para ver su ficha.</span>
+          </div>
+          <div class="col-barra">
+            <div class="sub-pestanas col-pestanas" id="col-pestanas" role="tablist" aria-label="Colección"></div>
+            <div class="segmentos col-filtro" id="col-filtro" role="radiogroup" aria-label="Mostrar"></div>
           </div>
           <div class="aspecto-rejilla">
             <aside class="vista-previa" aria-label="Vista previa de tu nación">
@@ -5627,10 +5980,11 @@ body.con-tutorial #despliegue { display: none !important; }
                 <span id="vp-titulo" class="vp-titulo"></span>
               </div>
               <div class="vp-mapa"><canvas id="vp-patron" width="320" height="120" aria-hidden="true"></canvas><span class="vp-etiqueta" id="vp-etiqueta"></span></div>
+              <div class="vp-escena" id="vp-escena" aria-label="Tus edificios, barcos y bombas en el mapa"></div>
               <p class="nota">Así te ven los demás en el menú, en las salas y en el mapa.</p>
             </aside>
             <div class="aspecto-opciones">
-              <div class="bloque">
+              <div class="bloque rpg-panel col-bloque" data-col="emblema">
                 <h2>Emblema</h2>
                 <label class="campo"><span>Bandera de un país como emblema</span><select id="in-bandera"></select></label>
                 <h3>Forma</h3>
@@ -5646,27 +6000,42 @@ body.con-tutorial #despliegue { display: none !important; }
                   <div class="muestras" id="mu-emb-figura" data-campo="in-emb-figura" role="group" aria-label="Colores de símbolo rápidos"></div>
                 </div>
               </div>
-              <div class="bloque">
+              <div class="bloque rpg-panel col-bloque" data-col="marco">
                 <h2>Marco del emblema</h2>
                 <div id="sel-marcos" class="selector" role="radiogroup" aria-label="Marco"></div>
               </div>
-              <div class="bloque">
+              <div class="bloque rpg-panel col-bloque" data-col="estandarte">
                 <h2>Estandarte</h2>
                 <p class="nota">El fondo de tu tarjeta de perfil y de tu insignia en el menú.</p>
                 <div id="sel-estandartes" class="estandartes" role="radiogroup" aria-label="Estandarte"></div>
               </div>
-              <div class="bloque">
+              <div class="bloque rpg-panel col-bloque" data-col="patron">
                 <h2>Patrón del territorio</h2>
                 <p class="nota">Se ve en tu territorio durante la partida, también para los demás jugadores online.</p>
                 <div id="sel-patrones" class="patrones" role="radiogroup" aria-label="Patrón"></div>
               </div>
-              <div class="bloque">
+              <div class="bloque rpg-panel col-bloque" data-col="nombre">
                 <h2>Color de tu nombre en el mapa</h2>
                 <div id="sel-color-nombre" class="colores-nombre" role="radiogroup" aria-label="Color del nombre"></div>
               </div>
-              <div class="bloque">
+              <div class="bloque rpg-panel col-bloque" data-col="titulo">
                 <h2>Título</h2>
                 <div id="sel-titulos" class="titulos" role="radiogroup" aria-label="Título"></div>
+              </div>
+              <div class="bloque rpg-panel col-bloque" data-col="edificios">
+                <h2>Edificios</h2>
+                <p class="nota">El aspecto de tus edificios en el mapa (ciudades, puertos, fábricas, defensas…). También lo ven los demás online.</p>
+                <div id="sel-edificios" class="selector selector-skin" role="radiogroup" aria-label="Edificios"></div>
+              </div>
+              <div class="bloque rpg-panel col-bloque" data-col="barcos">
+                <h2>Barcos</h2>
+                <p class="nota">Tus barcos de desembarco y tus buques de guerra.</p>
+                <div id="sel-barcos" class="selector selector-skin" role="radiogroup" aria-label="Barcos"></div>
+              </div>
+              <div class="bloque rpg-panel col-bloque" data-col="bombas">
+                <h2>Bombas</h2>
+                <p class="nota">Tus misiles, bombas H y MIRV en vuelo: cuerpo, ojiva y llama.</p>
+                <div id="sel-bombas" class="selector selector-skin" role="radiogroup" aria-label="Bombas"></div>
               </div>
             </div>
           </div>
@@ -5674,20 +6043,37 @@ body.con-tutorial #despliegue { display: none !important; }
       </section>
 
       <!-- Logros -->
-      <section class="vista" data-vista="logros" role="tabpanel" aria-labelledby="tab-logros" hidden>
-        <div class="bloque retos-bloque">
-          <h2>Retos de hoy <small id="retos-reloj" class="nota-inline"></small></h2>
-          <ul id="retos-diarios" class="retos"></ul>
-          <p id="retos-bonus" class="retos-bonus"></p>
+      <section class="vista vista-progreso" data-vista="logros" role="tabpanel" aria-labelledby="tab-logros" hidden>
+        <!-- Cabecera: nivel, experiencia, puntos de gesta, colección y monedas -->
+        <div class="pg-cab rpg-marco" id="pg-cab"></div>
+        <div class="bloque rpg-panel pg-camino-bloque">
+          <h2>Camino de recompensas <small class="nota-inline">lo que ganas al subir de nivel</small></h2>
+          <div id="pg-camino" class="pg-camino"></div>
         </div>
-        <div class="bloque retos-bloque semana-bloque">
-          <h2>Retos de la semana <small id="semana-reloj" class="nota-inline"></small></h2>
-          <ul id="retos-semanales" class="retos"></ul>
-          <p id="semana-bonus" class="retos-bonus"></p>
+        <div class="pg-rejilla">
+          <div class="bloque rpg-panel retos-bloque">
+            <h2>Diario de campaña</h2>
+            <h3 class="pg-sub">Retos de hoy <small id="retos-reloj" class="nota-inline"></small></h3>
+            <ul id="retos-diarios" class="retos"></ul>
+            <p id="retos-bonus" class="retos-bonus"></p>
+            <h3 class="pg-sub">Retos de la semana <small id="semana-reloj" class="nota-inline"></small></h3>
+            <ul id="retos-semanales" class="retos"></ul>
+            <p id="semana-bonus" class="retos-bonus"></p>
+          </div>
+          <div class="bloque rpg-panel pg-casi-bloque">
+            <h2>Casi lo tienes</h2>
+            <ul id="pg-casi" class="pg-casi"></ul>
+          </div>
         </div>
-        <div class="bloque">
-          <h2>Logros <small id="logros-resumen" class="nota-inline"></small></h2>
-          <ul id="lista-logros" class="logros"></ul>
+        <div class="bloque rpg-panel gestas-bloque">
+          <h2>Gestas <small id="logros-resumen" class="nota-inline"></small></h2>
+          <div class="gestas-cuerpo">
+            <nav id="gestas-cats" class="gestas-cats" aria-label="Categorías de gestas"></nav>
+            <div class="gestas-lista">
+              <div id="gestas-filtro" class="segmentos gestas-filtro" role="radiogroup" aria-label="Mostrar"></div>
+              <ul id="lista-logros" class="logros"></ul>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -6314,7 +6700,7 @@ body.con-tutorial #despliegue { display: none !important; }
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "7a83427 2026-11-14 13:26 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "8977338 2026-11-16 17:34 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-871f2c30c5db.json";</script>
 <script>
 (function () {
@@ -6424,7 +6810,7 @@ ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
 ctx.stroke();
 ctx.restore();
 }
-function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1) {
+function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1, look = null) {
 if (len < 8) return tiny(ctx, x, y, ang, Math.max(5, len), color, mine);
 const w = len * 0.46;
 ctx.save();
@@ -6442,11 +6828,24 @@ ctx.quadraticCurveTo(-len * 0.5, w * 0.5, -len * 0.44, w * 0.5);
 ctx.lineTo(len * 0.4, w * 0.5);
 ctx.quadraticCurveTo(len * 0.5, w * 0.5, len * 0.5, w * 0.38);
 ctx.closePath();
-ctx.fillStyle = '#4b5661';
+if (look && look.glow) {
+ctx.save();
+ctx.shadowColor = look.glow;
+ctx.shadowBlur = len * 0.5;
+ctx.fillStyle = look.hull;
+ctx.fill();
+ctx.restore();
+}
+ctx.fillStyle = look ? look.hull : '#4b5661';
 ctx.fill();
 ctx.lineWidth = Math.max(1, len * 0.06);
 ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
 ctx.stroke();
+if (look && look.trim) {
+ctx.strokeStyle = look.trim;
+ctx.lineWidth = Math.max(0.8, len * 0.035);
+ctx.strokeRect(-len * 0.42, -w * 0.42, len * 0.84, w * 0.84);
+}
 ctx.fillStyle = color;
 ctx.fillRect(-len * 0.34, -w * 0.32, len * 0.7, w * 0.64);
 ctx.fillStyle = '#6c7884';
@@ -6462,7 +6861,7 @@ ctx.fill();
 }
 }
 }
-ctx.fillStyle = '#d7dde3';
+ctx.fillStyle = look ? look.bridge : '#d7dde3';
 ctx.fillRect(-len * 0.47, -w * 0.22, len * 0.12, w * 0.44);
 ctx.restore();
 }
@@ -6514,18 +6913,36 @@ if (onlyShadow) {
 ctx.restore();
 return;
 }
+const look = opts.look || null;
 ctx.save();
 ctx.rotate(ang);
 hull();
-ctx.fillStyle = '#c9d2da';
+if (look && look.glow) {
+ctx.save();
+ctx.shadowColor = look.glow;
+ctx.shadowBlur = r * 0.9;
+ctx.fillStyle = look.warHull;
+ctx.fill();
+ctx.restore();
+}
+ctx.fillStyle = look ? look.warHull : '#c9d2da';
 ctx.fill();
 ctx.lineWidth = Math.max(1.2, r * 0.09);
 ctx.lineJoin = 'round';
 ctx.strokeStyle = mine ? '#ffffff' : 'rgba(10, 16, 24, 0.7)';
 ctx.stroke();
+if (look && look.trim) {
+ctx.save();
+ctx.scale(0.86, 0.72);
+hull();
+ctx.restore();
+ctx.strokeStyle = look.trim;
+ctx.lineWidth = Math.max(0.8, r * 0.06);
+ctx.stroke();
+}
 ctx.fillStyle = color;
 ctx.fillRect(-L * 0.36, -W * 0.24, L * 0.62, W * 0.48);
-ctx.fillStyle = '#eef2f5';
+ctx.fillStyle = look ? look.bridge : '#eef2f5';
 ctx.fillRect(-L * 0.1, -W * 0.3, L * 0.2, W * 0.6);
 const turret = (tx) => {
 ctx.save();
@@ -7252,7 +7669,7 @@ const dt = this._last ? Math.min(0.1, (now - this._last) / 1000) : 0;
 this._last = now;
 const t = this.tween;
 if (t) {
-const k = Math.min(1, (now - t.t0) / t.ms);
+const k = Math.max(0, Math.min(1, (now - t.t0) / Math.max(1, t.ms)));
 const e = easeInOut(k);
 this.zoom = t.fromZoom * (t.toZoom / t.fromZoom) ** e;
 const cx = t.fromCx + (t.wx - t.fromCx) * e;
@@ -7655,19 +8072,25 @@ warshipPatrol: 22 * RES,
 warshipGuard: 34 * RES,
 warshipsPerPort: 3,
 tradeSpeed: 0.252 * RES,
-railRange: 14 * RES,
-railRangePerLevel: 4 * RES,
-railMaxPerFactory: 6,
+railRange: 24 * RES,
+railRangePerLevel: 6 * RES,
+railMaxPerFactory: 12,
+railJoinDist: 1.5 * RES,
 railMaxWater: 2 * RES,
 railRefresh: 20,
 trainEveryMin: 150,
 trainEveryMax: 300,
+trainFactoryBoost: 0.2,
+trainLevelBoost: 0.25,
+trainBoostMax: 4,
+trainEveryFloor: 40,
 trainSpeed: 0.8 * RES,
 missileRadius: 8 * RES,
 hbombRadius: 2.2,
 mirvWarheads: 24,
 mirvRadius: 0.55,
-missileSpeed: 3 * RES,
+missileSpeed: 1.2 * RES,
+interceptorSpeed: 3 * RES,
 missileRange: 220 * RES,
 siloReload: 150,
 missileTroopLoss: 1.2,
@@ -8946,14 +9369,17 @@ card.how = `Clic en tu costa (se pone en la orilla más cercana). ${upHow} Compa
 break;
 }
 case 'factory': {
-card.summary = 'Tiende vías de tren hasta tus ciudades, puertos y otras fábricas cercanas.';
+card.summary = `Tiende vías a la vez a todas las estaciones a su alcance (ciudades, puertos, fábricas, pueblos y capitales; hasta ${CONFIG.railMaxPerFactory}). Puesta encima de una vía, se engancha a ella y llega a sus dos extremos.`;
+const active = p.active.factory || 0;
+const boost = (n, lvl = 1) => Math.min(CONFIG.trainBoostMax, 1 + CONFIG.trainFactoryBoost * Math.max(0, n - 1) + CONFIG.trainLevelBoost * (lvl - 1));
 card.gives = [
 { icon: 'tren', label: 'Cada tren', value: `+${formatNumber(MECH.trainRewards.self)}`, note: `de oro al llegar (${formatNumber(MECH.trainRewards.ally)} en una estación aliada)` },
 { icon: 'alcance', label: 'Alcance de las vías', value: `${dist(game.railRange(1))} casillas` },
+{ icon: 'tren', label: 'Trenes', value: `×${dec(boost(active + 1))}`, note: active ? `con esta, ${active + 1} fábricas: ×${dec(boost(active + 1))} trenes en todas tus vías (ahora ×${dec(boost(active))})` : 'cada fábrica más: +20 % de trenes en todas tus vías' },
 ];
-card.have = count ? `${count} ${count === 1 ? 'fábrica' : 'fábricas'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ninguna fábrica todavía: hacen falta ciudades o puertos cerca.';
-card.next = { title: 'Cada nivel', rows: [{ label: 'Alcance de las vías', from: '', to: `+${dist(CONFIG.railRangePerLevel)} casillas` }] };
-card.how = `Clic ${where}, cerca de tus ciudades y puertos. ${upHow} Comparte precio con los puertos.`;
+card.have = count ? `${count} ${count === 1 ? 'fábrica' : 'fábricas'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ninguna fábrica todavía: ponla cerca de ciudades, pueblos o puertos, o encima de una vía.';
+card.next = { title: 'Cada nivel', rows: [{ label: 'Alcance de las vías', from: '', to: `+${dist(CONFIG.railRangePerLevel)} casillas` }, { label: 'Trenes en sus vías', from: '', to: `+${Math.round(CONFIG.trainLevelBoost * 100)} %` }] };
+card.how = `Clic ${where}, cerca de tus ciudades, pueblos y puertos (o sobre una vía). ${upHow} Comparte precio con los puertos.`;
 break;
 }
 case 'fort': {
@@ -9519,6 +9945,7 @@ core: glowSprite(255, 246, 220, 0.35),
 red: glowSprite(255, 80, 50),
 blue: glowSprite(150, 215, 255, 0.3),
 gold: glowSprite(255, 215, 90, 0.3),
+violet: glowSprite(190, 120, 255, 0.3),
 smoke: smokeSprite(70, 70, 74),
 dark: smokeSprite(28, 26, 26),
 dust: smokeSprite(150, 128, 96),
@@ -9531,7 +9958,7 @@ return SPRITES;
 function resetFxSprites() {
 SPRITES = null;
 }
-const ADDITIVE = new Set(['fire', 'core', 'red', 'blue', 'gold']);
+const ADDITIVE = new Set(['fire', 'core', 'red', 'blue', 'gold', 'violet']);
 class Fx {
 constructor() {
 this.parts = [];
@@ -9775,6 +10202,22 @@ this.add({ zAbs: true, x: x + rnd(-1, 1), y: y + rnd(-1, 1), z, vx: rnd(-0.5, 0.
 }
 this.shake = Math.max(this.shake, 2);
 }
+samLaunch(x, y) {
+this.add({ x, y, life: 0.9, s0: 0.8, s1: 3, min: 8, sprite: 'steam', a0: 0.8, vz: 0.6 });
+this.add({ x, y, life: 0.3, s0: 1.4, s1: 0.6, min: 16, sprite: 'blue' });
+this.add({ x, y, life: 0.5, s0: 0.3, s1: 2.5, min: 6, ring: true, glowRing: true, color: 'rgba(170, 220, 255, 0.9)', lw: 0.25 });
+}
+missileBreakup(x, y, z, vx, vy, color) {
+const n = 3;
+for (let k = 0; k < n; k++) {
+const a = rnd(0, TAU);
+const v = rnd(1, 3);
+this.add({ zAbs: true, x, y, z, vx: vx * 0.25 + Math.cos(a) * v, vy: vy * 0.25 + Math.sin(a) * v, vz: rnd(0, 3), g: 9, drag: 0.4, life: rnd(1.4, 2.2), s0: 0.45, min: 3, chunk: true, color: k === 0 ? color : '#d9dee6' });
+for (let j = 0; j < 4; j++) {
+this.add({ zAbs: true, x, y, z: z - j, vx: vx * 0.2 + Math.cos(a) * v * 0.8, vy: vy * 0.2 + Math.sin(a) * v * 0.8, vz: -j * 0.8, drag: 0.7, life: rnd(1.2, 2), s0: 0.6, s1: 2.2, min: 4, sprite: 'dark', a0: 0.45, fadeIn: 0.08 + j * 0.08 });
+}
+}
+}
 pop(x, y, z) {
 this.add({ zAbs: true, x, y, z, life: 0.25, s0: 1.2, s1: 2, min: 10, sprite: 'fire' });
 this.add({ zAbs: true, x, y, z, life: 1.6, s0: 0.5, s1: 1.8, min: 4, sprite: 'smoke', a0: 0.5, vz: 0.4, fadeIn: 0.1 });
@@ -9946,97 +10389,20 @@ ctx.restore();
 },
 });
 }
-intercept(sx, sy, mx, my, mz, vx, vy, vz, hit, missileColor) {
-const T = 0.8;
-const FADE = 1.4;
-const ex = mx + vx * T + (hit ? 0 : rnd(-2, 2) * RES);
-const ey = my + vy * T + (hit ? 0 : rnd(-2, 2) * RES);
-const ez = Math.max(0.5 * RES, mz + vz * T);
-let t = 0;
-let done = false;
-const fx = this;
-let puff = 0;
-const at = (k) => [sx + (ex - sx) * k, sy + (ey - sy) * k - ez * k * k];
-this.add({ x: sx, y: sy, life: 0.9, s0: 0.8, s1: 3, min: 8, sprite: 'steam', a0: 0.8, vz: 0.6 });
-this.add({ x: sx, y: sy, life: 0.3, s0: 1.4, s1: 0.6, min: 16, sprite: 'blue' });
-this.add({ x: sx, y: sy, life: 0.5, s0: 0.3, s1: 2.5, min: 6, ring: true, glowRing: true, color: 'rgba(170, 220, 255, 0.9)', lw: 0.25 });
-this.scripts.push({
-update(dt) {
-const k0 = Math.min(1, t / T);
-t += dt;
-const k1 = Math.min(1, t / T);
-if (!done) {
-puff += dt;
-const n = Math.floor(puff / 0.015);
-puff -= n * 0.015;
-for (let i = 1; i <= n; i++) {
-const k = k0 + ((k1 - k0) * i) / n;
-fx.add({ x: sx + (ex - sx) * k, y: sy + (ey - sy) * k, z: ez * k * k, zAbs: true, drag: 0.5, life: rnd(1.1, 1.7), s0: 0.45, s1: 1.6, min: 4, sprite: 'steam', a0: 0.6 });
 }
-}
-if (!done && t >= T) {
-done = true;
-if (hit) fx.airburst(ex, ey, ez);
-else fx.pop(ex, ey, ez);
-fx.label(ex, ey - ez, hit ? '¡DERRIBADO!' : 'FALLO', hit ? '#bfe6ff' : '#d4d8e0', hit ? 18 : 14);
-}
-return t < T + FADE;
-},
-draw(ctx, cam) {
-const k = Math.min(1, t / T);
-const z = cam.zoom;
-const fade = done ? Math.max(0, 1 - (t - T) / FADE) : 1;
-const N = 18;
-ctx.save();
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-ctx.beginPath();
-for (let i = 0; i <= N; i++) {
-const [px, py] = at((k * i) / N);
-const X = (px - cam.x) * z;
-const Y = (py - cam.y) * z;
-if (i) ctx.lineTo(X, Y);
-else ctx.moveTo(X, Y);
-}
-ctx.globalAlpha = 0.22 * fade;
-ctx.strokeStyle = '#7cc8ff';
-ctx.lineWidth = 6;
-ctx.stroke();
-ctx.globalAlpha = 0.85 * fade;
-ctx.strokeStyle = '#e6f4ff';
-ctx.lineWidth = 1.8;
-ctx.stroke();
-ctx.restore();
-if (done) return;
-const [px, py] = at(k);
-const hx = (px - cam.x) * z;
-const hy = (py - cam.y) * z;
-ctx.globalCompositeOperation = 'lighter';
-ctx.drawImage(sprites().blue, hx - 16, hy - 16, 32, 32);
-ctx.globalCompositeOperation = 'source-over';
-const ang = Math.atan2(ey - sy - 2 * ez * k, ex - sx);
-drawMissileSprite(ctx, hx, hy, ang, Math.min(22, Math.max(13, z * RES * 2.2)), '#5ab8ff', t);
-if (hit) {
-const qx = mx + vx * t;
-const qy = my + vy * t;
-const qz = mz + vz * t;
-drawMissileSprite(ctx, (qx - cam.x) * z, (qy - qz - cam.y) * z, Math.atan2(vy - vz, vx), Math.min(30, Math.max(16, z * RES * 3)), missileColor, t);
-}
-},
-});
-}
-}
-function drawMissileSprite(ctx, x, y, ang, len, color, time) {
+function drawMissileSprite(ctx, x, y, ang, len, color, time, look = null) {
 ctx.save();
 ctx.translate(x, y);
 ctx.rotate(ang);
 const w = len * 0.22;
 const flick = 0.82 + Math.sin(time * 60) * 0.1 + Math.sin(time * 37 + 1.7) * 0.07;
+const S = sprites();
 ctx.globalCompositeOperation = 'lighter';
-ctx.drawImage(sprites().fire, -len * 1.05 - len * 0.5 * flick, -len * 0.35, len * flick, len * 0.7);
-ctx.drawImage(sprites().core, -len * 0.75, -w * 0.9, len * 0.4, w * 1.8);
+ctx.drawImage(S[(look && look.flame) || 'fire'] || S.fire, -len * 1.05 - len * 0.5 * flick, -len * 0.35, len * flick, len * 0.7);
+ctx.drawImage(S.core, -len * 0.75, -w * 0.9, len * 0.4, w * 1.8);
+if (look && look.glow) ctx.drawImage(S[look.flame] || S.fire, -len * 0.7, -len * 0.7, len * 1.4, len * 1.4);
 ctx.globalCompositeOperation = 'source-over';
-ctx.fillStyle = color;
+ctx.fillStyle = (look && look.fins) || color;
 ctx.beginPath();
 ctx.moveTo(-len * 0.5, 0);
 ctx.lineTo(-len * 0.62, -w * 1.5);
@@ -10052,17 +10418,21 @@ ctx.lineTo(-len * 0.5, -w * 0.5);
 ctx.lineTo(-len * 0.5, w * 0.5);
 ctx.lineTo(len * 0.2, w * 0.55);
 ctx.quadraticCurveTo(len * 0.36, w * 0.62, len * 0.5, 0);
-ctx.fillStyle = '#eef1f5';
+ctx.fillStyle = (look && look.body) || '#eef1f5';
 ctx.fill();
 ctx.lineWidth = 1;
 ctx.strokeStyle = 'rgba(0,0,0,0.55)';
 ctx.stroke();
+if (look && look.stripe) {
+ctx.fillStyle = look.stripe;
+ctx.fillRect(-len * 0.12, -w * 0.5, len * 0.1, w);
+}
 ctx.beginPath();
 ctx.moveTo(len * 0.5, 0);
 ctx.quadraticCurveTo(len * 0.36, -w * 0.62, len * 0.24, -w * 0.56);
 ctx.lineTo(len * 0.24, w * 0.56);
 ctx.quadraticCurveTo(len * 0.36, w * 0.62, len * 0.5, 0);
-ctx.fillStyle = color;
+ctx.fillStyle = (look && look.nose) || color;
 ctx.fill();
 ctx.restore();
 }
@@ -10109,6 +10479,7 @@ const COLONY_TONES = [
 [150, 128, 104], [128, 132, 140], [146, 134, 116], [120, 128, 112], [150, 120, 120], [118, 116, 138],
 [104, 130, 128], [140, 142, 108], [164, 142, 118], [112, 104, 96], [134, 112, 134], [100, 116, 140],
 ];
+const RAIL_STATIONS = new Set(['city', 'port', 'factory', 'village', 'capital']);
 class Game {
 constructor({ map, seed = 1, rules = null }) {
 this.map = map;
@@ -10125,6 +10496,8 @@ this.warships = [];
 this._nextWarshipId = 1;
 this.missiles = [];
 this._nextMissileId = 1;
+this.interceptors = [];
+this._nextInterceptorId = 1;
 this.merchants = [];
 this._nextMerchantId = 1;
 this.effects = [];
@@ -11514,34 +11887,82 @@ return CONFIG.fortRadius + CONFIG.fortRadiusPerLevel * (lvl - 1);
 railRange(lvl = 1) {
 return CONFIG.railRange + CONFIG.railRangePerLevel * (lvl - 1);
 }
-_updateRailNetwork() {
+railLinks(f) {
 const map = this.map;
-const keep = new Map();
-const list = [];
-for (const f of this.buildings) {
-if (f.kind !== 'factory' || !f.level) continue;
-const R = this.railRange(f.level) * (1 + (this.players[f.owner]?.mods.railRange || 0));
+const R = this.railRange(f.level || 1) * (1 + (this.players[f.owner]?.mods.railRange || 0));
 const fx = map.x(f.tile);
 const fy = map.y(f.tile);
 const body = map.landBody[f.tile];
 const cands = [];
 for (const s of this.buildings) {
-if (s === f || (s.kind !== 'city' && s.kind !== 'port' && s.kind !== 'factory') || !s.level || map.landBody[s.tile] !== body) continue;
+if (s === f || s.tile === f.tile || !RAIL_STATIONS.has(s.kind) || !s.level || map.landBody[s.tile] !== body) continue;
 const d = Math.abs(map.x(s.tile) - fx) + Math.abs(map.y(s.tile) - fy);
 if (d <= R) cands.push([d, s]);
 }
 cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
-let made = 0;
-for (let k = 0; k < cands.length && made < CONFIG.railMaxPerFactory; k++) {
+const out = new Map();
+for (let k = 0; k < cands.length && out.size < CONFIG.railMaxPerFactory; k++) {
 const [d, s] = cands[k];
-const key = s.kind === 'factory' ? `${Math.min(f.id, s.id)}:${Math.max(f.id, s.id)}` : `${f.id}:${s.id}`;
-if (keep.has(key)) {
-made++;
-continue;
+out.set(s, { station: s, corner: null, len: d, join: false });
 }
+for (const r of this.rails) {
+if (r.factory === f || r.station === f || r.factory.tile === f.tile || r.station.tile === f.tile) continue;
+const on = this._onRail(r, fx, fy, CONFIG.railJoinDist);
+if (!on) continue;
+const a = [map.x(r.factory.tile), map.y(r.factory.tile)];
+const b = [map.x(r.station.tile), map.y(r.station.tile)];
+const c = [r.cx, r.cy];
+const along = (p, q) => (Math.abs(p[1] - q[1]) <= Math.abs(p[0] - q[0]) ? [fx, p[1]] : [p[0], fy]);
+const near = on === 1 ? a : b;
+const far = on === 1 ? b : a;
+const nearSt = on === 1 ? r.factory : r.station;
+const farSt = on === 1 ? r.station : r.factory;
+const c1 = along(near, c);
+const pathLen = (corner, end) => Math.abs(corner[0] - fx) + Math.abs(corner[1] - fy) + Math.abs(end[0] - corner[0]) + Math.abs(end[1] - corner[1]);
+if (!out.get(nearSt)?.join) out.set(nearSt, { station: nearSt, corner: c1, len: Math.max(1, pathLen(c1, near)), join: true });
+if (!out.get(farSt)?.join) out.set(farSt, { station: farSt, corner: c, len: Math.max(1, pathLen(c, far)), join: true });
+}
+return [...out.values()];
+}
+_onRail(r, x, y, tol) {
+const map = this.map;
+const ax = map.x(r.factory.tile);
+const ay = map.y(r.factory.tile);
+const bx = map.x(r.station.tile);
+const by = map.y(r.station.tile);
+const seg = (x0, y0, x1, y1) => {
+const dx = x1 - x0;
+const dy = y1 - y0;
+const L = dx * dx + dy * dy;
+const t = L ? Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / L)) : 0;
+const ex = x0 + dx * t - x;
+const ey = y0 + dy * t - y;
+return ex * ex + ey * ey;
+};
+const t2 = tol * tol;
+if (seg(ax, ay, r.cx, r.cy) <= t2) return 1;
+if (seg(r.cx, r.cy, bx, by) <= t2) return 2;
+return 0;
+}
+_trainGap(r) {
+const f = r.factory;
+const owner = this.players[f.owner];
+const n = owner ? owner.active.factory || 1 : 1;
+const boost = Math.min(CONFIG.trainBoostMax, 1 + CONFIG.trainFactoryBoost * (n - 1) + CONFIG.trainLevelBoost * ((f.level || 1) - 1));
+return Math.max(CONFIG.trainEveryFloor, Math.round(this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax) / boost));
+}
+_updateRailNetwork() {
+const keep = new Map();
+const list = [];
+for (const f of this.buildings) {
+if (f.kind !== 'factory' || !f.level) continue;
+for (const link of this.railLinks(f)) {
+const s = link.station;
+const key = s.kind === 'factory' ? `${Math.min(f.id, s.id)}:${Math.max(f.id, s.id)}` : `${f.id}:${s.id}`;
+if (keep.has(key)) continue;
 let r = this._railMap.get(key);
 if (!r) {
-const corner = this._railCorner(f.tile, s.tile);
+const corner = link.corner || this._railCorner(f.tile, s.tile);
 if (!corner) continue;
 r = {
 key,
@@ -11549,14 +11970,14 @@ factory: f,
 station: s,
 cx: corner[0],
 cy: corner[1],
-len: Math.max(1, d),
-nextTrain: this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax),
+len: Math.max(1, link.len),
+join: link.join,
+nextTrain: this.ticks + this.rng.int(10, 40),
 train: null,
 };
 }
 keep.set(key, r);
 list.push(r);
-made++;
 }
 }
 if (this.trains.length) this.trains = this.trains.filter((t) => keep.has(t.rail.key));
@@ -11622,7 +12043,7 @@ t.pos = 0;
 t.done = true;
 done = true;
 r.train = null;
-r.nextTrain = this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax);
+r.nextTrain = this.ticks + this._trainGap(r);
 this._trainArrive(r, r.factory);
 }
 }
@@ -12385,16 +12806,19 @@ const ty = Math.floor(m.to / W) + 0.5;
 return [fx + (tx - fx) * m.progress, fy + (ty - fy) * m.progress];
 }
 _updateMissiles() {
-if (!this.missiles.length) return;
+if (!this.missiles.length && !this.interceptors.length) return;
 const W = this.map.width;
 for (const m of this.missiles) {
 m.progress = Math.min(1, m.progress + CONFIG.missileSpeed / m.dist);
 const [mx, my] = this.missilePos(m);
+if (!m.doomed) {
 for (const b of this.buildings) {
 const shield = b.kind === 'capital';
 if ((b.kind !== 'sam' && !shield) || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
-const dx = (b.tile % W) + 0.5 - mx;
-const dy = Math.floor(b.tile / W) + 0.5 - my;
+const bx = (b.tile % W) + 0.5;
+const by = Math.floor(b.tile / W) + 0.5;
+const dx = bx - mx;
+const dy = by - my;
 const range = shield ? CONFIG.capitalSamRange : this.samRange(b.level);
 if (dx * dx + dy * dy > range * range) continue;
 const shooter = this.players[b.owner];
@@ -12405,22 +12829,61 @@ const reload = Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (Ma
 b.readyAt = this.ticks + (b.ammo > 0 ? CONFIG.samGap : Math.max(CONFIG.samGap, reload));
 b.reloadFrom = this.ticks;
 const hit = this.rng.float() < this.samHitChance(b, shooter);
-this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
-if (!hit) continue;
-m.dead = true;
-const launcher = this.players[m.owner];
-const what = shield ? 'el escudo de tu capital' : 'tu antimisiles';
-if (shooter === this.human) this._emit(`🛡 ${what[0].toUpperCase()}${what.slice(1)} ha derribado un misil de ${launcher.name}`, 'good');
-else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
-else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
+const dist0 = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+this.interceptors.push({ id: this._nextInterceptorId++, owner: b.owner, from: b.tile, x: bx, y: by, px: bx, py: by, m, hit, shield, dist0 });
+this.effects.push({ kind: 'samLaunch', x: bx, y: by, from: b.tile, missile: m.id, tick: this.ticks });
+if (hit) {
+m.doomed = true;
 break;
+}
+}
 }
 if (!m.dead && m.progress >= 1) {
 m.dead = true;
 this._detonate(m);
 }
 }
+this._updateInterceptors();
 this.missiles = this.missiles.filter((m) => !m.dead);
+}
+_updateInterceptors() {
+if (!this.interceptors.length) return;
+const speed = CONFIG.interceptorSpeed;
+for (const it of this.interceptors) {
+const m = it.m;
+it.px = it.x;
+it.py = it.y;
+if (m.dead) {
+it.done = true;
+this.effects.push({ kind: 'miss', x: it.x, y: it.y, from: it.from, missile: m.id, interceptor: it.id, tick: this.ticks });
+continue;
+}
+const [mx, my] = this.missilePos(m);
+const dx = mx - it.x;
+const dy = my - it.y;
+const d = Math.sqrt(dx * dx + dy * dy);
+if (d > speed) {
+it.x += (dx / d) * speed;
+it.y += (dy / d) * speed;
+continue;
+}
+it.x = mx;
+it.y = my;
+it.done = true;
+this.effects.push({ kind: it.hit ? 'intercept' : 'miss', x: mx, y: my, from: it.from, missile: m.id, interceptor: it.id, tick: this.ticks });
+if (!it.hit) {
+m.doomed = this.interceptors.some((o) => o !== it && !o.done && o.m === m && o.hit);
+continue;
+}
+m.dead = true;
+const shooter = this.players[it.owner];
+const launcher = this.players[m.owner];
+const what = it.shield ? 'el escudo de tu capital' : 'tu antimisiles';
+if (shooter === this.human) this._emit(`🛡 ${what[0].toUpperCase()}${what.slice(1)} ha derribado un misil de ${launcher.name}`, 'good');
+else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
+else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
+}
+this.interceptors = this.interceptors.filter((it) => !it.done);
 }
 _detonate(m) {
 const map = this.map;
@@ -13742,7 +14205,7 @@ items: [
 ['corona', 'Tu capital', 'Naces con tu capital amurallada: dentro de las murallas conquistarte cuesta seis veces más, en las afueras dos veces y media, las bombas no arrasan lo que hay dentro y su escudo derriba los misiles que se acercan. Su muralla se ve en el mapa como una frontera de píxeles del metal de su nivel. Mejorarla es clave pero cuesta oro y tropas, cada vez más (Z, o toca su emblema en el panel): cada nivel da +20 % de oro, mucho más banco y murallas más fuertes, y los niveles 3 a 12 traen premios (escudo, afueras, crecimiento, barcos, techo, comercio). Del 1 al 12 su emblema pasa de piedra a bronce, plata, oro y oro real; el 12, la ciudadela dorada, es muy difícil.'],
 ['corona', 'Banco de tropas', 'Guarda soldados en tu capital con el botón Guardar (o X: el 25 % de tus soldados cada vez) y sácalos cuando los necesites (Sacar todo o Mayús + X). Lo guardado no ataca ni frena tu regeneración y, cuantas más tropas guardes, más fuertes son las murallas (y más gruesas en el mapa); con tus tropas al tope, la capital sigue reclutando hacia el banco. Si cae, quien la toma se lleva botín y la mitad del banco, y la refundas con la mitad de las mejoras.'],
 ['tropas', 'Trabajadores', 'Con la regla «Economía con trabajadores», el deslizador «Reparto» divide tu población entre soldados (atacan y defienden) y trabajadores (dan oro).'],
-['ciudad', 'Edificios', 'Pueblos (B): baratos, +300 de oro/s y +6 000 de techo por nivel. Ciudades: +25 000 de techo de tropas por nivel. Puertos: pesqueros que vuelven con oro (tantos como su nivel) y mercantes a puertos de otros países que os pagan a los dos. Fábricas: vías y trenes que dan oro en cada estación. Las obras tardan unos segundos.'],
+['ciudad', 'Edificios', 'Pueblos (B): baratos, +300 de oro/s y +6 000 de techo por nivel. Ciudades: +25 000 de techo de tropas por nivel. Puertos: pesqueros que vuelven con oro (tantos como su nivel) y mercantes a puertos de otros países que os pagan a los dos. Fábricas: vías a varias estaciones a la vez (o la vía que pisan) y trenes que dan oro en cada estación; cuantas más fábricas, más trenes. Las obras tardan unos segundos.'],
 ['bandera', 'Lugares de interés', 'Los discos dorados del mapa (tesoros, mercenarios, graneros, forjas, ruinas y fortalezas) dan un premio a quien los conquiste: oro o tropas al momento, un bono de unos segundos o una pequeña mejora para siempre. Luego aparece otro en otro sitio.'],
 ['engranaje', 'Precios', 'Cada compra encarece la siguiente de su familia; subir de nivel cuesta lo mismo que uno nuevo. Elige bien qué construyes primero.'],
 ['pergamino', 'Desarrollo (tecla I)', 'Ingresos por fuente y oro por minuto, especialización y, en el perfil Trinchera, 12 tecnologías en tres ramas.'],
@@ -13758,7 +14221,7 @@ items: [
 ['cerco', 'Cerco', 'Si rodeas una bolsa sin costa, de tierra libre o de otro país, es tuya enseguida (en menos de medio segundo) y sin bajas. Un río la cierra igual que tu frontera.'],
 ['mapa', 'Ríos', 'Los ríos son fronteras: no se cruzan por tierra. Si llegan al mar se navegan: puedes poner puertos en sus orillas y los barcos pasan por ellos, también para desembarcar en la otra orilla. Pasa el ratón por encima para ver si es navegable.'],
 ['barco', 'Barcos y buques', 'Con al menos un puerto (E), clic en una costa sin frontera por tierra: sale un barco con tropas desde tu costa más cercana (3 a la vez como mucho). Sin puerto no hay barcos. Los buques (T) patrullan la zona del mar que elijas y hunden barcos enemigos.'],
-['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Los antimisiles (H) las derriban: disparan salvas de 2 interceptores (+1 por nivel) con un 85 % de acierto cada uno y recargan en 7 s. Tu capital tiene su propio escudo.'],
+['bomba', 'Bombas', 'Con un silo (G) lanzas bombas atómicas (M), bombas H (J) y MIRV (K): arrasan y dejan las casillas libres. Vuelan despacio: se ven venir. Los antimisiles (H) las derriban en el aire: lanzan salvas de 2 proyectiles (+1 por nivel) que persiguen al misil, con un 85 % de acierto cada uno, y recargan en 7 s. Tu capital tiene su propio escudo.'],
 ['escudo', 'Defensa', 'Cerca de un puesto defensivo, conquistarte cuesta el triple de tiempo y de bajas; cerca de tu capital, el cuádruple. Las fronteras donde se lucha se ponen rojas (más intenso en tus combates) y, si el borde de la pantalla se pone rojo, te atacan.'],
 ],
 },
@@ -13932,6 +14395,24 @@ const { drawChart, drawSparkline } = __require('resumen');
 const { LEAGUES, PLACEMENT_GAMES, RANKED_AI, RANKED_ROOM, aiDifficultyFor, badgeCanvas, drawBadge, inPlacement, paintBadge, pointsFromMmr, rankOf, rankText, seasonEnd, seasonName, seasonReward } = __require('rangos');
 const { ACHIEVEMENTS, BANNERS, DAILY, DAILY_BONUS, FRAMES, NAME_COLORS, PATTERNS, SHAPES, SYMBOLS, TITLES, WEEKLY, WEEKLY_BONUS, ensureWeekly, achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rememberConfig, rewardsOf, titleName, unlockText } = __require('profile');
 const { coopSlots, seatsSummary, settingsDiff } = __require('configurador');
+const { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS, rarityOf, skinLook } = __require('skins');
+const { ACH_CATEGORIES, achCategory, achPoints, attachTip, hideTip, itemTipHtml } = __require('rpg');
+const COLLECTION = [
+{ cat: 'forma', col: 'emblema', name: 'Forma', type: 'Forma del emblema', list: SHAPES, desc: 'La forma de tu emblema.' },
+{ cat: 'simbolo', col: 'emblema', name: 'Símbolo', type: 'Símbolo del emblema', list: SYMBOLS, desc: 'El símbolo de tu emblema.' },
+{ cat: 'marco', col: 'marco', name: 'Marco', type: 'Marco del emblema', list: FRAMES, desc: 'Rodea tu emblema en el menú, en las salas y en la presentación de la partida.' },
+{ cat: 'estandarte', col: 'estandarte', name: 'Estandarte', type: 'Estandarte', list: BANNERS, desc: 'El fondo de tu ficha y de tu insignia en el menú.' },
+{ cat: 'patron', col: 'patron', name: 'Patrón', type: 'Patrón del territorio', list: PATTERNS, desc: 'El dibujo de tu territorio en el mapa; también lo ven los demás online.' },
+{ cat: 'color', col: 'nombre', name: 'Nombre', type: 'Color del nombre', list: NAME_COLORS, desc: 'El color de tu nombre sobre el mapa.' },
+{ cat: 'titulo', col: 'titulo', name: 'Título', type: 'Título', list: TITLES, desc: 'Acompaña a tu nombre en las fichas, las salas y la presentación.' },
+{ cat: 'edificios', col: 'edificios', name: 'Edificios', type: 'Aspecto de edificios', list: BUILDING_SKINS, desc: '' },
+{ cat: 'barcos', col: 'barcos', name: 'Barcos', type: 'Aspecto de barcos', list: SHIP_SKINS, desc: '' },
+{ cat: 'bombas', col: 'bombas', name: 'Bombas', type: 'Aspecto de bombas', list: BOMB_SKINS, desc: '' },
+];
+const CATALOG = new Map(COLLECTION.map((c) => [c.cat, c]));
+const COL_TABS = [
+['emblema', 'Emblema'], ['marco', 'Marco'], ['estandarte', 'Estandarte'], ['patron', 'Patrón'], ['nombre', 'Nombre'], ['titulo', 'Título'], ['edificios', 'Edificios'], ['barcos', 'Barcos'], ['bombas', 'Bombas'],
+];
 const MAX_HUMANS = VALIDATED_SEATS;
 const SWATCHES = [
 '#2f7dff', '#1fb5ff', '#20c997', '#3ddc84', '#8bd346', '#ffd23f', '#ffa23d', '#ff6b3d',
@@ -13956,6 +14437,8 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Novedades', title: 'Aspectos, gestas y ficha del comandante', text: 'Aspectos nuevos para tus edificios, barcos y bombas, que también ven los demás online. Todo lo coleccionable tiene rareza (común, poco común, rara, épica y legendaria) y una ficha al pasar el ratón o mantener pulsado. Perfil con tu ficha de comandante y Progreso renovado: camino de recompensas, diario de campaña, «casi lo tienes» y gestas por categorías con puntos.', art: 1 },
+{ tag: 'Batalla', title: 'Interceptores y fábricas en red', text: 'Los misiles vuelan más despacio y los antimisiles lanzan un proyectil que se ve subir y los revienta en el aire. Cada fábrica tiende vías a varias estaciones a la vez, aprovecha la vía que pisa y, cuantas más fábricas, más trenes y más oro.', art: 2 },
 { tag: 'Novedades', title: 'Salas de 32 y rangos por cola', text: 'Salas de hasta 32 jugadores con accesos a 4, 8, 16, 24 y 32 plazas; el anfitrión edita las reglas en borrador y las aplica de una vez. La clasificatoria contra la IA y la de en línea tienen ahora rangos separados (tu rango de antes queda como histórico). Y más: salidas explicadas, previsión de cada ataque, amortización en las fichas y repetir tu última partida tal cual.', art: 1 },
 { tag: 'Mejoras', title: 'Más ligero y más pulido', text: 'Cada versión nueva se descarga en una quinta parte (los mapas se guardan en tu navegador), arreglos en amigos y clanes, colonias que ya no encabezan la clasificación, Arsenal y Progreso mejor colocados y nuevas animaciones al pulsar y al poder construir.', art: 0 },
 { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
@@ -15163,21 +15646,19 @@ input.dispatchEvent(new Event('input'));
 }
 renderCard() {
 const p = this.profile;
-const card = $('tarjeta-perfil');
-card.className = `tarjeta-perfil est-${p.estandarte}`;
+$('fc-estandarte').className = `fc-estandarte est-${p.estandarte}`;
 const c = $('tarjeta-emblema');
 const ctx = c.getContext('2d');
 ctx.clearRect(0, 0, c.width, c.height);
-drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.66);
-drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.66);
+drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.62);
+drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.62);
 $('tp-nombre').textContent = p.nombre || 'Sin nombre';
 $('tp-nombre').style.color = nameColorOf(p);
 $('tp-titulo').textContent = titleName(p) || 'Recluta';
 const info = levelInfo(p.xp);
 $('tp-nivel').textContent = String(info.level);
-const frac = Math.max(0, Math.min(1, info.progress));
-$('tp-anillo-relleno').style.strokeDasharray = `${(frac * 100).toFixed(1)} 100`;
-$('tp-xp').textContent = `${p.xp - info.start}/${info.next - info.start} XP`;
+$('tp-xp-barra').style.setProperty('--p', Math.max(0, Math.min(1, info.progress)).toFixed(3));
+$('tp-xp').textContent = `${formatNumber(p.xp - info.start)} / ${formatNumber(info.next - info.start)} XP para el nivel ${info.level + 1}`;
 const winRate = p.stats.partidas ? Math.round((100 * p.stats.victorias) / p.stats.partidas) : 0;
 $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas${p.stats.partidas ? ` · ${winRate} % ganadas` : ''} · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
 const r = p.rango;
@@ -15187,6 +15668,220 @@ if (r && r.partidas > 0 && !inPlacement(r)) {
 const k = rankOf(r.puntos);
 liga.replaceChildren(el('span', { class: 'tp-chapa chapa-liga', style: `--liga: rgb(${k.league.color.join(',')})` }, badgeCanvas(r, 16), k.label));
 } else liga.replaceChildren();
+}
+const slot = (cat) => {
+const C = CATALOG.get(cat);
+const item = C.list.find((x) => x.id === this._equippedId(cat)) || C.list[0];
+const rar = rarityOf(item);
+const btn = el('button', { type: 'button', class: 'fc-hueco', style: `--rar:${rar.color}`, 'aria-label': `${C.name}: ${item.name}. Abrir la colección`, onclick: () => this.openCollection(C.col) },
+el('span', { class: 'fc-icono' }, this._itemIcon(item, 38)),
+el('span', { class: 'fc-textos' }, el('small', { text: C.name }), el('strong', { text: item.name, style: `color:${rar.color}` })));
+attachTip(btn, () => this._itemTip(item, { slot: true }));
+return btn;
+};
+$('fc-izq').replaceChildren(...['forma', 'simbolo', 'marco', 'estandarte', 'patron'].map(slot));
+$('fc-der').replaceChildren(...['color', 'titulo', 'edificios', 'barcos', 'bombas'].map(slot));
+$('fc-pedestal').replaceChildren(this._skinScene(320, 96));
+}
+_equippedId(cat) {
+const p = this.profile;
+return { forma: p.emblema.shape, simbolo: p.emblema.symbol, marco: p.marco, estandarte: p.estandarte, patron: p.patron, color: p.colorNombre, titulo: p.titulo, edificios: p.skinEdificios, barcos: p.skinBarcos, bombas: p.skinBombas }[cat];
+}
+_itemIcon(item, px = 40, look = null) {
+const p = this.profile;
+const cv = () => {
+const c = el('canvas', { width: px * 2, height: px * 2, 'aria-hidden': 'true' });
+c.style.width = c.style.height = `${px}px`;
+return c;
+};
+switch (item.cat) {
+case 'forma':
+return emblemCanvas({ ...p.emblema, shape: item.id, flag: '' }, px);
+case 'simbolo':
+return emblemCanvas({ ...p.emblema, symbol: item.id, flag: '' }, px);
+case 'marco': {
+const c = cv();
+const g = c.getContext('2d');
+drawEmblem(g, p.emblema, px, px, px * 1.15);
+drawFrame(g, item.id, px, px, px * 1.15);
+return c;
+}
+case 'estandarte':
+return el('span', { class: `est-icono est-${item.id}`, style: `width:${px}px;height:${px}px` });
+case 'patron': {
+const c = patternCanvas(item.id, p.color, px * 2, px * 2);
+c.style.width = c.style.height = `${px}px`;
+c.classList.add('patron-icono');
+return c;
+}
+case 'color':
+return el('span', { class: 'color-icono', style: `color:${item.color || nameColorOf({ ...p, colorNombre: 'propio' })};font-size:${Math.round(px * 0.5)}px`, text: 'Aa' });
+case 'titulo':
+return el('span', { class: 'titulo-icono', style: `font-size:${Math.round(px * 0.55)}px`, text: '📜' });
+case 'edificios': {
+const c = cv();
+drawBuildingReal(c.getContext('2d'), 'city', px, px, px * 1.3, { ring: p.color, skin: look || item.look });
+return c;
+}
+case 'barcos': {
+const c = cv();
+drawWarship(c.getContext('2d'), px, px * 1.05, -0.55, px * 0.6, p.color, false, null, 0, { look: look || item.look, shadow: false });
+return c;
+}
+case 'bombas': {
+const c = cv();
+drawMissileSprite(c.getContext('2d'), px * 1.2, px * 0.82, -0.62, px * 1.2, p.color, 0.3, look || item.look);
+return c;
+}
+default:
+return el('span');
+}
+}
+_skinScene(w = 320, h = 96) {
+const p = this.profile;
+const c = el('canvas', { width: w * 2, height: h * 2, class: 'fc-escena', 'aria-hidden': 'true' });
+c.style.width = `${w}px`;
+c.style.height = `${h}px`;
+const g = c.getContext('2d');
+g.scale(2, 2);
+g.fillStyle = '#1b4a75';
+g.fillRect(0, 0, w, h);
+g.fillStyle = '#7e9a62';
+g.beginPath();
+g.moveTo(0, 0);
+g.lineTo(w * 0.52, 0);
+g.bezierCurveTo(w * 0.46, h * 0.35, w * 0.6, h * 0.6, w * 0.5, h);
+g.lineTo(0, h);
+g.closePath();
+g.fill();
+g.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+g.lineWidth = 1.5;
+g.stroke();
+const ring = p.color;
+const bLook = skinLook('edificio', p.skinEdificios);
+drawBuildingReal(g, 'city', w * 0.14, h * 0.55, 30, { ring, outline: true, skin: bLook });
+drawBuildingReal(g, 'factory', w * 0.3, h * 0.32, 26, { ring, outline: true, skin: bLook });
+drawBuildingReal(g, 'sam', w * 0.34, h * 0.76, 26, { ring, outline: true, skin: bLook });
+const sLook = skinLook('barco', p.skinBarcos);
+drawWarship(g, w * 0.66, h * 0.66, -0.3, 13, p.color, true, null, 1, { look: sLook });
+drawTransport(g, w * 0.86, h * 0.32, 2.6, 26, p.color, true, 1, sLook);
+drawMissileSprite(g, w * 0.72, h * 0.2, -0.25, 30, p.color, 0.4, skinLook('bomba', p.skinBombas));
+return c;
+}
+_itemTip(item, { slot = false } = {}) {
+const p = this.profile;
+const C = CATALOG.get(item.cat);
+const ok = isUnlocked(p, item);
+const lines = [];
+if (this._equippedId(item.cat) === item.id) lines.push({ text: '✔ Equipado', tone: 'bien' });
+else if (ok) lines.push({ text: 'Es tuyo · clic para equipar', tone: 'bien' });
+else if (item.unlock && item.unlock.price) {
+const have = p.monedas || 0;
+const price = item.unlock.price;
+lines.push({ text: `Precio: 🪙 ${formatNumber(price)}`, tone: 'oro' });
+lines.push(have >= price ? { text: 'Clic para comprarlo', tone: 'bien' } : { text: `Te faltan 🪙 ${formatNumber(price - have)}`, tone: 'mal' });
+} else if (item.unlock && item.unlock.level) {
+lines.push({ text: `Requiere nivel ${item.unlock.level} (tienes el ${levelInfo(p.xp).level})`, tone: 'mal' });
+} else if (item.unlock && item.unlock.ach) {
+const a = ACHIEVEMENTS.find((x) => x.id === item.unlock.ach);
+const prog = a ? achievementProgress(p, a) : null;
+lines.push({ text: `Se consigue con la gesta «${a ? a.name : item.unlock.ach}»`, tone: 'aviso' });
+if (a) lines.push({ text: `${a.desc}${prog ? ` (${formatNumber(prog.have)}/${formatNumber(prog.need)})` : ''}`, tone: '' });
+}
+if (slot) lines.push({ text: 'Clic: abrir esta parte de la colección', tone: '' });
+const onMap = item.cat === 'edificios' || item.cat === 'barcos' || item.cat === 'bombas';
+const desc = item.desc ? `${item.desc}${onMap ? ' Se ve en el mapa, también para los demás online.' : ''}` : C.desc;
+return itemTipHtml({ name: item.name, item, type: C.type, desc, lines });
+}
+openCollection(col) {
+hideTip();
+this.colTab = col;
+if (this.view !== 'perfil') this.go('perfil');
+this._profileTab('aspecto', true);
+this.renderCollectionNav();
+requestAnimationFrame(() => $('col-pestanas')?.scrollIntoView({ block: 'start', behavior: sinMovimiento() ? 'auto' : 'smooth' }));
+}
+_collectionCount(col = null) {
+const p = this.profile;
+let have = 0;
+let total = 0;
+for (const c of COLLECTION) {
+if (col && c.col !== col) continue;
+total += c.list.length;
+have += c.list.filter((i) => isUnlocked(p, i)).length;
+}
+return { have, total };
+}
+renderCollectionNav() {
+if (!$('col-pestanas')) return;
+this.colTab ??= 'emblema';
+this.colFilter ??= 'todos';
+$('col-pestanas').replaceChildren(
+...COL_TABS.map(([id, name]) => {
+const n = this._collectionCount(id);
+return el('button', { type: 'button', role: 'tab', 'aria-selected': String(id === this.colTab), 'data-col': id, onclick: () => {
+this.colTab = id;
+this.renderCollectionNav();
+} }, el('span', { text: name }), el('small', { class: `col-n${n.have === n.total ? ' completa' : ''}`, text: `${n.have}/${n.total}` }));
+}),
+);
+underline($('col-pestanas'), true);
+rodar($('col-pestanas'));
+segmented($('col-filtro'), [['todos', 'Todo'], ['tengo', 'Lo tengo'], ['faltan', 'Me falta'], ['venta', 'En venta']], this.colFilter, (v) => {
+this.colFilter = v;
+this._applyColFilter();
+});
+for (const b of document.querySelectorAll('#perfil-aspecto .col-bloque')) b.hidden = b.dataset.col !== this.colTab;
+const all = this._collectionCount();
+$('col-total').textContent = `Colección: ${all.have}/${all.total} · ${Math.round((100 * all.have) / Math.max(1, all.total))} %`;
+this._applyColFilter();
+}
+_applyColFilter() {
+const p = this.profile;
+const f = this.colFilter || 'todos';
+for (const btn of document.querySelectorAll('#perfil-aspecto [data-k]')) {
+const item = this._byKey(btn.dataset.k);
+if (!item) continue;
+const ok = isUnlocked(p, item);
+const sale = !ok && !!(item.unlock && item.unlock.price);
+btn.hidden = f === 'tengo' ? !ok : f === 'faltan' ? ok : f === 'venta' ? !sale : false;
+}
+}
+_byKey(key) {
+if (!this._keyIndex) this._keyIndex = new Map(COLLECTION.flatMap((c) => c.list.map((i) => [itemKey(i), i])));
+return this._keyIndex.get(key);
+}
+_decorateCollection(root = $('perfil-aspecto')) {
+for (const btn of root.querySelectorAll('[data-k]')) {
+const item = this._byKey(btn.dataset.k);
+if (!item) continue;
+const rar = rarityOf(item);
+btn.style.setProperty('--rar', rar.color);
+btn.dataset.rareza = rar.id;
+if (btn.disabled) {
+btn.disabled = false;
+btn.setAttribute('aria-disabled', 'true');
+}
+btn.removeAttribute('title');
+if (!btn._tip) {
+btn._tip = true;
+attachTip(btn, () => this._itemTip(this._byKey(btn.dataset.k)));
+}
+}
+}
+_renderSkins() {
+const p = this.profile;
+for (const [box, list, field] of [['sel-edificios', BUILDING_SKINS, 'skinEdificios'], ['sel-barcos', SHIP_SKINS, 'skinBarcos'], ['sel-bombas', BOMB_SKINS, 'skinBombas']]) {
+if (!$(box)) continue;
+$(box).replaceChildren(
+...list.map((item) => {
+const s = this._shop(item);
+return el('button', { type: 'button', role: 'radio', 'aria-checked': String(item.id === p[field]), class: `opcion opcion-skin${s.cls}`, 'data-k': itemKey(item), onclick: () => this._pick(item, () => (p[field] = item.id)) },
+this._itemIcon(item, 64),
+el('span', { class: 'skin-nombre', text: item.name }),
+s.ok ? null : el('small', { class: 'skin-req', text: s.label }));
+}),
+);
 }
 }
 renderAppearance() {
@@ -15278,10 +15973,13 @@ s.ok ? null : el('small', { class: 'ft-req', text: s.label }),
 );
 }),
 );
-for (const id of ['sel-estandartes', 'sel-marcos', 'sel-color-nombre', 'sel-titulos', 'sel-patrones', 'sel-formas', 'sel-simbolos']) {
+this._renderSkins();
+for (const id of ['sel-estandartes', 'sel-marcos', 'sel-color-nombre', 'sel-titulos', 'sel-patrones', 'sel-formas', 'sel-simbolos', 'sel-edificios', 'sel-barcos', 'sel-bombas']) {
 teclasGrupo($(id));
 rodar($(id));
 }
+this._decorateCollection();
+this.renderCollectionNav();
 }
 menuVisible() {
 return !$('inicio').hidden && $('sala').hidden && $('crear-sala').hidden;
@@ -15838,6 +16536,7 @@ this.renderAchievements();
 }
 _itemPreview(item) {
 const p = this.profile;
+if (item.cat === 'edificios' || item.cat === 'barcos' || item.cat === 'bombas') return el('span', { class: 'compra-skin', style: `--rar:${rarityOf(item).color}` }, this._itemIcon(item, 96));
 if (item.cat === 'estandarte') return el('div', { class: `estandarte est-${item.id} compra-estandarte` }, el('span', { class: 'est-nombre', text: p.nombre || 'Mi nación' }));
 if (item.cat === 'patron') return patternCanvas(item.id, p.color, 192, 96);
 if (item.cat === 'color') return el('span', { class: 'compra-nombre', style: `color:${item.color || nameColorOf(p)}`, text: p.nombre || 'Mi nación' });
@@ -15884,6 +16583,9 @@ p.emblema.shape = id;
 this._renderSelector($('sel-simbolos'), SYMBOLS, p.emblema.symbol, (item) => ({ ...p.emblema, symbol: item.id }), (id) => {
 p.emblema.symbol = id;
 });
+this._decorateCollection($('sel-formas'));
+this._decorateCollection($('sel-simbolos'));
+this._applyColFilter();
 }
 _renderSelector(box, items, current, preview, apply) {
 box.replaceChildren(
@@ -15910,10 +16612,6 @@ return btn;
 }
 renderProgress(count = false) {
 const p = this.profile;
-const info = levelInfo(p.xp);
-$('perfil-nivel').textContent = info.level;
-$('perfil-xp-barra').style.setProperty('--p', String(Math.max(0, Math.min(1, info.progress))));
-$('perfil-xp').textContent = `${p.xp - info.start} / ${info.next - info.start} XP para el nivel ${info.level + 1}`;
 const s = p.stats;
 const int = (n) => formatNumber(Math.round(n));
 const rows = [
@@ -16081,6 +16779,7 @@ g.bezierCurveTo(pc.width * 0.7, pc.height * 0.3, pc.width * 0.86, pc.height * 0.
 g.stroke();
 $('vp-etiqueta').textContent = p.nombre || 'Mi nación';
 $('vp-etiqueta').style.color = nameColorOf(p);
+$('vp-escena')?.replaceChildren(this._skinScene(320, 96));
 }
 renderHistoryShort() {
 const h = this.profile.historial;
@@ -16161,40 +16860,159 @@ s.ok ? null : el('span', { class: 'patron-req', text: s.label }),
 );
 }),
 );
+this._decorateCollection($('sel-patrones'));
+this._applyColFilter();
 }
 renderAchievements() {
 const p = this.profile;
 const done = ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length;
-$('logros-resumen').textContent = `${done} de ${ACHIEVEMENTS.length} · 🪙 ${formatNumber(p.monedas || 0)}`;
+const points = ACHIEVEMENTS.reduce((s, a) => s + (hasAchievement(p, a.id) ? achPoints(a) : 0), 0);
+const maxPoints = ACHIEVEMENTS.reduce((s, a) => s + achPoints(a), 0);
+$('logros-resumen').textContent = `${done} de ${ACHIEVEMENTS.length} · ${formatNumber(points)} puntos`;
 this.renderDaily();
-$('lista-logros').replaceChildren(
-...ACHIEVEMENTS.map((a) => {
+this._renderProgressHead(done, points, maxPoints);
+this._renderRewardPath();
+this._renderAlmost();
+this._renderDeeds();
+}
+_renderProgressHead(done, points, maxPoints) {
+const p = this.profile;
+const info = levelInfo(p.xp);
+const col = this._collectionCount();
+const stat = (icon, value, label, onclick = null) => el(onclick ? 'button' : 'div', { class: 'pg-marcador', ...(onclick ? { type: 'button', onclick } : {}) },
+el('span', { class: 'pg-m-icono', 'aria-hidden': 'true', text: icon }),
+el('strong', { text: value }),
+el('small', { text: label }));
+$('pg-cab').replaceChildren(
+el('div', { class: 'pg-medallon', 'aria-label': `Nivel ${info.level}` }, el('small', { text: 'Nivel' }), el('strong', { text: String(info.level) })),
+el('div', { class: 'pg-cab-centro' },
+el('div', { class: 'pg-cab-linea' }, el('strong', { class: 'pg-nombre', text: p.nombre || 'Sin nombre', style: `color:${nameColorOf(p)}` }), el('span', { class: 'pg-titulo', text: titleName(p) || 'Recluta' })),
+el('div', { class: 'pg-xp', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(info.next - info.start), 'aria-valuenow': String(p.xp - info.start), 'aria-label': 'Experiencia' },
+el('span', { class: 'pg-xp-relleno', style: `--p:${Math.max(0, Math.min(1, info.progress)).toFixed(3)}` }),
+el('span', { class: 'pg-xp-txt', text: `${formatNumber(p.xp - info.start)} / ${formatNumber(info.next - info.start)} XP` })),
+el('small', { class: 'pg-xp-nota', text: `Te faltan ${formatNumber(info.next - p.xp)} XP para el nivel ${info.level + 1}. Una victoria da unos 150 XP de más.` })),
+el('div', { class: 'pg-marcadores' },
+stat('🏆', `${formatNumber(points)}`, `puntos de gesta (de ${formatNumber(maxPoints)})`),
+stat('📜', `${done}/${ACHIEVEMENTS.length}`, 'gestas'),
+stat('🎒', `${col.have}/${col.total}`, 'colección', () => this.openCollection(this.colTab || 'emblema')),
+stat('🪙', formatNumber(p.monedas || 0), 'monedas')),
+);
+}
+_renderRewardPath() {
+const p = this.profile;
+const lvl = levelInfo(p.xp).level;
+const next = COLLECTION.flatMap((c) => c.list.filter((i) => i.unlock && i.unlock.level && i.unlock.level > lvl))
+.sort((a, b) => a.unlock.level - b.unlock.level)
+.slice(0, 8);
+if (!next.length) {
+$('pg-camino').replaceChildren(el('p', { class: 'nota', text: 'Ya tienes todo lo que se gana con el nivel. Lo que queda está en la tienda y en las gestas.' }));
+return;
+}
+const nodes = [el('div', { class: 'pc-nodo pc-actual' }, el('span', { class: 'pc-nivel', text: String(lvl) }), el('small', { text: 'Ahora' }))];
+for (const item of next) {
+const rar = rarityOf(item);
+const n = el('button', { type: 'button', class: 'pc-nodo', style: `--rar:${rar.color}`, 'aria-label': `Nivel ${item.unlock.level}: ${item.name}`, onclick: () => this.openCollection(CATALOG.get(item.cat).col) },
+el('span', { class: 'pc-nivel', text: String(item.unlock.level) }),
+el('span', { class: 'pc-icono' }, this._itemIcon(item, 40)),
+el('small', { class: 'pc-nombre', text: item.name, style: `color:${rar.color}` }));
+attachTip(n, () => this._itemTip(item));
+nodes.push(n);
+}
+$('pg-camino').replaceChildren(...nodes);
+rodar($('pg-camino'));
+}
+_renderAlmost() {
+const p = this.profile;
+const rows = [];
+const near = ACHIEVEMENTS.filter((a) => !hasAchievement(p, a.id))
+.map((a) => ({ a, prog: achievementProgress(p, a) }))
+.filter((x) => x.prog && x.prog.have > 0 && x.prog.have < x.prog.need)
+.sort((x, y) => y.prog.have / y.prog.need - x.prog.have / x.prog.need)
+.slice(0, 4);
+for (const { a, prog } of near) {
+rows.push(el('li', { class: 'casi-gesta' },
+el('span', { class: 'casi-icono', 'aria-hidden': 'true', text: a.icon }),
+el('div', { class: 'casi-texto' },
+el('strong', { text: a.name }),
+el('span', { class: 'reto-barra llena-al-ver' }, el('span', { style: `--p:${(prog.have / prog.need).toFixed(3)}` })),
+el('small', { text: `${formatNumber(prog.have)}/${formatNumber(prog.need)} · ${a.desc}` })),
+el('b', { class: 'casi-premio', text: `+${achPoints(a)}` })));
+}
+const coins = p.monedas || 0;
+const affordable = COLLECTION.flatMap((c) => c.list).filter((i) => i.unlock && i.unlock.price && !isUnlocked(p, i) && i.unlock.price <= coins)
+.sort((a, b) => b.unlock.price - a.unlock.price)
+.slice(0, 3);
+for (const item of affordable) {
+const rar = rarityOf(item);
+const C = CATALOG.get(item.cat);
+const btn = el('button', { type: 'button', class: 'casi-compra', style: `--rar:${rar.color}`, onclick: () => this.openCollection(C.col) },
+el('span', { class: 'casi-icono' }, this._itemIcon(item, 34)),
+el('span', { class: 'casi-texto' }, el('strong', { text: item.name, style: `color:${rar.color}` }), el('small', { text: `${C.type} · ya puedes comprarlo` })),
+el('b', { class: 'casi-premio oro', text: `🪙 ${formatNumber(item.unlock.price)}` }));
+attachTip(btn, () => this._itemTip(item));
+rows.push(el('li', {}, btn));
+}
+$('pg-casi').replaceChildren(...(rows.length ? rows : [el('li', { class: 'casi-vacio' }, emptyState('🎯', 'Nada a medias', 'Juega partidas para avanzar en tus gestas y ganar monedas.'))]));
+llenarAlVer($('pg-casi'));
+}
+_renderDeeds() {
+const p = this.profile;
+this.gestaCat ??= 'todas';
+this.gestaFilter ??= 'todas';
+const inCat = (a) => this.gestaCat === 'todas' || achCategory(a.id) === this.gestaCat;
+const cats = [{ id: 'todas', name: 'Todas', icon: '📚' }, ...ACH_CATEGORIES];
+$('gestas-cats').replaceChildren(
+...cats.map((c) => {
+const list = ACHIEVEMENTS.filter((a) => c.id === 'todas' || achCategory(a.id) === c.id);
+const got = list.filter((a) => hasAchievement(p, a.id)).length;
+return el('button', { type: 'button', class: 'gc-cat', 'aria-pressed': String(c.id === this.gestaCat), onclick: () => {
+this.gestaCat = c.id;
+this._renderDeeds();
+} },
+el('span', { class: 'gc-icono', 'aria-hidden': 'true', text: c.icon }),
+el('span', { class: 'gc-nombre', text: c.name }),
+el('small', { class: 'gc-n', text: `${got}/${list.length}` }),
+el('span', { class: 'gc-barra', 'aria-hidden': 'true' }, el('span', { style: `--p:${(got / Math.max(1, list.length)).toFixed(3)}` })));
+}),
+);
+rodar($('gestas-cats'));
+segmented($('gestas-filtro'), [['todas', 'Todas'], ['hechas', 'Conseguidas'], ['pendientes', 'Pendientes']], this.gestaFilter, (v) => {
+this.gestaFilter = v;
+this._renderDeeds();
+});
+const rewardItems = (id) => COLLECTION.flatMap((c) => c.list.filter((i) => i.unlock && i.unlock.ach === id));
+const list = ACHIEVEMENTS.filter(inCat).filter((a) => {
+const has = hasAchievement(p, a.id);
+return this.gestaFilter === 'hechas' ? has : this.gestaFilter === 'pendientes' ? !has : true;
+});
+const rows = list.map((a) => {
 const when = hasAchievement(p, a.id) ? p.logros[a.id] : 0;
-const rewards = rewardsOf(a.id);
 const prog = when ? null : achievementProgress(p, a);
-return el(
-'li',
-{ class: when ? 'conseguido' : 'pendiente' },
-el('span', { class: 'logro-icono', 'aria-hidden': 'true', text: a.icon }),
-el(
-'div',
-{ class: 'logro-texto' },
+const items = rewardItems(a.id);
+const chips = [];
+if (a.coins) chips.push(el('span', { class: 'gp-chip oro', text: `🪙 ${a.coins}` }));
+for (const item of items) {
+const rar = rarityOf(item);
+const chip = el('button', { type: 'button', class: 'gp-chip', style: `--rar:${rar.color}`, onclick: () => this.openCollection(CATALOG.get(item.cat).col) },
+el('span', { class: 'gp-ico' }, this._itemIcon(item, 18)),
+el('span', { text: item.name }));
+attachTip(chip, () => this._itemTip(item));
+chips.push(chip);
+}
+return el('li', { class: `gesta ${when ? 'conseguido' : 'pendiente'}`, 'data-cat': achCategory(a.id) },
+el('span', { class: 'gesta-medallon', 'aria-hidden': 'true' }, el('span', { text: a.icon })),
+el('div', { class: 'logro-texto' },
 el('strong', { text: a.name }),
 el('span', { text: a.desc }),
 prog ? el('span', { class: 'logro-progreso' },
 el('span', { class: 'logro-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog.have / prog.need).toFixed(3)}` })),
 el('small', { text: `${formatNumber(prog.have)}/${formatNumber(prog.need)}` })) : null,
-rewards.length ? el('small', { class: 'logro-premio', text: `Recompensa: ${rewards.join(' · ')}` }) : null,
-),
-el(
-'span',
-{ class: 'logro-estado' },
-a.coins ? el('b', { class: 'logro-monedas', text: `🪙 ${a.coins}` }) : null,
-el('span', { class: 'logro-fecha', text: when ? `✓ ${new Date(when).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : '🔒' }),
-),
-);
-}),
-);
+chips.length ? el('div', { class: 'gesta-premios' }, el('small', { class: 'gp-etq', text: 'Recompensa' }), ...chips) : null),
+el('span', { class: 'logro-estado' },
+el('b', { class: 'gesta-puntos', title: 'Puntos de gesta', text: String(achPoints(a)) }),
+el('span', { class: 'logro-fecha', text: when ? `✓ ${new Date(when).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : '🔒' })));
+});
+$('lista-logros').replaceChildren(...(rows.length ? rows : [el('li', { class: 'gesta-vacia' }, emptyState('📜', 'Nada por aquí', this.gestaFilter === 'hechas' ? 'Aún no tienes gestas de esta categoría.' : 'Las tienes todas. ¡Enhorabuena!'))]));
 llenarAlVer($('lista-logros'));
 }
 renderDaily() {
@@ -17179,7 +17997,7 @@ ctx.lineWidth = g.lw;
 ctx.stroke(g.stroke);
 }
 }
-function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline = false, color = '#ffffff' } = {}) {
+function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline = false, color = '#ffffff', skin = null } = {}) {
 const g = glyphs()[kind];
 if (!g) return;
 ctx.save();
@@ -17189,6 +18007,11 @@ ctx.scale(k, k);
 if (!ring) {
 ctx.scale(1.05, 1.05);
 paintGlyph(ctx, g, color, false);
+ctx.restore();
+return;
+}
+if (skin) {
+paintSkinnedPlate(ctx, kind, g, ring, outline, skin);
 ctx.restore();
 return;
 }
@@ -17213,6 +18036,122 @@ ctx.scale(0.62, 0.62);
 } else ctx.scale(0.7, 0.7);
 paintGlyph(ctx, g, color === '#ffffff' ? '#eef2f7' : color, false);
 ctx.restore();
+}
+function platePath(ctx, kind, shape) {
+ctx.beginPath();
+if (kind === 'sam' || kind === 'silo') {
+roundedTriangle(ctx, 12.5, 2.4);
+return;
+}
+if (shape === 'hex') {
+for (let i = 0; i < 6; i++) {
+const a = Math.PI / 6 + (i * Math.PI) / 3;
+const x = Math.cos(a) * 10.6;
+const y = Math.sin(a) * 10.6;
+if (i) ctx.lineTo(x, y);
+else ctx.moveTo(x, y);
+}
+ctx.closePath();
+} else if (shape === 'shield') {
+ctx.moveTo(-9.4, -9.2);
+ctx.lineTo(9.4, -9.2);
+ctx.lineTo(9.4, -1);
+ctx.quadraticCurveTo(9, 7, 0, 10.6);
+ctx.quadraticCurveTo(-9, 7, -9.4, -1);
+ctx.closePath();
+} else ctx.arc(0, 0, 10, 0, TAU);
+}
+function paintSkinnedPlate(ctx, kind, g, ring, outline, L) {
+const tri = kind === 'sam' || kind === 'silo';
+ctx.lineJoin = 'round';
+if (L.glow) {
+ctx.save();
+ctx.shadowColor = L.glow;
+ctx.shadowBlur = 7;
+platePath(ctx, kind, L.shape);
+ctx.fillStyle = L.plate[1];
+ctx.fill();
+ctx.restore();
+}
+platePath(ctx, kind, L.shape);
+const grad = ctx.createLinearGradient(0, -11, 0, 11);
+grad.addColorStop(0, L.plate[0]);
+grad.addColorStop(1, L.plate[1]);
+ctx.fillStyle = grad;
+ctx.fill();
+if (outline) {
+ctx.lineWidth = 3.6;
+ctx.strokeStyle = '#ffffff';
+ctx.stroke();
+}
+if (L.rim2) {
+ctx.lineWidth = 2.4;
+ctx.strokeStyle = L.rim2;
+ctx.stroke();
+}
+ctx.save();
+ctx.scale(0.84, 0.84);
+if (tri) ctx.translate(0, 0.6);
+platePath(ctx, kind, L.shape);
+ctx.restore();
+ctx.lineWidth = 1.5;
+ctx.strokeStyle = ring;
+ctx.stroke();
+if (L.ornament === 'rivets' && !tri) {
+ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+for (let i = 0; i < 6; i++) {
+const a = Math.PI / 6 + (i * Math.PI) / 3;
+ctx.beginPath();
+ctx.arc(Math.cos(a) * 9.2, Math.sin(a) * 9.2, 0.8, 0, TAU);
+ctx.fill();
+}
+} else if (L.ornament === 'laurel' && !tri) {
+ctx.strokeStyle = '#6fa24a';
+ctx.fillStyle = '#8cc35e';
+ctx.lineWidth = 0.7;
+for (const side of [-1, 1]) {
+for (let i = 0; i < 4; i++) {
+const a = Math.PI / 2 + side * (0.5 + i * 0.32);
+const x = Math.cos(a) * 11.4;
+const y = Math.sin(a) * 11.4;
+ctx.beginPath();
+ctx.ellipse(x, y, 1.9, 0.9, a + side * 0.9, 0, TAU);
+ctx.fill();
+ctx.stroke();
+}
+}
+} else if (L.ornament === 'runes' && !tri) {
+ctx.strokeStyle = L.rim2 || '#ffffff';
+ctx.lineWidth = 0.8;
+for (let i = 0; i < 12; i++) {
+const a = (i * TAU) / 12;
+const r0 = 7.6;
+const r1 = i % 3 === 0 ? 9.6 : 8.6;
+ctx.beginPath();
+ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+ctx.stroke();
+}
+}
+ctx.save();
+platePath(ctx, kind, L.shape);
+ctx.clip();
+const shine = ctx.createLinearGradient(-8, -10, 4, 2);
+shine.addColorStop(0, 'rgba(255, 255, 255, 0.28)');
+shine.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+ctx.fillStyle = shine;
+ctx.fillRect(-12, -12, 24, 24);
+ctx.restore();
+if (tri) {
+ctx.translate(0, 2.4);
+ctx.scale(0.62, 0.62);
+} else ctx.scale(0.66, 0.66);
+if (L.glow) {
+ctx.shadowColor = L.glow;
+ctx.shadowBlur = 4;
+}
+paintGlyph(ctx, g, L.glyph, false);
+ctx.shadowBlur = 0;
 }
 function drawCapitalEmblem(ctx, cx, cy, size, level, { ring = null, outline = false } = {}) {
 const T = CAPITAL_TIERS[capitalTier(level)];
@@ -19278,6 +20217,7 @@ const { Ladder } = __require('ladder');
 const { claimText, getIdentity, signClaim, verifiedRank } = __require('identidad');
 const { challengeBeaten, challengeLink, parseChallenge } = __require('reto');
 const { RANKED_AI, RANKED_ROOM, aiDifficultyFor, alreadyApplied, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName, voidResult } = __require('rangos');
+const { cleanSkins } = __require('skins');
 const { presentMatch } = __require('presentacion');
 const { configSnapshot } = __require('repeticion');
 const { INVITE_MS, Matchmaker } = __require('emparejamiento');
@@ -19375,6 +20315,7 @@ title: titleName(profile),
 frame: profile.marco || 'ninguno',
 banner: profile.estandarte || 'noche',
 nameColor: profile.colorNombre || '',
+skins: { edificio: profile.skinEdificios, barco: profile.skinBarcos, bomba: profile.skinBombas },
 };
 }
 function loadMap(mapSize, seed) {
@@ -19414,6 +20355,7 @@ used.add(name.toLowerCase());
 const p = game.addPlayer(name, hexToRgb(h.color), true);
 p.emblem = h.emblem;
 p.pattern = h.pattern;
+p.skins = cleanSkins(h.skins);
 p.flag = (h.emblem && h.emblem.flag) || '';
 p.level = Math.max(...members.map((i) => Number(humans[i].level) || 0));
 return p;
@@ -23113,6 +24055,7 @@ __define('multiplayer', function () {
 const { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } = __require('config');
 const { MECH, PROFILES, rulesetId } = __require('mecanicas');
 const { selfPeer } = __require('net');
+const { cleanSkins } = __require('skins');
 const PROTOCOL = 3;
 const FINGERPRINT = (() => {
 const s = JSON.stringify([PROTOCOL, MECH, PROFILES, CONFIG, BUILDINGS, MAP_IDS]);
@@ -23287,6 +24230,7 @@ title: String(p.title || '').slice(0, 24),
 frame: word(p.frame, 'ninguno'),
 banner: word(p.banner, 'noche'),
 nameColor: typeof p.nameColor === 'string' && /^[a-z]{2,12}$/.test(p.nameColor) ? p.nameColor : '',
+skins: cleanSkins(p.skins),
 };
 }
 const utf8 = new TextEncoder();
@@ -23641,7 +24585,7 @@ ronda: this.ronda,
 rev: this.rev,
 ruleset: roomRuleset(this.settings.rules),
 settings: this.settings,
-players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor })),
+players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor, skins }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor, skins })),
 };
 payload.count = payload.players.length;
 this.payload = payload;
@@ -25725,6 +26669,7 @@ return { presentMatch };
 __define('profile', function () {
 const { DEFAULT_RULES, migrateRules } = __require('config');
 const { normalizeConfig } = __require('configurador');
+const { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS } = __require('skins');
 const { newRank, normalizeRank, splitRanks } = __require('rangos');
 const { Rng, hashString } = __require('rng');
 const KEY = 'dominia.perfil.v1';
@@ -25866,12 +26811,12 @@ const TITLES = [
 { id: 'grande', name: 'el Grande', unlock: { price: 700 } },
 { id: 'inmortal', name: 'el Inmortal', unlock: { price: 1200 } },
 ];
-for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'estandarte'], [FRAMES, 'marco'], [NAME_COLORS, 'color'], [PATTERNS, 'patron'], [TITLES, 'titulo']]) {
+for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'estandarte'], [FRAMES, 'marco'], [NAME_COLORS, 'color'], [PATTERNS, 'patron'], [TITLES, 'titulo'], [BUILDING_SKINS, 'edificios'], [SHIP_SKINS, 'barcos'], [BOMB_SKINS, 'bombas']]) {
 for (const item of list) item.cat = cat;
 }
 const itemKey = (item) => `${item.cat}:${item.id}`;
 const PRICE_BY_KEY = new Map(
-[SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
+[SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
 );
 function rankBest(p) {
 const best = (r) => {
@@ -26017,7 +26962,7 @@ function rewardsOf(achId) {
 const out = [];
 const ach = ACHIEVEMENTS.find((a) => a.id === achId);
 if (ach && ach.coins) out.push(`🪙 ${ach.coins}`);
-for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre']]) {
+for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre'], [BUILDING_SKINS, 'Edificios'], [SHIP_SKINS, 'Barcos'], [BOMB_SKINS, 'Bombas']]) {
 for (const item of list) if (item.unlock && item.unlock.ach === achId) out.push(`${kind}: ${item.name}`);
 }
 return out;
@@ -26049,6 +26994,9 @@ titulo: '',
 estandarte: 'noche',
 marco: 'ninguno',
 colorNombre: 'oro',
+skinEdificios: 'estandar',
+skinBarcos: 'estandar',
+skinBombas: 'estandar',
 xp: 0,
 stats: {
 partidas: 0,
@@ -26123,6 +27071,9 @@ return {
 estandarte: pick(BANNERS, p.estandarte, d.estandarte),
 marco: pick(FRAMES, p.marco, d.marco),
 colorNombre: pick(NAME_COLORS, p.colorNombre, d.colorNombre),
+skinEdificios: pick(BUILDING_SKINS, p.skinEdificios, d.skinEdificios),
+skinBarcos: pick(SHIP_SKINS, p.skinBarcos, d.skinBarcos),
+skinBombas: pick(BOMB_SKINS, p.skinBombas, d.skinBombas),
 emblema: cleanEmblem({ ...d.emblema, ...(p.emblema || {}) }),
 stats: { ...d.stats, ...(p.stats || {}) },
 logros: Object.fromEntries(Object.entries(p.logros || {}).filter(([k, v]) => ACHIEVEMENTS.some((a) => a.id === k) && Number.isFinite(v))),
@@ -26734,6 +27685,7 @@ const { forgetTerrain, paintTerrain } = __require('terreno');
 const { MECH, startOffsets } = __require('mecanicas');
 const { Fx, drawMissileSprite, resetFxSprites } = __require('fx');
 const { drawCargo, drawFishing, drawTransport, drawWarship } = __require('barcos');
+const { skinLook } = __require('skins');
 const { LUGARES } = __require('lugares');
 const START_ZONE = startOffsets();
 const TAU = Math.PI * 2;
@@ -27755,6 +28707,7 @@ this._drawBoats();
 this._drawWarships(now);
 this.fx.draw(ctx, camera);
 this._drawMissiles(now);
+this._drawInterceptors(now);
 this._drawVignette();
 if (this.fx.flash > 0.01 && this.anim) {
 ctx.fillStyle = `rgba(255, 244, 220, ${this.fx.flash * 0.45})`;
@@ -28238,14 +29191,15 @@ drawTrain(ctx, px, py, ang, L, owner ? pcss(owner) : '#888');
 _buildingSprite(kind, p, size) {
 const px = Math.max(8, Math.round((size * this.dpr) / 2) * 2);
 const human = p === this.game.human;
-const key = `${kind}|${p.id}|${px}|${human ? 1 : 0}`;
+const skin = p.skins ? p.skins.edificio : 'estandar';
+const key = `${kind}|${p.id}|${px}|${human ? 1 : 0}|${skin}`;
 this._sprites ??= new Map();
 let c = this._sprites.get(key);
 if (!c) {
 if (this._sprites.size > 600) this._sprites.clear();
 const S = Math.ceil(px * 1.45);
 c = makeCanvas(S, S);
-drawBuildingReal(c.getContext('2d'), kind, S / 2, S / 2, px, { ring: rgbToCss(p.color), outline: human });
+drawBuildingReal(c.getContext('2d'), kind, S / 2, S / 2, px, { ring: rgbToCss(p.color), outline: human, skin: skinLook('edificio', skin) });
 this._sprites.set(key, c);
 }
 return c;
@@ -28461,7 +29415,7 @@ const mine = human && (b.owner === human.id || b.targetId === human.id);
 this._drawBoatTrail(b, s, p, mine);
 if (!this._onScreen(sx, sy, 60)) continue;
 const len = clamp(z * RES * 2.4, 8, 30);
-drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
+drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1, skinLook('barco', p.skins && p.skins.barco));
 this._maybeWake(s, len, 8);
 if (z * RES >= 4 || mine) {
 const text = fmtTroops(b.troops);
@@ -28623,7 +29577,7 @@ const len = r * 2;
 if (!this._onScreen(sx, sy, len * 2)) continue;
 const p = game.players[ws.owner];
 const aim = now - st.aimAt < 1600 ? st.aim : null;
-drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
+drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1), { look: skinLook('barco', p.skins && p.skins.barco) });
 this._shipEnsign(p, sx, sy - r * 0.2, Math.round(clamp(r * 0.78, 10, 15)));
 this._maybeWake(s, len, 10);
 this._hpBar(sx, sy + r + 6, r * 2, ws.hp / CONFIG.warshipHp);
@@ -28690,24 +29644,22 @@ continue;
 }
 if (e.kind === 'boom') {
 fx.explosion(e.x, e.y, (e.r || CONFIG.missileRadius) / RES);
+} else if (e.kind === 'samLaunch') {
+if (visible) fx.samLaunch(e.x, e.y);
+} else if (e.kind === 'intercept' || e.kind === 'miss') {
+const vm = this._missiles.get(e.missile);
+const vi = this._icVis?.get(e.interceptor);
+const x = vm ? vm.gx : e.x;
+const y = vm ? vm.gy : e.y;
+const z = vm ? vm.z : vi ? vi.z : 4 * RES;
+if (e.kind === 'intercept') {
+fx.airburst(x, y, z);
+fx.missileBreakup(x, y, z, vm ? vm.vx : 0, vm ? vm.vy : 0, vm ? vm.color : '#cfd6e0');
+if (visible) fx.label(x, y - z, '¡DERRIBADO!', '#bfe6ff', 18);
 } else {
-live ??= new Set(game.missiles.map((m) => m.id));
-const hit = e.kind === 'intercept';
-let best = null;
-let bestD = Infinity;
-for (const [id, m] of this._missiles) {
-if (hit === live.has(id)) continue;
-const d = (m.gx - e.x) ** 2 + (m.gy - e.y) ** 2;
-if (d < bestD) {
-bestD = d;
-best = m;
+fx.pop(vi ? vi.x : x, vi ? vi.y : y, vi ? vi.z : z);
+if (visible && vm) fx.label(x, y - z, 'FALLO', '#d4d8e0', 13);
 }
-}
-const W = game.map.width;
-const bx = (e.from % W) + 0.5;
-const by = Math.floor(e.from / W) + 0.5;
-if (best && bestD < 64) fx.intercept(bx, by, best.gx, best.gy, best.z, best.vx, best.vy, best.vz, hit, best.color);
-else if (hit) fx.airburst(e.x, e.y, 4 * RES);
 }
 if (!visible) {
 fx.shake = shake;
@@ -28780,10 +29732,84 @@ ctx.globalAlpha = 0.55 + Math.sin(now / 70) * 0.15;
 ctx.drawImage(this.fx.glow, sx - len, sy - len, len * 2, len * 2);
 ctx.globalAlpha = 1;
 ctx.globalCompositeOperation = 'source-over';
-drawMissileSprite(ctx, sx, sy, Math.atan2(vy - vz, vx), len, color, now / 1000);
+const owner = game.players[m.owner];
+drawMissileSprite(ctx, sx, sy, Math.atan2(vy - vz, vx), len, color, now / 1000, skinLook('bomba', owner && owner.skins && owner.skins.bomba));
 }
 }
 for (const [id, m] of this._missiles) if (m.gen !== gen) this._missiles.delete(id);
+}
+_drawInterceptors(now) {
+const { ctx, game, camera, fx } = this;
+this._icVis ??= new Map();
+const vis = this._icVis;
+if (!game.interceptors.length && !vis.size) return;
+const W = game.map.width;
+const z0 = camera.zoom;
+const live = new Set();
+for (const it of game.interceptors) {
+live.add(it.id);
+const s = this._lerpUnit(it, it.x, it.y);
+const vm = this._missiles.get(it.m.id);
+const tx = vm ? vm.gx : it.x;
+const ty = vm ? vm.gy : it.y;
+const k = clamp(1 - Math.hypot(tx - s.x, ty - s.y) / Math.max(1, it.dist0), 0, 1);
+const z = (vm ? vm.z : 6 * RES) * (1 - (1 - k) * (1 - k));
+let v = vis.get(it.id);
+if (!v) {
+v = { x: (it.from % W) + 0.5, y: Math.floor(it.from / W) + 0.5, z: 0, pts: [[(it.from % W) + 0.5, Math.floor(it.from / W) + 0.5, 0]], end: 0 };
+vis.set(it.id, v);
+}
+const ang = Math.atan2(ty - (vm ? vm.z : z) - (s.y - z), tx - s.x);
+v.x = s.x;
+v.y = s.y;
+v.z = z;
+v.ang = ang;
+const last = v.pts[v.pts.length - 1];
+if (Math.hypot(last[0] - s.x, last[1] - s.y) > 0.4) {
+v.pts.push([s.x, s.y, z]);
+if (v.pts.length > 48) v.pts.shift();
+if (this.anim) fx.add({ x: s.x, y: s.y, z, zAbs: true, drag: 0.5, life: 1.2, s0: 0.4, s1: 1.5, min: 3, sprite: 'steam', a0: 0.5 });
+}
+}
+for (const [id, v] of vis) {
+if (!live.has(id) && !v.end) v.end = now;
+const fade = v.end ? 1 - (now - v.end) / 1200 : 1;
+if (fade <= 0) {
+vis.delete(id);
+continue;
+}
+ctx.save();
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+ctx.beginPath();
+v.pts.forEach(([x, y, z], i) => {
+const [sx, sy] = camera.worldToScreen(x, y - z);
+if (i) ctx.lineTo(sx, sy);
+else ctx.moveTo(sx, sy);
+});
+if (!v.end) {
+const [hx, hy] = camera.worldToScreen(v.x, v.y - v.z);
+ctx.lineTo(hx, hy);
+}
+ctx.globalAlpha = 0.25 * fade;
+ctx.strokeStyle = '#7cc8ff';
+ctx.lineWidth = 6;
+ctx.stroke();
+ctx.globalAlpha = 0.9 * fade;
+ctx.strokeStyle = '#eef8ff';
+ctx.lineWidth = 1.8;
+ctx.stroke();
+ctx.restore();
+if (v.end) continue;
+const [hx, hy] = camera.worldToScreen(v.x, v.y - v.z);
+const len = clamp(z0 * RES * 2.2, 12, 22);
+ctx.globalCompositeOperation = 'lighter';
+ctx.globalAlpha = 0.85;
+ctx.drawImage(this.fx.glow, hx - len, hy - len, len * 2, len * 2);
+ctx.globalAlpha = 1;
+ctx.globalCompositeOperation = 'source-over';
+drawMissileSprite(ctx, hx, hy, v.ang, len, '#5ab8ff', now / 1000);
+}
 }
 _drawRailPreview(tile, sx, sy) {
 const { ctx, game, camera } = this;
@@ -28803,26 +29829,19 @@ ctx.setLineDash([6, 5]);
 ctx.lineWidth = 1.5;
 ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
 ctx.stroke();
-const fx = map.x(tile);
-const fy = map.y(tile);
-const body = map.landBody[tile];
-const cands = [];
-for (const b of game.buildings) {
-if ((b.kind !== 'city' && b.kind !== 'port' && b.kind !== 'factory') || !b.level || map.landBody[b.tile] !== body) continue;
-const d = Math.abs(map.x(b.tile) - fx) + Math.abs(map.y(b.tile) - fy);
-if (d <= R) cands.push([d, b]);
-}
-cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
+const links = game.railLinks({ id: -1, tile, level: 1, owner: human.id });
 ctx.lineWidth = 2;
-ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
 let n = 0;
-for (const [, b] of cands) {
-if (n >= CONFIG.railMaxPerFactory) break;
-const corner = game._railCorner(tile, b.tile);
+let joins = 0;
+for (const l of links) {
+const b = l.station;
+const corner = l.corner || game._railCorner(tile, b.tile);
 if (!corner) continue;
 n++;
+if (l.join) joins++;
 const [cx, cy] = camera.worldToScreen(corner[0] + 0.5, corner[1] + 0.5);
 const [bx, by] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+ctx.strokeStyle = l.join ? 'rgba(255, 210, 110, 0.95)' : 'rgba(255, 255, 255, 0.85)';
 ctx.beginPath();
 ctx.moveTo(sx, sy);
 ctx.lineTo(cx, cy);
@@ -28835,7 +29854,7 @@ ctx.textAlign = 'center';
 ctx.textBaseline = 'middle';
 ctx.lineWidth = 3;
 ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-const note = n ? `${n} vía${n > 1 ? 's' : ''}: trenes con oro` : 'Sin estaciones al alcance (ciudades, puertos o fábricas)';
+const note = n ? `${n} vía${n > 1 ? 's' : ''} a la vez${joins ? ` · ${joins} por la vía que pisa` : ''}: trenes con oro` : 'Sin estaciones al alcance (ciudades, puertos, fábricas, pueblos o capitales)';
 ctx.strokeText(note, sx, sy - 30);
 ctx.fillStyle = '#ffffff';
 ctx.fillText(note, sx, sy - 30);
@@ -29949,6 +30968,121 @@ return h >>> 0;
 
 return { mulberry32, Rng, hashString };
 });
+__define('rpg', function () {
+const { RARITIES, rarityOf } = __require('skins');
+const ACH_CATEGORIES = [
+{ id: 'conquista', name: 'Conquista', icon: '🏰' },
+{ id: 'guerra', name: 'Guerra', icon: '⚔️' },
+{ id: 'economia', name: 'Economía', icon: '💰' },
+{ id: 'diplomacia', name: 'Diplomacia', icon: '🕊️' },
+{ id: 'clasificatoria', name: 'Clasificatoria', icon: '🏅' },
+{ id: 'trayectoria', name: 'Trayectoria', icon: '📜' },
+];
+const CAT_OF = {
+conquista: ['primera_victoria', 'gran_victoria', 'relampago', 'medio_mundo', 'imperio', 'remontada', 'top10', 'podio', 'emperador', 'magnate_mundial', 'resistente', 'superviviente', 'aguante', 'retador'],
+guerra: ['verdugo', 'tormenta', 'centurion', 'lluvia_fuego', 'almirante', 'saqueador', 'capitalino', 'marino'],
+economia: ['arquitecto', 'metropolis', 'urbanista', 'constructor', 'industrial', 'tesoro', 'millonario', 'magnate_oro', 'estratega', 'cientifico'],
+diplomacia: ['alianza_victoriosa', 'diplomatico', 'diplomatico_total', 'traidor', 'pacificador', 'cooperativo', 'en_compania'],
+clasificatoria: ['clasificado', 'liga_bronce', 'liga_plata', 'liga_oro', 'liga_platino', 'liga_diamante', 'liga_maestro', 'racha'],
+};
+const CAT_BY_ID = new Map(Object.entries(CAT_OF).flatMap(([cat, ids]) => ids.map((id) => [id, cat])));
+function achCategory(id) {
+return CAT_BY_ID.get(id) || 'trayectoria';
+}
+function achPoints(a) {
+return Math.max(5, Math.round((a.coins || 0) / 10));
+}
+function esc(s) {
+return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+function itemTipHtml({ name, item = null, rarity = null, type = '', desc = '', lines = [], flavor = '' }) {
+const r = rarity || (item ? rarityOf(item) : RARITIES.comun);
+return `<div class="rt-cab"><strong class="rt-nombre" style="color:${r.color}">${esc(name)}</strong>
+    <div class="rt-fila"><span style="color:${r.color}">${esc(r.name)}</span><span class="rt-tipo">${esc(type)}</span></div></div>
+    ${desc ? `<p class="rt-desc">${esc(desc)}</p>` : ''}
+    ${lines.map((l) => `<p class="rt-linea ${l.tone || ''}">${esc(l.text)}</p>`).join('')}
+    ${flavor ? `<p class="rt-sabor">«${esc(flavor)}»</p>` : ''}`;
+}
+let TIP = null;
+let current = null;
+let press = 0;
+function tipEl() {
+if (TIP) return TIP;
+TIP = document.createElement('div');
+TIP.className = 'rpg-tip';
+TIP.setAttribute('role', 'tooltip');
+TIP.hidden = true;
+document.body.append(TIP);
+return TIP;
+}
+function place(node) {
+const t = tipEl();
+const r = node.getBoundingClientRect();
+const w = t.offsetWidth;
+const h = t.offsetHeight;
+const vw = window.innerWidth;
+const vh = window.innerHeight;
+let x = r.right + 10;
+let y = r.top;
+if (x + w > vw - 8) x = r.left - w - 10;
+if (x < 8) {
+x = Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2));
+y = r.top - h - 10 < 8 ? r.bottom + 10 : r.top - h - 10;
+}
+y = Math.max(8, Math.min(vh - h - 8, y));
+t.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+}
+function show(node, build) {
+const t = tipEl();
+current = node;
+t.innerHTML = build();
+t.hidden = false;
+t.classList.remove('entra');
+void t.offsetWidth;
+t.classList.add('entra');
+place(node);
+}
+function hideTip() {
+if (TIP) TIP.hidden = true;
+current = null;
+}
+function attachTip(node, build) {
+node.addEventListener('pointerenter', (e) => {
+if (e.pointerType === 'mouse') show(node, build);
+});
+node.addEventListener('pointerleave', () => current === node && hideTip());
+node.addEventListener('focus', () => show(node, build));
+node.addEventListener('blur', () => current === node && hideTip());
+node.addEventListener('pointerdown', (e) => {
+if (e.pointerType === 'mouse') return;
+clearTimeout(press);
+press = setTimeout(() => {
+node.dataset.tipLargo = '1';
+show(node, build);
+}, 480);
+});
+for (const ev of ['pointerup', 'pointercancel']) {
+node.addEventListener(ev, () => {
+clearTimeout(press);
+if (node.dataset.tipLargo) setTimeout(() => {
+delete node.dataset.tipLargo;
+hideTip();
+}, 1400);
+});
+}
+node.addEventListener('click', (e) => {
+if (node.dataset.tipLargo) {
+e.preventDefault();
+e.stopImmediatePropagation();
+}
+}, true);
+}
+if (typeof window !== 'undefined') {
+window.addEventListener('scroll', hideTip, { passive: true, capture: true });
+}
+
+return { ACH_CATEGORIES, achCategory, achPoints, esc, itemTipHtml, hideTip, attachTip };
+});
 __define('salida', function () {
 const pct = (n, total) => Math.round((100 * n) / Math.max(1, total));
 function freeLabel(info) {
@@ -29988,6 +31122,68 @@ line: [have >= info.full ? `${have}/${info.full} casillas` : `${have}/${info.ful
 }
 
 return { freeLabel, describeSpawn };
+});
+__define('skins', function () {
+const RARITIES = {
+comun: { id: 'comun', name: 'Común', color: '#c9cdd3', order: 0 },
+poco: { id: 'poco', name: 'Poco común', color: '#3fd65a', order: 1 },
+raro: { id: 'raro', name: 'Raro', color: '#3d9cff', order: 2 },
+epico: { id: 'epico', name: 'Épico', color: '#b866ff', order: 3 },
+legendario: { id: 'legendario', name: 'Legendario', color: '#ff9d2e', order: 4 },
+};
+const RARITY_IDS = Object.keys(RARITIES);
+const EPIC_ACHIEVEMENTS = new Set(['emperador', 'gran_victoria', 'millonario', 'almirante', 'magnate_oro', 'liga_maestro', 'imperio', 'urbanista', 'lluvia_fuego']);
+function rarityOf(item) {
+if (item && item.rarity && RARITIES[item.rarity]) return RARITIES[item.rarity];
+const u = item && item.unlock;
+if (!u) return RARITIES.comun;
+if (u.level) return u.level <= 3 ? RARITIES.comun : u.level <= 6 ? RARITIES.poco : RARITIES.raro;
+if (u.price) return u.price < 300 ? RARITIES.poco : u.price < 600 ? RARITIES.raro : u.price < 1000 ? RARITIES.epico : RARITIES.legendario;
+if (u.ach) return EPIC_ACHIEVEMENTS.has(u.ach) ? RARITIES.epico : RARITIES.raro;
+return RARITIES.comun;
+}
+const BUILDING_SKINS = [
+{ id: 'estandar', name: 'Estándar', rarity: 'comun', unlock: null, desc: 'El de siempre: disco oscuro con el aro de tu color.', look: null },
+{ id: 'piedra', name: 'Piedra labrada', rarity: 'poco', unlock: { level: 5 }, desc: 'Placa hexagonal de piedra con remaches.', look: { shape: 'hex', plate: ['#9a9fa6', '#5b5f66'], rim2: '#34373d', glyph: '#f6f1e6', ornament: 'rivets' } },
+{ id: 'bronce', name: 'Bronce bruñido', rarity: 'poco', unlock: { price: 300 }, desc: 'Medallón de bronce con borde oscuro.', look: { shape: 'disc', plate: ['#d4914a', '#7a4a1d'], rim2: '#3d2410', glyph: '#fff1d6' } },
+{ id: 'marmol', name: 'Mármol y oro', rarity: 'raro', unlock: { level: 12 }, desc: 'Mármol blanco con filo dorado.', look: { shape: 'disc', plate: ['#f7f4ee', '#cdc6b8'], rim2: '#d6ac3a', glyph: '#2b2f36' } },
+{ id: 'obsidiana', name: 'Obsidiana', rarity: 'raro', unlock: { price: 700 }, desc: 'Piedra volcánica negra con destellos violeta.', look: { shape: 'hex', plate: ['#33244d', '#0b0812'], rim2: '#9b7bff', glyph: '#e6d9ff', glow: '#9b7bff' } },
+{ id: 'imperial', name: 'Imperial', rarity: 'epico', unlock: { ach: 'urbanista' }, desc: 'Escudo de oro con corona de laurel.', look: { shape: 'shield', plate: ['#f8d873', '#b07d1e'], rim2: '#5a3b05', glyph: '#3a2604', ornament: 'laurel' } },
+{ id: 'arcano', name: 'Arcano', rarity: 'legendario', unlock: { price: 2000 }, desc: 'Sello azul profundo con un anillo de runas que brilla.', look: { shape: 'disc', plate: ['#163463', '#050c1a'], rim2: '#5ff2ff', glyph: '#c4fbff', ornament: 'runes', glow: '#5ff2ff' } },
+];
+const SHIP_SKINS = [
+{ id: 'estandar', name: 'Estándar', rarity: 'comun', unlock: null, desc: 'Gris naval con la cubierta de tu color.', look: null },
+{ id: 'madera', name: 'Roble', rarity: 'poco', unlock: { level: 4 }, desc: 'Casco de madera de roble con filete dorado.', look: { hull: '#7d522c', warHull: '#8a5c33', trim: '#d6a65e', bridge: '#efe0c0' } },
+{ id: 'acero', name: 'Acero pavonado', rarity: 'poco', unlock: { price: 250 }, desc: 'Acero oscuro de buque de línea.', look: { hull: '#323b45', warHull: '#56616d', trim: '#8a98a6', bridge: '#c3ccd5' } },
+{ id: 'artico', name: 'Rompehielos', rarity: 'raro', unlock: { level: 14 }, desc: 'Blanco polar con franja azul.', look: { hull: '#eef3f7', warHull: '#f4f8fb', trim: '#2f7dff', bridge: '#ffffff' } },
+{ id: 'corsario', name: 'Corsario', rarity: 'raro', unlock: { price: 700 }, desc: 'Casco negro con franja roja.', look: { hull: '#1b1b20', warHull: '#26262c', trim: '#d0362f', bridge: '#ece4d2' } },
+{ id: 'real', name: 'Armada real', rarity: 'epico', unlock: { ach: 'almirante' }, desc: 'Azul de gala con filetes de oro.', look: { hull: '#1f2f5c', warHull: '#2a3d72', trim: '#ebc65c', bridge: '#f6eed6' } },
+{ id: 'espectral', name: 'Flota espectral', rarity: 'legendario', unlock: { price: 2200 }, desc: 'Cascos translúcidos que brillan sobre el agua.', look: { hull: 'rgba(70, 225, 205, 0.55)', warHull: 'rgba(90, 235, 215, 0.6)', trim: '#a8fff2', bridge: '#e0fffa', glow: '#5fffe0' } },
+];
+const BOMB_SKINS = [
+{ id: 'estandar', name: 'Estándar', rarity: 'comun', unlock: null, desc: 'Cuerpo blanco con la ojiva de tu color.', look: null },
+{ id: 'camuflaje', name: 'Camuflaje', rarity: 'poco', unlock: { level: 6 }, desc: 'Verde oliva con manchas.', look: { body: '#6b7a4a', nose: '#3f4a2a', stripe: '#3f4a2a', flame: 'fire' } },
+{ id: 'carmesi', name: 'Carmesí', rarity: 'poco', unlock: { price: 300 }, desc: 'Rojo intenso con ojiva negra.', look: { body: '#c3283a', nose: '#1c1c20', fins: '#1c1c20', stripe: '#ffffff', flame: 'red' } },
+{ id: 'tormenta', name: 'Tormenta', rarity: 'raro', unlock: { level: 16 }, desc: 'Gris tormenta con un rayo amarillo y llama azul.', look: { body: '#3a3f48', stripe: '#ffd23f', flame: 'blue' } },
+{ id: 'dorada', name: 'Ojiva dorada', rarity: 'epico', unlock: { ach: 'lluvia_fuego' }, desc: 'Oro de punta a cola, con llama dorada.', look: { body: '#f4cf5e', nose: '#ffffff', fins: '#b8862a', flame: 'gold' } },
+{ id: 'plasma', name: 'Plasma', rarity: 'legendario', unlock: { price: 2500 }, desc: 'Cuerpo violeta con llama de plasma.', look: { body: '#2a1846', nose: '#e3c7ff', stripe: '#c08bff', flame: 'violet', glow: '#b06bff' } },
+];
+const BY = {
+edificio: new Map(BUILDING_SKINS.map((s) => [s.id, s])),
+barco: new Map(SHIP_SKINS.map((s) => [s.id, s])),
+bomba: new Map(BOMB_SKINS.map((s) => [s.id, s])),
+};
+function skinLook(kind, id) {
+const s = BY[kind] && BY[kind].get(id);
+return s ? s.look : null;
+}
+function cleanSkins(raw) {
+const r = raw && typeof raw === 'object' ? raw : {};
+const pick = (kind, v) => (typeof v === 'string' && BY[kind].has(v) ? v : 'estandar');
+return { edificio: pick('edificio', r.edificio), barco: pick('barco', r.barco), bomba: pick('bomba', r.bomba) };
+}
+
+return { RARITIES, RARITY_IDS, rarityOf, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS, skinLook, cleanSkins };
 });
 __define('social-ui', function () {
 const { drawEmblem, drawFrame } = __require('icons');
@@ -33295,7 +34491,7 @@ const P = h.economy === 'workers' ? h.troops + h.workers : h.troops;
 const k = h.paceRegen * h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
 const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
 out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
-out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
+out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a la vez a las ciudades, puertos, fábricas, pueblos y capitales cercanas (o enganchada a la vía que pise); más fábricas, más trenes; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
 out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} en una ruta corta, ~${formatNumber(tradeGold(300))} en una larga)`;
 return out;
 }
