@@ -31,7 +31,12 @@ primer pintado) cubre todo mientras se preparan las fuentes, las banderas, el
 mapa del mundo, su terreno, la cuenta y el menú. Tiene un
 horizonte con un frente que avanza y brasas que suben, el mapa del mundo que se
 descubre con un escáner dorado y en el que van cayendo chinchetas con las
-banderas de algunos países, la lista de pasos (cada uno se marca al terminar),
+banderas de algunos países (en un marco con esquinas doradas y una rosa de los
+vientos que gira), **los pasos como insignias** (Cuartel, Banderas, Mapa,
+Terreno, Perfil y Frente, cada una con su icono) unidas por una línea dorada que
+se llena: la que está en marcha lleva un anillo que gira y su icono flota, y al
+terminar se dora con un golpe de sello, una onda y su marca verde; el texto del
+paso con un pequeño anillo delante, la barra con una punta que brilla,
 un contador de porcentaje y **consejos de juego** que van rotando con sus
 puntos. Todo se anima con `transform` y `opacity` (en la tarjeta gráfica), así
 que no se para aunque un paso ocupe el hilo principal. Al terminar, «Listo»,
@@ -86,8 +91,16 @@ cubre lo que va encima del menú: «atrás» en Crear sala vuelve a la página d
 que vino, en una sala te saca de ella y **en partida abre el menú de la partida
 en vez de sacarte** (otra vez, lo cierra); al terminar una partida se vuelve a
 la página desde la que empezó (Crear partida, Competitivo o Multijugador).
-Antes de cada partida hay una pantalla de carga con los pasos reales y un
-consejo.
+Antes de cada partida hay una **pantalla de carga con el mismo estilo** que la
+de arranque (rejilla, horizonte, brasas y siluetas del frente): «Preparando la
+batalla» con el nombre del mapa, **la vista previa del mapa elegido** (en cuanto
+el primer paso lo lee; se descubre con el escáner y, en los mapas reales, caen
+las banderas de los países más grandes, cada una con su hueco), la barra
+dorada con su punta, los pasos reales como insignias (Relieve, Naciones y
+Trincheras; en línea, Revista) y un consejo de campaña. Las animaciones van con
+`transform` y `opacity` (siguen aunque el paso ocupe el navegador); el texto del
+paso entra sin opacidad, para que no se quede invisible si el paso siguiente
+bloquea el navegador.
 
 - **Competitivo** (al estilo de los clientes de juegos competitivos, con el arte
   de Trinchera): una franja con **tu comandante** (estandarte, emblema, marco,
@@ -891,7 +904,7 @@ CONQUISTAMUNDIAL/
 │   ├── minimapa.js     Minimapa de la partida (clic para ir)
 │   ├── musica.js       Música medieval y bélica (laúd, cuerno, flauta, coro, zanfona y tambores) e instrumentos sintetizados
 │   ├── sonido.js       Efectos del menú y de la batalla, ambiente de los frentes y cambio de música según la partida
-│   ├── loading.js      Pantalla de carga
+│   ├── loading.js      Pantallas de carga: arranque y antes de cada partida (pasos como insignias, barra y vista previa del mapa)
 │   ├── presentacion.js Presentación de la partida: participantes (marco, nivel, rango) y naciones en juego
 │   ├── emparejamiento.js Cola de la clasificatoria en línea: grupos de rango parecido y sala automática
 │   ├── tutorial.js     Tutorial guiado

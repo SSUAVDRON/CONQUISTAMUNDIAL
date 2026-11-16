@@ -433,13 +433,15 @@ async function startGame(opts) {
   state.holdSim = true;
   try {
     const game = await withLoading(opts.title || mapLabel(opts.mapSize), [
-      { label: 'Levantando el relieve…', run: () => loadMap(opts.mapSize, seed) },
+      { label: 'Levantando el relieve…', name: 'Relieve', icon: 'terreno', run: () => loadMap(opts.mapSize, seed) },
       {
         label: 'Desplegando naciones…',
+        name: 'Naciones',
+        icon: 'banderas',
         run: (loaded) =>
           newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficulty, rules: opts.rules, humans: [myIdentity()], localIndex: 0, loaded }),
       },
-      { label: 'Cavando trincheras…', run: (game) => game },
+      { label: 'Cavando trincheras…', name: 'Trincheras', icon: 'frente', run: (game) => game },
     ], { onReady: hideScreensForGame });
     // Qué partida es (para repetirla desde el historial)
     if (state.config) state.config.modo = opts.tutorial ? 'tutorial' : opts.ranked ? 'clasificatoria' : opts.challenge ? 'reto' : 'ia';
@@ -1012,9 +1014,11 @@ async function beginOnlineGame(sala, payload, hostPeer) {
     // En un mapa generado, la semilla que reparte el anfitrión (la misma para todos, DEV10)
     `${mapLabel(payload.settings.mapSize)}${REAL_MAPS[payload.settings.mapSize] ? '' : ` · semilla ${payload.seed >>> 0}`} · ${transport && transport.kind === 'local' ? 'prueba local' : 'online'}`,
     [
-      { label: 'Levantando el relieve…', run: () => loadMap(payload.settings.mapSize, payload.seed) },
+      { label: 'Levantando el relieve…', name: 'Relieve', icon: 'terreno', run: () => loadMap(payload.settings.mapSize, payload.seed) },
       {
         label: 'Desplegando naciones…',
+        name: 'Naciones',
+        icon: 'banderas',
         run: (loaded) =>
           newGame({
             seed: payload.seed,
@@ -1029,7 +1033,7 @@ async function beginOnlineGame(sala, payload, hostPeer) {
       },
       // Los rangos de los demás (para la presentación), con la carga aún delante:
       // antes se esperaban después y el mapa pelado asomaba hasta casi 1 s
-      { label: 'Pasando revista…', run: async (game) => (await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]), game) },
+      { label: 'Pasando revista…', name: 'Revista', icon: 'revista', run: async (game) => (await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]), game) },
     ],
     { minMs: 500, onReady: hideScreensForGame }, // online no hay que hacer esperar al resto
   );

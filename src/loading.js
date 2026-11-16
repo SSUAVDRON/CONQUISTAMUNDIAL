@@ -3,6 +3,7 @@
 
 import { mostrar } from './movimiento.js';
 import { flagCss, hasFlag } from './icons.js';
+import { paintMapPreview } from './terreno.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -42,34 +43,156 @@ const twoPaints = () => new Promise((resolve) => requestAnimationFrame(() => req
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Ejecuta `steps` ([{ label, run }]) mostrando la pantalla de carga.
- * Devuelve lo que devuelva el último paso. `onReady(result)` se llama con la
- * pantalla todavía tapándolo todo, justo antes de desvanecerse: es el momento
- * de quitar lo de debajo (el menú, la sala), para que al irse no reaparezca
- * la pantalla anterior ni un fotograma.
+ * Marca los pasos (insignias) hasta `index`: los anteriores, hechos; ese, en
+ * marcha (si es el último + 1, todos hechos). La línea que los une se llena
+ * hasta el paso en marcha.
+ */
+function markSteps(ol, index) {
+  if (!ol) return;
+  const items = [...ol.children];
+  items.forEach((li, i) => {
+    li.classList.toggle('hecho', i < index);
+    li.classList.toggle('activo', i === index);
+  });
+  const n = items.length;
+  ol.style.setProperty('--avance', String(n > 1 ? Math.min(1, Math.max(0, index) / (n - 1)) : 1));
+}
+
+/** La barra dorada hasta `f` (0-1) en `ms`, con su punta y su porcentaje. */
+function setBar(bar, tip, pct, f, ms) {
+  f = Math.max(0.02, Math.min(1, f));
+  for (const el of [bar, tip]) if (el) el.style.transitionDuration = `${ms}ms`;
+  bar.style.transform = `scaleX(${f})`;
+  if (tip) tip.style.transform = `translateX(${((f - 1) * 100).toFixed(2)}%)`;
+  pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
+}
+
+/** Una insignia de paso: icono (de los símbolos #ico-… del HTML), sello de hecho y nombre. */
+function stepBadge(name, icon, key = '') {
+  const li = document.createElement('li');
+  if (key) li.dataset.paso = key;
+  li.innerHTML = `<span class="ins-medalla"><svg class="ins-ico"><use href="#ico-${icon}"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre"></span>`;
+  li.querySelector('.ins-nombre').textContent = name;
+  return li;
+}
+
+/** Banderas sobre una vista previa: caen cuando pasa el escáner (`span`: segundos que tarda en cruzar). */
+function dropPins(layer, pins, span = 1.35) {
+  layer.replaceChildren(
+    ...pins.filter((p) => hasFlag(p.iso)).map((p) => {
+      const pin = document.createElement('span');
+      pin.className = 'arr-pin';
+      pin.style.left = `${(p.x * 100).toFixed(2)}%`;
+      pin.style.top = `${(p.y * 100).toFixed(2)}%`;
+      pin.style.setProperty('--d', `${(0.2 + p.x * span).toFixed(2)}s`);
+      const flag = document.createElement('i');
+      flag.className = 'bandera';
+      flag.style.cssText = flagCss(p.iso, 18);
+      pin.append(flag);
+      return pin;
+    }),
+  );
+}
+
+/**
+ * Vista previa del mapa de la partida (en cuanto el primer paso lo ha leído):
+ * el terreno en el lienzo, recortado a una proporción que quepa, y las
+ * banderas de sus países (en los mapas reales), que caen con el escáner.
+ */
+function paintPreview(box, loaded) {
+  const map = loaded && loaded.map;
+  if (!map || !map.terrain) return false;
+  const canvas = $('carga-lienzo');
+  const W = 480;
+  const ratio = map.height / map.width;
+  const H = Math.round(W * Math.min(0.62, Math.max(0.36, ratio)));
+  canvas.width = W;
+  canvas.height = H;
+  $('carga-vista').style.aspectRatio = `${W} / ${H}`;
+  // Si el mapa es más alto que la vista, se enseña su franja central
+  const cropH = Math.min(map.height, Math.round((map.width * H) / W));
+  const y0 = Math.max(0, Math.round((map.height - cropH) / 2));
+  paintMapPreview(canvas, { w: map.width, h: map.height, terrain: map.terrain, relief: map.relief, tileKm: (map.tileKm || 1) * 3, river: map.river, lat: map.lat }, [0, y0, map.width, y0 + cropH]);
+  // Banderas: de los países más grandes a los más pequeños, cada una con su
+  // hueco (sin amontonarse en Europa o África), como mucho 22
+  const all = (loaded.countries || []).filter((c) => c.iso && c.tile >= 0 && hasFlag(c.iso)).sort((a, b) => (b.area || 0) - (a.area || 0));
+  const pins = [];
+  const gap = all.length > 60 ? 0.085 : 0.11;
+  for (const c of all) {
+    const x = (map.x(c.tile) + 0.5) / map.width;
+    const y = (map.y(c.tile) - y0) / cropH;
+    // (la bandera va encima de su punto: lejos del borde de arriba y de los lados)
+    if (y < 0.13 || y > 0.97 || x < 0.04 || x > 0.95) continue;
+    if (pins.some((p) => Math.hypot(p.x - x, (p.y - y) * (H / W)) < gap)) continue;
+    pins.push({ iso: c.iso, x, y });
+    if (pins.length >= 22) break;
+  }
+  dropPins($('carga-pines'), pins, 0.9);
+  box.classList.add('con-mapa');
+  return true;
+}
+
+/**
+ * Ejecuta `steps` ([{ label, name, icon, run }]) mostrando la pantalla de
+ * carga: el mapa de la partida en cuanto se lee, un paso por insignia
+ * (`name` e `icon`: su nombre corto y su símbolo #ico-…), la barra y un
+ * consejo. Devuelve lo que devuelva el último paso. `onReady(result)` se
+ * llama con la pantalla todavía tapándolo todo, justo antes de desvanecerse:
+ * es el momento de quitar lo de debajo (el menú, la sala), para que al irse no
+ * reaparezca la pantalla anterior ni un fotograma.
  */
 export async function withLoading(title, steps, { minMs = 1300, onReady = null } = {}) {
   const box = $('carga');
   const started = performance.now();
+  const bar = $('carga-progreso');
+  const tip = $('carga-punta');
+  const pct = $('carga-pct');
+  const list = $('carga-pasos');
+  const text = $('carga-paso');
   $('carga-mapa').textContent = title;
   $('carga-consejo').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
-  $('carga-progreso').style.width = '0%';
-  box.classList.remove('saliendo');
+  const ICONS = ['terreno', 'banderas', 'frente', 'revista'];
+  list.style.setProperty('--n', String(steps.length));
+  list.replaceChildren(...steps.map((st, i) => stepBadge(st.name || st.label.replace(/…$/, ''), st.icon || ICONS[i % ICONS.length])));
+  markSteps(list, 0);
+  box.classList.remove('saliendo', 'listo', 'con-mapa');
+  $('carga-pines').replaceChildren();
+  setBar(bar, tip, pct, 0.02, 0);
   clearTimeout(box._fuera);
   mostrar(box, { y: 0, scale: 1.02, ms: 260 });
   let result;
   let ok = false;
+  let painted = false;
+  const say = (label) => {
+    text.textContent = label;
+    text.classList.remove('cambia');
+    void text.offsetWidth;
+    text.classList.add('cambia');
+  };
   try {
     // Que se vea de verdad antes del primer paso pesado (que bloquea el hilo)
     await twoPaints();
     for (let i = 0; i < steps.length; i++) {
-      $('carga-paso').textContent = steps[i].label;
-      $('carga-progreso').style.width = `${Math.round((i / steps.length) * 100)}%`;
+      say(steps[i].label);
+      markSteps(list, i);
+      // La barra avanza hacia el final del paso mientras dura (con transform: aunque el paso ocupe el navegador)
+      setBar(bar, tip, pct, (i + 0.85) / steps.length, 1400);
       await nextPaint();
       result = await steps[i].run(result);
+      setBar(bar, tip, pct, (i + 1) / steps.length, 250);
+      // En cuanto está el mapa: su vista previa (se descubre durante los pasos siguientes)
+      if (!painted) {
+        try {
+          painted = paintPreview(box, result);
+        } catch {
+          painted = true; // sin vista previa: sigue el radar
+        }
+      }
     }
-    $('carga-paso').textContent = '¡A las trincheras!';
-    $('carga-progreso').style.width = '100%';
+    say('¡A las trincheras!');
+    markSteps(list, steps.length);
+    setBar(bar, tip, pct, 1, 250);
+    box.classList.add('listo');
     // Un par de fotogramas con la carga aún delante: el primer dibujo del
     // mapa nuevo (el más caro: sube el territorio a la gráfica) pasa aquí y
     // no al desvanecerse la carga
@@ -106,8 +229,10 @@ export function bootLoader() {
   const box = $('arranque');
   if (!box) return null;
   const bar = $('arr-progreso');
+  const tip = $('arr-punta');
   const text = $('arr-paso');
   const pct = $('arr-pct');
+  const list = $('arr-pasos');
   const started = performance.now();
   // Cinco consejos distintos al azar: cada uno 5 s, en bucle
   const pool = [...TIPS];
@@ -119,7 +244,9 @@ export function bootLoader() {
       const p = document.createElement('p');
       p.className = 'arr-tip';
       p.textContent = t;
-      p.style.setProperty('--d', `${i * 5}s`);
+      // Un segundo adelantados: el primero ya se ve al empezar (si la carga
+      // ocupa el navegador, su animación de entrada podía no arrancar)
+      p.style.setProperty('--d', `${i * 5 - 1}s`);
       p.style.setProperty('--ciclo', `${cycle}s`);
       return p;
     }),
@@ -127,7 +254,7 @@ export function bootLoader() {
   $('arr-puntos').replaceChildren(
     ...tips.map((_, i) => {
       const d = document.createElement('i');
-      d.style.setProperty('--d', `${i * 5}s`);
+      d.style.setProperty('--d', `${i * 5 - 1}s`);
       d.style.setProperty('--ciclo', `${cycle}s`);
       return d;
     }),
@@ -140,18 +267,10 @@ export function bootLoader() {
       text.classList.remove('cambia');
       void text.offsetWidth;
       text.classList.add('cambia');
-      const f = Math.max(0.02, Math.min(1, to));
-      bar.style.transitionDuration = `${ms}ms`;
-      bar.style.transform = `scaleX(${f})`;
-      pct?.style.setProperty('--arr-pct', String(Math.round(f * 100)));
+      setBar(bar, tip, pct, to, ms);
       if (key) {
-        let reached = false;
-        for (const li of marks) {
-          const here = li.dataset.paso === key;
-          li.classList.toggle('activo', here);
-          if (!reached && !here) li.classList.add('hecho');
-          if (here) reached = true;
-        }
+        const i = marks.findIndex((li) => li.dataset.paso === key);
+        if (i >= 0) markSteps(list, i);
       }
     },
     /**
@@ -161,22 +280,8 @@ export function bootLoader() {
     map(draw, pins = []) {
       try {
         draw($('arr-lienzo'));
-        const layer = $('arr-pines');
-        layer.replaceChildren(
-          ...pins.filter((p) => hasFlag(p.iso)).map((p) => {
-            const pin = document.createElement('span');
-            pin.className = 'arr-pin';
-            pin.style.left = `${(p.x * 100).toFixed(2)}%`;
-            pin.style.top = `${(p.y * 100).toFixed(2)}%`;
-            // Cae cuando el escáner (1,7 s de izquierda a derecha) pasa por encima
-            pin.style.setProperty('--d', `${(0.25 + p.x * 1.35).toFixed(2)}s`);
-            const flag = document.createElement('i');
-            flag.className = 'bandera';
-            flag.style.cssText = flagCss(p.iso, 18);
-            pin.append(flag);
-            return pin;
-          }),
-        );
+        // Caen cuando el escáner (1,7 s de izquierda a derecha) pasa por encima
+        dropPins($('arr-pines'), pins, 1.4);
         box.classList.add('con-mapa');
         this.mapAt = performance.now();
       } catch {
@@ -190,10 +295,7 @@ export function bootLoader() {
      */
     async done({ minMs = 1800, onOpen = () => {}, tap = null } = {}) {
       this.step('¡A las trincheras!', 1, 300);
-      for (const li of marks) {
-        li.classList.remove('activo');
-        li.classList.add('hecho');
-      }
+      markSteps(list, marks.length);
       box.classList.add('listo');
       // Un mínimo total y, si el mapa salió hace poco, que dé tiempo a verlo
       // descubrirse y a que caigan sus banderas

@@ -36,15 +36,15 @@
       "./src/game.js": "./src/game.js?v=507c1f7ebb",
       "./src/guia.js": "./src/guia.js?v=10004c72c0",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=4ef874e8bd",
+      "./src/home.js": "./src/home.js?v=1c43bf1a43",
       "./src/icons.js": "./src/icons.js?v=72c24ddc2d",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=03eed180fc",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
-      "./src/loading.js": "./src/loading.js?v=5bc4ea131e",
+      "./src/loading.js": "./src/loading.js?v=a6d871f13d",
       "./src/lugares.js": "./src/lugares.js?v=4a2b8221d0",
-      "./src/main.js": "./src/main.js?v=421414f877",
+      "./src/main.js": "./src/main.js?v=080efe6906",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=87bade7d81",
@@ -83,16 +83,30 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=fac7ce0cae">
+  <link rel="stylesheet" href="css/estilo.css?v=c407356471">
 </head>
 <body class="arrancando">
-  <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
+  <!-- Definiciones gráficas compartidas (degradado del logotipo, siluetas e iconos de las pantallas de carga) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="lg-oro" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#ffe39a"/>
         <stop offset="1" stop-color="#d99a2b"/>
       </linearGradient>
+      <!-- Siluetas del frente (arranque y carga de partida) -->
+          <g id="arr-soldado"><path d="M-5.5 -33 q5.5 -7.5 11 0 z"/><circle cx="0" cy="-30" r="3.6"/><path d="M-4 -26 h8 l2 13 h-3 l-1 13 h-3 l-1 -10 l-1 10 h-3 l1 -13 h-2 z"/><path d="M2 -23 l15 -9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+          <g id="arr-poste"><path d="M0 0 v-22 M-14 -18 q7 4 14 0 q7 -4 14 0 M-14 -10 q7 4 14 0 q7 -4 14 0" fill="none" stroke="currentColor" stroke-width="1.6"/></g>
+          <g id="arr-bandera"><path d="M0 0 v-38" stroke="currentColor" stroke-width="2"/><path d="M1 -38 l16 5 l-16 5 z"/></g>
+      <!-- Iconos de los pasos de las pantallas de carga (trazo del color del texto) -->
+      <symbol id="ico-cuartel" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 13.6 L8 4.4 L14.5 13.6 Z" fill="currentColor" fill-opacity="0.18"/><path d="M6 13.6 L8 10.2 L10 13.6"/><path d="M8 4.4 V1.5"/><path d="M8 1.6 L11.4 2.6 L8 3.6" fill="currentColor"/></g></symbol>
+      <symbol id="ico-banderas" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 14.6 V1.8"/><path d="M3.5 2.4 C6.2 1 8.4 3.8 12.6 2.4 V8.7 C8.4 10.1 6.2 7.3 3.5 8.7" fill="currentColor" fill-opacity="0.22"/></g></symbol>
+      <symbol id="ico-mapa" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.3"/><path d="M1.7 8 H14.3"/><path d="M8 1.7 C5.2 4.6 5.2 11.4 8 14.3 M8 1.7 C10.8 4.6 10.8 11.4 8 14.3"/><path d="M2.8 4.9 H13.2 M2.8 11.1 H13.2" stroke-opacity="0.55"/></g></symbol>
+      <symbol id="ico-terreno" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 13.6 L5.6 5.4 L8.7 10.2 L10.7 7.3 L15 13.6 Z" fill="currentColor" fill-opacity="0.2"/><path d="M4.2 7.9 L5.6 9 L6.9 7.9"/></g></symbol>
+      <symbol id="ico-perfil" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.6 L13.6 3.6 V8 C13.6 11.1 11.2 13.5 8 14.5 C4.8 13.5 2.4 11.1 2.4 8 V3.6 Z"/><path d="M8 4.9 L8.9 6.8 L11 7 L9.4 8.4 L9.9 10.5 L8 9.4 L6.1 10.5 L6.6 8.4 L5 7 L7.1 6.8 Z" fill="currentColor" stroke-width="0.7"/></g></symbol>
+      <symbol id="ico-frente" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.4 L11.3 10.7 M13 2.4 L4.7 10.7"/><path d="M9.9 12.1 L12.1 9.9 M6.1 12.1 L3.9 9.9"/><path d="M11.1 11.1 L13.6 13.6 M4.9 11.1 L2.4 13.6"/></g></symbol>
+      <symbol id="ico-revista" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 3.4 L8 6 L12.4 3.4 M3.6 7.2 L8 9.8 L12.4 7.2 M3.6 11 L8 13.6 L12.4 11"/></g></symbol>
+      <symbol id="ico-hecho" viewBox="0 0 16 16"><path d="M3.6 8.4 L6.6 11.4 L12.6 4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="ico-rosa" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.4" fill="none" stroke="currentColor" stroke-width="0.9" stroke-opacity="0.55"/><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="0.6" stroke-opacity="0.35" stroke-dasharray="1.2 1.6"/><path d="M12 1.8 L13.7 12 L12 22.2 L10.3 12 Z" fill="currentColor"/><path d="M1.8 12 L12 10.3 L22.2 12 L12 13.7 Z" fill="currentColor" fill-opacity="0.5"/><path d="M12 1.8 L13.7 12 L12 12 Z" fill="#fff3cf"/></symbol>
     </defs>
   </svg>
 
@@ -108,11 +122,6 @@
       <span class="arr-horizonte"></span>
       <span class="arr-brasas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <svg class="arr-frente arr-lejos" viewBox="0 0 2400 90" preserveAspectRatio="xMidYMax slice">
-        <defs>
-          <g id="arr-soldado"><path d="M-5.5 -33 q5.5 -7.5 11 0 z"/><circle cx="0" cy="-30" r="3.6"/><path d="M-4 -26 h8 l2 13 h-3 l-1 13 h-3 l-1 -10 l-1 10 h-3 l1 -13 h-2 z"/><path d="M2 -23 l15 -9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
-          <g id="arr-poste"><path d="M0 0 v-22 M-14 -18 q7 4 14 0 q7 -4 14 0 M-14 -10 q7 4 14 0 q7 -4 14 0" fill="none" stroke="currentColor" stroke-width="1.6"/></g>
-          <g id="arr-bandera"><path d="M0 0 v-38" stroke="currentColor" stroke-width="2"/><path d="M1 -38 l16 5 l-16 5 z"/></g>
-        </defs>
         <path d="M0 70 Q 60 58 120 66 T 240 64 T 360 68 T 480 62 T 600 67 T 720 63 T 840 68 T 960 62 T 1080 66 T 1200 64 T 1320 66 T 1440 64 T 1560 68 T 1680 62 T 1800 67 T 1920 63 T 2040 68 T 2160 62 T 2280 66 T 2400 64 V 90 H 0 Z"/>
         <g><use href="#arr-soldado" transform="translate(20 64) scale(1.036057306323988)"/><use href="#arr-poste" transform="translate(85.89686165836555 66)"/><use href="#arr-soldado" transform="translate(169.69728294592932 64) scale(0.9032919978887186)"/><use href="#arr-soldado" transform="translate(268.3201186926815 64) scale(0.9585827402616741)"/><use href="#arr-poste" transform="translate(378.0152571784139 66)"/><use href="#arr-poste" transform="translate(476.5675587676211 66)"/><use href="#arr-soldado" transform="translate(561.3023286057124 64) scale(1.058715164571297)"/><use href="#arr-poste" transform="translate(662.0655001057432 66)"/><use href="#arr-poste" transform="translate(753.9531300398476 66)"/><use href="#arr-bandera" transform="translate(798.4353307157373 64)"/><use href="#arr-soldado" transform="translate(879.8123015209296 64) scale(0.9077529378674375)"/><use href="#arr-poste" transform="translate(980.3992081094558 66)"/></g><g transform="translate(1200 0)"><use href="#arr-soldado" transform="translate(20 64) scale(1.036057306323988)"/><use href="#arr-poste" transform="translate(85.89686165836555 66)"/><use href="#arr-soldado" transform="translate(169.69728294592932 64) scale(0.9032919978887186)"/><use href="#arr-soldado" transform="translate(268.3201186926815 64) scale(0.9585827402616741)"/><use href="#arr-poste" transform="translate(378.0152571784139 66)"/><use href="#arr-poste" transform="translate(476.5675587676211 66)"/><use href="#arr-soldado" transform="translate(561.3023286057124 64) scale(1.058715164571297)"/><use href="#arr-poste" transform="translate(662.0655001057432 66)"/><use href="#arr-poste" transform="translate(753.9531300398476 66)"/><use href="#arr-bandera" transform="translate(798.4353307157373 64)"/><use href="#arr-soldado" transform="translate(879.8123015209296 64) scale(0.9077529378674375)"/><use href="#arr-poste" transform="translate(980.3992081094558 66)"/></g>
       </svg>
@@ -139,19 +148,24 @@
         <span class="arr-radar"></span>
         <div class="arr-pines" id="arr-pines"></div>
         <span class="arr-brillo-mapa"></span>
+        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
+        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
       </div>
       <div class="arr-progreso">
-        <div class="arr-barra" aria-hidden="true"><span id="arr-progreso"></span></div>
+        <div class="barra-oro" aria-hidden="true">
+          <div class="arr-barra"><span id="arr-progreso"></span></div>
+          <span class="barra-punta" id="arr-punta"></span>
+        </div>
         <b class="arr-pct" id="arr-pct" aria-hidden="true"></b>
       </div>
       <p id="arr-paso" class="arr-paso">Preparando el cuartel…</p>
-      <ol class="arr-pasos" id="arr-pasos" aria-hidden="true">
-        <li data-paso="cuartel">Cuartel</li>
-        <li data-paso="banderas">Banderas</li>
-        <li data-paso="mapa">Mapa</li>
-        <li data-paso="terreno">Terreno</li>
-        <li data-paso="perfil">Perfil</li>
-        <li data-paso="frente">Frente</li>
+      <ol class="arr-pasos insignias" id="arr-pasos" aria-hidden="true" style="--n: 6">
+        <li data-paso="cuartel"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-cuartel"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Cuartel</span></li>
+        <li data-paso="banderas"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-banderas"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Banderas</span></li>
+        <li data-paso="mapa"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-mapa"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Mapa</span></li>
+        <li data-paso="terreno"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-terreno"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Terreno</span></li>
+        <li data-paso="perfil"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-perfil"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Perfil</span></li>
+        <li data-paso="frente"><span class="ins-medalla"><svg class="ins-ico"><use href="#ico-frente"/></svg><svg class="ins-hecho"><use href="#ico-hecho"/></svg></span><span class="ins-nombre">Frente</span></li>
       </ol>
       <div class="arr-consejos" id="arr-consejos">
         <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
@@ -687,25 +701,53 @@
 
   <!-- Pantalla de carga -->
   <div id="carga" class="carga" hidden aria-live="polite">
-    <div class="carga-centro">
-      <div class="logo logo-grande" role="img" aria-label="Trinchera">
-        <svg class="logo-marca" viewBox="0 0 64 64" aria-hidden="true">
-            <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
-            <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
-            <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
-            <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
-          </svg>
-        <span class="logo-texto">TRINCHERA</span>
-      </div>
-      <p id="carga-mapa" class="carga-mapa"></p>
-      <div class="carga-barra"><span id="carga-progreso"></span></div>
-      <p id="carga-paso" class="carga-paso"></p>
-      <p id="carga-consejo" class="carga-consejo"></p>
+    <div class="arr-fondo carga-fondo" aria-hidden="true">
+      <span class="arr-rejilla"></span>
+      <span class="arr-halo"></span>
+      <span class="arr-horizonte"></span>
+      <span class="arr-brasas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <svg class="arr-frente arr-cerca" viewBox="0 0 2400 90" preserveAspectRatio="xMidYMax slice">
+        <path d="M0 74 Q 50 62 100 70 T 200 68 T 300 72 T 400 66 T 500 71 T 600 67 T 700 72 T 800 66 T 900 70 T 1000 68 T 1100 71 T 1200 68 T 1300 70 T 1400 68 T 1500 72 T 1600 66 T 1700 71 T 1800 67 T 1900 72 T 2000 66 T 2100 70 T 2200 68 T 2300 71 T 2400 68 V 90 H 0 Z"/>
+        <g><use href="#arr-poste" transform="translate(20 66)"/><use href="#arr-poste" transform="translate(171.77957193261886 66)"/><use href="#arr-soldado" transform="translate(252.89650995211164 64) scale(1.0279771597604515)"/><use href="#arr-bandera" transform="translate(336.98830036728776 64)"/><use href="#arr-soldado" transform="translate(383.57694230333306 64) scale(0.9226676343729598)"/><use href="#arr-poste" transform="translate(480.2520597090355 66)"/><use href="#arr-poste" transform="translate(630.7167279337144 66)"/><use href="#arr-soldado" transform="translate(713.8061172542143 64) scale(0.9037501842374013)"/><use href="#arr-soldado" transform="translate(790.7928058861478 64) scale(0.9475520656994822)"/><use href="#arr-soldado" transform="translate(847.7288168427128 64) scale(1.0159836153058213)"/><use href="#arr-bandera" transform="translate(918.5659950086788 64)"/><use href="#arr-poste" transform="translate(994.9046830421642 66)"/><use href="#arr-poste" transform="translate(1069.8888036966396 66)"/><use href="#arr-soldado" transform="translate(1141.9018954086087 64) scale(1.149414050115771)"/></g><g transform="translate(1200 0)"><use href="#arr-poste" transform="translate(20 66)"/><use href="#arr-poste" transform="translate(171.77957193261886 66)"/><use href="#arr-soldado" transform="translate(252.89650995211164 64) scale(1.0279771597604515)"/><use href="#arr-bandera" transform="translate(336.98830036728776 64)"/><use href="#arr-soldado" transform="translate(383.57694230333306 64) scale(0.9226676343729598)"/><use href="#arr-poste" transform="translate(480.2520597090355 66)"/><use href="#arr-poste" transform="translate(630.7167279337144 66)"/><use href="#arr-soldado" transform="translate(713.8061172542143 64) scale(0.9037501842374013)"/><use href="#arr-soldado" transform="translate(790.7928058861478 64) scale(0.9475520656994822)"/><use href="#arr-soldado" transform="translate(847.7288168427128 64) scale(1.0159836153058213)"/><use href="#arr-bandera" transform="translate(918.5659950086788 64)"/><use href="#arr-poste" transform="translate(994.9046830421642 66)"/><use href="#arr-poste" transform="translate(1069.8888036966396 66)"/><use href="#arr-soldado" transform="translate(1141.9018954086087 64) scale(1.149414050115771)"/></g>
+      </svg>
     </div>
-    <svg class="carga-frente" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 40 L40 22 L80 40 L120 22 L160 40 L200 22 L240 40 L280 22 L320 40 L360 22 L400 40 L440 22 L480 40 L520 22 L560 40 L600 22 L640 40 L680 22 L720 40 L760 22 L800 40 L840 22 L880 40 L920 22 L960 40 L1000 22 L1040 40 L1080 22 L1120 40 L1160 22 L1200 40" fill="none" stroke="url(#lg-oro)" stroke-width="4" stroke-linejoin="round"/>
-    </svg>
+    <div class="carga-centro">
+      <header class="carga-cab">
+        <svg class="carga-escudo" viewBox="0 0 64 64" aria-hidden="true">
+          <path class="logo-escudo" d="M32 4 L56 12 V30 C56 45 45 55 32 60 C19 55 8 45 8 30 V12 Z" fill="#131b2b" stroke="url(#lg-oro)" stroke-width="3"/>
+          <path d="M30 11 V37" stroke="#e9eef7" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="logo-banderin" d="M31.5 12 L46 16.5 L31.5 21.5 Z" fill="#e0483f"/>
+          <path class="logo-zanja" d="M12 41 L19 34.5 L26 41 L33 34.5 L40 41 L47 34.5 L52.5 39" fill="none" stroke="url(#lg-oro)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 48 H49" stroke="#7c8c52" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <div class="carga-titulos">
+          <p class="carga-kicker">Preparando la batalla</p>
+          <h2 id="carga-mapa" class="carga-mapa"></h2>
+        </div>
+      </header>
+      <div class="arr-mapa carga-vista" id="carga-vista" aria-hidden="true">
+        <canvas id="carga-lienzo" width="480" height="240"></canvas>
+        <span class="arr-velo"><span class="arr-escaner"></span></span>
+        <span class="arr-radar"></span>
+        <div class="arr-pines" id="carga-pines"></div>
+        <span class="arr-brillo-mapa"></span>
+        <span class="mapa-esquinas"><i></i><i></i><i></i><i></i></span>
+        <svg class="mapa-rosa"><use href="#ico-rosa"/></svg>
+      </div>
+      <div class="arr-progreso">
+        <div class="barra-oro" aria-hidden="true">
+          <div class="arr-barra"><span id="carga-progreso"></span></div>
+          <span class="barra-punta" id="carga-punta"></span>
+        </div>
+        <b class="arr-pct" id="carga-pct" aria-hidden="true"></b>
+      </div>
+      <p id="carga-paso" class="arr-paso carga-paso"></p>
+      <ol class="insignias" id="carga-pasos" aria-hidden="true"></ol>
+      <div class="arr-consejos carga-consejos">
+        <span class="arr-consejos-titulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 a4.6 4.6 0 0 1 2.7 8.3 c-0.5 0.4 -0.8 0.9 -0.8 1.5 v0.6 h-3.8 v-0.6 c0 -0.6 -0.3 -1.1 -0.8 -1.5 A4.6 4.6 0 0 1 8 1.6 z M6.3 13.4 h3.4 M6.8 14.9 h2.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Consejo de campaña</span>
+        <p id="carga-consejo" class="carga-tip"></p>
+      </div>
+    </div>
   </div>
 
   <!-- Sala multijugador -->
