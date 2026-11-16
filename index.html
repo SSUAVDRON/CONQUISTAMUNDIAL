@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="91d9111 2026-11-16 18:35 UTC">
+<meta name="trinchera-build" content="ccbf8ab 2026-11-16 19:44 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -692,10 +692,6 @@ select option:checked { background-color: #2a3550; color: #fff; }
   color: var(--acento);
   flex: none;
 }
-.nivel-datos { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.nivel-barra { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
-.nivel-barra span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--acento), var(--oro-200)); }
-.nivel-datos small { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
 .estadisticas { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; }
 .estadisticas dt { color: var(--texto-suave); }
 .estadisticas dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -717,9 +713,7 @@ select option:checked { background-color: #2a3550; color: #fff; }
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid transparent;
 }
-.logros li:not(.conseguido) .logro-icono { filter: grayscale(1); opacity: 0.45; }
 .logros li.conseguido { border-color: rgba(242, 179, 61, 0.45); background: rgba(242, 179, 61, 0.08); }
-.logro-icono { font-size: 26px; text-align: center; }
 .logro-texto { display: flex; flex-direction: column; min-width: 0; }
 .logro-texto span { color: var(--texto-suave); font-size: 13px; }
 .logro-texto small { color: var(--acento); font-size: 11px; margin-top: 2px; }
@@ -758,7 +752,7 @@ select option:checked { background-color: #2a3550; color: #fff; }
 body.sin-animaciones .fin-logro { animation: none; }
 
 @media (max-width: 760px) {
-  .jugar-rejilla, .perfil-rejilla { grid-template-columns: 1fr; }
+  .perfil-rejilla { grid-template-columns: 1fr; }
   .chip-barra { width: 90px; }
   .identidad canvas { width: 76px; height: 76px; }
   .logros { grid-template-columns: 1fr; }
@@ -972,7 +966,6 @@ body.con-tutorial #eventos { top: calc(262px + env(safe-area-inset-top, 0px)); }
 
 /* ---------- Panel del jugador ---------- */
 .etq { display: inline-flex; align-items: center; gap: 4px; }
-.etq-icono { width: 12px; height: 12px; opacity: 0.8; }
 .cifras .valor .max { color: var(--texto-suave); font-weight: 500; font-size: 0.82em; }
 .barra { position: relative; height: 8px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
 #pj-barra {
@@ -1224,7 +1217,6 @@ body.con-tutorial #eventos { top: auto; }
 #hud:not([hidden]) #panel-jugador { animation: hudSube 0.5s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes hudSube { from { opacity: 0; transform: translateY(18px); } }
 .pj-col { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.pj-resumen { flex: 1.15 1 0; }
 .pj-ataque { flex: 0.6 1 0; padding: 0 14px; border-left: 1px solid rgba(255, 255, 255, 0.07); border-right: 1px solid rgba(255, 255, 255, 0.07); transition: flex-grow 0.35s ease; }
 .pj-obras { flex: 1.75 1 0; transition: flex-grow 0.35s ease, opacity 0.25s ease, margin 0.35s ease; }
 #panel-jugador .cabecera { margin-bottom: 5px; }
@@ -1298,7 +1290,6 @@ body.con-tutorial #eventos { top: auto; }
 #panel-jugador.plegado .cabecera, #panel-jugador.plegado .ratio-titulo, #panel-jugador.plegado .cifras .sub { display: none; }
 #panel-jugador.plegado .barra { margin-bottom: 5px; }
 #panel-jugador.plegado .etq { font-size: 0; gap: 0; }
-#panel-jugador.plegado .etq-icono { width: 13px; height: 13px; }
 #panel-jugador.plegado .cifras div { flex-direction: row; align-items: center; gap: 5px; }
 #panel-jugador.plegado .ratio-cifra strong { font-size: 16px; }
 #panel-jugador.plegado #ratio { margin: 2px 0 0; }
@@ -1310,14 +1301,12 @@ body.con-tutorial #eventos { top: auto; }
 }
 @media (max-width: 860px) {
   #panel-jugador { flex-wrap: wrap; row-gap: 8px; }
-  .pj-resumen { flex: 1 1 58%; }
   .pj-ataque { flex: 1 1 28%; border-right: none; padding-right: 0; }
   .pj-obras { flex: 1 1 100%; }
   #panel-jugador.plegado .pj-obras { display: none; }
 }
 @media (max-width: 720px) {
   #panel-jugador { left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); padding: 8px 36px 9px 10px; gap: 8px; }
-  .pj-resumen { flex: 1 1 100%; }
   .pj-ataque { flex: 1 1 100%; padding: 0; border: none; }
   .ratio-cifra strong { font-size: 16px; }
   #hud .obra { height: 38px; }
@@ -1537,7 +1526,6 @@ body.con-tutorial #eventos { top: auto; }
 
 /* Panel central más estrecho y compacto (mismos textos e iconos) */
 #panel-jugador { gap: 10px; padding: 7px 36px 7px 12px; }
-.pj-resumen { flex: 1.1 1 0; }
 .pj-ataque { flex: 0.55 1 0; padding: 0 10px; }
 .pj-obras { flex: 1.6 1 0; }
 #panel-jugador .cabecera { margin-bottom: 3px; }
@@ -1553,7 +1541,6 @@ body.con-tutorial #eventos { top: auto; }
 @media (min-width: 1500px) {
   #panel-jugador { width: min(940px, calc(100vw - 660px)); }
 }
-#panel-jugador .pj-resumen { flex: 1.35 1 0; }
 #panel-jugador .pj-obras { flex: 1.45 1 0; }
 #panel-jugador .cifras { grid-template-columns: 1.55fr 1.05fr 0.9fr 0.7fr; }
 #panel-jugador .cifras .valor { overflow: hidden; text-overflow: ellipsis; }
@@ -1697,24 +1684,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .chip-perfil[class*="est-"] { border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
 .chip-perfil[class*="est-"]:hover { filter: brightness(1.1); }
 .chip-perfil canvas { width: 44px; height: 44px; }
-
-/* Tarjeta de perfil */
-.tarjeta-perfil {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 16px 22px;
-  margin-bottom: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-  animation: subir 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.tarjeta-perfil::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent 60%); pointer-events: none; }
-.tarjeta-perfil canvas { position: relative; z-index: 1; width: 110px; height: 110px; flex: none; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
-.tp-textos { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .tp-titulo { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.75); }
 .tp-nombre { font-family: var(--serif); font-weight: 800; font-size: 32px; line-height: 1.1; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tp-datos { font-size: 13px; color: rgba(255, 255, 255, 0.82); }
@@ -1746,8 +1715,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 }
 @media (max-width: 520px) {
   .portada-titulo { font-size: 28px; }
-  .tarjeta-perfil { padding: 12px 14px; gap: 12px; }
-  .tarjeta-perfil canvas { width: 76px; height: 76px; }
   .tp-nombre { font-size: 22px; }
   .tp-nivel { width: 44px; height: 44px; font-size: 18px; right: 10px; }
 }
@@ -1791,7 +1758,6 @@ button.secundario { padding: 11px 20px; font-weight: 700; border-radius: 12px; }
 .pista.good { border-color: rgba(95, 211, 141, 0.5); color: #c9f9dc; }
 
 /* Resumen del jugador más compacto; el máximo de tropas, bien legible */
-#panel-jugador .pj-resumen { flex: 1.2 1 0; }
 #panel-jugador .cabecera { margin-bottom: 2px; }
 #panel-jugador .barra { height: 6px; margin-bottom: 4px; }
 #panel-jugador .cifras { gap: 2px 6px; grid-template-columns: 1.95fr 1fr 0.85fr 0.62fr; }
@@ -1871,14 +1837,13 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
     margin: 0;
     border-radius: 12px;
   }
-  #panel-jugador .pj-resumen, #panel-jugador .pj-ataque, #panel-jugador .pj-obras { padding: 0; border: 0; }
+  #panel-jugador .pj-ataque, #panel-jugador .pj-obras { padding: 0; border: 0; }
   #panel-jugador .cabecera { margin-bottom: 2px; padding-right: 26px; min-height: 18px; }
   #panel-jugador .cabecera strong { font-size: 12.5px; }
   #panel-jugador .barra { height: 5px; margin-bottom: 4px; }
   #panel-jugador .cifras { gap: 1px 6px; grid-template-columns: 1.75fr 1fr 0.9fr 0.62fr; }
   #panel-jugador .cifras .valor { font-size: 13px; }
   #panel-jugador .etq { font-size: 9px; letter-spacing: 0.02em; }
-  #panel-jugador .etq-icono { width: 10px; height: 10px; }
   #panel-jugador .cifras .sub { font-size: 10px; min-height: 12px; }
   .pj-plegar { top: 4px; right: 4px; width: 24px; height: 24px; }
   /* Fuerza de ataque en una línea: cifra a la izquierda y barra a la derecha */
@@ -1922,11 +1887,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 /* Móvil en horizontal: una sola fila baja */
 @media (max-height: 500px) and (orientation: landscape) {
   #panel-jugador { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; padding: 5px 34px 6px 8px; }
-  #panel-jugador .pj-resumen { flex: 1.35 1 0; }
   #panel-jugador .pj-ataque { flex: 0.62 1 0; }
   #panel-jugador .pj-obras { flex: 1.8 1 0; }
   #panel-jugador .cabecera { display: none; }
-  #panel-jugador .etq-icono { display: none; }
   #panel-jugador .ratio { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
   #hud .obra { height: 40px; }
   #barra-superior { top: calc(6px + env(safe-area-inset-top, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); gap: 6px; padding: 3px 5px; }
@@ -1981,12 +1944,9 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 }
 #panel-jugador .barra::before { left: 33%; width: 20%; }
 #panel-jugador .cifras .sub.baja { color: var(--peligro); }
-#panel-jugador .cifras .sub-trab { color: #7fd8c9; }
-#panel-jugador .cifras .sub-tropas { display: flex; gap: 6px; white-space: nowrap; overflow: hidden; }
 #pj-crec.baja { color: var(--peligro); }
 #panel-jugador .sub-comp { color: #ffb36b; overflow: hidden; text-overflow: ellipsis; }
 #panel-jugador .sub-comp:empty { display: none; }
-#panel-jugador .cifras .sub-barcos { color: var(--texto-suave); }
 /* Dos controles en la columna de ataque: fuerza de ataque y reparto */
 #panel-jugador .pj-ataque { justify-content: center; gap: 4px; }
 #panel-jugador .pj-ataque .ratio { gap: 1px; }
@@ -2011,7 +1971,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   #reparto::-webkit-slider-thumb { width: 22px; height: 22px; }
   #panel-jugador .pj-ataque { gap: 5px; }
 }
-#panel-jugador .cifras .sub-barcos { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #panel-jugador .pj-ataque .ratio-cifra { overflow: hidden; text-overflow: ellipsis; }
 @media (max-height: 500px) and (orientation: landscape) {
   /* En horizontal, solo las cifras: el deslizador ya muestra el reparto */
@@ -2025,7 +1984,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 
 /* Tooltip: punto estratégico cercano y estimación del ataque */
 #tooltip .tip-punto { margin-top: 3px; padding-top: 3px; border-top: 1px solid rgba(255, 255, 255, 0.1); max-width: 240px; white-space: normal; }
-#tooltip .tip-estim { margin-top: 2px; color: #ffd98a; font-size: 11px; }
 
 /* ===================================================== Mejoras estratégicas */
 /* Botón de desarrollo en la barra superior, con un punto si puedes investigar */
@@ -2176,8 +2134,6 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
 .retos-bonus { margin: 10px 0 0; font-size: 13px; color: var(--texto-suave); }
 .retos-bonus.bien { color: var(--ok); font-weight: 700; }
 .logro-estado { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.logro-monedas { font-size: 12px; color: var(--oro-200); }
-.logros li:not(.conseguido) .logro-monedas { opacity: 0.75; }
 @media (max-width: 560px) {
   .chip-monedas { font-size: 12px; padding: 3px 7px; }
   .bolsa { flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; }
@@ -2222,7 +2178,7 @@ canvas.portada-arte { object-fit: cover; background: #122d5a; }
   gap: 9px;
   padding: 10px 14px 12px;
 }
-#hud.escritorio .pj-resumen, #hud.escritorio .pj-ataque { flex: none; }
+#hud.escritorio .pj-ataque { flex: none; }
 #hud.escritorio .pj-ataque { padding: 9px 0 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.07); }
 #hud.escritorio #panel-jugador .cabecera { padding-right: 26px; }
 #hud.escritorio #panel-jugador .cifras { grid-template-columns: 1fr 1fr; row-gap: 7px; }
@@ -3273,12 +3229,10 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 #inicio .logros li.pendiente { background: rgba(255, 255, 255, 0.025); border-color: var(--borde-1); }
 #inicio .logros li.pendiente .logro-texto strong { color: var(--texto-2); }
 #inicio .logros li.conseguido { border-color: rgba(233, 185, 85, 0.5); background: linear-gradient(135deg, rgba(233, 185, 85, 0.14), rgba(233, 185, 85, 0.03)); }
-#inicio .logros li.conseguido .logro-icono { filter: drop-shadow(0 0 8px rgba(233, 185, 85, 0.5)); }
 .logro-progreso { display: flex; align-items: center; gap: var(--e2); margin-top: 4px; }
 .logro-barra { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .logro-barra > span { background: linear-gradient(90deg, var(--oro-700), var(--oro-400)); border-radius: 3px; }
 .logro-progreso small { font-size: 11px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
-.logro-premio { color: var(--texto-3); }
 .logro-fecha { font-size: 11px; color: var(--texto-3); white-space: nowrap; }
 .logros li.conseguido .logro-fecha { color: var(--ok); font-weight: 700; }
 
@@ -3293,16 +3247,7 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 .arsenal-vista .arma:hover .arma-detalle, .arsenal-vista .arma:focus .arma-detalle, .arsenal-vista .arma:focus-within .arma-detalle { opacity: 1; transform: none; }
 
 /* ===================================================== Ajustes agrupados */
-.ajustes-rejilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-.aj-grupo { display: flex; flex-direction: column; gap: var(--e3); }
-.aj-grupo h2 { display: flex; align-items: center; gap: var(--e2); }
 .aj-icono { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r-s); font-size: 15px; color: var(--oro-200); background: rgba(233, 185, 85, 0.12); border: 1px solid rgba(233, 185, 85, 0.3); font-family: system-ui, sans-serif; }
-.aj-sonido { display: flex; flex-direction: column; gap: 6px; padding: var(--e3); border-radius: var(--r-s); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--borde-1); }
-.aj-volumen input[type="range"] { width: 100%; }
-.aj-volumen { transition: opacity var(--dur-2); }
-.aj-volumen.apagado { opacity: 0.45; }
-.aj-grupo .botones-izq { display: flex; flex-wrap: wrap; gap: var(--e2); }
-@media (max-width: 900px) { .ajustes-rejilla { grid-template-columns: 1fr; } }
 
 /* ===================================================== Guía y menú en partida */
 .guia-caja { width: min(720px, 100%); height: min(640px, 88vh); }
@@ -3443,10 +3388,6 @@ body.sin-animaciones .fin-rango.fr-ascenso { animation: none; }
 .crear-clasif { margin: 0; padding: var(--e3) var(--e4); border-radius: var(--r-m); background: rgba(196, 126, 255, 0.1); border: 1px solid rgba(196, 126, 255, 0.35); color: var(--texto-1); font-size: 14px; line-height: 1.45; }
 .crear-clasif[hidden], #crear-mapas[hidden], #crear-avanzadas[hidden] { display: none; }
 .chip-sala.chip-clasif { border-color: rgba(196, 126, 255, 0.55); color: #e3d0ff; }
-
-/* ===================================================== Progresión y social (fase 3) */
-.semana-bloque { background: linear-gradient(120deg, rgba(196, 126, 255, 0.14), transparent 60%), var(--panel); }
-.semana-bloque .reto-barra span { background: linear-gradient(90deg, #8f5cff, #d6b8ff); }
 .perfil-clasif .pc-cab { display: flex; align-items: center; gap: var(--e3); }
 .perfil-clasif canvas.fin-grafica { margin-top: var(--e2); }
 .fila-boton { cursor: pointer; transition: background var(--dur-1); }
@@ -4556,7 +4497,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .pj-banco { display: flex; align-items: center; gap: 7px; margin-top: 8px; padding: 4px 4px 4px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); font-size: 11.5px; line-height: 1; }
 .pj-banco[hidden], #panel-jugador.plegado .pj-banco { display: none; }
 .banco-etq { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); cursor: help; }
-.banco-etq .etq-icono { width: 13px; height: 13px; color: var(--acento); }
 .banco-barra { position: relative; flex: 1 1 auto; min-width: 24px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 #banco-relleno { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, #b8862a, var(--acento)); transition: width 0.3s ease; }
 .banco-cifra { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -4815,10 +4755,6 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 /* =========================================================== Perfil renovado (con amigos y clan) */
 /* Cabecera: estandarte, emblema, nombre, chapas (clan, amigos, liga) y anillo de nivel */
 #inicio .tarjeta-perfil { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 20px 24px; min-height: 150px; }
-.tarjeta-perfil::after { background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.15) 55%, rgba(0, 0, 0, 0.35)); }
-.tarjeta-perfil::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.12), transparent 50%); }
-.tarjeta-perfil canvas { width: 118px; height: 118px; }
-.tp-textos { gap: 5px; }
 .tp-titulo { color: var(--oro-200, #ffe3a1); }
 .tp-nombre { font-size: 34px; }
 .tp-chapas { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 1px; }
@@ -4831,21 +4767,10 @@ body.sin-animaciones .arranque *, body.sin-animaciones #inicio.entrada * { anima
 .chapa-amigos i { width: 7px; height: 7px; border-radius: 50%; background: #6b7587; }
 .chapa-amigos i.punto-linea { background: #5fd38d; box-shadow: 0 0 0 3px rgba(95, 211, 141, 0.2); }
 .tp-datos { color: rgba(255, 255, 255, 0.86); }
-/* Anillo de experiencia con el nivel dentro */
-.tp-anillo { position: relative; z-index: 2; display: grid; place-items: center; width: 92px; height: 92px; flex: none; }
-.tp-anillo svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5)); }
-.tpa-fondo { fill: rgba(8, 12, 22, 0.72); stroke: rgba(255, 255, 255, 0.14); stroke-width: 6; }
-.tpa-relleno { fill: none; stroke: #f2b33d; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 0 100; transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); filter: drop-shadow(0 0 4px rgba(242, 179, 61, 0.6)); }
-#inicio .tp-anillo .tp-nivel { position: static; transform: none; width: auto; height: auto; margin-top: -8px; font-size: 30px; font-weight: 900; color: #ffe08a; background: none; box-shadow: none; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
 .tp-xp { position: absolute; bottom: 19px; font-size: 9.5px; font-weight: 700; color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) {
-  #inicio .tarjeta-perfil { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; }
-  .tarjeta-perfil canvas { width: 72px; height: 72px; }
   .tp-nombre { font-size: 23px; }
-  .tp-anillo { position: absolute; top: 10px; right: 10px; width: 64px; height: 64px; }
-  #inicio .tp-anillo .tp-nivel { font-size: 21px; margin-top: -5px; }
   .tp-xp { bottom: 12px; font-size: 8px; }
-  .tp-textos { padding-right: 62px; }
   .tp-datos { font-size: 12px; }
 }
 
@@ -5029,15 +4954,15 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
 @media (max-width: 720px) { .lb-nivel { display: none; } }
 
 /* Entrada en cascada de lo que hay en Progreso, Ajustes y el resumen del perfil */
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > * { animation: cascada 0.42s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 45ms + 40ms); }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(2) { --k: 1; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(3) { --k: 2; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(4) { --k: 3; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(5) { --k: 4; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(6) { --k: 5; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(7) { --k: 6; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(8) { --k: 7; }
-:is(.retos, .logros, .ajustes-rejilla, .est-fichas) > :nth-child(n + 9) { --k: 8; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > * { animation: cascada 0.42s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 45ms + 40ms); }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(2) { --k: 1; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(3) { --k: 2; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(4) { --k: 3; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(5) { --k: 4; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(6) { --k: 5; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(7) { --k: 6; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(8) { --k: 7; }
+:is(.retos, .logros, .aj-lista, .est-fichas) > :nth-child(n + 9) { --k: 8; }
 .logros > :nth-child(n + 17) { animation: none; }
 @keyframes cascada { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
 
@@ -5057,7 +4982,7 @@ button.confirmar { color: #1b0d0a !important; background: linear-gradient(180deg
 @keyframes yaPuedesCoste { 0%, 40% { color: #fff6d6; text-shadow: 0 0 8px rgba(255, 210, 110, 0.9); } }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.retos, .logros, .ajustes-rejilla, .est-fichas) > *, #hud .obra.ya-puedes, #hud .obra.ya-puedes .b-coste { animation: none; }
+  :is(.retos, .logros, .aj-lista, .est-fichas) > *, #hud .obra.ya-puedes, #hud .obra.ya-puedes .b-coste { animation: none; }
 }
 
 /* Última partida: repetir configuración o el mismo escenario (DEV01) */
@@ -5954,6 +5879,136 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
 }
 @media (prefers-reduced-motion: reduce) { .sala-radar i, #sala.sala-competitiva .sala-rango { animation: none; } }
 
+/* ---------- Ajustes en partida: contador de fps y tamaño de los paneles ---------- */
+.fps-contador {
+  position: fixed;
+  top: calc(var(--hud-top, 52px) + 6px);
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  z-index: 6;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(8, 13, 26, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #9fe3a8;
+  font: 600 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.fps-contador.justo { color: #ffb84d; }
+/* «Tamaño de los paneles»: zoom de los paneles de la partida (el mapa no cambia) */
+#hud #columna-izquierda, #hud #barra-superior, #hud #pie-centro, #hud #columna-derecha,
+#hud #minimapa, #hud #avisos, #hud #panel-nacion, #hud #panel-desarrollo {
+  zoom: var(--escala-ui, 1);
+}
+
+/* ---------- Ajustes: secciones a la izquierda, opciones en filas ---------- */
+.aj-pagina { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1080px; margin: 0 auto; width: 100%; }
+.aj-nav { position: sticky; top: calc(var(--ini-barra-alto, 64px) + 12px); display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: var(--r-l); background: var(--sup-1); border: 1px solid var(--borde-1); box-shadow: var(--sombra-1); }
+.aj-nav button { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: var(--r-m); border: 1px solid transparent; background: transparent; color: var(--texto-2); text-align: left; cursor: pointer; position: relative; transition: background var(--dur-1), color var(--dur-1), border-color var(--dur-1); }
+.aj-nav button:hover { background: rgba(255, 255, 255, 0.04); color: var(--texto-1); }
+.aj-nav button[aria-selected="true"] { background: linear-gradient(90deg, rgba(233, 185, 85, 0.16), rgba(233, 185, 85, 0.04)); border-color: rgba(233, 185, 85, 0.32); color: var(--texto-1); }
+.aj-nav button[aria-selected="true"]::before { content: ""; position: absolute; left: -9px; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--oro-400); box-shadow: 0 0 10px rgba(242, 179, 61, 0.6); }
+.aj-nav-icono { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px; font: 15px/1 system-ui, sans-serif; color: var(--oro-200); background: rgba(233, 185, 85, 0.1); border: 1px solid rgba(233, 185, 85, 0.22); }
+.aj-nav button[aria-selected="true"] .aj-nav-icono { background: rgba(233, 185, 85, 0.22); border-color: rgba(233, 185, 85, 0.5); }
+.aj-nav-txt { display: flex; flex-direction: column; min-width: 0; }
+.aj-nav-txt b { font-size: 14px; font-weight: 700; }
+.aj-nav-txt small { font-size: 11px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aj-contenido { min-width: 0; }
+.aj-seccion { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 20px; border-radius: var(--r-l); background: var(--sup-1); border: 1px solid var(--borde-1); box-shadow: var(--sombra-2); animation: aj-entra var(--dur-3) var(--ease-out); }
+@keyframes aj-entra { from { opacity: 0; transform: translateY(6px); } }
+body.sin-animaciones .aj-seccion { animation: none; }
+.aj-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--borde-1); }
+.aj-cab h2 { margin: 0; display: flex; align-items: center; gap: 10px; font: 700 21px/1.2 var(--serif); letter-spacing: 0.02em; color: var(--oro-100); }
+.aj-cab p { margin: 4px 0 0; color: var(--texto-2); font-size: 13px; }
+.aj-reset-sec { flex: none; padding: 6px 12px; border-radius: var(--r-pildora); border: 1px solid var(--borde-2); background: transparent; color: var(--texto-2); font-size: 12px; font-weight: 600; cursor: pointer; }
+.aj-reset-sec:hover { color: var(--texto-1); border-color: rgba(233, 185, 85, 0.45); }
+.aj-lista { display: flex; flex-direction: column; border-radius: var(--r-m); border: 1px solid var(--borde-1); overflow: hidden; background: rgba(255, 255, 255, 0.015); }
+.aj-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 18px; padding: 13px 16px; border-top: 1px solid var(--borde-1); cursor: default; transition: background var(--dur-1); }
+.aj-fila:first-child { border-top: 0; }
+label.aj-fila { cursor: pointer; }
+.aj-fila:hover { background: rgba(255, 255, 255, 0.025); }
+.aj-fila.cambiado { animation: aj-cambio 0.7s var(--ease-out); }
+@keyframes aj-cambio { 0% { background: rgba(233, 185, 85, 0.16); } 100% { background: transparent; } }
+.aj-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.aj-titulo { font-size: 14.5px; font-weight: 650; color: var(--texto-1); }
+.aj-desc { font-size: 12.5px; line-height: 1.45; color: var(--texto-3); }
+.aj-control { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
+.aj-control.interruptor input { margin: 0; }
+.aj-seg { min-width: 0; flex-wrap: wrap; justify-content: flex-end; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--borde-1); }
+.aj-seg button { flex: 0 1 auto; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; border-radius: 8px; }
+.aj-fila-ancha { grid-template-columns: 1fr; }
+.aj-fila-ancha .aj-texto { margin-bottom: 2px; }
+/* Deslizadores con el tramo lleno en dorado y la cifra al lado */
+.aj-deslizador { display: flex; align-items: center; gap: 10px; width: min(260px, 100%); transition: opacity var(--dur-2); }
+.aj-deslizador.apagado { opacity: 0.4; }
+.aj-deslizador input[type="range"] { flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--oro-400) var(--llenado, 50%), rgba(255, 255, 255, 0.12) var(--llenado, 50%)); outline-offset: 4px; }
+.aj-deslizador input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--oro-500); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); cursor: pointer; }
+.aj-deslizador input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--oro-500); cursor: pointer; }
+.aj-valor { min-width: 30px; text-align: right; font: 700 13px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; color: var(--oro-200); }
+.aj-sonido-ctl { gap: 14px; }
+/* Calidad gráfica: cuatro tarjetas */
+.aj-bloque-presets { display: flex; flex-direction: column; gap: 8px; }
+.aj-presets-cab { display: flex; align-items: center; gap: 10px; }
+.aj-personalizada { display: none; padding: 2px 9px; border-radius: var(--r-pildora); font-size: 11px; font-weight: 700; color: var(--oro-200); background: rgba(233, 185, 85, 0.12); border: 1px dashed rgba(233, 185, 85, 0.5); }
+.aj-bloque-presets:has(.aj-presets.personalizada) .aj-personalizada { display: inline-block; }
+.aj-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.aj-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px 12px 11px; border-radius: var(--r-m); border: 1px solid var(--borde-2); background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)); color: var(--texto-1); text-align: left; cursor: pointer; transition: transform var(--dur-1), border-color var(--dur-1), background var(--dur-1), box-shadow var(--dur-1); }
+.aj-preset:hover { transform: translateY(-1px); border-color: rgba(233, 185, 85, 0.4); }
+.aj-preset[aria-checked="true"] { border-color: var(--oro-400); background: linear-gradient(180deg, rgba(233, 185, 85, 0.2), rgba(233, 185, 85, 0.06)); box-shadow: 0 0 0 1px rgba(242, 179, 61, 0.35), 0 8px 22px rgba(0, 0, 0, 0.3); }
+.aj-barras { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; margin-bottom: 2px; }
+.aj-barras i { width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.16); }
+.aj-barras i:nth-child(1) { height: 25%; }
+.aj-barras i:nth-child(2) { height: 50%; }
+.aj-barras i:nth-child(3) { height: 75%; }
+.aj-barras i:nth-child(4) { height: 100%; }
+.aj-barras[data-n="1"] i:nth-child(-n + 1), .aj-barras[data-n="2"] i:nth-child(-n + 2), .aj-barras[data-n="3"] i:nth-child(-n + 3), .aj-barras[data-n="4"] i { background: var(--oro-400); box-shadow: 0 0 6px rgba(242, 179, 61, 0.45); }
+.aj-preset-nombre { font-weight: 700; font-size: 14px; }
+.aj-preset-pista { font-size: 11.5px; line-height: 1.35; color: var(--texto-3); }
+.aj-presets.compacto { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 4px; }
+.aj-presets.compacto .aj-preset { align-items: center; padding: 8px 4px; gap: 2px; }
+.aj-presets.compacto .aj-preset-nombre { font-size: 12px; }
+.aj-info { margin: 0; padding: 9px 12px; border-radius: var(--r-s); font-size: 12px; color: var(--texto-2); background: rgba(95, 211, 141, 0.06); border: 1px solid rgba(95, 211, 141, 0.18); }
+.aj-info:empty { display: none; }
+/* Atajos de teclado */
+.aj-atajos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 18px; }
+.aj-atajo { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--borde-1); font-size: 12.5px; }
+.aj-atajo-que { color: var(--texto-2); }
+.aj-atajo-teclas { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; color: var(--texto-3); text-align: right; }
+.aj-atajo-obras { grid-column: 1 / -1; align-items: flex-start; }
+.aj-atajo-obras .aj-atajo-teclas { gap: 6px 12px; }
+.aj-tecla-obra { white-space: nowrap; color: var(--texto-2); }
+.aj-atajos kbd, .aj-tecla-obra kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 6px; font: 700 11px/1 system-ui, sans-serif; color: var(--texto-1); background: linear-gradient(180deg, #2a3550, #1b2338); border: 1px solid rgba(255, 255, 255, 0.16); border-bottom-width: 2px; }
+.aj-creditos { margin-top: 2px; }
+/* Menú en partida: calidad gráfica */
+.menu-partida #mp-calidad { margin: 2px 0 6px; }
+@media (max-width: 900px) {
+  .aj-pagina { grid-template-columns: 1fr; gap: 10px; }
+  .aj-nav { position: sticky; top: calc(var(--ini-barra-alto, 56px) + 4px); z-index: 4; flex-direction: row; overflow-x: auto; scrollbar-width: none; padding: 6px; border-radius: var(--r-m); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .aj-nav::-webkit-scrollbar { display: none; }
+  .aj-nav button { flex: none; padding: 7px 12px 7px 8px; gap: 7px; }
+  .aj-nav button[aria-selected="true"]::before { left: 12px; right: 12px; top: auto; bottom: -7px; width: auto; height: 3px; }
+  .aj-nav-icono { width: 24px; height: 24px; font-size: 13px; border-radius: 7px; }
+  .aj-nav-txt small { display: none; }
+  .aj-nav-txt b { font-size: 13px; }
+  .aj-seccion { padding: 14px 12px 14px; }
+  .aj-cab h2 { font-size: 18px; }
+  .aj-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aj-atajos { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .aj-presets { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .aj-preset { align-items: center; padding: 10px 4px 9px; text-align: center; }
+  .aj-preset-nombre { font-size: 12px; }
+  .aj-preset-pista { display: none; }
+  .aj-fila { grid-template-columns: 1fr; padding: 12px; gap: 9px; }
+  label.aj-fila { grid-template-columns: minmax(0, 1fr) auto; }
+  .aj-control { justify-content: flex-start; }
+  .aj-seg { justify-content: flex-start; width: 100%; }
+  .aj-seg button { flex: 1 1 auto; }
+  .aj-deslizador { width: 100%; }
+  .aj-fila-sonido .aj-control { width: 100%; }
+}
+
 </style>
 <link rel="preload" href="mapas-6c16c49b00a7.json" as="fetch" crossorigin="anonymous">
 </head>
@@ -6521,54 +6576,36 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
         </div>
       </section>
 
-      <!-- Ajustes: agrupados -->
+      <!-- Ajustes: secciones (ajustes-ui.js genera las opciones; «Más» va aquí) -->
       <section class="vista" data-vista="ajustes" role="tabpanel" aria-labelledby="tab-ajustes" hidden>
-        <div class="ajustes-rejilla">
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">⚔</span>Partida</h2>
-            <div class="interruptores columna">
-              <label class="interruptor"><input type="checkbox" id="aj-alerta"><span>Borde rojo en la pantalla cuando te atacan</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-puntero"><span>Puntero hacia tu nación (marca «TÚ» y flecha en el borde)</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-consejos"><span>Consejos durante la partida (💡 población al máximo, oro sin usar, vecinos peligrosos…)</span></label>
-            </div>
-          </div>
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">✦</span>Interfaz</h2>
-            <div class="interruptores columna">
-              <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones y transiciones de los menús</span></label>
-            </div>
-            <p class="nota">Si tu sistema pide reducir el movimiento, las animaciones se quitan igualmente.</p>
-          </div>
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">♪</span>Sonido</h2>
-            <div class="aj-sonido">
-              <label class="interruptor"><input type="checkbox" id="aj-musica"><span>Música de fondo</span></label>
-              <label class="campo aj-volumen"><span>Volumen <strong id="out-vol-musica">50</strong></span>
-                <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
-            </div>
-            <div class="aj-sonido">
-              <label class="interruptor"><input type="checkbox" id="aj-efectos"><span>Efectos de sonido</span></label>
-              <label class="campo aj-volumen"><span>Volumen <strong id="out-vol-efectos">80</strong></span>
-                <input id="aj-vol-efectos" type="range" min="0" max="100" value="80"></label>
-            </div>
-          </div>
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">…</span>Más</h2>
-            <div class="botones-izq">
-              <button type="button" id="aj-tutorial" class="btn-sec">Repetir el tutorial</button>
-              <button type="button" id="aj-guia" class="btn-sec">📖 Guía del juego</button>
-              <button type="button" id="aj-restablecer" class="btn-peligro">Restablecer ajustes</button>
-            </div>
-            <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
-            <p class="nota version-reglas" id="version-reglas"></p>
-            <details class="ultimo-error" id="aj-error" hidden>
-              <summary>Último error</summary>
-              <p class="nota">Si algo ha ido mal, cópialo y envíalo: ayuda a arreglarlo.</p>
-              <pre id="aj-error-texto"></pre>
-              <button type="button" id="aj-error-copiar" class="btn-sec">Copiar</button>
-            </details>
+        <div class="aj-pagina">
+          <nav class="aj-nav" id="aj-nav" role="tablist" aria-label="Secciones de los ajustes"></nav>
+          <div class="aj-contenido" id="aj-contenido">
+            <section class="aj-seccion" data-sec="mas" role="tabpanel" hidden>
+              <header class="aj-cab"><div><h2><span class="aj-icono" aria-hidden="true">…</span>Más</h2><p>Ayuda, restablecer y créditos.</p></div></header>
+              <div class="aj-lista">
+                <div class="aj-fila">
+                  <div class="aj-texto"><span class="aj-titulo">Tutorial</span><span class="aj-desc">Una partida guiada paso a paso, desde el despliegue.</span></div>
+                  <div class="aj-control"><button type="button" id="aj-tutorial" class="btn-sec">Repetir el tutorial</button></div>
+                </div>
+                <div class="aj-fila">
+                  <div class="aj-texto"><span class="aj-titulo">Guía del juego</span><span class="aj-desc">Tropas, oro, edificios, ataques, barcos y diplomacia.</span></div>
+                  <div class="aj-control"><button type="button" id="aj-guia" class="btn-sec">📖 Abrir la guía</button></div>
+                </div>
+                <div class="aj-fila">
+                  <div class="aj-texto"><span class="aj-titulo">Restablecer todo</span><span class="aj-desc">Todos los ajustes como venían. Tu perfil, tus monedas y tu rango no cambian.</span></div>
+                  <div class="aj-control"><button type="button" id="aj-restablecer" class="btn-peligro">Restablecer ajustes</button></div>
+                </div>
+              </div>
+              <p class="nota aj-creditos">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
+              <p class="nota version-reglas" id="version-reglas"></p>
+              <details class="ultimo-error" id="aj-error" hidden>
+                <summary>Último error</summary>
+                <p class="nota">Si algo ha ido mal, cópialo y envíalo: ayuda a arreglarlo.</p>
+                <pre id="aj-error-texto"></pre>
+                <button type="button" id="aj-error-copiar" class="btn-sec">Copiar</button>
+              </details>
+            </section>
           </div>
         </div>
       </section>
@@ -6827,6 +6864,7 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
     </div>
     <!-- Últimos segundos del despliegue (5-4-3-2-1) y «¡Comienza!» -->
     <div id="cuenta-atras" class="cuenta-atras" aria-hidden="true" hidden></div>
+    <div id="fps-contador" class="fps-contador" aria-hidden="true" hidden></div>
     <div id="aviso" hidden><span id="aviso-texto"></span></div>
     <!-- Respuesta breve a tus acciones (no es un aviso importante) -->
     <div id="pista" class="pista" hidden role="status"></div>
@@ -7098,12 +7136,15 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
       <div class="dialogo-cuerpo">
         <button type="button" class="principal grande mp-continuar" id="mp-continuar" data-cerrar>Continuar</button>
         <p class="mp-nota" id="mp-nota">La partida sigue mientras tanto.</p>
+        <h3>Calidad gráfica</h3>
+        <div id="mp-calidad"></div>
         <h3>Ajustes rápidos</h3>
         <div class="interruptores columna mp-ajustes">
           <label class="interruptor"><input type="checkbox" id="mp-musica" data-ajuste="musica"><span>Música</span></label>
           <label class="interruptor"><input type="checkbox" id="mp-efectos" data-ajuste="efectos"><span>Efectos de sonido</span></label>
-          <label class="interruptor"><input type="checkbox" id="mp-animaciones" data-ajuste="animaciones"><span>Animaciones</span></label>
+          <label class="interruptor"><input type="checkbox" id="mp-animaciones" data-ajuste="efectosMapa"><span>Animaciones del mapa</span></label>
           <label class="interruptor"><input type="checkbox" id="mp-puntero" data-ajuste="puntero"><span>Puntero hacia tu nación</span></label>
+          <label class="interruptor"><input type="checkbox" id="mp-fps" data-ajuste="contadorFps"><span>Contador de fps</span></label>
         </div>
         <div class="mp-botones">
           <button type="button" class="btn-sec" id="mp-guia">📖 Guía</button>
@@ -7171,7 +7212,7 @@ body #hud.hud3 #clasificacion.lb-valor .lb-barra span { background: linear-gradi
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "91d9111 2026-11-16 18:35 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "ccbf8ab 2026-11-16 19:44 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-6c16c49b00a7.json";</script>
 <script>
 (function () {
@@ -7186,6 +7227,451 @@ function __require(name) {
   }
   return __cache[name];
 }
+__define('ajustes-ui', function () {
+const { BUILDINGS, BUILDING_KINDS } = __require('config');
+const { GFX_PRESETS, SECTIONS, SETTINGS_DEFAULTS, applyPreset, presetOf, sectionKeys } = __require('ajustes');
+const { rodar, teclasGrupo } = __require('movimiento');
+const { defaultProfile } = __require('profile');
+const $ = (id) => document.getElementById(id);
+const STORE = 'trinchera.ajustesSeccion';
+function el(tag, attrs = {}, ...children) {
+const node = document.createElement(tag);
+for (const [k, v] of Object.entries(attrs)) {
+if (k === 'class') node.className = v;
+else if (k === 'text') node.textContent = v;
+else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+else if (v !== false && v != null) node.setAttribute(k, v === true ? '' : v);
+}
+for (const c of children) if (c != null) node.append(c);
+return node;
+}
+function segmented(options, current, onPick, label) {
+const box = el('div', { class: 'segmentos aj-seg', role: 'radiogroup', 'aria-label': label });
+for (const [value, text] of options) {
+const b = el('button', { type: 'button', role: 'radio', 'aria-checked': String(value === current), text });
+b.dataset.valor = String(value);
+b.addEventListener('click', () => {
+for (const x of box.children) x.setAttribute('aria-checked', String(x === b));
+rodar(box);
+onPick(value);
+});
+box.append(b);
+}
+teclasGrupo(box);
+return box;
+}
+function presetPicker(a, onPick, { compact = false } = {}) {
+const box = el('div', { class: `aj-presets${compact ? ' compacto' : ''}`, role: 'radiogroup', 'aria-label': 'Calidad gráfica' });
+const cur = presetOf(a);
+for (const [id, P] of Object.entries(GFX_PRESETS)) {
+const b = el(
+'button',
+{ type: 'button', role: 'radio', class: 'aj-preset', 'aria-checked': String(id === cur), 'data-preset': id, title: P.hint },
+el('span', { class: 'aj-barras', 'aria-hidden': 'true', 'data-n': String(P.level) }, el('i'), el('i'), el('i'), el('i')),
+el('span', { class: 'aj-preset-nombre', text: P.name }),
+compact ? null : el('span', { class: 'aj-preset-pista', text: P.hint }),
+);
+b.addEventListener('click', () => onPick(id));
+box.append(b);
+}
+teclasGrupo(box);
+return box;
+}
+function syncPresetPicker(box, a) {
+if (!box) return;
+const cur = presetOf(a);
+for (const b of box.querySelectorAll('[data-preset]')) b.setAttribute('aria-checked', String(b.dataset.preset === cur));
+box.classList.toggle('personalizada', cur === 'personalizada');
+rodar(box);
+}
+const kbd = (...keys) => keys.map((k) => el('kbd', { text: k }));
+function shortcuts() {
+const rows = [
+['Mover la cámara', kbd('W', 'A', 'S', 'D'), ' o las flechas'],
+['Acercar y alejar', ['rueda del ratón, ', ...kbd('+', '−')]],
+['Ir a tu nación', kbd('C')],
+['Fuerza del ataque (10 %…100 %)', [...kbd('1'), '…', ...kbd('0'), ' · ', ...kbd('Mayús'), '+ rueda']],
+['Información avanzada', [...kbd('Mayús'), ' (mantener)']],
+['Guardar tropas en la capital', [...kbd('X'), ' · sacarlas: ', ...kbd('Mayús', 'X')]],
+['Construir varias veces', [...kbd('Mayús'), ' + clic']],
+['Plegar el panel de abajo', kbd('V')],
+['Desarrollo e investigación', kbd('I')],
+['Silenciar el sonido', kbd('N')],
+['Menú de la partida', kbd('Esc')],
+];
+const builds = BUILDING_KINDS.filter((k) => BUILDINGS[k].key).map((k) => el('span', { class: 'aj-tecla-obra' }, el('kbd', { text: BUILDINGS[k].key.replace('Key', '') }), ` ${BUILDINGS[k].short || BUILDINGS[k].name}`));
+const list = el('div', { class: 'aj-atajos' });
+for (const [label, keys, extra] of rows) list.append(el('div', { class: 'aj-atajo' }, el('span', { class: 'aj-atajo-que', text: label }), el('span', { class: 'aj-atajo-teclas' }, ...[].concat(keys), extra || null)));
+list.append(el('div', { class: 'aj-atajo aj-atajo-obras' }, el('span', { class: 'aj-atajo-que', text: 'Edificios y armas' }), el('span', { class: 'aj-atajo-teclas' }, ...builds)));
+return list;
+}
+class SettingsUI {
+constructor(profile, h) {
+this.profile = profile;
+this.h = h;
+this.nav = $('aj-nav');
+this.body = $('aj-contenido');
+if (!this.nav || !this.body) return;
+this._build();
+let start = 'graficos';
+try {
+start = localStorage.getItem(STORE) || start;
+} catch {
+}
+this.show(SECTIONS.some((s) => s.id === start) ? start : 'graficos', false);
+}
+get a() {
+return this.profile.ajustes;
+}
+_build() {
+this.controls = new Map();
+this.nav.replaceChildren(
+...SECTIONS.map((s) =>
+el(
+'button',
+{ type: 'button', role: 'tab', id: `aj-tab-${s.id}`, 'aria-controls': `aj-sec-${s.id}`, 'aria-selected': 'false', 'data-sec': s.id, onclick: () => this.show(s.id) },
+el('span', { class: 'aj-nav-icono', 'aria-hidden': 'true', text: s.icon }),
+el('span', { class: 'aj-nav-txt' }, el('b', { text: s.title }), el('small', { text: s.nav || s.desc })),
+),
+),
+);
+teclasGrupo(this.nav);
+const mas = this.body.querySelector('[data-sec="mas"]');
+for (const s of SECTIONS) {
+if (s.id === 'mas') {
+if (mas) {
+mas.id = `aj-sec-mas`;
+mas.setAttribute('aria-labelledby', 'aj-tab-mas');
+}
+continue;
+}
+const sec = el('section', { class: 'aj-seccion', id: `aj-sec-${s.id}`, 'data-sec': s.id, role: 'tabpanel', 'aria-labelledby': `aj-tab-${s.id}`, hidden: true });
+const reset = el('button', { type: 'button', class: 'aj-reset-sec', text: 'Restablecer', title: `Dejar ${s.title.toLowerCase()} como venían` });
+reset.addEventListener('click', () => this.resetSection(s.id));
+sec.append(el('header', { class: 'aj-cab' }, el('div', {}, el('h2', {}, el('span', { class: 'aj-icono', 'aria-hidden': 'true', text: s.icon }), s.title), el('p', { text: s.desc })), reset));
+const list = el('div', { class: 'aj-lista' });
+for (const it of s.items) {
+const row = this._row(it);
+if (row) (it.type === 'presets' ? sec : list).append(row);
+}
+sec.append(list);
+if (s.id === 'graficos') {
+this.infoBox = el('p', { class: 'aj-info', 'aria-live': 'polite' });
+sec.append(this.infoBox);
+}
+if (mas) this.body.insertBefore(sec, mas);
+else this.body.append(sec);
+}
+}
+_row(it) {
+const a = this.a;
+const text = (id) => el('div', { class: 'aj-texto' }, el('span', { class: 'aj-titulo', id }, it.label), it.desc ? el('span', { class: 'aj-desc', text: it.desc }) : null);
+const id = `aj-${it.key}`;
+if (it.type === 'presets') {
+const box = presetPicker(a, (pid) => {
+applyPreset(this.a, pid);
+this.sync();
+this._changed('calidad');
+});
+this.presets = box;
+return el('div', { class: 'aj-bloque-presets' }, el('div', { class: 'aj-presets-cab' }, el('span', { class: 'aj-titulo', text: 'Calidad gráfica' }), el('span', { class: 'aj-personalizada', text: 'Personalizada' })), box);
+}
+if (it.type === 'shortcuts') {
+return el('div', { class: 'aj-fila aj-fila-ancha' }, text(`${id}-t`), shortcuts());
+}
+if (it.type === 'toggle') {
+const input = el('input', { type: 'checkbox', id, role: 'switch' });
+input.checked = (a[it.key] ?? SETTINGS_DEFAULTS[it.key] ?? true) !== false;
+input.addEventListener('change', () => {
+this.a[it.key] = input.checked;
+this._changed(it.key, row);
+});
+const row = el('label', { class: 'aj-fila', for: id }, text(`${id}-t`), el('span', { class: 'aj-control interruptor' }, input));
+this.controls.set(it.key, { type: 'toggle', input });
+return row;
+}
+if (it.type === 'seg') {
+const box = segmented(it.options, a[it.key] ?? SETTINGS_DEFAULTS[it.key], (v) => {
+this.a[it.key] = v;
+this._changed(it.key, row);
+}, it.label);
+box.id = id;
+const row = el('div', { class: 'aj-fila' }, text(`${id}-t`), el('div', { class: 'aj-control' }, box));
+this.controls.set(it.key, { type: 'seg', node: box });
+return row;
+}
+if (it.type === 'range') {
+const { input, out, wrap } = this._slider(id, it.key, 1);
+const row = el('div', { class: 'aj-fila' }, text(`${id}-t`), el('div', { class: 'aj-control' }, wrap));
+input.addEventListener('change', () => this._changed(it.key, row, true));
+this.controls.set(it.key, { type: 'range', input, out });
+return row;
+}
+if (it.type === 'sound') {
+const tog = el('input', { type: 'checkbox', id, role: 'switch', 'aria-labelledby': `${id}-t` });
+tog.checked = a[it.key] !== false;
+const def = it.vol === 'volMusica' ? 0.5 : 0.8;
+const { input, out, wrap } = this._slider(`aj-vol-${it.key}`, it.vol, def);
+const row = el('div', { class: 'aj-fila aj-fila-sonido' }, text(`${id}-t`), el('div', { class: 'aj-control aj-sonido-ctl' }, el('span', { class: 'interruptor' }, tog), wrap));
+tog.addEventListener('change', () => {
+this.a[it.key] = tog.checked;
+this._syncSound();
+this._changed(it.key, row);
+});
+input.addEventListener('change', () => this._changed(it.vol, row, true));
+this.controls.set(it.key, { type: 'toggle', input: tog });
+this.controls.set(it.vol, { type: 'range', input, out, def });
+return row;
+}
+return null;
+}
+_slider(id, key, def) {
+const v = Math.round((this.a[key] ?? def) * 100);
+const input = el('input', { type: 'range', id, min: '0', max: '100', step: '1', value: String(v), 'aria-label': 'Volumen' });
+const out = el('output', { class: 'aj-valor', for: id, text: `${v}` });
+const paint = () => input.style.setProperty('--llenado', `${input.value}%`);
+paint();
+input.addEventListener('input', () => {
+out.textContent = input.value;
+paint();
+this.a[key] = Number(input.value) / 100;
+this.h.onChange?.(key, true);
+});
+return { input, out, wrap: el('div', { class: 'aj-deslizador' }, input, out) };
+}
+_changed(key, row = null, done = false) {
+this.h.onChange?.(key, false);
+if (this.presets) syncPresetPicker(this.presets, this.a);
+this.renderInfo();
+if (row && !done) {
+row.classList.remove('cambiado');
+void row.offsetWidth;
+row.classList.add('cambiado');
+}
+}
+_syncSound() {
+for (const [tog, vol] of [['musica', 'volMusica'], ['efectos', 'volEfectos']]) {
+const t = this.controls.get(tog);
+const v = this.controls.get(vol);
+if (!t || !v) continue;
+v.input.disabled = !t.input.checked;
+v.input.closest('.aj-deslizador')?.classList.toggle('apagado', !t.input.checked);
+}
+}
+sync() {
+if (!this.controls) return;
+const a = this.a;
+for (const [key, c] of this.controls) {
+const v = a[key] ?? SETTINGS_DEFAULTS[key] ?? c.def ?? true;
+if (c.type === 'toggle') c.input.checked = v !== false;
+else if (c.type === 'seg') {
+for (const b of c.node.children) b.setAttribute('aria-checked', String(b.dataset.valor === String(v)));
+rodar(c.node);
+} else if (c.type === 'range') {
+const n = Math.round((v ?? 1) * 100);
+c.input.value = String(n);
+c.out.textContent = String(n);
+c.input.style.setProperty('--llenado', `${n}%`);
+}
+}
+this._syncSound();
+syncPresetPicker(this.presets, a);
+this.renderInfo();
+}
+renderInfo() {
+if (!this.infoBox) return;
+const i = this.h.info?.();
+if (!i) return;
+const fmt = (x) => `${(Math.round(x * 100) / 100).toLocaleString('es-ES')}×`;
+const parts = [`Pantalla ${fmt(i.pantalla)}`, `mapa a ${fmt(i.mapa)}${i.auto ? ' (automática)' : ''}`];
+if (i.fps) parts.push(`última partida: ${i.fps} fps de media`);
+this.infoBox.textContent = parts.join(' · ');
+}
+show(id, focus = false) {
+this.current = id;
+for (const b of this.nav.querySelectorAll('[data-sec]')) b.setAttribute('aria-selected', String(b.dataset.sec === id));
+rodar(this.nav);
+for (const s of this.body.querySelectorAll('.aj-seccion, [data-sec="mas"]')) s.hidden = s.dataset.sec !== id;
+try {
+localStorage.setItem(STORE, id);
+} catch {
+}
+if (id === 'graficos') this.renderInfo();
+if (focus) this.nav.querySelector(`[data-sec="${id}"]`)?.focus();
+this.nav.querySelector(`[data-sec="${id}"]`)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+}
+resetSection(id) {
+const a = this.a;
+const d = defaultProfile().ajustes;
+for (const k of sectionKeys(id)) if (k in d) a[k] = d[k];
+this.sync();
+this.h.onChange?.('*', false);
+this.h.onFlash?.(`${SECTIONS.find((s) => s.id === id)?.title || 'Sección'}: como venía.`);
+}
+}
+
+return { presetPicker, syncPresetPicker, SettingsUI };
+});
+__define('ajustes', function () {
+const SETTINGS_DEFAULTS = {
+resolucion: 'auto',
+fpsMax: 0,
+efectosMapa: true,
+particulas: 'normal',
+temblor: true,
+vineta: true,
+contadorFps: false,
+nombres: 'todos',
+banderas: true,
+infoAvanzada: false,
+minimapa: true,
+escalaUI: 1,
+volGeneral: 1,
+velCamara: 1,
+zoomRueda: 1,
+invertirRueda: false,
+};
+const GFX_KEYS = ['resolucion', 'fpsMax', 'efectosMapa', 'particulas', 'temblor', 'vineta'];
+const GFX_PRESETS = {
+bateria: { name: 'Ahorro', hint: 'Menos batería y calor', level: 1, values: { resolucion: 'baja', fpsMax: 30, efectosMapa: false, particulas: 'baja', temblor: false, vineta: false } },
+rendimiento: { name: 'Rendimiento', hint: 'Más fluidez en equipos modestos', level: 2, values: { resolucion: 'media', fpsMax: 0, efectosMapa: true, particulas: 'baja', temblor: true, vineta: false } },
+equilibrada: { name: 'Equilibrada', hint: 'Recomendada: se adapta sola', level: 3, values: { resolucion: 'auto', fpsMax: 0, efectosMapa: true, particulas: 'normal', temblor: true, vineta: true } },
+maxima: { name: 'Máxima', hint: 'La mejor imagen', level: 4, values: { resolucion: 'alta', fpsMax: 0, efectosMapa: true, particulas: 'alta', temblor: true, vineta: true } },
+};
+function presetOf(a) {
+for (const [id, P] of Object.entries(GFX_PRESETS)) {
+if (GFX_KEYS.every((k) => (a[k] ?? SETTINGS_DEFAULTS[k]) === P.values[k])) return id;
+}
+return 'personalizada';
+}
+function applyPreset(a, id) {
+const P = GFX_PRESETS[id];
+if (P) Object.assign(a, P.values);
+return a;
+}
+function fixedDpr(mode, native) {
+if (mode === 'alta') return native;
+if (mode === 'media') return native > 1.25 ? 1.25 : Math.max(0.75, Math.round(native * 0.85 * 100) / 100);
+if (mode === 'baja') return native > 1 ? 1 : 0.7;
+return null;
+}
+const PARTICLES = { alta: { max: 2400, keep: 1 }, normal: { max: 1600, keep: 1 }, baja: { max: 600, keep: 0.4 } };
+function normalizeSettingsExtra(a) {
+if (a.efectosMapa === undefined && a.animaciones === false) a.efectosMapa = false;
+const pick = (k, allowed) => {
+if (!allowed.includes(a[k])) a[k] = SETTINGS_DEFAULTS[k];
+};
+pick('resolucion', ['auto', 'alta', 'media', 'baja']);
+pick('fpsMax', [0, 30, 60]);
+pick('particulas', ['alta', 'normal', 'baja']);
+pick('nombres', ['todos', 'grandes', 'jugadores']);
+pick('escalaUI', [0.9, 1, 1.1, 1.25]);
+pick('velCamara', [0.6, 1, 1.6]);
+pick('zoomRueda', [0.6, 1, 1.6]);
+for (const k of ['efectosMapa', 'temblor', 'vineta', 'contadorFps', 'banderas', 'infoAvanzada', 'minimapa', 'invertirRueda']) {
+if (typeof a[k] !== 'boolean') a[k] = SETTINGS_DEFAULTS[k];
+}
+const v = Number(a.volGeneral);
+a.volGeneral = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+return a;
+}
+const SECTIONS = [
+{
+id: 'graficos',
+nav: 'Calidad y fluidez',
+title: 'Gráficos',
+icon: '◈',
+desc: 'Calidad de imagen y fluidez del mapa.',
+items: [
+{ key: 'calidad', type: 'presets', label: 'Calidad' },
+{ key: 'resolucion', type: 'seg', label: 'Resolución del mapa', desc: 'Automática la baja sola si el equipo no llega a ~40 fps y la vuelve a subir si va sobrado.', options: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']] },
+{ key: 'fpsMax', type: 'seg', label: 'Límite de fotogramas', desc: 'Con 30 fps el móvil gasta menos batería y se calienta menos.', options: [[0, 'Sin límite'], [60, '60 fps'], [30, '30 fps']] },
+{ key: 'efectosMapa', type: 'toggle', label: 'Animaciones del mapa', desc: 'Olas, brillos, estelas de los barcos, humo y el avance suave del territorio.' },
+{ key: 'particulas', type: 'seg', label: 'Partículas', desc: 'Chispas de los frentes, humo y restos de las explosiones.', options: [['alta', 'Muchas'], ['normal', 'Normales'], ['baja', 'Pocas']] },
+{ key: 'temblor', type: 'toggle', label: 'Temblor y destellos', desc: 'La cámara tiembla y la pantalla destella con las explosiones cercanas.' },
+{ key: 'vineta', type: 'toggle', label: 'Viñeta', desc: 'Bordes de la pantalla algo más oscuros para centrar la mirada (en el ordenador).' },
+{ key: 'contadorFps', type: 'toggle', label: 'Contador de fps', desc: 'Los fotogramas por segundo, en una esquina durante la partida.' },
+],
+},
+{
+id: 'mapa',
+nav: 'Nombres y marcas',
+title: 'Mapa',
+icon: '⌖',
+desc: 'Qué se dibuja sobre el mapa.',
+items: [
+{ key: 'nombres', type: 'seg', label: 'Nombres de los países', desc: 'Tú, tus aliados y los demás jugadores se nombran siempre.', options: [['todos', 'Todos'], ['grandes', 'Naciones grandes'], ['jugadores', 'Solo jugadores']] },
+{ key: 'banderas', type: 'toggle', label: 'Banderas junto a los nombres', desc: 'La bandera o el emblema de cada nación delante de su nombre.' },
+{ key: 'marcadores', type: 'toggle', label: 'Tropas de cada ataque', desc: 'Una pastilla con las tropas que quedan en cada frente.' },
+{ key: 'puntero', type: 'toggle', label: 'Puntero hacia tu nación', desc: 'La marca «TÚ» y una flecha en el borde cuando tu país no se ve.' },
+{ key: 'emojis', type: 'toggle', label: 'Burbujas de emoji', desc: 'Los emojis que se mandan las naciones, sobre el mapa.' },
+{ key: 'alerta', type: 'toggle', label: 'Borde rojo al ser atacado', desc: 'La pantalla se tiñe de rojo por el lado del ataque.' },
+],
+},
+{
+id: 'partida',
+nav: 'Ayudas e información',
+title: 'Partida',
+icon: '⚔',
+desc: 'Ayudas e información durante la partida.',
+items: [
+{ key: 'consejos', type: 'toggle', label: 'Consejos', desc: 'Avisos con 💡: población al máximo, oro sin usar, vecinos peligrosos…' },
+{ key: 'infoAvanzada', type: 'toggle', label: 'Información avanzada siempre', desc: 'Las cifras detalladas de fichas y paneles a la vista. Si no, se ven manteniendo Mayús.' },
+{ key: 'minimapa', type: 'toggle', label: 'Minimapa', desc: 'El mapa pequeño de la esquina al empezar (se puede plegar en la partida).' },
+],
+},
+{
+id: 'interfaz',
+nav: 'Tamaño y movimiento',
+title: 'Interfaz',
+icon: '✦',
+desc: 'Tamaño y movimiento de los menús y paneles.',
+items: [
+{ key: 'escalaUI', type: 'seg', label: 'Tamaño de los paneles', desc: 'La barra de arriba, la clasificación, el panel de abajo y el minimapa. Más grandes, solo hasta donde quepan en la pantalla.', options: [[0.9, 'Pequeño'], [1, 'Normal'], [1.1, 'Grande'], [1.25, 'Muy grande']] },
+{ key: 'animaciones', type: 'toggle', label: 'Animaciones de los menús', desc: 'Transiciones de pantallas, pestañas y tarjetas. Si tu sistema pide reducir el movimiento, se quitan igualmente.' },
+],
+},
+{
+id: 'sonido',
+nav: 'Volumen y música',
+title: 'Sonido',
+icon: '♪',
+desc: 'Volumen general, música y efectos.',
+items: [
+{ key: 'volGeneral', type: 'range', label: 'Volumen general' },
+{ key: 'musica', type: 'sound', vol: 'volMusica', label: 'Música', desc: 'Calma en paz y más bélica cuando hay guerra.' },
+{ key: 'efectos', type: 'sound', vol: 'volEfectos', label: 'Efectos de sonido', desc: 'Conquistas, explosiones, botones y avisos.' },
+],
+},
+{
+id: 'controles',
+nav: 'Cámara y atajos',
+title: 'Controles',
+icon: '✥',
+desc: 'Cámara, rueda del ratón y atajos de teclado.',
+items: [
+{ key: 'velCamara', type: 'seg', label: 'Velocidad de la cámara', desc: 'Al moverla con WASD o las flechas.', options: [[0.6, 'Lenta'], [1, 'Normal'], [1.6, 'Rápida']] },
+{ key: 'zoomRueda', type: 'seg', label: 'Zoom con la rueda', desc: 'Cuánto acerca o aleja cada golpe de rueda (o del panel táctil).', options: [[0.6, 'Suave'], [1, 'Normal'], [1.6, 'Rápido']] },
+{ key: 'invertirRueda', type: 'toggle', label: 'Invertir la rueda', desc: 'Rueda hacia arriba para alejar.' },
+{ key: 'atajos', type: 'shortcuts', label: 'Atajos de teclado' },
+],
+},
+{ id: 'mas', nav: 'Ayuda y créditos', title: 'Más', icon: '…', desc: 'Ayuda, restablecer y créditos.', items: [] },
+];
+function sectionKeys(id) {
+const s = SECTIONS.find((x) => x.id === id);
+if (!s) return [];
+const keys = [];
+for (const it of s.items) {
+if (it.type === 'presets' || it.type === 'shortcuts') continue;
+keys.push(it.key);
+if (it.vol) keys.push(it.vol);
+}
+return keys;
+}
+
+return { SETTINGS_DEFAULTS, GFX_KEYS, GFX_PRESETS, presetOf, applyPreset, fixedDpr, PARTICLES, normalizeSettingsExtra, SECTIONS, sectionKeys };
+});
 __define('attack', function () {
 const { MinHeap } = __require('heap');
 class Attack {
@@ -9091,14 +9577,6 @@ return true;
 return false;
 }
 }
-async providers() {
-try {
-const body = await this._post('proveedores');
-return Array.isArray(body.proveedores) ? body.proveedores : [];
-} catch {
-return [];
-}
-}
 sync(profile) {
 if (!this.signedIn) return Promise.resolve(false);
 if (this.syncing) {
@@ -9623,6 +10101,7 @@ if (this._avBtn) {
 this._avBtn = false;
 setAdvanced(false);
 }
+if (document.documentElement.dataset.avSiempre === '1') setAdvanced(true);
 this.el.classList.remove('visible');
 clearTimeout(this._hideTimer);
 this._hideTimer = setTimeout(() => {
@@ -10505,6 +10984,7 @@ this.parts = [];
 this.decals = [];
 this.scripts = [];
 this.max = 1600;
+this.keep = 1;
 this.shake = 0;
 this.flash = 0;
 sprites();
@@ -10520,6 +11000,7 @@ this.shake = 0;
 this.flash = 0;
 }
 add(p) {
+if (this.keep < 1 && !this._priority && Math.random() > this.keep) return;
 if (this.parts.length >= this.max) {
 if (!this._priority) return;
 this.parts.shift();
@@ -11093,6 +11574,8 @@ this._pathCache = new Map();
 this._nextBoatId = 1;
 this._annexFail = new Uint32Array(map.size);
 this._annexBudget = 0;
+this._annexRound = 0;
+this._annexBig = 0x80000000;
 }
 addPlayer(name, color, isHuman = false) {
 const id = this.players.length;
@@ -12707,6 +13190,7 @@ return true;
 _flushAnnex(atk) {
 const q = atk.annexQ;
 if (!q || !q.length) return;
+this._annexBig = (0x80000001 + (this._annexRound++ % 0x7ffffffe)) >>> 0;
 const aid = atk.attacker.id;
 const owner = this.owner;
 for (let i = 0; i < q.length; i++) {
@@ -12723,7 +13207,8 @@ for (let k = 0; k < c; k++) {
 const n = nb[k];
 const o = this.owner[n];
 if (o === aid || map.terrain[n] === 0 || (o !== tid && o !== 0)) continue;
-if (this._annexFail[n] === this.ticks) continue;
+const f = this._annexFail[n];
+if (f === this.ticks || f === this._annexBig) continue;
 this._tryAnnex(n, aid);
 if (this._annexBudget <= 0) return;
 }
@@ -12738,6 +13223,7 @@ const stamp = this._nextStamp();
 const seen = this._stampArr;
 const queue = this._queue;
 const fail = this._annexFail;
+const big = this._annexBig;
 const nb = (this._annexNb2 ??= new Int32Array(4));
 const max = this.players[aid].weak ? ANNEX_MAX_COLONY : ANNEX_MAX_TILES;
 let tooBig = false;
@@ -12777,6 +13263,11 @@ if (ov !== o || fail[v] === this.ticks) {
 ok = false;
 break;
 }
+if (fail[v] === big) {
+ok = false;
+tooBig = true;
+break;
+}
 if (seen[v] !== stamp && tail >= max) {
 ok = false;
 tooBig = max < ANNEX_MAX_TILES;
@@ -12790,7 +13281,8 @@ queue[tail++] = v;
 }
 this._annexBudget -= tail + probeSteps;
 if (!ok) {
-if (!tooBig) for (let i = 0; i < tail; i++) fail[queue[i]] = this.ticks;
+const mark = tooBig ? big : this.ticks;
+for (let i = 0; i < tail; i++) fail[queue[i]] = mark;
 return false;
 }
 const tiles = Array.from(queue.subarray(0, tail));
@@ -14126,12 +14618,31 @@ sum += p.tiles;
 this.nationAvgTiles = n ? sum / n : 0;
 }
 tick() {
-if (this.phase === 'ended') return;
+if (!this._midTick && !this._tickStart()) return;
+this._midTick = false;
+this._tickAttacks(Infinity);
+this._tickFinish();
+}
+tickPart(deadline) {
+if (!this._midTick) {
+if (!this._tickStart()) return true;
+this._midTick = true;
+}
+if (!this._tickAttacks(deadline)) return false;
+this._midTick = false;
+this._tickFinish();
+return true;
+}
+get midTick() {
+return !!this._midTick;
+}
+_tickStart() {
+if (this.phase === 'ended') return false;
 this.ticks++;
 this._applyIntents();
 if (this.phase === 'spawn') {
 if (this.ticks >= CONFIG.spawnTicks) this._beginPlaying();
-return;
+return false;
 }
 if (this.ticks % 10 === 0) this._updateNationAverage();
 for (let i = 1; i < this.players.length; i++) {
@@ -14150,9 +14661,21 @@ if (p.research && this.ticks >= p.research.end) this._finishResearch(p);
 if (p.gold > p.stats.maxGold) p.stats.maxGold = p.gold;
 }
 this._annexBudget = ANNEX_VISITS_PER_TICK;
-const na = this.attacks.length;
-const first = na ? this.ticks % na : 0;
-for (let k = 0; k < na; k++) this._processAttack(this.attacks[(first + k) % na]);
+this._atkN = this.attacks.length;
+this._atkFirst = this._atkN ? this.ticks % this._atkN : 0;
+this._atkK = 0;
+return true;
+}
+_tickAttacks(deadline) {
+const na = this._atkN;
+const first = this._atkFirst;
+while (this._atkK < na) {
+this._processAttack(this.attacks[(first + this._atkK++) % na]);
+if (deadline !== Infinity && this._atkK < na && performance.now() >= deadline) return false;
+}
+return true;
+}
+_tickFinish() {
 this.attacks = this.attacks.filter((a) => !a.done);
 this._updateSites();
 this._updateBoats();
@@ -14954,6 +15477,8 @@ const { coopSlots, seatsSummary, settingsDiff } = __require('configurador');
 const { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS, rarityOf, skinLook } = __require('skins');
 const { ACH_CATEGORIES, achCategory, achPoints, attachTip, esc, hideTip, itemTipHtml } = __require('rpg');
 const { LOBBY_WAIT_MS } = __require('emparejamiento');
+const { SECTIONS, sectionKeys } = __require('ajustes');
+const { SettingsUI } = __require('ajustes-ui');
 const COLLECTION = [
 { cat: 'forma', col: 'emblema', name: 'Forma', type: 'Forma del emblema', list: SHAPES, desc: 'La forma de tu emblema.' },
 { cat: 'simbolo', col: 'emblema', name: 'Símbolo', type: 'Símbolo del emblema', list: SYMBOLS, desc: 'El símbolo de tu emblema.' },
@@ -14994,6 +15519,7 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Ajustes', title: 'Ajustes gráficos y más fluidez', text: 'Ajustes renovados por secciones: calidad gráfica en un toque (Ahorro, Rendimiento, Equilibrada o Máxima), resolución del mapa, límite de fps, partículas, temblor, viñeta y contador de fps; qué nombres se ven en el mapa, tamaño de los paneles, volumen general, velocidad de la cámara y atajos de teclado. Y la partida va más fluida: el turno se reparte entre fotogramas, salir al menú es instantáneo y la conexión se recupera antes tras un corte.', art: 0 },
 { tag: 'Mapas', title: 'Mapas con más píxeles', text: 'Todos los mapas tienen ahora 1,78 veces más casillas (el mundo, 4000 × 2000) con la misma geografía: costas, ríos y fronteras más finos. La partida va al mismo ritmo: el techo de tropas, la zona inicial y el coste de conquistar cuentan superficie, no píxeles.', art: 2 },
 { tag: 'Competitivo', title: 'Clasificatorias con amigos', text: 'Al encontrar partida, la sala espera 30 s a que entre más gente de tu rango. Juega con amigos: abre una clasificatoria de grupo, invítales y busca rivales. Salas de competición sin código, rangos animados que estallan al subir y menos texto: lo demás, al pasar el ratón. En partida, la clasificación también por economía.', art: 1 },
 { tag: 'Partida', title: 'Interfaz de partida más limpia', text: 'Tus tropas, oro y territorio en una barra arriba; la clasificación con los tres primeros y tú; el banco aparte y la fuerza de ataque encima de los edificios. Las fichas enseñan lo esencial: mantén Mayús (o toca «Más detalles» en el móvil) para ver todo.', art: 2 },
@@ -15609,34 +16135,14 @@ rememberConfig(this.profile, 'ia', { bots: opts.bots, mapa: opts.mapSize, dificu
 this.h.onProfileChange?.(false);
 this.h.onQuickPlay?.(opts);
 });
-const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos' };
-for (const [id, key] of Object.entries(toggles)) {
-$(id).checked = this.profile.ajustes[key] !== false;
-$(id).addEventListener('change', () => {
-this.profile.ajustes[key] = $(id).checked;
-this.h.onProfileChange?.(false);
+this.settingsUI = new SettingsUI(this.profile, {
+onChange: (key, live) => {
+if (!live) this.h.onProfileChange?.(false);
 this.h.onSettings?.();
+},
+info: () => this.h.graphicsInfo?.(),
+onFlash: (text) => this._flash(text, true),
 });
-}
-for (const [id, key] of Object.entries({ 'aj-musica': 'musica', 'aj-efectos': 'efectos' })) {
-$(id).checked = this.profile.ajustes[key] !== false;
-$(id).addEventListener('change', () => {
-this.profile.ajustes[key] = $(id).checked;
-this._syncVolumes();
-this.h.onProfileChange?.(false);
-});
-}
-for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
-const v = Math.round((this.profile.ajustes[key] ?? def) * 100);
-$(id).value = String(v);
-$(out).textContent = String(v);
-$(id).addEventListener('input', () => {
-$(out).textContent = $(id).value;
-this.profile.ajustes[key] = Number($(id).value) / 100;
-this.h.onSettings?.();
-});
-$(id).addEventListener('change', () => this.h.onProfileChange?.(false));
-}
 $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
 $('aj-guia').addEventListener('click', () => abrirGuia());
 $('btn-guia').addEventListener('click', () => abrirGuia());
@@ -15658,7 +16164,6 @@ this._resetSettings();
 cerrarDialogo($('dialogo-restablecer'));
 this._flash('Ajustes restablecidos.', true);
 });
-this._syncVolumes();
 $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
 this.queue = this.profile.ajustes.colaClasif === 'sala' ? 'sala' : 'ia';
 segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => {
@@ -17404,17 +17909,12 @@ el('span', { class: 'hc-dato', text: formatTime(g.duracion) }));
 all,
 );
 }
-_syncVolumes() {
-for (const [tog, vol] of [['aj-musica', 'aj-vol-musica'], ['aj-efectos', 'aj-vol-efectos']]) {
-const on = $(tog).checked;
-$(vol).disabled = !on;
-$(vol).closest('.aj-volumen')?.classList.toggle('apagado', !on);
-}
-}
 _resetSettings() {
 const d = defaultProfile().ajustes;
 const a = this.profile.ajustes;
-for (const k of ['alerta', 'puntero', 'marcadores', 'emojis', 'animaciones', 'consejos', 'musica', 'efectos', 'volMusica', 'volEfectos', 'silencio']) {
+const keys = new Set(['silencio', 'minimapa']);
+for (const s of SECTIONS) for (const k of sectionKeys(s.id)) keys.add(k);
+for (const k of keys) {
 if (k in d) a[k] = d[k];
 else delete a[k];
 }
@@ -17423,15 +17923,7 @@ this.h.onProfileChange?.(false);
 this.h.onSettings?.();
 }
 syncSettings() {
-const a = this.profile.ajustes;
-const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos', 'aj-musica': 'musica', 'aj-efectos': 'efectos' };
-for (const [id, key] of Object.entries(toggles)) $(id).checked = a[key] !== false;
-for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
-const v = Math.round((a[key] ?? def) * 100);
-$(id).value = String(v);
-$(out).textContent = String(v);
-}
-this._syncVolumes();
+this.settingsUI?.sync();
 }
 setCloudNote(text) {
 $('nota-nube').textContent = text;
@@ -20440,8 +20932,8 @@ if (e.shiftKey) {
 this.h.onRatioStep?.(e.deltaY > 0 ? -0.05 : 0.05);
 return;
 }
-const dy = e.deltaY * (WHEEL_UNIT[e.deltaMode] || 1);
-this.camera.zoomToward(x, y, Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0018));
+const dy = e.deltaY * (WHEEL_UNIT[e.deltaMode] || 1) * (this.invertWheel ? -1 : 1);
+this.camera.zoomToward(x, y, Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0018 * (this.zoomSpeed || 1)));
 }
 _key(e, down) {
 const tag = e.target && e.target.tagName;
@@ -20465,7 +20957,7 @@ this.camera.zoomToward(this.camera.viewW / 2, this.camera.viewH / 2, 1 / 1.3);
 }
 }
 update(dt) {
-const speed = 0.8 * dt;
+const speed = 0.8 * dt * (this.panSpeed || 1);
 let dx = 0;
 let dy = 0;
 if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) dx += speed;
@@ -20661,8 +21153,9 @@ const TIPS = [
 ];
 const nextPaint = () =>
 new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+const twoPaints = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))));
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-async function withLoading(title, steps, { minMs = 1300 } = {}) {
+async function withLoading(title, steps, { minMs = 1300, onReady = null } = {}) {
 const box = $('carga');
 const started = performance.now();
 $('carga-mapa').textContent = title;
@@ -20672,7 +21165,9 @@ box.classList.remove('saliendo');
 clearTimeout(box._fuera);
 mostrar(box, { y: 0, scale: 1.02, ms: 260 });
 let result;
+let ok = false;
 try {
+await twoPaints();
 for (let i = 0; i < steps.length; i++) {
 $('carga-paso').textContent = steps[i].label;
 $('carga-progreso').style.width = `${Math.round((i / steps.length) * 100)}%`;
@@ -20681,9 +21176,18 @@ result = await steps[i].run(result);
 }
 $('carga-paso').textContent = '¡A las trincheras!';
 $('carga-progreso').style.width = '100%';
+await twoPaints();
+await twoPaints();
 const left = minMs - (performance.now() - started);
 if (left > 0) await wait(left);
+ok = true;
 } finally {
+if (ok && onReady) {
+try {
+onReady(result);
+} catch {
+}
+}
 box.classList.add('saliendo');
 box._fuera = setTimeout(() => {
 box.hidden = true;
@@ -20864,6 +21368,8 @@ const { Diagnostico } = __require('diagnostico');
 const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('diag') === '1';
 const { Sound } = __require('sonido');
 const { Minimap } = __require('minimapa');
+const { PARTICLES, applyPreset, fixedDpr } = __require('ajustes');
+const { presetPicker, syncPresetPicker } = __require('ajustes-ui');
 const { abrirDialogo, cerrarDialogo, hayDialogo, ondasAlPulsar } = __require('movimiento');
 const { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } = __require('toque');
 const { installGlobalHandlers, reportError, setErrorContext, setErrorNotifier } = __require('errores');
@@ -20910,11 +21416,14 @@ const native = Math.min(TOUCH ? 1.5 : 2, window.devicePixelRatio || 1);
 return [...new Set([native, 1.5, 1.25, 1].filter((d) => d <= native))];
 }
 function currentDpr() {
+const fixed = fixedDpr(profile.ajustes.resolucion, dprSteps()[0]);
+if (fixed) return fixed;
 const steps = dprSteps();
 return steps[Math.min(quality.level, steps.length - 1)];
 }
 function adaptQuality(dt) {
 if (dt > 200 || state.demo || !state.game) return;
+if (profile.ajustes.resolucion !== 'auto') return;
 quality.ema += (dt - quality.ema) * 0.05;
 const steps = dprSteps();
 if (quality.ema > 25 && quality.level < steps.length - 1) {
@@ -20935,7 +21444,13 @@ resize();
 }
 } else quality.fastMs = 0;
 }
+function applyUiScale() {
+const want = profile.ajustes.escalaUI || 1;
+const fit = want <= 1 ? want : Math.max(1, Math.min(want, window.innerWidth / 1440, window.innerHeight / 860));
+document.documentElement.style.setProperty('--escala-ui', String(Math.round(fit * 100) / 100));
+}
 function resize() {
+applyUiScale();
 const dpr = currentDpr();
 const w = window.innerWidth;
 const h = window.innerHeight;
@@ -21047,6 +21562,7 @@ state.human = game.human;
 state.mapSize = mapSize;
 state.diag = DIAG ? new Diagnostico(game, { build: RULES_FINGERPRINT, mechVersion: MECH_VERSION, ruleset: roomRuleset(game.rules) }) : null;
 state.renderer = new Renderer(canvas, game, camera);
+state.backdrop = false;
 state.renderer.onRestored = () => {
 if (minimap.game === game) minimap.restore();
 ui.repaintIcons();
@@ -21061,14 +21577,15 @@ state.recorded = false;
 camera.fit(map.width, map.height);
 return game;
 }
-function startDemo({ background = false } = {}) {
+function backToMenu({ background = false } = {}) {
 state.holdSim = false;
 if (!background) {
 leaveOnline();
 home.closeLayer('partida');
 }
 state.demo = true;
-newGame({ seed: randomSeed(), mapSize: 'mundo', bots: 30, difficulty: 'normal', humans: [], localIndex: -1 });
+releaseGame();
+state.backdrop = true;
 state.speed = 1;
 ui.hideHud();
 ui.closeNation();
@@ -21135,6 +21652,11 @@ home.hide();
 home.hideLobby();
 ui.showHud();
 }
+function hideScreensForGame() {
+home.hide();
+home.hideLobby();
+ui.hideEnd?.();
+}
 async function startGame(opts) {
 if (state.loading) return;
 state.loading = true;
@@ -21159,11 +21681,17 @@ run: (loaded) =>
 newGame({ seed, mapSize: opts.mapSize, bots: opts.bots, difficulty: opts.difficulty, rules: opts.rules, humans: [myIdentity()], localIndex: 0, loaded }),
 },
 { label: 'Cavando trincheras…', run: (game) => game },
-]);
+], { onReady: hideScreensForGame });
 if (state.config) state.config.modo = opts.tutorial ? 'tutorial' : opts.ranked ? 'clasificatoria' : opts.challenge ? 'reto' : 'ia';
-if (!opts.tutorial) await presentMatch(soloPresentation(game, opts));
-if (state.game !== game) return;
+let entered = false;
+const enter = () => {
+if (entered || state.game !== game) return;
+entered = true;
 enterGame(game);
+};
+if (!opts.tutorial) await presentMatch({ ...soloPresentation(game, opts), onEnd: enter });
+if (state.game !== game) return;
+enter();
 if (opts.tutorial) tutorial.start(tutorialState());
 } finally {
 state.loading = false;
@@ -21251,6 +21779,7 @@ music: a.musica !== false,
 sfx: a.efectos !== false,
 musicVol: a.volMusica ?? 0.5,
 sfxVol: a.volEfectos ?? 0.8,
+masterVol: a.volGeneral ?? 1,
 muted: !!a.silencio,
 });
 const muteBtn = document.getElementById('btn-sonido');
@@ -21266,10 +21795,25 @@ state.renderer.options = {
 badges: a.marcadores !== false,
 emojis: a.emojis !== false,
 pointer: state.pointerOn,
-animations: a.animaciones !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+animations: a.efectosMapa !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+shake: a.temblor !== false,
+vignette: a.vineta !== false,
+names: a.nombres,
+flags: a.banderas !== false,
 nameColor: nameColorOf(profile),
 };
+const P = PARTICLES[a.particulas] || PARTICLES.normal;
+state.renderer.fx.max = P.max;
+state.renderer.fx.keep = P.keep;
+state.renderer.lastLabelTime = 0;
 }
+if (canvas.width !== Math.round(window.innerWidth * currentDpr())) resize();
+if (fpsBox) fpsBox.hidden = !a.contadorFps;
+input.panSpeed = a.velCamara || 1;
+input.zoomSpeed = a.zoomRueda || 1;
+input.invertWheel = !!a.invertirRueda;
+ui.setAlwaysAdvanced?.(!!a.infoAvanzada);
+applyUiScale();
 document.documentElement.style.setProperty('--color-nombre', nameColorOf(profile));
 ui.redAlert = a.alerta !== false;
 ui.tips = a.consejos !== false;
@@ -21330,7 +21874,7 @@ if (state.oldNet === net) state.oldNet = null;
 state.net = null;
 state.online = false;
 state.ranked = null;
-startDemo({ background: true });
+backToMenu({ background: true });
 home.showLobby();
 }
 function openRematch() {
@@ -21619,11 +22163,17 @@ localIndex: index,
 loaded,
 }),
 },
+{ label: 'Pasando revista…', run: async (game) => (await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]), game) },
 ],
-{ minMs: 500 },
+{ minMs: 500, onReady: hideScreensForGame },
 );
 if (state.sala !== sala) return;
-await Promise.race([ranksReady, new Promise((r) => setTimeout(r, 900))]);
+let entered = false;
+const enter = () => {
+if (entered || state.sala !== sala || state.game !== game) return;
+entered = true;
+startOnlineGame(sala, game, payload, { index, hostPeer, myPeer });
+};
 {
 const nations = nationsOf(game);
 const prof = PROFILES[game.rules.profile]?.name || 'Clásico';
@@ -21642,13 +22192,16 @@ nations,
 ranked,
 skippable: false,
 sound,
+onEnd: enter,
 });
 }
-if (state.sala !== sala || state.game !== game) return;
+enter();
+}
+function startOnlineGame(sala, game, payload, { index, hostPeer, myPeer }) {
 const groups = coopGroups(payload.players.length, game.rules.coop);
 const playerOf = (i) => groups.findIndex((g) => g.includes(i)) + 1;
 const peerToPlayer = new Map(payload.players.map((p, i) => [p.peer, playerOf(i)]));
-state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true, ronda: payload.ronda || 1 });
+state.net = new NetSync(sala.room, game, { isHost: sala.isHost, hostPeer, myPlayerId: playerOf(index), peerToPlayer, mySlot: index, myPeer, smooth: true, ronda: payload.ronda || 1, slice: NET_SLICE });
 state.rankedRivals = () =>
 payload.players
 .map((p, i) => ({ p, player: game.players[playerOf(i)] }))
@@ -22071,6 +22624,7 @@ onTutorial() {
 startGame({ tutorial: true, title: 'Tutorial', mapSize: 'pequeno', bots: 5, difficulty: 'facil', seed: 'trinchera-tutorial', rules: DEFAULT_RULES });
 },
 onSettings: applySettings,
+graphicsInfo: () => ({ pantalla: window.devicePixelRatio || 1, mapa: currentDpr(), auto: profile.ajustes.resolucion === 'auto', fps: state.lastFps || 0 }),
 sound: (name) => sound.play(name, 0.9, 0),
 onFindMatch() {
 toggleMatchmaking();
@@ -22551,7 +23105,7 @@ return;
 const wasOnline = state.online;
 finishGame();
 tutorial.stop();
-startDemo();
+backToMenu();
 if (wasOnline) home.returnTo('multijugador');
 },
 onRematch() {
@@ -22561,10 +23115,10 @@ else joinRematch();
 return;
 }
 finishGame();
+if (!state.lastOpts) {
 ui.hideEnd();
-if (state.online || !state.lastOpts) {
 tutorial.stop();
-startDemo();
+backToMenu();
 return;
 }
 if (state.lastOpts.ranked === 'ia') startRanked();
@@ -22588,8 +23142,15 @@ onRespondAlliance: (fromId, accept) => humanIntent({ type: 'respondAlliance', fr
 onCancelAttack: (targetId) => humanIntent({ type: 'cancelAttack', targetId }),
 });
 const MAX_TICKS_PER_FRAME = TOUCH ? 2 : 3;
+const SIM_SLICE_MS = 4;
+const SIM_SLICE_BEHIND_MS = TOUCH ? 12 : 14;
+const NET_SLICE = { ms: SIM_SLICE_MS, behindMs: SIM_SLICE_BEHIND_MS, catchupMs: 40 };
 function frame(now) {
 requestAnimationFrame(frame);
+const cap = profile.ajustes.fpsMax;
+if (cap && now - (state.shownAt || 0) < 1000 / cap - 3) return;
+state.shownAt = now;
+countFps(now);
 const dt = Math.min(250, now - state.last);
 state.last = now;
 const game = state.game;
@@ -22601,16 +23162,18 @@ if (game && game.phase !== 'ended') {
 if (state.net) {
 state.net.update();
 } else if (tutorial.holds() && !state.holdSim) {
+if (game.midTick) game.tick();
 if (game.phase === 'spawn') game.applyIntentsNow();
 } else if (state.speed > 0 && !state.holdSim) {
 state.acc += dt * state.speed;
+const deadline = performance.now() + (state.acc >= 2 * TICK_MS ? SIM_SLICE_BEHIND_MS : SIM_SLICE_MS);
 let steps = 0;
-while (state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME) {
+if (game.midTick && game.tickPart(deadline)) steps++;
+while (!game.midTick && state.acc >= TICK_MS && steps < MAX_TICKS_PER_FRAME && performance.now() < deadline) {
 state.acc -= TICK_MS;
-steps++;
-game.tick();
+if (game.tickPart(deadline)) steps++;
 }
-if (steps === MAX_TICKS_PER_FRAME) state.acc = Math.min(state.acc, TICK_MS);
+if (state.acc > MAX_TICKS_PER_FRAME * TICK_MS) state.acc = MAX_TICKS_PER_FRAME * TICK_MS;
 }
 }
 } catch (err) {
@@ -22621,15 +23184,18 @@ frameWorld(now, dt, game);
 } catch (err) {
 reportError(err, 'cámara y sonido');
 }
-state.frameNo = (state.frameNo || 0) + 1;
-const demoGap = TOUCH ? 62 : 46;
-if (!state.demo || (now - (state.lastDemoDraw || 0) >= demoGap && !home.menuCovers())) {
-if (state.demo) state.lastDemoDraw = now;
+if (!state.demo) {
 try {
 state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping, spawn: state.spawnPreview });
 } catch (err) {
 reportError(err, 'dibujo del mapa');
 }
+}
+if (state.backdrop && !state.game && home.menuCovers()) {
+state.backdrop = false;
+const g = canvas.getContext('2d');
+g.setTransform(1, 0, 0, 1, 0, 0);
+g.clearRect(0, 0, canvas.width, canvas.height);
 }
 try {
 if (!state.demo && state.game && !minimapBox.classList.contains('plegado')) minimap.draw(now);
@@ -22657,8 +23223,27 @@ reportError(err, 'final de partida');
 }
 }
 }
+const fpsBox = document.getElementById('fps-contador');
+const fpsStat = { n: 0, at: 0, sum: 0, samples: 0 };
+function countFps(now) {
+fpsStat.n++;
+if (!fpsStat.at) fpsStat.at = now;
+const span = now - fpsStat.at;
+if (span < 500) return;
+const fps = (fpsStat.n * 1000) / span;
+fpsStat.n = 0;
+fpsStat.at = now;
+if (state.demo || !state.game || document.hidden) return;
+fpsStat.sum += fps;
+fpsStat.samples++;
+state.lastFps = Math.round(fpsStat.sum / fpsStat.samples);
+if (fpsBox && !fpsBox.hidden) {
+fpsBox.textContent = `${Math.round(fps)} fps`;
+fpsBox.classList.toggle('justo', fps < 40);
+}
+}
 function frameWorld(now, dt, game) {
-if (!state.demo && state.rec && state.rec.game === game) state.rec.update();
+if (!state.demo && state.rec && state.rec.game === game && !game.midTick) state.rec.update();
 if (game && !state.demo && game.phase === 'spawn' && state.human?.alive) {
 const left = Math.ceil(((CONFIG.spawnTicks - game.ticks) * TICK_MS) / 1000);
 if (left !== state.spawnLeft) {
@@ -22666,7 +23251,6 @@ state.spawnLeft = left;
 if (left >= 1 && left <= 5) sound.play('tick', left === 1 ? 1 : 0.75, 0);
 }
 }
-if (state.demo && game && game.phase === 'ended') startDemo({ background: true });
 if (game && !state.demo && state.lastPhase === 'spawn' && game.phase === 'playing') {
 const at = myPosition();
 if (at) camera.flyTo(at[0], at[1], Math.max(camera.zoom, camera.viewW / (80 * RES)), 900);
@@ -22688,6 +23272,17 @@ return !state.demo && state.game && state.game.phase !== 'ended' && !!state.huma
 function openGameMenu() {
 const a = profile.ajustes;
 for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) input.checked = a[input.dataset.ajuste] !== false;
+const mpQ = document.getElementById('mp-calidad');
+mpQ.replaceChildren(
+presetPicker(a, (id) => {
+applyPreset(profile.ajustes, id);
+saveProfile(profile);
+applySettings();
+home.syncSettings();
+syncPresetPicker(mpQ.firstElementChild, profile.ajustes);
+}, { compact: true }),
+);
+syncPresetPicker(mpQ.firstElementChild, a);
 document.getElementById('mp-salir').textContent = stillPlaying() ? 'Abandonar' : 'Volver al menú';
 document.getElementById('mp-nota').textContent = state.online ? 'La partida sigue para todos mientras tanto.' : 'La partida sigue mientras tanto.';
 abrirDialogo(document.getElementById('menu-partida'), { foco: '#mp-continuar' });
@@ -22698,6 +23293,7 @@ profile.ajustes[input.dataset.ajuste] = input.checked;
 saveProfile(profile);
 applySettings();
 home.syncSettings();
+syncPresetPicker(document.getElementById('mp-calidad').firstElementChild, profile.ajustes);
 });
 }
 document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());
@@ -22708,7 +23304,7 @@ if (stillPlaying()) ui.confirmExit(!!state.ranked, { host: !!(state.online && st
 else {
 finishGame();
 tutorial.stop();
-startDemo();
+backToMenu();
 }
 });
 window.__dominia = state;
@@ -22816,13 +23412,13 @@ whenBooted(() => setTimeout(() => home.flash?.(`Ahora la clasificatoria contra l
 home.renderAll();
 loader?.step('Desplegando el frente…', 0.96, 700, 'frente');
 await paint();
-if (!state.game) startDemo({ background: true });
+if (!state.game) backToMenu({ background: true });
 await paint();
 } catch (err) {
 reportError(err, 'arranque');
 try {
 home.renderAll();
-if (!state.game) startDemo({ background: true });
+if (!state.game) backToMenu({ background: true });
 } catch (err2) {
 reportError(err2, 'arranque (menú)');
 }
@@ -24587,6 +25183,7 @@ if (!onFirst) this._schedule();
 return;
 }
 this.ws = ws;
+this._openedAt = Date.now();
 ws.binaryType = 'arraybuffer';
 clearTimeout(this._hung);
 if (!onFirst) {
@@ -24660,7 +25257,11 @@ this._schedule(0);
 check() {
 if (this.closed) return;
 if (!this.isConnected) {
-if (!this.ws) this._schedule(0);
+if (!this.ws || Date.now() - (this._openedAt || 0) > 1500) {
+this._drop();
+this.retry = 0;
+this._schedule(0);
+}
 return;
 }
 const sent = Date.now();
@@ -25454,7 +26055,7 @@ for (const p of game.players) if (p) h = Math.imul(h ^ (Math.floor(p.troops) & 0
 return h >>> 0;
 }
 class NetSync {
-constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, ronda = 1, now = () => performance.now() }) {
+constructor(room, game, { isHost, hostPeer, myPlayerId, peerToPlayer, mySlot = myPlayerId, myPeer = null, smooth = false, ronda = 1, now = () => performance.now(), slice = null }) {
 this.room = room;
 this.ronda = ronda;
 this.game = game;
@@ -25473,6 +26074,8 @@ this.onHostLeft = null;
 this.myPeer = myPeer;
 this.smooth = smooth;
 this.now = now;
+this.slice = slice;
+this._partial = null;
 if (isHost) {
 this.queue = [];
 this.pending = new Map();
@@ -25594,7 +26197,8 @@ if (now - (this.lastResend.get(m.peer) ?? -Infinity) < 250) return;
 this.lastResend.set(m.peer, now);
 let turns = [];
 let bytes = wireBytes('turn', { r: this.ronda, turns: [] });
-for (let t = Math.max(from, this.game.ticks - 2999); t <= this.game.ticks && t < from + RESEND_MAX_TURNS; t++) {
+const done = this._doneTicks();
+for (let t = Math.max(from, done - 2999); t <= done && t < from + RESEND_MAX_TURNS; t++) {
 const entry = [t, this.history.get(t) || []];
 const size = utf8Bytes(JSON.stringify(entry)) + 1;
 if (bytes + size > MAX_MSG_BYTES) break;
@@ -25611,10 +26215,33 @@ if (mine !== undefined && mine !== d.h) {
 this.status = 'Aviso: un jugador se ha desincronizado';
 }
 }
-_hostStep() {
+_doneTicks() {
+return this.game.midTick ? this.game.ticks - 1 : this.game.ticks;
+}
+_finishPartial(deadline) {
+const p = this._partial;
+if (!p) return true;
+if (!this.game.tickPart(deadline)) return false;
+this._partial = null;
+if (this.isHost) this._hostAfter(p.intents);
+else this._guestAfter();
+return true;
+}
+_deadline(ms) {
+if (!this.slice || !ms || (typeof document !== 'undefined' && document.hidden)) return Infinity;
+return performance.now() + ms;
+}
+_hostStep(deadline = Infinity) {
 const intents = this._takeIntents();
 for (const it of intents) this.game.queueIntent({ ...it, by: slotOf(it.u) });
-this.game.tick();
+if (!this.game.tickPart(deadline)) {
+this._partial = { intents };
+return false;
+}
+this._hostAfter(intents);
+return true;
+}
+_hostAfter(intents) {
 const t = this.game.ticks;
 this.history.set(t, intents);
 if (this.history.size > 3000) this.history.delete(t - 3000);
@@ -25643,13 +26270,20 @@ if (!Array.isArray(entry) || !Number.isInteger(entry[0]) || !Array.isArray(entry
 if (entry[0] > this.game.ticks) this.turns.set(entry[0], entry[1]);
 }
 }
-_guestStep(intents) {
+_guestStep(intents, deadline = Infinity) {
 for (const raw of intents) {
 const clean = cleanIntent(raw);
 if (clean && Number.isInteger(raw.playerId)) this.game.queueIntent({ ...clean, playerId: raw.playerId, by: slotOf(raw.u) });
 if (raw && typeof raw.u === 'string') this.outbox.delete(raw.u);
 }
-this.game.tick();
+if (!this.game.tickPart(deadline)) {
+this._partial = {};
+return false;
+}
+this._guestAfter();
+return true;
+}
+_guestAfter() {
 const t = this.game.ticks;
 if (t % HASH_EVERY === 0) {
 const h = stateHash(this.game);
@@ -25680,11 +26314,11 @@ let n = 0;
 while (n < max && this.turns.has(this.game.ticks + 1 + n)) n++;
 return n;
 }
-_playNext() {
+_playNext(deadline = Infinity) {
 const t = this.game.ticks + 1;
 const intents = this.turns.get(t);
 this.turns.delete(t);
-this._guestStep(intents);
+return this._guestStep(intents, deadline);
 }
 update() {
 if (this.game.phase === 'ended' || this.hostGone) return;
@@ -25706,22 +26340,28 @@ if (offline) this.status = OFFLINE_NOTE;
 else if (this.status === OFFLINE_NOTE) this.status = '';
 this.acc += Math.min(1000, now - this.last);
 this.last = now;
+const deadline = this._deadline(this.acc >= 2 * TICK_MS ? this.slice?.behindMs : this.slice?.ms);
+const hadPartial = !!this._partial;
+if (!this._finishPartial(deadline)) return;
 let steps = 0;
-while (this.acc >= TICK_MS && steps < 10) {
-this._hostStep();
+while (this.acc >= TICK_MS && steps < 10 && (performance.now() < deadline || (!steps && !hadPartial))) {
 this.acc -= TICK_MS;
 steps++;
+if (!this._hostStep(deadline)) break;
 }
 return;
 }
+const hadPartial = !!this._partial;
+const partialDone = this._finishPartial(this._deadline(this.slice?.ms));
 let steps = 0;
-const ready = this._ready();
+const ready = partialDone ? this._ready() : 0;
 if (ready > CATCHUP_TURNS) this.status = 'Sincronizando partida…';
 if (!this.smooth || ready > CATCHUP_TURNS) {
 const keep = this.smooth ? SMOOTH_BUFFER : 0;
-while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1)) {
-this._playNext();
+const deadline = this._deadline(this.slice?.catchupMs);
+while (steps < 60 && ready - steps > keep && this.turns.has(this.game.ticks + 1) && (performance.now() < deadline || (!steps && !hadPartial))) {
 steps++;
+if (!this._playNext(deadline)) break;
 }
 this.playAcc = 0;
 } else {
@@ -25730,15 +26370,17 @@ if (!ready) this.playAcc = Math.min(TICK_MS, this.playAcc + dt);
 else {
 this.playAcc += dt;
 const every = ready <= SMOOTH_BUFFER ? TICK_MS : ready <= 5 ? TICK_MS * 0.9 : TICK_MS * 0.75;
-while (this.playAcc >= every && steps < ready) {
-this._playNext();
+const deadline = this._deadline(this.playAcc >= 2 * every ? this.slice?.behindMs : this.slice?.ms);
+while (this.playAcc >= every && steps < ready && (performance.now() < deadline || (!steps && !hadPartial))) {
 this.playAcc -= every;
 steps++;
+if (!this._playNext(deadline)) break;
 }
 }
 }
 this.playLast = now;
-if (steps) {
+const progressed = steps > 0 || hadPartial;
+if (progressed) {
 this.lastAdvance = now;
 if (this._ready() <= CATCHUP_TURNS) {
 this.status = this.desynced
@@ -25749,11 +26391,11 @@ this.status = this.desynced
 }
 }
 const gap = this.turns.size > 0 && !this.turns.has(this.game.ticks + 1);
-if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !steps && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
+if (gap ? now - this.lastResendAsk > GAP_RESEND_MS : !progressed && now - this.lastAdvance > RESEND_AFTER_MS && now - this.lastResendAsk > 1000) {
 this.lastResendAsk = now;
 this.room.emit('resend', { r: this.ronda, from: this.game.ticks + 1 }).catch(() => {});
 }
-if (!steps) {
+if (!progressed) {
 if (offline) this.status = OFFLINE_NOTE;
 else if (now - this.lastAdvance > 4000) this.status = 'Esperando al anfitrión…';
 else if (this.status === OFFLINE_NOTE) this.status = '';
@@ -27319,7 +27961,7 @@ el('span', {}, el('b', { text: rank.placing ? 'Colocación' : rk.label }), el('s
 );
 }
 async function presentMatch(opts) {
-const { kicker = '', title = '', details = '', players = [], ai = null, nations = [], nationTotal = nations.length, ranked = false, ms = 6500, skippable = true, sound = null } = opts;
+const { kicker = '', title = '', details = '', players = [], ai = null, nations = [], nationTotal = nations.length, ranked = false, ms = 6500, skippable = true, sound = null, onEnd = null } = opts;
 const still = sinMovimiento();
 const ordered = [...players.filter((p) => p.me), ...players.filter((p) => !p.me), ...(ai ? [{ ...ai, ai: true }] : [])];
 const size = sizeFor(ordered.length);
@@ -27370,6 +28012,10 @@ if (left <= 0) end();
 await finished;
 clearInterval(timer);
 window.removeEventListener('keydown', onKey, true);
+try {
+onEnd?.();
+} catch {
+}
 box.classList.add('saliendo');
 await wait(still ? 0 : 320);
 box.remove();
@@ -27378,6 +28024,7 @@ box.remove();
 return { presentMatch };
 });
 __define('profile', function () {
+const { SETTINGS_DEFAULTS, normalizeSettingsExtra } = __require('ajustes');
 const { DEFAULT_RULES, migrateRules } = __require('config');
 const { normalizeConfig } = __require('configurador');
 const { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS } = __require('skins');
@@ -27748,6 +28395,8 @@ efectos: true,
 volMusica: 0.5,
 volEfectos: 0.8,
 silencio: false,
+consejos: true,
+...SETTINGS_DEFAULTS,
 },
 tutorial: false,
 rango: newRank(new Date(), 'ia'),
@@ -27811,6 +28460,8 @@ return { rango: split.ia, rangoOnline: split.online, rangoHistorico: split.histo
 }
 function normalizeSettings(defaults, saved) {
 const a = { ...defaults, ...(saved || {}), reglas: { ...defaults.reglas, ...(migrateRules(saved && saved.reglas) || {}) } };
+if (saved && saved.efectosMapa === undefined) delete a.efectosMapa;
+normalizeSettingsExtra(a);
 const legacy = { bots: a.bots, mapa: a.mapa, dificultad: a.dificultad, reglas: a.reglas };
 a.ia = normalizeConfig(saved && saved.ia, legacy);
 a.online = normalizeConfig(saved && saved.online, legacy);
@@ -28065,7 +28716,6 @@ const [y, n] = String(id).split('-').map(Number);
 return new Date(y, n * 2, 1);
 }
 const RANKED_VERSION = 'clasico';
-const QUEUES = { ia: 'Contra la IA', online: 'En línea' };
 const APPLIED = 40;
 function newRank(date = new Date(), modalidad = 'ia') {
 return {
@@ -28384,7 +29034,7 @@ const k = rankOf(typeof r === 'number' ? r : r ? r.puntos : 0);
 drawBadge(ctx, c.width / 2, c.height * 0.54, c.height * 0.72, placing ? null : k.league, placing ? 0 : k.div);
 }
 
-return { LEAGUES, DIVISIONS, PLACEMENT_GAMES, SHIELD_GAMES, MMR_START, MAX_POINTS, AI_RATING, RANKED_AI, RANKED_ROOM, rankOf, divisionIndex, divisionFloor, pointsFromMmr, mmrFromPoints, seasonOf, seasonName, seasonEnd, RANKED_VERSION, QUEUES, newRank, normalizeRank, inPlacement, aiDifficultyFor, expectedPerf, seasonReward, ensureSeason, alreadyApplied, voidResult, splitRanks, applyAiResult, applyRoomResult, rankText, drawBadge, badgeCanvas, paintBadge };
+return { LEAGUES, DIVISIONS, PLACEMENT_GAMES, SHIELD_GAMES, MMR_START, MAX_POINTS, AI_RATING, RANKED_AI, RANKED_ROOM, rankOf, divisionIndex, divisionFloor, pointsFromMmr, mmrFromPoints, seasonOf, seasonName, seasonEnd, RANKED_VERSION, newRank, normalizeRank, inPlacement, aiDifficultyFor, expectedPerf, seasonReward, ensureSeason, alreadyApplied, voidResult, splitRanks, applyAiResult, applyRoomResult, rankText, drawBadge, badgeCanvas, paintBadge };
 });
 __define('render', function () {
 const { BUILDINGS, CONFIG, RES, TICK_MS } = __require('config');
@@ -29375,7 +30025,7 @@ this._lbStep = 1;
 this.lastLabelTime = now;
 }
 this.fx.update(this._dt);
-const sh = this.anim ? this.fx.shake : 0;
+const sh = this.anim && this.options.shake !== false ? this.fx.shake : 0;
 const ts = now / 1000;
 const ox = sh ? (Math.sin(ts * 53) * 0.6 + Math.sin(ts * 31 + 1.3) * 0.4) * sh * 0.5 : 0;
 const oy = sh ? (Math.sin(ts * 47 + 0.7) * 0.6 + Math.sin(ts * 37 + 2.1) * 0.4) * sh * 0.5 : 0;
@@ -29420,7 +30070,7 @@ this.fx.draw(ctx, camera);
 this._drawMissiles(now);
 this._drawInterceptors(now);
 this._drawVignette();
-if (this.fx.flash > 0.01 && this.anim) {
+if (this.fx.flash > 0.01 && this.anim && this.options.shake !== false) {
 ctx.fillStyle = `rgba(255, 244, 220, ${this.fx.flash * 0.45})`;
 ctx.fillRect(-20, -20, camera.viewW + 40, camera.viewH + 40);
 }
@@ -29486,7 +30136,7 @@ if (changed) repaint(t);
 this._hotList = next;
 }
 _drawVignette() {
-if (this.lite) return;
+if (this.lite || this.options.vignette === false) return;
 const { ctx, camera } = this;
 const w = camera.viewW;
 const h = camera.viewH;
@@ -30676,6 +31326,14 @@ L.y += (L.ty - L.y) * k;
 L.r += (L.tr - L.r) * k;
 }
 }
+_bigNations() {
+const t = performance.now();
+if (this._big && t - this._bigAt < 1000) return this._big;
+const list = this.game.players.filter((p) => p && p.alive && !p.weak && !p.isHuman).sort((a, b) => b.tiles - a.tiles);
+this._big = new Set(list.slice(0, 24));
+this._bigAt = t;
+return this._big;
+}
 _drawLabels() {
 this._glideLabels();
 const { ctx, camera } = this;
@@ -30712,6 +31370,8 @@ const radiusPx = L.r * camera.zoom;
 const allied = human && p !== human && human.allies.has(p.id);
 const player = p.isHuman;
 if (!allied && !player) {
+const names = this.options.names;
+if (names === 'jugadores' || (names === 'grandes' && !this._bigNations().has(p))) continue;
 const k = L.was ? 0.85 : 1;
 const minR = (p.weak ? COLONY_LABEL_R : BOT_LABEL_R) * k;
 const minZoom = (p.weak ? COLONY_LABEL_ZOOM : BOT_LABEL_ZOOM) * k;
@@ -30829,7 +31489,8 @@ _nameSprite(p, size, me, allied, traitor, player) {
 const e = this._labelEntry(p).name;
 const color = me ? this.options.nameColor || '#ffd23f' : '';
 const flag = flagReady() && hasFlag(p.flag);
-const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${this.dpr}`;
+const icons = this.options.flags !== false;
+const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${icons}|${this.dpr}`;
 if (e.key === key) return e;
 e.key = key;
 e.size = size;
@@ -30841,7 +31502,7 @@ const w = mc.measureText(name).width;
 const lw = Math.max(2.5, size / (me ? 4 : 6));
 const blur = me ? Math.min(16, size * 0.6) : 0;
 const pad = Math.ceil(lw + blur / this.dpr + 2);
-const iconW = player || size >= 11 ? size * 1.45 : 0;
+const iconW = player || (icons && size >= 11) ? size * 1.45 : 0;
 e.w = w;
 e.iconW = iconW;
 e.cw = iconW + w + pad * 2;
@@ -30862,7 +31523,7 @@ g.shadowBlur = blur;
 g.fillText(name, e.tx, e.ty);
 g.shadowBlur = 0;
 g.shadowColor = 'transparent';
-if (player && flag) {
+if (player && flag && icons) {
 const fx = e.tx - w / 2 - size * 0.85;
 drawFlag(g, p.flag, fx, e.ty, size * 0.8);
 drawPlayerBadge(g, fx + size * 0.5, e.ty + size * 0.38, size * 0.6, p.color);
@@ -31842,7 +32503,6 @@ raro: { id: 'raro', name: 'Raro', color: '#3d9cff', order: 2 },
 epico: { id: 'epico', name: 'Épico', color: '#b866ff', order: 3 },
 legendario: { id: 'legendario', name: 'Legendario', color: '#ff9d2e', order: 4 },
 };
-const RARITY_IDS = Object.keys(RARITIES);
 const EPIC_ACHIEVEMENTS = new Set(['emperador', 'gran_victoria', 'millonario', 'almirante', 'magnate_oro', 'liga_maestro', 'imperio', 'urbanista', 'lluvia_fuego']);
 function rarityOf(item) {
 if (item && item.rarity && RARITIES[item.rarity]) return RARITIES[item.rarity];
@@ -31894,7 +32554,7 @@ const pick = (kind, v) => (typeof v === 'string' && BY[kind].has(v) ? v : 'estan
 return { edificio: pick('edificio', r.edificio), barco: pick('barco', r.barco), bomba: pick('bomba', r.bomba) };
 }
 
-return { RARITIES, RARITY_IDS, rarityOf, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS, skinLook, cleanSkins };
+return { RARITIES, rarityOf, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS, skinLook, cleanSkins };
 });
 __define('social-ui', function () {
 const { drawEmblem, drawFrame } = __require('icons');
@@ -32711,9 +33371,6 @@ if (this.estadoFn && this.estadoFn() === 'partida' && Date.now() - (this._last |
 this.refresh();
 }, ms);
 }
-setEstado(estado) {
-this.estado = estado;
-}
 forgetCard() {
 this._cardJson = '';
 }
@@ -32894,7 +33551,7 @@ _applyVolumes() {
 if (!this.ctx) return;
 const t = this.ctx.currentTime;
 const o = this.opts;
-this.master.gain.setTargetAtTime(o.muted ? 0 : 1, t, 0.08);
+this.master.gain.setTargetAtTime(o.muted ? 0 : (o.masterVol ?? 1), t, 0.08);
 this.musicBus.gain.setTargetAtTime(o.music ? 0.36 * o.musicVol : 0, t, 0.4);
 this.sfxBus.gain.setTargetAtTime(o.sfx ? 1.1 * o.sfxVol : 0, t, 0.05);
 this.music?.setEnabled(o.music && !o.muted && !this._hold);
@@ -34468,14 +35125,20 @@ root.classList.toggle('info-avanzada', on);
 document.dispatchEvent(new CustomEvent('info-avanzada', { detail: on }));
 };
 this.setAdvanced = setAdvanced;
+this.alwaysAdvanced = false;
+this.setAlwaysAdvanced = (on) => {
+this.alwaysAdvanced = !!on;
+document.documentElement.dataset.avSiempre = on ? '1' : '';
+setAdvanced(this.alwaysAdvanced);
+};
 document.addEventListener('info-avanzada', () => (this._tipSize = null));
 window.addEventListener('keydown', (e) => {
 if (e.key === 'Shift' && !e.repeat) setAdvanced(true);
 });
 window.addEventListener('keyup', (e) => {
-if (e.key === 'Shift') setAdvanced(false);
+if (e.key === 'Shift') setAdvanced(this.alwaysAdvanced);
 });
-window.addEventListener('blur', () => setAdvanced(false));
+window.addEventListener('blur', () => setAdvanced(this.alwaysAdvanced));
 $('lista-clasificacion').addEventListener('click', (e) => {
 const li = e.target.closest('li[data-id]');
 if (li) this.handlers.onFocusPlayer?.(Number(li.dataset.id));
