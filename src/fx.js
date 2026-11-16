@@ -82,6 +82,7 @@ function sprites() {
       red: glowSprite(255, 80, 50),
       blue: glowSprite(150, 215, 255, 0.3),
       gold: glowSprite(255, 215, 90, 0.3),
+      violet: glowSprite(190, 120, 255, 0.3),
       smoke: smokeSprite(70, 70, 74),
       dark: smokeSprite(28, 26, 26),
       dust: smokeSprite(150, 128, 96),
@@ -98,7 +99,7 @@ export function resetFxSprites() {
 }
 
 /** Sprites que se dibujan sumando luz. */
-const ADDITIVE = new Set(['fire', 'core', 'red', 'blue', 'gold']);
+const ADDITIVE = new Set(['fire', 'core', 'red', 'blue', 'gold', 'violet']);
 
 export class Fx {
   constructor() {
@@ -380,6 +381,30 @@ export class Fx {
     this.shake = Math.max(this.shake, 2);
   }
 
+  /** Disparo de una batería antimisiles: fogonazo, anillo y nube de lanzamiento. */
+  samLaunch(x, y) {
+    this.add({ x, y, life: 0.9, s0: 0.8, s1: 3, min: 8, sprite: 'steam', a0: 0.8, vz: 0.6 });
+    this.add({ x, y, life: 0.3, s0: 1.4, s1: 0.6, min: 16, sprite: 'blue' });
+    this.add({ x, y, life: 0.5, s0: 0.3, s1: 2.5, min: 6, ring: true, glowRing: true, color: 'rgba(170, 220, 255, 0.9)', lw: 0.25 });
+  }
+
+  /**
+   * El misil derribado se parte: dos o tres trozos grandes que caen
+   * ardiendo con su humo, siguiendo un poco la inercia del vuelo.
+   */
+  missileBreakup(x, y, z, vx, vy, color) {
+    const n = 3;
+    for (let k = 0; k < n; k++) {
+      const a = rnd(0, TAU);
+      const v = rnd(1, 3);
+      this.add({ zAbs: true, x, y, z, vx: vx * 0.25 + Math.cos(a) * v, vy: vy * 0.25 + Math.sin(a) * v, vz: rnd(0, 3), g: 9, drag: 0.4, life: rnd(1.4, 2.2), s0: 0.45, min: 3, chunk: true, color: k === 0 ? color : '#d9dee6' });
+      // Humo que sueltan al caer
+      for (let j = 0; j < 4; j++) {
+        this.add({ zAbs: true, x, y, z: z - j, vx: vx * 0.2 + Math.cos(a) * v * 0.8, vy: vy * 0.2 + Math.sin(a) * v * 0.8, vz: -j * 0.8, drag: 0.7, life: rnd(1.2, 2), s0: 0.6, s1: 2.2, min: 4, sprite: 'dark', a0: 0.45, fadeIn: 0.08 + j * 0.08 });
+      }
+    }
+  }
+
   /** Petardazo pequeño (interceptor que falla). */
   pop(x, y, z) {
     this.add({ zAbs: true, x, y, z, life: 0.25, s0: 1.2, s1: 2, min: 10, sprite: 'fire' });
@@ -579,115 +604,27 @@ export class Fx {
       },
     });
   }
-
-  /**
-   * Interceptor desde la batería (sx, sy) hasta un misil que va por (mx, my, mz)
-   * con velocidad (vx, vy, vz). `hit`: si lo derriba (el misil se sigue
-   * dibujando hasta el choque). Deja una estela continua que se desvanece
-   * y un rótulo «¡DERRIBADO!» / «FALLO» donde se cruzan.
-   */
-  intercept(sx, sy, mx, my, mz, vx, vy, vz, hit, missileColor) {
-    const T = 0.8; // lo bastante lento para verlo subir
-    const FADE = 1.4; // la estela sigue a la vista un rato tras el choque
-    const ex = mx + vx * T + (hit ? 0 : rnd(-2, 2) * RES);
-    const ey = my + vy * T + (hit ? 0 : rnd(-2, 2) * RES);
-    const ez = Math.max(0.5 * RES, mz + vz * T);
-    let t = 0;
-    let done = false;
-    const fx = this;
-    let puff = 0;
-    // Posición (en el plano de pantalla) del interceptor en la fracción k del vuelo
-    const at = (k) => [sx + (ex - sx) * k, sy + (ey - sy) * k - ez * k * k];
-    // Fogonazo y humo de lanzamiento en la batería
-    this.add({ x: sx, y: sy, life: 0.9, s0: 0.8, s1: 3, min: 8, sprite: 'steam', a0: 0.8, vz: 0.6 });
-    this.add({ x: sx, y: sy, life: 0.3, s0: 1.4, s1: 0.6, min: 16, sprite: 'blue' });
-    this.add({ x: sx, y: sy, life: 0.5, s0: 0.3, s1: 2.5, min: 6, ring: true, glowRing: true, color: 'rgba(170, 220, 255, 0.9)', lw: 0.25 });
-    this.scripts.push({
-      update(dt) {
-        const k0 = Math.min(1, t / T);
-        t += dt;
-        const k1 = Math.min(1, t / T);
-        // Humo del motor repartido por el tramo recorrido en este fotograma
-        if (!done) {
-          puff += dt;
-          const n = Math.floor(puff / 0.015);
-          puff -= n * 0.015;
-          for (let i = 1; i <= n; i++) {
-            const k = k0 + ((k1 - k0) * i) / n;
-            fx.add({ x: sx + (ex - sx) * k, y: sy + (ey - sy) * k, z: ez * k * k, zAbs: true, drag: 0.5, life: rnd(1.1, 1.7), s0: 0.45, s1: 1.6, min: 4, sprite: 'steam', a0: 0.6 });
-          }
-        }
-        if (!done && t >= T) {
-          done = true;
-          if (hit) fx.airburst(ex, ey, ez);
-          else fx.pop(ex, ey, ez);
-          fx.label(ex, ey - ez, hit ? '¡DERRIBADO!' : 'FALLO', hit ? '#bfe6ff' : '#d4d8e0', hit ? 18 : 14);
-        }
-        return t < T + FADE;
-      },
-      draw(ctx, cam) {
-        const k = Math.min(1, t / T);
-        const z = cam.zoom;
-        const fade = done ? Math.max(0, 1 - (t - T) / FADE) : 1;
-        // Estela: línea fina y continua de la batería a la cabeza
-        const N = 18;
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        for (let i = 0; i <= N; i++) {
-          const [px, py] = at((k * i) / N);
-          const X = (px - cam.x) * z;
-          const Y = (py - cam.y) * z;
-          if (i) ctx.lineTo(X, Y);
-          else ctx.moveTo(X, Y);
-        }
-        ctx.globalAlpha = 0.22 * fade;
-        ctx.strokeStyle = '#7cc8ff';
-        ctx.lineWidth = 6;
-        ctx.stroke();
-        ctx.globalAlpha = 0.85 * fade;
-        ctx.strokeStyle = '#e6f4ff';
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
-        ctx.restore();
-        if (done) return;
-        // Cabeza del interceptor
-        const [px, py] = at(k);
-        const hx = (px - cam.x) * z;
-        const hy = (py - cam.y) * z;
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.drawImage(sprites().blue, hx - 16, hy - 16, 32, 32);
-        ctx.globalCompositeOperation = 'source-over';
-        // Interceptor: un misil pequeño, blanco y azul, apuntando hacia donde va
-        const ang = Math.atan2(ey - sy - 2 * ez * k, ex - sx);
-        drawMissileSprite(ctx, hx, hy, ang, Math.min(22, Math.max(13, z * RES * 2.2)), '#5ab8ff', t);
-        // El misil condenado sigue su vuelo hasta el choque
-        if (hit) {
-          const qx = mx + vx * t;
-          const qy = my + vy * t;
-          const qz = mz + vz * t;
-          drawMissileSprite(ctx, (qx - cam.x) * z, (qy - qz - cam.y) * z, Math.atan2(vy - vz, vx), Math.min(30, Math.max(16, z * RES * 3)), missileColor, t);
-        }
-      },
-    });
-  }
 }
 
-/** Misil visto desde arriba, apuntando en `ang` (pantalla), con llama. */
-export function drawMissileSprite(ctx, x, y, ang, len, color, time) {
+/**
+ * Misil visto desde arriba, apuntando en `ang` (pantalla), con llama.
+ * `look` (skins.js): cuerpo, ojiva, aletas, franja, llama y brillo.
+ */
+export function drawMissileSprite(ctx, x, y, ang, len, color, time, look = null) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(ang);
   const w = len * 0.22;
   // Llama del motor
   const flick = 0.82 + Math.sin(time * 60) * 0.1 + Math.sin(time * 37 + 1.7) * 0.07;
+  const S = sprites();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.drawImage(sprites().fire, -len * 1.05 - len * 0.5 * flick, -len * 0.35, len * flick, len * 0.7);
-  ctx.drawImage(sprites().core, -len * 0.75, -w * 0.9, len * 0.4, w * 1.8);
+  ctx.drawImage(S[(look && look.flame) || 'fire'] || S.fire, -len * 1.05 - len * 0.5 * flick, -len * 0.35, len * flick, len * 0.7);
+  ctx.drawImage(S.core, -len * 0.75, -w * 0.9, len * 0.4, w * 1.8);
+  if (look && look.glow) ctx.drawImage(S[look.flame] || S.fire, -len * 0.7, -len * 0.7, len * 1.4, len * 1.4);
   ctx.globalCompositeOperation = 'source-over';
   // Aletas
-  ctx.fillStyle = color;
+  ctx.fillStyle = (look && look.fins) || color;
   ctx.beginPath();
   ctx.moveTo(-len * 0.5, 0);
   ctx.lineTo(-len * 0.62, -w * 1.5);
@@ -704,18 +641,23 @@ export function drawMissileSprite(ctx, x, y, ang, len, color, time) {
   ctx.lineTo(-len * 0.5, w * 0.5);
   ctx.lineTo(len * 0.2, w * 0.55);
   ctx.quadraticCurveTo(len * 0.36, w * 0.62, len * 0.5, 0);
-  ctx.fillStyle = '#eef1f5';
+  ctx.fillStyle = (look && look.body) || '#eef1f5';
   ctx.fill();
   ctx.lineWidth = 1;
   ctx.strokeStyle = 'rgba(0,0,0,0.55)';
   ctx.stroke();
-  // Ojiva con el color del lanzador
+  // Franja en mitad del cuerpo
+  if (look && look.stripe) {
+    ctx.fillStyle = look.stripe;
+    ctx.fillRect(-len * 0.12, -w * 0.5, len * 0.1, w);
+  }
+  // Ojiva con el color del lanzador (o la del aspecto)
   ctx.beginPath();
   ctx.moveTo(len * 0.5, 0);
   ctx.quadraticCurveTo(len * 0.36, -w * 0.62, len * 0.24, -w * 0.56);
   ctx.lineTo(len * 0.24, w * 0.56);
   ctx.quadraticCurveTo(len * 0.36, w * 0.62, len * 0.5, 0);
-  ctx.fillStyle = color;
+  ctx.fillStyle = (look && look.nose) || color;
   ctx.fill();
   ctx.restore();
 }

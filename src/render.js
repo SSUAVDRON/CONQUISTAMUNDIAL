@@ -12,6 +12,7 @@ import { forgetTerrain, paintTerrain } from './terreno.js';
 import { MECH, startOffsets } from './mecanicas.js';
 import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
+import { skinLook } from './skins.js';
 import { LUGARES } from './lugares.js';
 /** Zona inicial (desplazamientos desde la casilla de salida), para la vista previa del despliegue. */
 const START_ZONE = startOffsets();
@@ -1272,6 +1273,7 @@ export class Renderer {
     this._drawWarships(now);
     this.fx.draw(ctx, camera);
     this._drawMissiles(now);
+    this._drawInterceptors(now);
     this._drawVignette();
     if (this.fx.flash > 0.01 && this.anim) {
       // Destello blanco de toda la pantalla tras una explosión cercana
@@ -1853,14 +1855,15 @@ export class Renderer {
   _buildingSprite(kind, p, size) {
     const px = Math.max(8, Math.round((size * this.dpr) / 2) * 2);
     const human = p === this.game.human;
-    const key = `${kind}|${p.id}|${px}|${human ? 1 : 0}`;
+    const skin = p.skins ? p.skins.edificio : 'estandar';
+    const key = `${kind}|${p.id}|${px}|${human ? 1 : 0}|${skin}`;
     this._sprites ??= new Map();
     let c = this._sprites.get(key);
     if (!c) {
       if (this._sprites.size > 600) this._sprites.clear();
       const S = Math.ceil(px * 1.45);
       c = makeCanvas(S, S);
-      drawBuildingReal(c.getContext('2d'), kind, S / 2, S / 2, px, { ring: rgbToCss(p.color), outline: human });
+      drawBuildingReal(c.getContext('2d'), kind, S / 2, S / 2, px, { ring: rgbToCss(p.color), outline: human, skin: skinLook('edificio', skin) });
       this._sprites.set(key, c);
     }
     return c;
@@ -2117,7 +2120,7 @@ export class Renderer {
       this._drawBoatTrail(b, s, p, mine);
       if (!this._onScreen(sx, sy, 60)) continue;
       const len = clamp(z * RES * 2.4, 8, 30);
-      drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1);
+      drawTransport(ctx, sx, sy, s.ang, len, pcss(p), p === human, 1, skinLook('barco', p.skins && p.skins.barco));
       this._maybeWake(s, len, 8);
       if (z * RES >= 4 || mine) {
         // Etiqueta con la bandera del dueño y sus tropas
@@ -2299,7 +2302,7 @@ export class Renderer {
       if (!this._onScreen(sx, sy, len * 2)) continue;
       const p = game.players[ws.owner];
       const aim = now - st.aimAt < 1600 ? st.aim : null;
-      drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1));
+      drawWarship(ctx, sx, sy, s.ang, r, pcss(p), p === game.human, aim, clamp((s.speed / RES) * 3, 0, 1), { look: skinLook('barco', p.skins && p.skins.barco) });
       // Su bandera en el mástil (de quién es, de un vistazo)
       this._shipEnsign(p, sx, sy - r * 0.2, Math.round(clamp(r * 0.78, 10, 15)));
       this._maybeWake(s, len, 10);
@@ -2377,25 +2380,24 @@ export class Renderer {
       }
       if (e.kind === 'boom') {
         fx.explosion(e.x, e.y, (e.r || CONFIG.missileRadius) / RES);
-      } else {
-        // Busca el misil: el derribado ya no está en la simulación; el que se salva, sí
-        live ??= new Set(game.missiles.map((m) => m.id));
-        const hit = e.kind === 'intercept';
-        let best = null;
-        let bestD = Infinity;
-        for (const [id, m] of this._missiles) {
-          if (hit === live.has(id)) continue;
-          const d = (m.gx - e.x) ** 2 + (m.gy - e.y) ** 2;
-          if (d < bestD) {
-            bestD = d;
-            best = m;
-          }
+      } else if (e.kind === 'samLaunch') {
+        // Disparo de la batería: fogonazo, anillo y humo de lanzamiento
+        if (visible) fx.samLaunch(e.x, e.y);
+      } else if (e.kind === 'intercept' || e.kind === 'miss') {
+        // El proyectil alcanza al misil (o pasa de largo): donde se ven los dos, a su altura
+        const vm = this._missiles.get(e.missile);
+        const vi = this._icVis?.get(e.interceptor);
+        const x = vm ? vm.gx : e.x;
+        const y = vm ? vm.gy : e.y;
+        const z = vm ? vm.z : vi ? vi.z : 4 * RES;
+        if (e.kind === 'intercept') {
+          fx.airburst(x, y, z);
+          fx.missileBreakup(x, y, z, vm ? vm.vx : 0, vm ? vm.vy : 0, vm ? vm.color : '#cfd6e0');
+          if (visible) fx.label(x, y - z, '¡DERRIBADO!', '#bfe6ff', 18);
+        } else {
+          fx.pop(vi ? vi.x : x, vi ? vi.y : y, vi ? vi.z : z);
+          if (visible && vm) fx.label(x, y - z, 'FALLO', '#d4d8e0', 13);
         }
-        const W = game.map.width;
-        const bx = (e.from % W) + 0.5;
-        const by = Math.floor(e.from / W) + 0.5;
-        if (best && bestD < 64) fx.intercept(bx, by, best.gx, best.gy, best.z, best.vx, best.vy, best.vz, hit, best.color);
-        else if (hit) fx.airburst(e.x, e.y, 4 * RES);
       }
       if (!visible) {
         fx.shake = shake;
@@ -2474,10 +2476,93 @@ export class Renderer {
         ctx.drawImage(this.fx.glow, sx - len, sy - len, len * 2, len * 2);
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
-        drawMissileSprite(ctx, sx, sy, Math.atan2(vy - vz, vx), len, color, now / 1000);
+        const owner = game.players[m.owner];
+        drawMissileSprite(ctx, sx, sy, Math.atan2(vy - vz, vx), len, color, now / 1000, skinLook('bomba', owner && owner.skins && owner.skins.bomba));
       }
     }
     for (const [id, m] of this._missiles) if (m.gen !== gen) this._missiles.delete(id);
+  }
+
+  /**
+   * Proyectiles antimisiles en vuelo (simulación: game.interceptors): suben
+   * desde la batería y persiguen al misil hasta su altura, con una estela
+   * blanca y azul que se desvanece al terminar.
+   */
+  _drawInterceptors(now) {
+    const { ctx, game, camera, fx } = this;
+    this._icVis ??= new Map(); // id → { x, y, z, pts: [[x, y, z]], end }
+    const vis = this._icVis;
+    if (!game.interceptors.length && !vis.size) return;
+    const W = game.map.width;
+    const z0 = camera.zoom;
+    const live = new Set();
+    for (const it of game.interceptors) {
+      live.add(it.id);
+      const s = this._lerpUnit(it, it.x, it.y);
+      const vm = this._missiles.get(it.m.id);
+      const tx = vm ? vm.gx : it.x;
+      const ty = vm ? vm.gy : it.y;
+      const k = clamp(1 - Math.hypot(tx - s.x, ty - s.y) / Math.max(1, it.dist0), 0, 1);
+      // Sube deprisa al principio y llega a la altura del misil
+      const z = (vm ? vm.z : 6 * RES) * (1 - (1 - k) * (1 - k));
+      let v = vis.get(it.id);
+      if (!v) {
+        v = { x: (it.from % W) + 0.5, y: Math.floor(it.from / W) + 0.5, z: 0, pts: [[(it.from % W) + 0.5, Math.floor(it.from / W) + 0.5, 0]], end: 0 };
+        vis.set(it.id, v);
+      }
+      const ang = Math.atan2(ty - (vm ? vm.z : z) - (s.y - z), tx - s.x);
+      v.x = s.x;
+      v.y = s.y;
+      v.z = z;
+      v.ang = ang;
+      const last = v.pts[v.pts.length - 1];
+      if (Math.hypot(last[0] - s.x, last[1] - s.y) > 0.4) {
+        v.pts.push([s.x, s.y, z]);
+        if (v.pts.length > 48) v.pts.shift();
+        if (this.anim) fx.add({ x: s.x, y: s.y, z, zAbs: true, drag: 0.5, life: 1.2, s0: 0.4, s1: 1.5, min: 3, sprite: 'steam', a0: 0.5 });
+      }
+    }
+    for (const [id, v] of vis) {
+      if (!live.has(id) && !v.end) v.end = now;
+      const fade = v.end ? 1 - (now - v.end) / 1200 : 1;
+      if (fade <= 0) {
+        vis.delete(id);
+        continue;
+      }
+      // Estela: de la batería a la cabeza (o lo que queda de ella)
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      v.pts.forEach(([x, y, z], i) => {
+        const [sx, sy] = camera.worldToScreen(x, y - z);
+        if (i) ctx.lineTo(sx, sy);
+        else ctx.moveTo(sx, sy);
+      });
+      if (!v.end) {
+        const [hx, hy] = camera.worldToScreen(v.x, v.y - v.z);
+        ctx.lineTo(hx, hy);
+      }
+      ctx.globalAlpha = 0.25 * fade;
+      ctx.strokeStyle = '#7cc8ff';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.globalAlpha = 0.9 * fade;
+      ctx.strokeStyle = '#eef8ff';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.restore();
+      if (v.end) continue;
+      // Cabeza: destello azul y el proyectil apuntando al misil
+      const [hx, hy] = camera.worldToScreen(v.x, v.y - v.z);
+      const len = clamp(z0 * RES * 2.2, 12, 22);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(this.fx.glow, hx - len, hy - len, len * 2, len * 2);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      drawMissileSprite(ctx, hx, hy, v.ang, len, '#5ab8ff', now / 1000);
+    }
   }
 
   // ------------------------------------------------------------ vista previa
@@ -2504,26 +2589,21 @@ export class Renderer {
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
     ctx.stroke();
-    const fx = map.x(tile);
-    const fy = map.y(tile);
-    const body = map.landBody[tile];
-    const cands = [];
-    for (const b of game.buildings) {
-      if ((b.kind !== 'city' && b.kind !== 'port' && b.kind !== 'factory') || !b.level || map.landBody[b.tile] !== body) continue;
-      const d = Math.abs(map.x(b.tile) - fx) + Math.abs(map.y(b.tile) - fy);
-      if (d <= R) cands.push([d, b]);
-    }
-    cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
+    // Las mismas vías que tenderá la simulación (railLinks): a la vez a todas
+    // las estaciones a su alcance y, si pisa una vía, enganchada a ella
+    const links = game.railLinks({ id: -1, tile, level: 1, owner: human.id });
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
     let n = 0;
-    for (const [, b] of cands) {
-      if (n >= CONFIG.railMaxPerFactory) break;
-      const corner = game._railCorner(tile, b.tile);
+    let joins = 0;
+    for (const l of links) {
+      const b = l.station;
+      const corner = l.corner || game._railCorner(tile, b.tile);
       if (!corner) continue;
       n++;
+      if (l.join) joins++;
       const [cx, cy] = camera.worldToScreen(corner[0] + 0.5, corner[1] + 0.5);
       const [bx, by] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+      ctx.strokeStyle = l.join ? 'rgba(255, 210, 110, 0.95)' : 'rgba(255, 255, 255, 0.85)';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.lineTo(cx, cy);
@@ -2536,7 +2616,7 @@ export class Renderer {
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-    const note = n ? `${n} vía${n > 1 ? 's' : ''}: trenes con oro` : 'Sin estaciones al alcance (ciudades, puertos o fábricas)';
+    const note = n ? `${n} vía${n > 1 ? 's' : ''} a la vez${joins ? ` · ${joins} por la vía que pisa` : ''}: trenes con oro` : 'Sin estaciones al alcance (ciudades, puertos, fábricas, pueblos o capitales)';
     // Encima del icono: debajo va la estimación de lo que rendiría
     ctx.strokeText(note, sx, sy - 30);
     ctx.fillStyle = '#ffffff';

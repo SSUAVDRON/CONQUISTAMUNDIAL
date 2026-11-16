@@ -102,7 +102,8 @@ export class Camera {
     this._last = now;
     const t = this.tween;
     if (t) {
-      const k = Math.min(1, (now - t.t0) / t.ms);
+      // (el reloj del fotograma puede ir un poco por detrás del de la orden: nunca negativo)
+      const k = Math.max(0, Math.min(1, (now - t.t0) / Math.max(1, t.ms)));
       const e = easeInOut(k);
       // Zoom en escala logarítmica: cada duplicación tarda lo mismo
       this.zoom = t.fromZoom * (t.toZoom / t.fromZoom) ** e;

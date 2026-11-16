@@ -59,6 +59,9 @@ const COLONY_TONES = [
   [104, 130, 128], [140, 142, 108], [164, 142, 118], [112, 104, 96], [134, 112, 134], [100, 116, 140],
 ];
 
+/** Edificios a los que llegan las vías de las fábricas (estaciones). */
+const RAIL_STATIONS = new Set(['city', 'port', 'factory', 'village', 'capital']);
+
 export class Game {
   constructor({ map, seed = 1, rules = null }) {
     this.map = map;
@@ -76,6 +79,9 @@ export class Game {
     this._nextWarshipId = 1;
     this.missiles = []; // { id, owner, from, to, dist, progress, targetId }
     this._nextMissileId = 1;
+    /** Proyectiles antimisiles en vuelo: persiguen a su misil y lo destruyen en el aire al alcanzarlo. */
+    this.interceptors = []; // { id, owner, from, x, y, px, py, m, hit, shield, dist0 }
+    this._nextInterceptorId = 1;
     /** Mercantes de los puertos: { id, owner, kind: 'trade', port, dest, tile, path, pos, progress, value (casillas de agua del viaje) } */
     this.merchants = [];
     this._nextMerchantId = 1;
@@ -1863,42 +1869,113 @@ export class Game {
   }
 
   /**
-   * Red de vías: cada fábrica terminada se une con las ciudades, puertos y
-   * otras fábricas terminados a su alcance en la misma masa de tierra, sean de
-   * quien sean (también enemigos), como mucho CONFIG.railMaxPerFactory, las
-   * más cercanas. Las vías van en ángulo recto (un tramo en horizontal y otro
+   * Vías que tendería una fábrica `f` ({ id, tile, level, owner }): a la vez,
+   * con todas las estaciones a su alcance en la misma masa de tierra
+   * (ciudades, puertos, fábricas, pueblos y capitales, de quien sean; como
+   * mucho CONFIG.railMaxPerFactory, las más cercanas) y, si está encima o al
+   * lado de una vía que ya existe, se engancha a ella: usa ese mismo trazado
+   * hasta sus dos extremos, estén a la distancia que estén. Devuelve
+   * [{ station, corner: [x, y] | null, len, join }].
+   */
+  railLinks(f) {
+    const map = this.map;
+    const R = this.railRange(f.level || 1) * (1 + (this.players[f.owner]?.mods.railRange || 0));
+    const fx = map.x(f.tile);
+    const fy = map.y(f.tile);
+    const body = map.landBody[f.tile];
+    const cands = [];
+    for (const s of this.buildings) {
+      if (s === f || s.tile === f.tile || !RAIL_STATIONS.has(s.kind) || !s.level || map.landBody[s.tile] !== body) continue;
+      const d = Math.abs(map.x(s.tile) - fx) + Math.abs(map.y(s.tile) - fy);
+      if (d <= R) cands.push([d, s]);
+    }
+    cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
+    const out = new Map(); // estación → enlace
+    for (let k = 0; k < cands.length && out.size < CONFIG.railMaxPerFactory; k++) {
+      const [d, s] = cands[k];
+      out.set(s, { station: s, corner: null, len: d, join: false });
+    }
+    // Enganche a las vías por las que pasa (o casi)
+    for (const r of this.rails) {
+      if (r.factory === f || r.station === f || r.factory.tile === f.tile || r.station.tile === f.tile) continue;
+      const on = this._onRail(r, fx, fy, CONFIG.railJoinDist);
+      if (!on) continue;
+      const a = [map.x(r.factory.tile), map.y(r.factory.tile)];
+      const b = [map.x(r.station.tile), map.y(r.station.tile)];
+      const c = [r.cx, r.cy];
+      // Por el tramo en el que está, recto hasta su extremo; hacia el otro, por la esquina de la vía
+      const along = (p, q) => (Math.abs(p[1] - q[1]) <= Math.abs(p[0] - q[0]) ? [fx, p[1]] : [p[0], fy]);
+      const near = on === 1 ? a : b;
+      const far = on === 1 ? b : a;
+      const nearSt = on === 1 ? r.factory : r.station;
+      const farSt = on === 1 ? r.station : r.factory;
+      const c1 = along(near, c);
+      const pathLen = (corner, end) => Math.abs(corner[0] - fx) + Math.abs(corner[1] - fy) + Math.abs(end[0] - corner[0]) + Math.abs(end[1] - corner[1]);
+      // (el enganche manda sobre una vía propia a la misma estación: usa la que ya hay)
+      if (!out.get(nearSt)?.join) out.set(nearSt, { station: nearSt, corner: c1, len: Math.max(1, pathLen(c1, near)), join: true });
+      if (!out.get(farSt)?.join) out.set(farSt, { station: farSt, corner: c, len: Math.max(1, pathLen(c, far)), join: true });
+    }
+    return [...out.values()];
+  }
+
+  /**
+   * ¿Pasa la vía `r` a menos de `tol` casillas de (x, y)? 1 si es por el
+   * primer tramo (de la fábrica a la esquina), 2 si por el segundo, 0 si no.
+   */
+  _onRail(r, x, y, tol) {
+    const map = this.map;
+    const ax = map.x(r.factory.tile);
+    const ay = map.y(r.factory.tile);
+    const bx = map.x(r.station.tile);
+    const by = map.y(r.station.tile);
+    const seg = (x0, y0, x1, y1) => {
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / L)) : 0;
+      const ex = x0 + dx * t - x;
+      const ey = y0 + dy * t - y;
+      return ex * ex + ey * ey;
+    };
+    const t2 = tol * tol;
+    if (seg(ax, ay, r.cx, r.cy) <= t2) return 1;
+    if (seg(r.cx, r.cy, bx, by) <= t2) return 2;
+    return 0;
+  }
+
+  /**
+   * Ticks hasta el próximo tren de la vía `r`: más trenes cuantas más
+   * fábricas terminadas tenga su dueño y cuanto más nivel tenga la fábrica.
+   */
+  _trainGap(r) {
+    const f = r.factory;
+    const owner = this.players[f.owner];
+    const n = owner ? owner.active.factory || 1 : 1;
+    const boost = Math.min(CONFIG.trainBoostMax, 1 + CONFIG.trainFactoryBoost * (n - 1) + CONFIG.trainLevelBoost * ((f.level || 1) - 1));
+    return Math.max(CONFIG.trainEveryFloor, Math.round(this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax) / boost));
+  }
+
+  /**
+   * Red de vías: cada fábrica terminada tiende a la vez todas sus vías (ver
+   * railLinks). Las vías van en ángulo recto (un tramo en horizontal y otro
    * en vertical, por donde cruzan menos agua) y el alcance se mide en ese
-   * recorrido. Las vías que siguen existiendo conservan su tren.
+   * recorrido; las que se enganchan a una vía existente siguen su trazado.
+   * Las vías que siguen existiendo conservan su tren; una nueva saca el
+   * primero enseguida.
    */
   _updateRailNetwork() {
-    const map = this.map;
     const keep = new Map();
     const list = [];
     for (const f of this.buildings) {
       if (f.kind !== 'factory' || !f.level) continue;
-      const R = this.railRange(f.level) * (1 + (this.players[f.owner]?.mods.railRange || 0));
-      const fx = map.x(f.tile);
-      const fy = map.y(f.tile);
-      const body = map.landBody[f.tile];
-      const cands = [];
-      for (const s of this.buildings) {
-        if (s === f || (s.kind !== 'city' && s.kind !== 'port' && s.kind !== 'factory') || !s.level || map.landBody[s.tile] !== body) continue;
-        const d = Math.abs(map.x(s.tile) - fx) + Math.abs(map.y(s.tile) - fy);
-        if (d <= R) cands.push([d, s]);
-      }
-      cands.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
-      let made = 0;
-      for (let k = 0; k < cands.length && made < CONFIG.railMaxPerFactory; k++) {
-        const [d, s] = cands[k];
+      for (const link of this.railLinks(f)) {
+        const s = link.station;
         // Entre dos fábricas, una sola vía (la clave no depende del orden)
         const key = s.kind === 'factory' ? `${Math.min(f.id, s.id)}:${Math.max(f.id, s.id)}` : `${f.id}:${s.id}`;
-        if (keep.has(key)) {
-          made++;
-          continue;
-        }
+        if (keep.has(key)) continue;
         let r = this._railMap.get(key);
         if (!r) {
-          const corner = this._railCorner(f.tile, s.tile);
+          const corner = link.corner || this._railCorner(f.tile, s.tile);
           if (!corner) continue; // demasiada agua en medio
           r = {
             key,
@@ -1906,14 +1983,14 @@ export class Game {
             station: s,
             cx: corner[0],
             cy: corner[1],
-            len: Math.max(1, d),
-            nextTrain: this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax),
+            len: Math.max(1, link.len),
+            join: link.join,
+            nextTrain: this.ticks + this.rng.int(10, 40),
             train: null,
           };
         }
         keep.set(key, r);
         list.push(r);
-        made++;
       }
     }
     if (this.trains.length) this.trains = this.trains.filter((t) => keep.has(t.rail.key));
@@ -1989,7 +2066,7 @@ export class Game {
         t.done = true;
         done = true;
         r.train = null;
-        r.nextTrain = this.ticks + this.rng.int(CONFIG.trainEveryMin, CONFIG.trainEveryMax);
+        r.nextTrain = this.ticks + this._trainGap(r);
         this._trainArrive(r, r.factory);
       }
     }
@@ -2946,46 +3023,101 @@ export class Game {
   }
 
   _updateMissiles() {
-    if (!this.missiles.length) return;
+    if (!this.missiles.length && !this.interceptors.length) return;
     const W = this.map.width;
     for (const m of this.missiles) {
       m.progress = Math.min(1, m.progress + CONFIG.missileSpeed / m.dist);
       const [mx, my] = this.missilePos(m);
       // Baterías antimisiles (y escudos de las capitales) enemigas del
-      // lanzador que estén listas y a tiro (doc-1.7: salvas de varios
-      // interceptores; si uno falla, el siguiente vuelve a intentarlo)
-      for (const b of this.buildings) {
-        const shield = b.kind === 'capital';
-        if ((b.kind !== 'sam' && !shield) || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
-        const dx = (b.tile % W) + 0.5 - mx;
-        const dy = Math.floor(b.tile / W) + 0.5 - my;
-        const range = shield ? CONFIG.capitalSamRange : this.samRange(b.level);
-        if (dx * dx + dy * dy > range * range) continue;
-        const shooter = this.players[b.owner];
-        const shots = this.samShots(b);
-        if (!(b.ammo > 0)) b.ammo = shots; // salva recargada
-        b.ammo--;
-        // Entre dos disparos de la salva, una pausa corta; al vaciarla, la recarga entera
-        const reload = Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (Math.min(b.level, CONFIG.maxLevel) - 1)));
-        b.readyAt = this.ticks + (b.ammo > 0 ? CONFIG.samGap : Math.max(CONFIG.samGap, reload));
-        b.reloadFrom = this.ticks;
-        const hit = this.rng.float() < this.samHitChance(b, shooter);
-        this.effects.push({ kind: hit ? 'intercept' : 'miss', x: mx, y: my, from: b.tile, tick: this.ticks });
-        if (!hit) continue;
-        m.dead = true;
-        const launcher = this.players[m.owner];
-        const what = shield ? 'el escudo de tu capital' : 'tu antimisiles';
-        if (shooter === this.human) this._emit(`🛡 ${what[0].toUpperCase()}${what.slice(1)} ha derribado un misil de ${launcher.name}`, 'good');
-        else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
-        else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
-        break;
+      // lanzador que estén listas y a tiro disparan un proyectil que lo
+      // persigue (doc-1.7: salvas de varios; si uno va a fallar, el siguiente
+      // vuelve a intentarlo). Un misil con un proyectil certero en camino ya
+      // no atrae más disparos.
+      if (!m.doomed) {
+        for (const b of this.buildings) {
+          const shield = b.kind === 'capital';
+          if ((b.kind !== 'sam' && !shield) || !b.level || b.readyAt > this.ticks || !this._isEnemy(m.owner, b.owner)) continue;
+          const bx = (b.tile % W) + 0.5;
+          const by = Math.floor(b.tile / W) + 0.5;
+          const dx = bx - mx;
+          const dy = by - my;
+          const range = shield ? CONFIG.capitalSamRange : this.samRange(b.level);
+          if (dx * dx + dy * dy > range * range) continue;
+          const shooter = this.players[b.owner];
+          const shots = this.samShots(b);
+          if (!(b.ammo > 0)) b.ammo = shots; // salva recargada
+          b.ammo--;
+          // Entre dos disparos de la salva, una pausa corta; al vaciarla, la recarga entera
+          const reload = Math.round(CONFIG.samReload * (1 - CONFIG.samReloadPerLevel * (Math.min(b.level, CONFIG.maxLevel) - 1)));
+          b.readyAt = this.ticks + (b.ammo > 0 ? CONFIG.samGap : Math.max(CONFIG.samGap, reload));
+          b.reloadFrom = this.ticks;
+          // El acierto se decide al disparar (mismo azar que antes); el
+          // derribo, cuando el proyectil alcanza al misil
+          const hit = this.rng.float() < this.samHitChance(b, shooter);
+          const dist0 = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+          this.interceptors.push({ id: this._nextInterceptorId++, owner: b.owner, from: b.tile, x: bx, y: by, px: bx, py: by, m, hit, shield, dist0 });
+          this.effects.push({ kind: 'samLaunch', x: bx, y: by, from: b.tile, missile: m.id, tick: this.ticks });
+          if (hit) {
+            m.doomed = true;
+            break;
+          }
+        }
       }
       if (!m.dead && m.progress >= 1) {
         m.dead = true;
         this._detonate(m);
       }
     }
+    this._updateInterceptors();
     this.missiles = this.missiles.filter((m) => !m.dead);
+  }
+
+  /**
+   * Proyectiles antimisiles: cada uno vuela hacia la posición actual de su
+   * misil y, al alcanzarlo, lo destruye en el aire (si el disparo era
+   * certero) o pasa de largo y estalla solo. Si el misil ya no existe (ha
+   * caído o lo derribó otro), se autodestruye.
+   */
+  _updateInterceptors() {
+    if (!this.interceptors.length) return;
+    const speed = CONFIG.interceptorSpeed;
+    for (const it of this.interceptors) {
+      const m = it.m;
+      it.px = it.x;
+      it.py = it.y;
+      if (m.dead) {
+        it.done = true;
+        this.effects.push({ kind: 'miss', x: it.x, y: it.y, from: it.from, missile: m.id, interceptor: it.id, tick: this.ticks });
+        continue;
+      }
+      const [mx, my] = this.missilePos(m);
+      const dx = mx - it.x;
+      const dy = my - it.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > speed) {
+        it.x += (dx / d) * speed;
+        it.y += (dy / d) * speed;
+        continue;
+      }
+      // Lo alcanza
+      it.x = mx;
+      it.y = my;
+      it.done = true;
+      this.effects.push({ kind: it.hit ? 'intercept' : 'miss', x: mx, y: my, from: it.from, missile: m.id, interceptor: it.id, tick: this.ticks });
+      if (!it.hit) {
+        // Falla: si no queda otro certero en camino, el misil vuelve a ser blanco
+        m.doomed = this.interceptors.some((o) => o !== it && !o.done && o.m === m && o.hit);
+        continue;
+      }
+      m.dead = true;
+      const shooter = this.players[it.owner];
+      const launcher = this.players[m.owner];
+      const what = it.shield ? 'el escudo de tu capital' : 'tu antimisiles';
+      if (shooter === this.human) this._emit(`🛡 ${what[0].toUpperCase()}${what.slice(1)} ha derribado un misil de ${launcher.name}`, 'good');
+      else if (launcher === this.human) this._emit(`Tu misil ha sido derribado por ${shooter.name}`, 'warn');
+      else if (this.players[m.targetId] === this.human) this._emit(`🛡 ${shooter.name} ha derribado un misil que iba hacia ti`, 'good');
+    }
+    this.interceptors = this.interceptors.filter((it) => !it.done);
   }
 
   /** Impacto: las casillas enemigas del radio quedan libres y sus defensores pierden tropas. */

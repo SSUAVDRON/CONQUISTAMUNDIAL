@@ -4,6 +4,7 @@
 
 import { DEFAULT_RULES, migrateRules } from './config.js';
 import { normalizeConfig } from './configurador.js';
+import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS } from './skins.js';
 import { newRank, normalizeRank, splitRanks } from './rangos.js';
 import { Rng, hashString } from './rng.js';
 
@@ -165,14 +166,14 @@ export const TITLES = [
 ];
 
 /** Cada objeto sabe a qué catálogo pertenece (para comprarlo y guardarlo). */
-for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'estandarte'], [FRAMES, 'marco'], [NAME_COLORS, 'color'], [PATTERNS, 'patron'], [TITLES, 'titulo']]) {
+for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'estandarte'], [FRAMES, 'marco'], [NAME_COLORS, 'color'], [PATTERNS, 'patron'], [TITLES, 'titulo'], [BUILDING_SKINS, 'edificios'], [SHIP_SKINS, 'barcos'], [BOMB_SKINS, 'bombas']]) {
   for (const item of list) item.cat = cat;
 }
 export const itemKey = (item) => `${item.cat}:${item.id}`;
 
 /** Precio en monedas de cada objeto de la tienda, por su clave. */
 const PRICE_BY_KEY = new Map(
-  [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
+  [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
 );
 
 /** Mejores puntos de la clasificatoria (esta temporada o las anteriores). */
@@ -354,7 +355,7 @@ export function rewardsOf(achId) {
   const out = [];
   const ach = ACHIEVEMENTS.find((a) => a.id === achId);
   if (ach && ach.coins) out.push(`🪙 ${ach.coins}`);
-  for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre']]) {
+  for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre'], [BUILDING_SKINS, 'Edificios'], [SHIP_SKINS, 'Barcos'], [BOMB_SKINS, 'Bombas']]) {
     for (const item of list) if (item.unlock && item.unlock.ach === achId) out.push(`${kind}: ${item.name}`);
   }
   return out;
@@ -394,6 +395,10 @@ export function defaultProfile() {
     estandarte: 'noche',
     marco: 'ninguno',
     colorNombre: 'oro',
+    // Aspectos de lo que pones en el mapa (skins.js): también los ven los demás online
+    skinEdificios: 'estandar',
+    skinBarcos: 'estandar',
+    skinBombas: 'estandar',
     xp: 0,
     stats: {
       partidas: 0,
@@ -477,6 +482,9 @@ function normalizeFields(p, d, pick) {
     estandarte: pick(BANNERS, p.estandarte, d.estandarte),
     marco: pick(FRAMES, p.marco, d.marco),
     colorNombre: pick(NAME_COLORS, p.colorNombre, d.colorNombre),
+    skinEdificios: pick(BUILDING_SKINS, p.skinEdificios, d.skinEdificios),
+    skinBarcos: pick(SHIP_SKINS, p.skinBarcos, d.skinBarcos),
+    skinBombas: pick(BOMB_SKINS, p.skinBombas, d.skinBombas),
     emblema: cleanEmblem({ ...d.emblema, ...(p.emblema || {}) }),
     stats: { ...d.stats, ...(p.stats || {}) },
     logros: Object.fromEntries(Object.entries(p.logros || {}).filter(([k, v]) => ACHIEVEMENTS.some((a) => a.id === k) && Number.isFinite(v))),

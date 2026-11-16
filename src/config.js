@@ -113,13 +113,18 @@ export const CONFIG = {
   tradeSpeed: 0.252 * RES, // antes 0,42 (× 0,6 como todos los barcos)
 
   // Raíles y trenes de las fábricas
-  railRange: 14 * RES, // alcance de las vías de una fábrica de nivel 1 (casillas de recorrido: en horizontal + en vertical)
-  railRangePerLevel: 4 * RES, // y cuánto más por cada nivel extra
-  railMaxPerFactory: 6, // estaciones (ciudades, puertos y otras fábricas) como mucho por fábrica, las más cercanas
+  railRange: 24 * RES, // alcance de las vías de una fábrica de nivel 1 (casillas de recorrido: en horizontal + en vertical)
+  railRangePerLevel: 6 * RES, // y cuánto más por cada nivel extra
+  railMaxPerFactory: 12, // estaciones (ciudades, puertos, fábricas, pueblos y capitales) a la vez por fábrica, las más cercanas
+  railJoinDist: 1.5 * RES, // una fábrica a esta distancia de una vía se engancha a ella (y a sus dos extremos)
   railMaxWater: 2 * RES, // casillas de agua que puede cruzar una vía (un puente corto); si no, no se tiende
   railRefresh: 20, // ticks entre recálculos de la red
-  trainEveryMin: 150, // ticks entre trenes de un mismo raíl
+  trainEveryMin: 150, // ticks entre trenes de un mismo raíl (con una sola fábrica de nivel 1)
   trainEveryMax: 300,
+  trainFactoryBoost: 0.2, // cada fábrica terminada más del mismo dueño: +20 % de trenes en todas sus vías
+  trainLevelBoost: 0.25, // y cada nivel de la fábrica, +25 % en las suyas
+  trainBoostMax: 4, // como mucho ×4 (nunca menos de trainEveryFloor entre dos)
+  trainEveryFloor: 40,
   trainSpeed: 0.8 * RES, // casillas por tick (el oro por estación: mecanicas.js)
 
   // Misiles y antimisiles
@@ -127,7 +132,8 @@ export const CONFIG = {
   hbombRadius: 2.2, // bomba H: radio × 2,2 (PROPUESTA)
   mirvWarheads: 24, // MIRV: cabezas (PROPUESTA)
   mirvRadius: 0.55, // y su radio, × el de la bomba atómica
-  missileSpeed: 3 * RES, // casillas por tick
+  missileSpeed: 1.2 * RES, // casillas por tick (el 40 % de los 3 × RES de antes: se ven venir)
+  interceptorSpeed: 3 * RES, // casillas por tick del proyectil antimisiles (más del doble que el misil: siempre lo alcanza, y se le ve volar)
   missileRange: 220 * RES, // distancia máxima desde el silo
   siloReload: 150, // ticks entre lanzamientos de un mismo silo
   missileTroopLoss: 1.2, // × densidad del defensor por casilla arrasada

@@ -41,6 +41,7 @@ import { Ladder } from './ladder.js';
 import { claimText, getIdentity, signClaim, verifiedRank } from './identidad.js';
 import { challengeBeaten, challengeLink, parseChallenge } from './reto.js';
 import { RANKED_AI, RANKED_ROOM, aiDifficultyFor, alreadyApplied, applyAiResult, applyRoomResult, badgeCanvas, ensureSeason, inPlacement, rankOf, seasonName, voidResult } from './rangos.js';
+import { cleanSkins } from './skins.js';
 import { presentMatch } from './presentacion.js';
 import { configSnapshot } from './repeticion.js';
 import { INVITE_MS, Matchmaker } from './emparejamiento.js';
@@ -162,6 +163,8 @@ function myIdentity() {
     frame: profile.marco || 'ninguno',
     banner: profile.estandarte || 'noche',
     nameColor: profile.colorNombre || '',
+    // Aspecto de tus edificios, barcos y bombas (también lo ven los demás online)
+    skins: { edificio: profile.skinEdificios, barco: profile.skinBarcos, bomba: profile.skinBombas },
   };
 }
 
@@ -217,6 +220,7 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
     const p = game.addPlayer(name, hexToRgb(h.color), true);
     p.emblem = h.emblem;
     p.pattern = h.pattern;
+    p.skins = cleanSkins(h.skins);
     // Bandera de un país elegida como emblema: también junto a su nombre y en la clasificación
     p.flag = (h.emblem && h.emblem.flag) || '';
     // Nivel del jugador (se ve junto a su nombre en la clasificación de la partida)

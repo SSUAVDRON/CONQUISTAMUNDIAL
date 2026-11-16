@@ -49,7 +49,7 @@ test('la fábrica une con raíles las ciudades cercanas, también las enemigas',
   const rails = game.rails.filter((r) => r.factory === factory);
   assert.ok(rails.some((r) => r.station.owner === a.id), 'raíl a su propia ciudad');
   assert.ok(rails.some((r) => r.station.owner === b.id), 'raíl a la ciudad enemiga dentro del alcance');
-  assert.ok(rails.every((r) => r.len <= game.railRange(factory.level) + 1e-9));
+  assert.ok(rails.filter((r) => !r.join).every((r) => r.len <= game.railRange(factory.level) + 1e-9));
 });
 
 test('los trenes dan oro al llegar según la relación (10k propia o neutral, 35k aliada)', async () => {
@@ -94,6 +94,7 @@ test('las vías van en ángulo recto, dentro del alcance, y unen también fábri
   const between = game.rails.filter((r) => r.factory.kind === 'factory' && r.station.kind === 'factory');
   assert.equal(between.length, 1, 'una vía entre las dos fábricas');
   for (const r of game.rails) {
+    if (r.join) continue; // las que se enganchan a otra vía siguen su trazado (test aparte)
     const fx = map.x(r.factory.tile);
     const fy = map.y(r.factory.tile);
     const sx = map.x(r.station.tile);
@@ -107,4 +108,66 @@ test('las vías van en ángulo recto, dentro del alcance, y unen también fábri
     assert.deepEqual([x0, y0], [fx + 0.5, fy + 0.5]);
     assert.deepEqual([x1, y1], [sx + 0.5, sy + 0.5]);
   }
+});
+
+test('la fábrica tiende a la vez vías a todas las estaciones a su alcance, también pueblos', () => {
+  const { game, a, map, ta } = setup();
+  const d = (t, u) => Math.hypot(map.x(t) - map.x(u), map.y(t) - map.y(u));
+  const m = (t, u) => Math.abs(map.x(t) - map.x(u)) + Math.abs(map.y(t) - map.y(u));
+  // Dos pueblos más al alcance
+  for (let k = 0; k < 2; k++) {
+    const t = [...map.landTiles].find((x) => game.owner[x] === a.id && m(x, ta) < CONFIG.railRange - 4 && game.buildings.every((b) => d(x, b.tile) > CONFIG.buildingMinDist + 2) && game.canBuild(a, 'village', x).ok);
+    if (t !== undefined) buildNow(game, a, 'village', t);
+  }
+  for (let i = 0; i < CONFIG.railRefresh + 1; i++) game.tick();
+  const factory = game.buildings.find((x) => x.kind === 'factory' && x.owner === a.id);
+  const rails = game.rails.filter((r) => r.factory === factory || r.station === factory);
+  assert.ok(rails.length >= 3, `varias vías a la vez (${rails.length})`);
+  assert.ok(rails.some((r) => r.station.kind === 'village'), 'los pueblos también son estaciones');
+  // Las vías nuevas sacan su primer tren enseguida
+  const before = game._nextTrainId;
+  for (let i = 0; i < 45; i++) game.tick();
+  assert.ok(game._nextTrainId - before + game.trains.length >= Math.min(2, rails.length), 'varios trenes salen a la vez');
+});
+
+test('una fábrica puesta encima de una vía se engancha a ella y llega a sus dos extremos', () => {
+  const { game, a, map } = setup();
+  for (let i = 0; i < CONFIG.railRefresh + 1; i++) game.tick();
+  // La vía más larga de A
+  const r = [...game.rails].filter((x) => x.len > 10).sort((x, y) => y.len - x.len)[0];
+  assert.ok(r, 'hay una vía');
+  // Una casilla del recorrido, lejos de los extremos (a mitad del tramo más largo)
+  let spot = -1;
+  for (const k of [0.5, 0.4, 0.6, 0.3, 0.7]) {
+    const [x, y] = game.railPoint(r, r.len * k);
+    const t = map.index(Math.floor(x), Math.floor(y));
+    if (map.isLand(t)) {
+      game.owner[t] = a.id; // (la casilla es de A para poder construir)
+      spot = t;
+      break;
+    }
+  }
+  assert.ok(spot >= 0);
+  const f2 = { id: -1, tile: spot, level: 1, owner: a.id };
+  const links = game.railLinks(f2);
+  const joins = links.filter((l) => l.join);
+  assert.ok(joins.some((l) => l.station === r.factory) && joins.some((l) => l.station === r.station), 'enganche a los dos extremos de la vía');
+  // El enganche sigue el trazado: su recorrido no es más largo que el de la vía original
+  for (const l of joins) assert.ok(l.len <= r.len + 2 * CONFIG.railJoinDist + 2, `recorrido ${l.len} frente a ${r.len}`);
+});
+
+test('más fábricas, más trenes (y más oro)', () => {
+  const { game, a } = setup();
+  for (let i = 0; i < CONFIG.railRefresh + 1; i++) game.tick();
+  const r = game.rails.find((x) => x.factory.owner === a.id);
+  const gaps = (n) => {
+    a.active.factory = n;
+    let sum = 0;
+    for (let k = 0; k < 200; k++) sum += game._trainGap(r);
+    return sum / 200;
+  };
+  const one = gaps(1);
+  const four = gaps(4);
+  assert.ok(four < one * 0.7, `con cuatro fábricas salen más trenes: ${Math.round(four)} frente a ${Math.round(one)} ticks`);
+  assert.ok(gaps(50) >= CONFIG.trainEveryFloor, 'con un mínimo entre trenes');
 });

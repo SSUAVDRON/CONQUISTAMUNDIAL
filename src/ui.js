@@ -1514,7 +1514,7 @@ export class UI {
     const k = h.paceRegen * h.regenMult * h.troopMult * Math.max(0.1, 1 + h.mods.growth) * 10;
     const gain = (regenPerTick(P, cap + extra) - regenPerTick(P, cap)) * k;
     out.city = `${BUILDINGS.city.name} (${formatNumber(game.buildCost(h, 'city'))}): +${fmtTroops(extra)} de techo de tropas → ~+${fmtTroops(Math.max(0, gain))} tropas/s ahora`;
-    out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a las ciudades, puertos y fábricas cercanas; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
+    out.factory = `${BUILDINGS.factory.name} (${formatNumber(game.buildCost(h, 'factory'))}): vías a la vez a las ciudades, puertos, fábricas, pueblos y capitales cercanas (o enganchada a la vía que pise); más fábricas, más trenes; cada tren da ${formatNumber(MECH.trainRewards.self)} de oro (${formatNumber(MECH.trainRewards.ally)} en estaciones aliadas)`;
     out.port = `${BUILDINGS.port.name} (${formatNumber(game.buildCost(h, 'port'))}): mercantes a puertos de otros jugadores; al llegar, los dos cobráis (~${formatNumber(tradeGold(100))} en una ruta corta, ~${formatNumber(tradeGold(300))} en una larga)`;
     return out;
   }

@@ -126,3 +126,42 @@ test('los antimisiles derriban casi todos los misiles: salvas de varios intercep
   // Si un interceptor falla, el segundo de la salva vuelve a disparar al mismo misil
   if (shots > hits) assert.ok(retried >= 1, 'tras un fallo, otro disparo');
 });
+
+test('el antimisiles lanza un proyectil que vuela hasta el misil y lo destruye en el aire (no al instante)', () => {
+  const { map, game, a, b, ta, tb } = setup();
+  for (const atk of [...b.attacks.values()]) game._endAttack(atk);
+  buildNow(game, a, 'silo', ta);
+  const dist = (t, u) => Math.hypot(map.x(t) - map.x(u), map.y(t) - map.y(u));
+  const samTile = [...map.landTiles].find((t) => game.owner[t] === b.id && dist(t, tb) < 6 && game.canBuild(b, 'sam', t).ok);
+  assert.ok(samTile !== undefined && buildNow(game, b, 'sam', samTile));
+  const target = [...map.landTiles].find((t) => {
+    const d = dist(t, samTile);
+    return game.owner[t] === b.id && d > CONFIG.missileRadius + 2 && d < CONFIG.samRange - 4;
+  });
+  a.gold = 1e7;
+  assert.ok(buildNow(game, a, 'missile', target));
+  const m = game.missiles[0];
+  // El misil va al 40 % de la velocidad de antes
+  assert.equal(CONFIG.missileSpeed, 1.2 * RES);
+  let launchedAt = -1;
+  let flying = 0;
+  for (let i = 0; i < 400 && (game.missiles.length || game.interceptors.length); i++) {
+    game.tick();
+    if (game.interceptors.length) {
+      if (launchedAt < 0) launchedAt = game.ticks;
+      flying++;
+      // Mientras el proyectil vuela, el misil sigue en el aire
+      if (game.interceptors.some((it) => it.m === m)) assert.ok(game.missiles.includes(m) || m.dead);
+    }
+  }
+  assert.ok(launchedAt > 0, 'la batería dispara');
+  assert.ok(flying >= 1, 'el proyectil tarda al menos un turno en llegar');
+  const hit = game.effects.find((e) => e.kind === 'intercept' && e.missile === m.id);
+  const launch = game.effects.find((e) => e.kind === 'samLaunch' && e.missile === m.id);
+  assert.ok(launch, 'efecto de lanzamiento en la batería');
+  if (hit) {
+    assert.ok(hit.tick > launch.tick, 'el derribo llega después del disparo');
+    assert.ok(Math.hypot(hit.x - launch.x, hit.y - launch.y) > 1, 'se destruye lejos de la batería, en el aire');
+  }
+  assert.equal(game.interceptors.length, 0, 'no quedan proyectiles colgados');
+});

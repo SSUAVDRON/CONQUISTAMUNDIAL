@@ -26,6 +26,27 @@ import {
   achievementProgress, buyItem, defaultProfile, ensureDaily, grantAchievement, hasAchievement, isUnlocked, itemKey, levelInfo, nameColorOf, rememberConfig, rewardsOf, titleName, unlockText,
 } from './profile.js';
 import { coopSlots, seatsSummary, settingsDiff } from './configurador.js';
+import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS, rarityOf, skinLook } from './skins.js';
+import { ACH_CATEGORIES, achCategory, achPoints, attachTip, hideTip, itemTipHtml } from './rpg.js';
+
+/** Todo lo coleccionable, por catálogo (para contar la colección y buscar recompensas). */
+const COLLECTION = [
+  { cat: 'forma', col: 'emblema', name: 'Forma', type: 'Forma del emblema', list: SHAPES, desc: 'La forma de tu emblema.' },
+  { cat: 'simbolo', col: 'emblema', name: 'Símbolo', type: 'Símbolo del emblema', list: SYMBOLS, desc: 'El símbolo de tu emblema.' },
+  { cat: 'marco', col: 'marco', name: 'Marco', type: 'Marco del emblema', list: FRAMES, desc: 'Rodea tu emblema en el menú, en las salas y en la presentación de la partida.' },
+  { cat: 'estandarte', col: 'estandarte', name: 'Estandarte', type: 'Estandarte', list: BANNERS, desc: 'El fondo de tu ficha y de tu insignia en el menú.' },
+  { cat: 'patron', col: 'patron', name: 'Patrón', type: 'Patrón del territorio', list: PATTERNS, desc: 'El dibujo de tu territorio en el mapa; también lo ven los demás online.' },
+  { cat: 'color', col: 'nombre', name: 'Nombre', type: 'Color del nombre', list: NAME_COLORS, desc: 'El color de tu nombre sobre el mapa.' },
+  { cat: 'titulo', col: 'titulo', name: 'Título', type: 'Título', list: TITLES, desc: 'Acompaña a tu nombre en las fichas, las salas y la presentación.' },
+  { cat: 'edificios', col: 'edificios', name: 'Edificios', type: 'Aspecto de edificios', list: BUILDING_SKINS, desc: '' },
+  { cat: 'barcos', col: 'barcos', name: 'Barcos', type: 'Aspecto de barcos', list: SHIP_SKINS, desc: '' },
+  { cat: 'bombas', col: 'bombas', name: 'Bombas', type: 'Aspecto de bombas', list: BOMB_SKINS, desc: '' },
+];
+const CATALOG = new Map(COLLECTION.map((c) => [c.cat, c]));
+/** Pestañas de la colección (Aspecto). */
+const COL_TABS = [
+  ['emblema', 'Emblema'], ['marco', 'Marco'], ['estandarte', 'Estandarte'], ['patron', 'Patrón'], ['nombre', 'Nombre'], ['titulo', 'Título'], ['edificios', 'Edificios'], ['barcos', 'Barcos'], ['bombas', 'Bombas'],
+];
 
 /** Plazas que se ofrecen: hasta el mayor aforo validado (DEV06). */
 const MAX_HUMANS = VALIDATED_SEATS;
@@ -59,6 +80,8 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Novedades', title: 'Aspectos, gestas y ficha del comandante', text: 'Aspectos nuevos para tus edificios, barcos y bombas, que también ven los demás online. Todo lo coleccionable tiene rareza (común, poco común, rara, épica y legendaria) y una ficha al pasar el ratón o mantener pulsado. Perfil con tu ficha de comandante y Progreso renovado: camino de recompensas, diario de campaña, «casi lo tienes» y gestas por categorías con puntos.', art: 1 },
+  { tag: 'Batalla', title: 'Interceptores y fábricas en red', text: 'Los misiles vuelan más despacio y los antimisiles lanzan un proyectil que se ve subir y los revienta en el aire. Cada fábrica tiende vías a varias estaciones a la vez, aprovecha la vía que pisa y, cuantas más fábricas, más trenes y más oro.', art: 2 },
   { tag: 'Novedades', title: 'Salas de 32 y rangos por cola', text: 'Salas de hasta 32 jugadores con accesos a 4, 8, 16, 24 y 32 plazas; el anfitrión edita las reglas en borrador y las aplica de una vez. La clasificatoria contra la IA y la de en línea tienen ahora rangos separados (tu rango de antes queda como histórico). Y más: salidas explicadas, previsión de cada ataque, amortización en las fichas y repetir tu última partida tal cual.', art: 1 },
   { tag: 'Mejoras', title: 'Más ligero y más pulido', text: 'Cada versión nueva se descarga en una quinta parte (los mapas se guardan en tu navegador), arreglos en amigos y clanes, colonias que ya no encabezan la clasificación, Arsenal y Progreso mejor colocados y nuevas animaciones al pulsar y al poder construir.', art: 0 },
   { tag: 'Social', title: 'Amigos y clanes', text: 'Añade amigos con tu código, mira quién está en línea e invítales a tu sala. Funda un clan con su etiqueta e insignia o únete a uno. Y un perfil renovado, con tus cifras a la vista.', art: 0 },
@@ -1488,22 +1511,19 @@ export class Home {
   /** Tarjeta de perfil: estandarte, emblema con marco, nombre, título y nivel. */
   renderCard() {
     const p = this.profile;
-    const card = $('tarjeta-perfil');
-    card.className = `tarjeta-perfil est-${p.estandarte}`;
+    $('fc-estandarte').className = `fc-estandarte est-${p.estandarte}`;
     const c = $('tarjeta-emblema');
     const ctx = c.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
-    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.66);
-    drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.66);
+    drawEmblem(ctx, p.emblema, c.width / 2, c.height / 2, c.width * 0.62);
+    drawFrame(ctx, p.marco, c.width / 2, c.height / 2, c.width * 0.62);
     $('tp-nombre').textContent = p.nombre || 'Sin nombre';
     $('tp-nombre').style.color = nameColorOf(p);
     $('tp-titulo').textContent = titleName(p) || 'Recluta';
     const info = levelInfo(p.xp);
     $('tp-nivel').textContent = String(info.level);
-    // Anillo de experiencia hacia el siguiente nivel
-    const frac = Math.max(0, Math.min(1, info.progress));
-    $('tp-anillo-relleno').style.strokeDasharray = `${(frac * 100).toFixed(1)} 100`;
-    $('tp-xp').textContent = `${p.xp - info.start}/${info.next - info.start} XP`;
+    $('tp-xp-barra').style.setProperty('--p', Math.max(0, Math.min(1, info.progress)).toFixed(3));
+    $('tp-xp').textContent = `${formatNumber(p.xp - info.start)} / ${formatNumber(info.next - info.start)} XP para el nivel ${info.level + 1}`;
     const winRate = p.stats.partidas ? Math.round((100 * p.stats.victorias) / p.stats.partidas) : 0;
     $('tp-datos').textContent = `${p.stats.victorias} victorias · ${p.stats.partidas} partidas${p.stats.partidas ? ` · ${winRate} % ganadas` : ''} · mejor ${formatPercent(p.stats.mejorPct || 0)}`;
     // Liga de la clasificatoria
@@ -1514,6 +1534,247 @@ export class Home {
         const k = rankOf(r.puntos);
         liga.replaceChildren(el('span', { class: 'tp-chapa chapa-liga', style: `--liga: rgb(${k.league.color.join(',')})` }, badgeCanvas(r, 16), k.label));
       } else liga.replaceChildren();
+    }
+    // Huecos del equipo: lo que llevas puesto en cada uno (clic: su parte de la colección)
+    const slot = (cat) => {
+      const C = CATALOG.get(cat);
+      const item = C.list.find((x) => x.id === this._equippedId(cat)) || C.list[0];
+      const rar = rarityOf(item);
+      const btn = el('button', { type: 'button', class: 'fc-hueco', style: `--rar:${rar.color}`, 'aria-label': `${C.name}: ${item.name}. Abrir la colección`, onclick: () => this.openCollection(C.col) },
+        el('span', { class: 'fc-icono' }, this._itemIcon(item, 38)),
+        el('span', { class: 'fc-textos' }, el('small', { text: C.name }), el('strong', { text: item.name, style: `color:${rar.color}` })));
+      attachTip(btn, () => this._itemTip(item, { slot: true }));
+      return btn;
+    };
+    $('fc-izq').replaceChildren(...['forma', 'simbolo', 'marco', 'estandarte', 'patron'].map(slot));
+    $('fc-der').replaceChildren(...['color', 'titulo', 'edificios', 'barcos', 'bombas'].map(slot));
+    $('fc-pedestal').replaceChildren(this._skinScene(320, 96));
+  }
+
+  /** Lo que llevas puesto de un catálogo. */
+  _equippedId(cat) {
+    const p = this.profile;
+    return { forma: p.emblema.shape, simbolo: p.emblema.symbol, marco: p.marco, estandarte: p.estandarte, patron: p.patron, color: p.colorNombre, titulo: p.titulo, edificios: p.skinEdificios, barcos: p.skinBarcos, bombas: p.skinBombas }[cat];
+  }
+
+  /** Icono pequeño de un objeto de la colección (con tu emblema y tu color). */
+  _itemIcon(item, px = 40, look = null) {
+    const p = this.profile;
+    const cv = () => {
+      const c = el('canvas', { width: px * 2, height: px * 2, 'aria-hidden': 'true' });
+      c.style.width = c.style.height = `${px}px`;
+      return c;
+    };
+    switch (item.cat) {
+      case 'forma':
+        return emblemCanvas({ ...p.emblema, shape: item.id, flag: '' }, px);
+      case 'simbolo':
+        return emblemCanvas({ ...p.emblema, symbol: item.id, flag: '' }, px);
+      case 'marco': {
+        const c = cv();
+        const g = c.getContext('2d');
+        drawEmblem(g, p.emblema, px, px, px * 1.15);
+        drawFrame(g, item.id, px, px, px * 1.15);
+        return c;
+      }
+      case 'estandarte':
+        return el('span', { class: `est-icono est-${item.id}`, style: `width:${px}px;height:${px}px` });
+      case 'patron': {
+        const c = patternCanvas(item.id, p.color, px * 2, px * 2);
+        c.style.width = c.style.height = `${px}px`;
+        c.classList.add('patron-icono');
+        return c;
+      }
+      case 'color':
+        return el('span', { class: 'color-icono', style: `color:${item.color || nameColorOf({ ...p, colorNombre: 'propio' })};font-size:${Math.round(px * 0.5)}px`, text: 'Aa' });
+      case 'titulo':
+        return el('span', { class: 'titulo-icono', style: `font-size:${Math.round(px * 0.55)}px`, text: '📜' });
+      case 'edificios': {
+        const c = cv();
+        drawBuildingReal(c.getContext('2d'), 'city', px, px, px * 1.3, { ring: p.color, skin: look || item.look });
+        return c;
+      }
+      case 'barcos': {
+        const c = cv();
+        drawWarship(c.getContext('2d'), px, px * 1.05, -0.55, px * 0.6, p.color, false, null, 0, { look: look || item.look, shadow: false });
+        return c;
+      }
+      case 'bombas': {
+        const c = cv();
+        drawMissileSprite(c.getContext('2d'), px * 1.2, px * 0.82, -0.62, px * 1.2, p.color, 0.3, look || item.look);
+        return c;
+      }
+      default:
+        return el('span');
+    }
+  }
+
+  /** Escena pequeña con tus aspectos: costa con dos edificios, un buque, un barco y una bomba en el aire. */
+  _skinScene(w = 320, h = 96) {
+    const p = this.profile;
+    const c = el('canvas', { width: w * 2, height: h * 2, class: 'fc-escena', 'aria-hidden': 'true' });
+    c.style.width = `${w}px`;
+    c.style.height = `${h}px`;
+    const g = c.getContext('2d');
+    g.scale(2, 2);
+    // Tierra y mar
+    g.fillStyle = '#1b4a75';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#7e9a62';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(w * 0.52, 0);
+    g.bezierCurveTo(w * 0.46, h * 0.35, w * 0.6, h * 0.6, w * 0.5, h);
+    g.lineTo(0, h);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    g.lineWidth = 1.5;
+    g.stroke();
+    const ring = p.color;
+    const bLook = skinLook('edificio', p.skinEdificios);
+    drawBuildingReal(g, 'city', w * 0.14, h * 0.55, 30, { ring, outline: true, skin: bLook });
+    drawBuildingReal(g, 'factory', w * 0.3, h * 0.32, 26, { ring, outline: true, skin: bLook });
+    drawBuildingReal(g, 'sam', w * 0.34, h * 0.76, 26, { ring, outline: true, skin: bLook });
+    const sLook = skinLook('barco', p.skinBarcos);
+    drawWarship(g, w * 0.66, h * 0.66, -0.3, 13, p.color, true, null, 1, { look: sLook });
+    drawTransport(g, w * 0.86, h * 0.32, 2.6, 26, p.color, true, 1, sLook);
+    drawMissileSprite(g, w * 0.72, h * 0.2, -0.25, 30, p.color, 0.4, skinLook('bomba', p.skinBombas));
+    return c;
+  }
+
+  /** Ficha emergente de un objeto: rareza, tipo, para qué sirve y cómo se consigue. */
+  _itemTip(item, { slot = false } = {}) {
+    const p = this.profile;
+    const C = CATALOG.get(item.cat);
+    const ok = isUnlocked(p, item);
+    const lines = [];
+    if (this._equippedId(item.cat) === item.id) lines.push({ text: '✔ Equipado', tone: 'bien' });
+    else if (ok) lines.push({ text: 'Es tuyo · clic para equipar', tone: 'bien' });
+    else if (item.unlock && item.unlock.price) {
+      const have = p.monedas || 0;
+      const price = item.unlock.price;
+      lines.push({ text: `Precio: 🪙 ${formatNumber(price)}`, tone: 'oro' });
+      lines.push(have >= price ? { text: 'Clic para comprarlo', tone: 'bien' } : { text: `Te faltan 🪙 ${formatNumber(price - have)}`, tone: 'mal' });
+    } else if (item.unlock && item.unlock.level) {
+      lines.push({ text: `Requiere nivel ${item.unlock.level} (tienes el ${levelInfo(p.xp).level})`, tone: 'mal' });
+    } else if (item.unlock && item.unlock.ach) {
+      const a = ACHIEVEMENTS.find((x) => x.id === item.unlock.ach);
+      const prog = a ? achievementProgress(p, a) : null;
+      lines.push({ text: `Se consigue con la gesta «${a ? a.name : item.unlock.ach}»`, tone: 'aviso' });
+      if (a) lines.push({ text: `${a.desc}${prog ? ` (${formatNumber(prog.have)}/${formatNumber(prog.need)})` : ''}`, tone: '' });
+    }
+    if (slot) lines.push({ text: 'Clic: abrir esta parte de la colección', tone: '' });
+    const onMap = item.cat === 'edificios' || item.cat === 'barcos' || item.cat === 'bombas';
+    const desc = item.desc ? `${item.desc}${onMap ? ' Se ve en el mapa, también para los demás online.' : ''}` : C.desc;
+    return itemTipHtml({ name: item.name, item, type: C.type, desc, lines });
+  }
+
+  /** Abre la colección (Perfil → Aspecto) en una de sus partes. */
+  openCollection(col) {
+    hideTip();
+    this.colTab = col;
+    if (this.view !== 'perfil') this.go('perfil');
+    this._profileTab('aspecto', true);
+    this.renderCollectionNav();
+    requestAnimationFrame(() => $('col-pestanas')?.scrollIntoView({ block: 'start', behavior: sinMovimiento() ? 'auto' : 'smooth' }));
+  }
+
+  /** Cuántos objetos tienes de una parte de la colección (o de toda). */
+  _collectionCount(col = null) {
+    const p = this.profile;
+    let have = 0;
+    let total = 0;
+    for (const c of COLLECTION) {
+      if (col && c.col !== col) continue;
+      total += c.list.length;
+      have += c.list.filter((i) => isUnlocked(p, i)).length;
+    }
+    return { have, total };
+  }
+
+  /** Pestañas, filtro y total de la colección; enseña la parte elegida. */
+  renderCollectionNav() {
+    if (!$('col-pestanas')) return;
+    this.colTab ??= 'emblema';
+    this.colFilter ??= 'todos';
+    $('col-pestanas').replaceChildren(
+      ...COL_TABS.map(([id, name]) => {
+        const n = this._collectionCount(id);
+        return el('button', { type: 'button', role: 'tab', 'aria-selected': String(id === this.colTab), 'data-col': id, onclick: () => {
+          this.colTab = id;
+          this.renderCollectionNav();
+        } }, el('span', { text: name }), el('small', { class: `col-n${n.have === n.total ? ' completa' : ''}`, text: `${n.have}/${n.total}` }));
+      }),
+    );
+    underline($('col-pestanas'), true);
+    rodar($('col-pestanas'));
+    segmented($('col-filtro'), [['todos', 'Todo'], ['tengo', 'Lo tengo'], ['faltan', 'Me falta'], ['venta', 'En venta']], this.colFilter, (v) => {
+      this.colFilter = v;
+      this._applyColFilter();
+    });
+    for (const b of document.querySelectorAll('#perfil-aspecto .col-bloque')) b.hidden = b.dataset.col !== this.colTab;
+    const all = this._collectionCount();
+    $('col-total').textContent = `Colección: ${all.have}/${all.total} · ${Math.round((100 * all.have) / Math.max(1, all.total))} %`;
+    this._applyColFilter();
+  }
+
+  /** Filtro de la colección: todo, lo que tienes, lo que te falta o lo que está a la venta. */
+  _applyColFilter() {
+    const p = this.profile;
+    const f = this.colFilter || 'todos';
+    for (const btn of document.querySelectorAll('#perfil-aspecto [data-k]')) {
+      const item = this._byKey(btn.dataset.k);
+      if (!item) continue;
+      const ok = isUnlocked(p, item);
+      const sale = !ok && !!(item.unlock && item.unlock.price);
+      btn.hidden = f === 'tengo' ? !ok : f === 'faltan' ? ok : f === 'venta' ? !sale : false;
+    }
+  }
+
+  /** Objeto por su clave («marco:rubi»). */
+  _byKey(key) {
+    if (!this._keyIndex) this._keyIndex = new Map(COLLECTION.flatMap((c) => c.list.map((i) => [itemKey(i), i])));
+    return this._keyIndex.get(key);
+  }
+
+  /**
+   * Viste los objetos de la colección: color de su rareza, ficha emergente
+   * y, los bloqueados, sin `disabled` (así su ficha dice cómo conseguirlos).
+   */
+  _decorateCollection(root = $('perfil-aspecto')) {
+    for (const btn of root.querySelectorAll('[data-k]')) {
+      const item = this._byKey(btn.dataset.k);
+      if (!item) continue;
+      const rar = rarityOf(item);
+      btn.style.setProperty('--rar', rar.color);
+      btn.dataset.rareza = rar.id;
+      if (btn.disabled) {
+        btn.disabled = false;
+        btn.setAttribute('aria-disabled', 'true');
+      }
+      btn.removeAttribute('title');
+      if (!btn._tip) {
+        btn._tip = true;
+        attachTip(btn, () => this._itemTip(this._byKey(btn.dataset.k)));
+      }
+    }
+  }
+
+  /** Aspectos de edificios, barcos y bombas en la colección. */
+  _renderSkins() {
+    const p = this.profile;
+    for (const [box, list, field] of [['sel-edificios', BUILDING_SKINS, 'skinEdificios'], ['sel-barcos', SHIP_SKINS, 'skinBarcos'], ['sel-bombas', BOMB_SKINS, 'skinBombas']]) {
+      if (!$(box)) continue;
+      $(box).replaceChildren(
+        ...list.map((item) => {
+          const s = this._shop(item);
+          return el('button', { type: 'button', role: 'radio', 'aria-checked': String(item.id === p[field]), class: `opcion opcion-skin${s.cls}`, 'data-k': itemKey(item), onclick: () => this._pick(item, () => (p[field] = item.id)) },
+            this._itemIcon(item, 64),
+            el('span', { class: 'skin-nombre', text: item.name }),
+            s.ok ? null : el('small', { class: 'skin-req', text: s.label }));
+        }),
+      );
     }
   }
 
@@ -1610,10 +1871,13 @@ export class Home {
         );
       }),
     );
-    for (const id of ['sel-estandartes', 'sel-marcos', 'sel-color-nombre', 'sel-titulos', 'sel-patrones', 'sel-formas', 'sel-simbolos']) {
+    this._renderSkins();
+    for (const id of ['sel-estandartes', 'sel-marcos', 'sel-color-nombre', 'sel-titulos', 'sel-patrones', 'sel-formas', 'sel-simbolos', 'sel-edificios', 'sel-barcos', 'sel-bombas']) {
       teclasGrupo($(id));
       rodar($(id));
     }
+    this._decorateCollection();
+    this.renderCollectionNav();
   }
 
   /** ¿Se ve el menú de inicio (y no una sala o «Crear sala»)? */
@@ -2262,6 +2526,7 @@ export class Home {
   /** Muestra pequeña de un objeto de la tienda (para la ficha de compra). */
   _itemPreview(item) {
     const p = this.profile;
+    if (item.cat === 'edificios' || item.cat === 'barcos' || item.cat === 'bombas') return el('span', { class: 'compra-skin', style: `--rar:${rarityOf(item).color}` }, this._itemIcon(item, 96));
     if (item.cat === 'estandarte') return el('div', { class: `estandarte est-${item.id} compra-estandarte` }, el('span', { class: 'est-nombre', text: p.nombre || 'Mi nación' }));
     if (item.cat === 'patron') return patternCanvas(item.id, p.color, 192, 96);
     if (item.cat === 'color') return el('span', { class: 'compra-nombre', style: `color:${item.color || nameColorOf(p)}`, text: p.nombre || 'Mi nación' });
@@ -2317,6 +2582,9 @@ export class Home {
     this._renderSelector($('sel-simbolos'), SYMBOLS, p.emblema.symbol, (item) => ({ ...p.emblema, symbol: item.id }), (id) => {
       p.emblema.symbol = id;
     });
+    this._decorateCollection($('sel-formas'));
+    this._decorateCollection($('sel-simbolos'));
+    this._applyColFilter();
   }
 
   _renderSelector(box, items, current, preview, apply) {
@@ -2346,10 +2614,6 @@ export class Home {
   /** Nivel, XP y estadísticas; con `count`, las cifras suben desde cero. */
   renderProgress(count = false) {
     const p = this.profile;
-    const info = levelInfo(p.xp);
-    $('perfil-nivel').textContent = info.level;
-    $('perfil-xp-barra').style.setProperty('--p', String(Math.max(0, Math.min(1, info.progress))));
-    $('perfil-xp').textContent = `${p.xp - info.start} / ${info.next - info.start} XP para el nivel ${info.level + 1}`;
     const s = p.stats;
     const int = (n) => formatNumber(Math.round(n));
     // [etiqueta, valor, formato, icono, destacada]
@@ -2538,6 +2802,7 @@ export class Home {
     g.stroke();
     $('vp-etiqueta').textContent = p.nombre || 'Mi nación';
     $('vp-etiqueta').style.color = nameColorOf(p);
+    $('vp-escena')?.replaceChildren(this._skinScene(320, 96));
   }
 
   /** Últimas partidas en el resumen del perfil (el historial entero, en Clasificación). */
@@ -2630,43 +2895,171 @@ export class Home {
         );
       }),
     );
+    this._decorateCollection($('sel-patrones'));
+    this._applyColFilter();
   }
 
   // --------------------------------------------------------------- logros
 
+  /** Progreso: cabecera, camino de recompensas, «casi lo tienes» y gestas. */
   renderAchievements() {
     const p = this.profile;
     const done = ACHIEVEMENTS.filter((a) => hasAchievement(p, a.id)).length;
-    $('logros-resumen').textContent = `${done} de ${ACHIEVEMENTS.length} · 🪙 ${formatNumber(p.monedas || 0)}`;
+    const points = ACHIEVEMENTS.reduce((s, a) => s + (hasAchievement(p, a.id) ? achPoints(a) : 0), 0);
+    const maxPoints = ACHIEVEMENTS.reduce((s, a) => s + achPoints(a), 0);
+    $('logros-resumen').textContent = `${done} de ${ACHIEVEMENTS.length} · ${formatNumber(points)} puntos`;
     this.renderDaily();
-    $('lista-logros').replaceChildren(
-      ...ACHIEVEMENTS.map((a) => {
-        const when = hasAchievement(p, a.id) ? p.logros[a.id] : 0;
-        const rewards = rewardsOf(a.id);
-        const prog = when ? null : achievementProgress(p, a);
-        return el(
-          'li',
-          { class: when ? 'conseguido' : 'pendiente' },
-          el('span', { class: 'logro-icono', 'aria-hidden': 'true', text: a.icon }),
-          el(
-            'div',
-            { class: 'logro-texto' },
-            el('strong', { text: a.name }),
-            el('span', { text: a.desc }),
-            prog ? el('span', { class: 'logro-progreso' },
-              el('span', { class: 'logro-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog.have / prog.need).toFixed(3)}` })),
-              el('small', { text: `${formatNumber(prog.have)}/${formatNumber(prog.need)}` })) : null,
-            rewards.length ? el('small', { class: 'logro-premio', text: `Recompensa: ${rewards.join(' · ')}` }) : null,
-          ),
-          el(
-            'span',
-            { class: 'logro-estado' },
-            a.coins ? el('b', { class: 'logro-monedas', text: `🪙 ${a.coins}` }) : null,
-            el('span', { class: 'logro-fecha', text: when ? `✓ ${new Date(when).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : '🔒' }),
-          ),
-        );
+    this._renderProgressHead(done, points, maxPoints);
+    this._renderRewardPath();
+    this._renderAlmost();
+    this._renderDeeds();
+  }
+
+  /** Cabecera de Progreso: medallón de nivel, experiencia y tus marcadores. */
+  _renderProgressHead(done, points, maxPoints) {
+    const p = this.profile;
+    const info = levelInfo(p.xp);
+    const col = this._collectionCount();
+    const stat = (icon, value, label, onclick = null) => el(onclick ? 'button' : 'div', { class: 'pg-marcador', ...(onclick ? { type: 'button', onclick } : {}) },
+      el('span', { class: 'pg-m-icono', 'aria-hidden': 'true', text: icon }),
+      el('strong', { text: value }),
+      el('small', { text: label }));
+    $('pg-cab').replaceChildren(
+      el('div', { class: 'pg-medallon', 'aria-label': `Nivel ${info.level}` }, el('small', { text: 'Nivel' }), el('strong', { text: String(info.level) })),
+      el('div', { class: 'pg-cab-centro' },
+        el('div', { class: 'pg-cab-linea' }, el('strong', { class: 'pg-nombre', text: p.nombre || 'Sin nombre', style: `color:${nameColorOf(p)}` }), el('span', { class: 'pg-titulo', text: titleName(p) || 'Recluta' })),
+        el('div', { class: 'pg-xp', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(info.next - info.start), 'aria-valuenow': String(p.xp - info.start), 'aria-label': 'Experiencia' },
+          el('span', { class: 'pg-xp-relleno', style: `--p:${Math.max(0, Math.min(1, info.progress)).toFixed(3)}` }),
+          el('span', { class: 'pg-xp-txt', text: `${formatNumber(p.xp - info.start)} / ${formatNumber(info.next - info.start)} XP` })),
+        el('small', { class: 'pg-xp-nota', text: `Te faltan ${formatNumber(info.next - p.xp)} XP para el nivel ${info.level + 1}. Una victoria da unos 150 XP de más.` })),
+      el('div', { class: 'pg-marcadores' },
+        stat('🏆', `${formatNumber(points)}`, `puntos de gesta (de ${formatNumber(maxPoints)})`),
+        stat('📜', `${done}/${ACHIEVEMENTS.length}`, 'gestas'),
+        stat('🎒', `${col.have}/${col.total}`, 'colección', () => this.openCollection(this.colTab || 'emblema')),
+        stat('🪙', formatNumber(p.monedas || 0), 'monedas')),
+    );
+  }
+
+  /** Camino de recompensas: lo próximo que se desbloquea por nivel, con su ficha. */
+  _renderRewardPath() {
+    const p = this.profile;
+    const lvl = levelInfo(p.xp).level;
+    const next = COLLECTION.flatMap((c) => c.list.filter((i) => i.unlock && i.unlock.level && i.unlock.level > lvl))
+      .sort((a, b) => a.unlock.level - b.unlock.level)
+      .slice(0, 8);
+    if (!next.length) {
+      $('pg-camino').replaceChildren(el('p', { class: 'nota', text: 'Ya tienes todo lo que se gana con el nivel. Lo que queda está en la tienda y en las gestas.' }));
+      return;
+    }
+    const nodes = [el('div', { class: 'pc-nodo pc-actual' }, el('span', { class: 'pc-nivel', text: String(lvl) }), el('small', { text: 'Ahora' }))];
+    for (const item of next) {
+      const rar = rarityOf(item);
+      const n = el('button', { type: 'button', class: 'pc-nodo', style: `--rar:${rar.color}`, 'aria-label': `Nivel ${item.unlock.level}: ${item.name}`, onclick: () => this.openCollection(CATALOG.get(item.cat).col) },
+        el('span', { class: 'pc-nivel', text: String(item.unlock.level) }),
+        el('span', { class: 'pc-icono' }, this._itemIcon(item, 40)),
+        el('small', { class: 'pc-nombre', text: item.name, style: `color:${rar.color}` }));
+      attachTip(n, () => this._itemTip(item));
+      nodes.push(n);
+    }
+    $('pg-camino').replaceChildren(...nodes);
+    rodar($('pg-camino'));
+  }
+
+  /** «Casi lo tienes»: las gestas más avanzadas y lo que ya puedes comprar. */
+  _renderAlmost() {
+    const p = this.profile;
+    const rows = [];
+    const near = ACHIEVEMENTS.filter((a) => !hasAchievement(p, a.id))
+      .map((a) => ({ a, prog: achievementProgress(p, a) }))
+      .filter((x) => x.prog && x.prog.have > 0 && x.prog.have < x.prog.need)
+      .sort((x, y) => y.prog.have / y.prog.need - x.prog.have / x.prog.need)
+      .slice(0, 4);
+    for (const { a, prog } of near) {
+      rows.push(el('li', { class: 'casi-gesta' },
+        el('span', { class: 'casi-icono', 'aria-hidden': 'true', text: a.icon }),
+        el('div', { class: 'casi-texto' },
+          el('strong', { text: a.name }),
+          el('span', { class: 'reto-barra llena-al-ver' }, el('span', { style: `--p:${(prog.have / prog.need).toFixed(3)}` })),
+          el('small', { text: `${formatNumber(prog.have)}/${formatNumber(prog.need)} · ${a.desc}` })),
+        el('b', { class: 'casi-premio', text: `+${achPoints(a)}` })));
+    }
+    const coins = p.monedas || 0;
+    const affordable = COLLECTION.flatMap((c) => c.list).filter((i) => i.unlock && i.unlock.price && !isUnlocked(p, i) && i.unlock.price <= coins)
+      .sort((a, b) => b.unlock.price - a.unlock.price)
+      .slice(0, 3);
+    for (const item of affordable) {
+      const rar = rarityOf(item);
+      const C = CATALOG.get(item.cat);
+      const btn = el('button', { type: 'button', class: 'casi-compra', style: `--rar:${rar.color}`, onclick: () => this.openCollection(C.col) },
+        el('span', { class: 'casi-icono' }, this._itemIcon(item, 34)),
+        el('span', { class: 'casi-texto' }, el('strong', { text: item.name, style: `color:${rar.color}` }), el('small', { text: `${C.type} · ya puedes comprarlo` })),
+        el('b', { class: 'casi-premio oro', text: `🪙 ${formatNumber(item.unlock.price)}` }));
+      attachTip(btn, () => this._itemTip(item));
+      rows.push(el('li', {}, btn));
+    }
+    $('pg-casi').replaceChildren(...(rows.length ? rows : [el('li', { class: 'casi-vacio' }, emptyState('🎯', 'Nada a medias', 'Juega partidas para avanzar en tus gestas y ganar monedas.'))]));
+    llenarAlVer($('pg-casi'));
+  }
+
+  /** Gestas: índice de categorías, filtro y filas con premios, puntos y fecha. */
+  _renderDeeds() {
+    const p = this.profile;
+    this.gestaCat ??= 'todas';
+    this.gestaFilter ??= 'todas';
+    const inCat = (a) => this.gestaCat === 'todas' || achCategory(a.id) === this.gestaCat;
+    const cats = [{ id: 'todas', name: 'Todas', icon: '📚' }, ...ACH_CATEGORIES];
+    $('gestas-cats').replaceChildren(
+      ...cats.map((c) => {
+        const list = ACHIEVEMENTS.filter((a) => c.id === 'todas' || achCategory(a.id) === c.id);
+        const got = list.filter((a) => hasAchievement(p, a.id)).length;
+        return el('button', { type: 'button', class: 'gc-cat', 'aria-pressed': String(c.id === this.gestaCat), onclick: () => {
+          this.gestaCat = c.id;
+          this._renderDeeds();
+        } },
+        el('span', { class: 'gc-icono', 'aria-hidden': 'true', text: c.icon }),
+        el('span', { class: 'gc-nombre', text: c.name }),
+        el('small', { class: 'gc-n', text: `${got}/${list.length}` }),
+        el('span', { class: 'gc-barra', 'aria-hidden': 'true' }, el('span', { style: `--p:${(got / Math.max(1, list.length)).toFixed(3)}` })));
       }),
     );
+    rodar($('gestas-cats'));
+    segmented($('gestas-filtro'), [['todas', 'Todas'], ['hechas', 'Conseguidas'], ['pendientes', 'Pendientes']], this.gestaFilter, (v) => {
+      this.gestaFilter = v;
+      this._renderDeeds();
+    });
+    const rewardItems = (id) => COLLECTION.flatMap((c) => c.list.filter((i) => i.unlock && i.unlock.ach === id));
+    const list = ACHIEVEMENTS.filter(inCat).filter((a) => {
+      const has = hasAchievement(p, a.id);
+      return this.gestaFilter === 'hechas' ? has : this.gestaFilter === 'pendientes' ? !has : true;
+    });
+    const rows = list.map((a) => {
+      const when = hasAchievement(p, a.id) ? p.logros[a.id] : 0;
+      const prog = when ? null : achievementProgress(p, a);
+      const items = rewardItems(a.id);
+      const chips = [];
+      if (a.coins) chips.push(el('span', { class: 'gp-chip oro', text: `🪙 ${a.coins}` }));
+      for (const item of items) {
+        const rar = rarityOf(item);
+        const chip = el('button', { type: 'button', class: 'gp-chip', style: `--rar:${rar.color}`, onclick: () => this.openCollection(CATALOG.get(item.cat).col) },
+          el('span', { class: 'gp-ico' }, this._itemIcon(item, 18)),
+          el('span', { text: item.name }));
+        attachTip(chip, () => this._itemTip(item));
+        chips.push(chip);
+      }
+      return el('li', { class: `gesta ${when ? 'conseguido' : 'pendiente'}`, 'data-cat': achCategory(a.id) },
+        el('span', { class: 'gesta-medallon', 'aria-hidden': 'true' }, el('span', { text: a.icon })),
+        el('div', { class: 'logro-texto' },
+          el('strong', { text: a.name }),
+          el('span', { text: a.desc }),
+          prog ? el('span', { class: 'logro-progreso' },
+            el('span', { class: 'logro-barra llena-al-ver', 'aria-hidden': 'true' }, el('span', { style: `--p:${(prog.have / prog.need).toFixed(3)}` })),
+            el('small', { text: `${formatNumber(prog.have)}/${formatNumber(prog.need)}` })) : null,
+          chips.length ? el('div', { class: 'gesta-premios' }, el('small', { class: 'gp-etq', text: 'Recompensa' }), ...chips) : null),
+        el('span', { class: 'logro-estado' },
+          el('b', { class: 'gesta-puntos', title: 'Puntos de gesta', text: String(achPoints(a)) }),
+          el('span', { class: 'logro-fecha', text: when ? `✓ ${new Date(when).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : '🔒' })));
+    });
+    $('lista-logros').replaceChildren(...(rows.length ? rows : [el('li', { class: 'gesta-vacia' }, emptyState('📜', 'Nada por aquí', this.gestaFilter === 'hechas' ? 'Aún no tienes gestas de esta categoría.' : 'Las tienes todas. ¡Enhorabuena!'))]));
     llenarAlVer($('lista-logros'));
   }
 

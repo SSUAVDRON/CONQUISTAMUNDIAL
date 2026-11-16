@@ -288,7 +288,7 @@ function paintGlyph(ctx, g, color, outline) {
  * un disco oscuro semitransparente (triángulo para silo y antimisiles) con un
  * anillo fino de ese color. `outline`: tuyo (filo blanco por fuera).
  */
-export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline = false, color = '#ffffff' } = {}) {
+export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline = false, color = '#ffffff', skin = null } = {}) {
   const g = glyphs()[kind];
   if (!g) return;
   ctx.save();
@@ -298,6 +298,11 @@ export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline
   if (!ring) {
     ctx.scale(1.05, 1.05);
     paintGlyph(ctx, g, color, false);
+    ctx.restore();
+    return;
+  }
+  if (skin) {
+    paintSkinnedPlate(ctx, kind, g, ring, outline, skin);
     ctx.restore();
     return;
   }
@@ -322,6 +327,135 @@ export function drawBuildingReal(ctx, kind, cx, cy, size, { ring = null, outline
   } else ctx.scale(0.7, 0.7);
   paintGlyph(ctx, g, color === '#ffffff' ? '#eef2f7' : color, false);
   ctx.restore();
+}
+
+/** Contorno de la placa de un aspecto de edificio (en la caja de 20 × 20). */
+function platePath(ctx, kind, shape) {
+  ctx.beginPath();
+  if (kind === 'sam' || kind === 'silo') {
+    roundedTriangle(ctx, 12.5, 2.4);
+    return;
+  }
+  if (shape === 'hex') {
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + (i * Math.PI) / 3;
+      const x = Math.cos(a) * 10.6;
+      const y = Math.sin(a) * 10.6;
+      if (i) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  } else if (shape === 'shield') {
+    ctx.moveTo(-9.4, -9.2);
+    ctx.lineTo(9.4, -9.2);
+    ctx.lineTo(9.4, -1);
+    ctx.quadraticCurveTo(9, 7, 0, 10.6);
+    ctx.quadraticCurveTo(-9, 7, -9.4, -1);
+    ctx.closePath();
+  } else ctx.arc(0, 0, 10, 0, TAU);
+}
+
+/**
+ * Edificio con un aspecto (skins.js): placa con su material y degradado,
+ * aro del color del dueño, filo exterior, adornos (remaches, laurel, runas),
+ * brillo y el pictograma de su color.
+ */
+function paintSkinnedPlate(ctx, kind, g, ring, outline, L) {
+  const tri = kind === 'sam' || kind === 'silo';
+  ctx.lineJoin = 'round';
+  // Brillo detrás de la placa
+  if (L.glow) {
+    ctx.save();
+    ctx.shadowColor = L.glow;
+    ctx.shadowBlur = 7;
+    platePath(ctx, kind, L.shape);
+    ctx.fillStyle = L.plate[1];
+    ctx.fill();
+    ctx.restore();
+  }
+  platePath(ctx, kind, L.shape);
+  const grad = ctx.createLinearGradient(0, -11, 0, 11);
+  grad.addColorStop(0, L.plate[0]);
+  grad.addColorStop(1, L.plate[1]);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  if (outline) {
+    ctx.lineWidth = 3.6;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  }
+  // Filo exterior del material y, dentro, el aro del dueño
+  if (L.rim2) {
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = L.rim2;
+    ctx.stroke();
+  }
+  ctx.save();
+  ctx.scale(0.84, 0.84);
+  if (tri) ctx.translate(0, 0.6);
+  platePath(ctx, kind, L.shape);
+  ctx.restore();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = ring;
+  ctx.stroke();
+  // Adornos
+  if (L.ornament === 'rivets' && !tri) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + (i * Math.PI) / 3;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * 9.2, Math.sin(a) * 9.2, 0.8, 0, TAU);
+      ctx.fill();
+    }
+  } else if (L.ornament === 'laurel' && !tri) {
+    ctx.strokeStyle = '#6fa24a';
+    ctx.fillStyle = '#8cc35e';
+    ctx.lineWidth = 0.7;
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const a = Math.PI / 2 + side * (0.5 + i * 0.32);
+        const x = Math.cos(a) * 11.4;
+        const y = Math.sin(a) * 11.4;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 1.9, 0.9, a + side * 0.9, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  } else if (L.ornament === 'runes' && !tri) {
+    ctx.strokeStyle = L.rim2 || '#ffffff';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 12; i++) {
+      const a = (i * TAU) / 12;
+      const r0 = 7.6;
+      const r1 = i % 3 === 0 ? 9.6 : 8.6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+      ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      ctx.stroke();
+    }
+  }
+  // Reflejo de la placa
+  ctx.save();
+  platePath(ctx, kind, L.shape);
+  ctx.clip();
+  const shine = ctx.createLinearGradient(-8, -10, 4, 2);
+  shine.addColorStop(0, 'rgba(255, 255, 255, 0.28)');
+  shine.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = shine;
+  ctx.fillRect(-12, -12, 24, 24);
+  ctx.restore();
+  // Pictograma
+  if (tri) {
+    ctx.translate(0, 2.4);
+    ctx.scale(0.62, 0.62);
+  } else ctx.scale(0.66, 0.66);
+  if (L.glow) {
+    ctx.shadowColor = L.glow;
+    ctx.shadowBlur = 4;
+  }
+  paintGlyph(ctx, g, L.glyph, false);
+  ctx.shadowBlur = 0;
 }
 
 /**

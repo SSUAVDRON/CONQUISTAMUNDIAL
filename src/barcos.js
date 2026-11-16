@@ -73,7 +73,7 @@ function tiny(ctx, x, y, ang, len, color, mine) {
 }
 
 /** Lancha de desembarco con las tropas en cubierta. */
-export function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1) {
+export function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1, look = null) {
   if (len < 8) return tiny(ctx, x, y, ang, Math.max(5, len), color, mine);
   const w = len * 0.46;
   ctx.save();
@@ -92,11 +92,25 @@ export function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1) {
   ctx.lineTo(len * 0.4, w * 0.5);
   ctx.quadraticCurveTo(len * 0.5, w * 0.5, len * 0.5, w * 0.38);
   ctx.closePath();
-  ctx.fillStyle = '#4b5661';
+  // Aspecto (skins.js): casco, brillo y filete
+  if (look && look.glow) {
+    ctx.save();
+    ctx.shadowColor = look.glow;
+    ctx.shadowBlur = len * 0.5;
+    ctx.fillStyle = look.hull;
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = look ? look.hull : '#4b5661';
   ctx.fill();
   ctx.lineWidth = Math.max(1, len * 0.06);
   ctx.strokeStyle = mine ? OUTLINE_MINE : OUTLINE;
   ctx.stroke();
+  if (look && look.trim) {
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = Math.max(0.8, len * 0.035);
+    ctx.strokeRect(-len * 0.42, -w * 0.42, len * 0.84, w * 0.84);
+  }
   // Bodega con el color del dueño
   ctx.fillStyle = color;
   ctx.fillRect(-len * 0.34, -w * 0.32, len * 0.7, w * 0.64);
@@ -116,7 +130,7 @@ export function drawTransport(ctx, x, y, ang, len, color, mine, moving = 1) {
     }
   }
   // Puente de mando a popa
-  ctx.fillStyle = '#d7dde3';
+  ctx.fillStyle = look ? look.bridge : '#d7dde3';
   ctx.fillRect(-len * 0.47, -w * 0.22, len * 0.12, w * 0.44);
   ctx.restore();
 }
@@ -181,19 +195,37 @@ export function drawWarship(ctx, x, y, ang, r, color, mine, aim = null, moving =
     ctx.restore();
     return;
   }
-  // Silueta del buque, girada con su rumbo
+  // Silueta del buque, girada con su rumbo (con su aspecto, skins.js)
+  const look = opts.look || null;
   ctx.save();
   ctx.rotate(ang);
   hull();
-  ctx.fillStyle = '#c9d2da';
+  if (look && look.glow) {
+    ctx.save();
+    ctx.shadowColor = look.glow;
+    ctx.shadowBlur = r * 0.9;
+    ctx.fillStyle = look.warHull;
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = look ? look.warHull : '#c9d2da';
   ctx.fill();
   ctx.lineWidth = Math.max(1.2, r * 0.09);
   ctx.lineJoin = 'round';
   ctx.strokeStyle = mine ? '#ffffff' : 'rgba(10, 16, 24, 0.7)';
   ctx.stroke();
+  if (look && look.trim) {
+    ctx.save();
+    ctx.scale(0.86, 0.72);
+    hull();
+    ctx.restore();
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = Math.max(0.8, r * 0.06);
+    ctx.stroke();
+  }
   ctx.fillStyle = color;
   ctx.fillRect(-L * 0.36, -W * 0.24, L * 0.62, W * 0.48);
-  ctx.fillStyle = '#eef2f5';
+  ctx.fillStyle = look ? look.bridge : '#eef2f5';
   ctx.fillRect(-L * 0.1, -W * 0.3, L * 0.2, W * 0.6);
   const turret = (tx) => {
     ctx.save();

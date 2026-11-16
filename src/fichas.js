@@ -166,14 +166,18 @@ export function buildingCard(game, p, kind) {
       break;
     }
     case 'factory': {
-      card.summary = 'Tiende vías de tren hasta tus ciudades, puertos y otras fábricas cercanas.';
+      card.summary = `Tiende vías a la vez a todas las estaciones a su alcance (ciudades, puertos, fábricas, pueblos y capitales; hasta ${CONFIG.railMaxPerFactory}). Puesta encima de una vía, se engancha a ella y llega a sus dos extremos.`;
+      // Más fábricas, más trenes en todas tus vías
+      const active = p.active.factory || 0;
+      const boost = (n, lvl = 1) => Math.min(CONFIG.trainBoostMax, 1 + CONFIG.trainFactoryBoost * Math.max(0, n - 1) + CONFIG.trainLevelBoost * (lvl - 1));
       card.gives = [
         { icon: 'tren', label: 'Cada tren', value: `+${formatNumber(MECH.trainRewards.self)}`, note: `de oro al llegar (${formatNumber(MECH.trainRewards.ally)} en una estación aliada)` },
         { icon: 'alcance', label: 'Alcance de las vías', value: `${dist(game.railRange(1))} casillas` },
+        { icon: 'tren', label: 'Trenes', value: `×${dec(boost(active + 1))}`, note: active ? `con esta, ${active + 1} fábricas: ×${dec(boost(active + 1))} trenes en todas tus vías (ahora ×${dec(boost(active))})` : 'cada fábrica más: +20 % de trenes en todas tus vías' },
       ];
-      card.have = count ? `${count} ${count === 1 ? 'fábrica' : 'fábricas'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ninguna fábrica todavía: hacen falta ciudades o puertos cerca.';
-      card.next = { title: 'Cada nivel', rows: [{ label: 'Alcance de las vías', from: '', to: `+${dist(CONFIG.railRangePerLevel)} casillas` }] };
-      card.how = `Clic ${where}, cerca de tus ciudades y puertos. ${upHow} Comparte precio con los puertos.`;
+      card.have = count ? `${count} ${count === 1 ? 'fábrica' : 'fábricas'}${levels > count ? ` (${levels} niveles)` : ''}.` : 'Ninguna fábrica todavía: ponla cerca de ciudades, pueblos o puertos, o encima de una vía.';
+      card.next = { title: 'Cada nivel', rows: [{ label: 'Alcance de las vías', from: '', to: `+${dist(CONFIG.railRangePerLevel)} casillas` }, { label: 'Trenes en sus vías', from: '', to: `+${Math.round(CONFIG.trainLevelBoost * 100)} %` }] };
+      card.how = `Clic ${where}, cerca de tus ciudades, pueblos y puertos (o sobre una vía). ${upHow} Comparte precio con los puertos.`;
       break;
     }
     case 'fort': {

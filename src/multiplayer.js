@@ -9,6 +9,7 @@
 import { BUILDINGS, BUILDING_KINDS, CONFIG, MAP_IDS, TICK_MS, cleanRules } from './config.js';
 import { MECH, PROFILES, rulesetId } from './mecanicas.js';
 import { selfPeer } from './net.js';
+import { cleanSkins } from './skins.js';
 
 /**
  * Versión del protocolo de la sala y de la sincronización. 2: cada mensaje de
@@ -262,6 +263,8 @@ function cleanPlayer(raw) {
     frame: word(p.frame, 'ninguno'),
     banner: word(p.banner, 'noche'),
     nameColor: typeof p.nameColor === 'string' && /^[a-z]{2,12}$/.test(p.nameColor) ? p.nameColor : '',
+    // Aspecto de sus edificios, barcos y bombas (solo se ve: no cambia la partida)
+    skins: cleanSkins(p.skins),
   };
 }
 
@@ -725,7 +728,7 @@ export class Sala {
       ruleset: roomRuleset(this.settings.rules),
       settings: this.settings,
       // Lo que se ve de cada uno en la partida y en la presentación (nivel, título, marco, estandarte…)
-      players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor })),
+      players: players.map(({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor, skins }) => ({ peer, name, color, emblem, pattern, level, title, frame, banner, nameColor, skins })),
     };
     payload.count = payload.players.length;
     this.payload = payload;
