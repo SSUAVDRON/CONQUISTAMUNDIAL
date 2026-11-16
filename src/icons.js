@@ -1337,9 +1337,7 @@ function flagCell(id) {
   return null;
 }
 
-/** Todas las banderas que se pueden elegir: [id, nombre, grupo] (grupos: es, eus, his, reg, pais, org). */
-export { FLAG_CATALOG };
-
+/** Nombre en español de cada bandera que se puede elegir. */
 const FLAG_NAMES = new Map(FLAG_CATALOG.map(([id, name]) => [id, name]));
 /** Nombre de una bandera («Cataluña», «II República Española»…), o ''. */
 export function flagName(id) {
