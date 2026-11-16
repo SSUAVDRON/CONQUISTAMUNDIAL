@@ -9,6 +9,14 @@ import { buildingCard, minSec } from './fichas.js';
 
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
 
+/** Enseña u oculta lo avanzado (.av) en toda la partida y avisa (la ficha y el tooltip se recolocan). */
+function setAdvanced(on) {
+  const root = document.documentElement;
+  if (root.classList.contains('info-avanzada') === on) return;
+  root.classList.toggle('info-avanzada', on);
+  document.dispatchEvent(new CustomEvent('info-avanzada', { detail: on }));
+}
+
 const svg = (body, fill = false) =>
   `<svg viewBox="0 0 16 16" aria-hidden="true" ${fill ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"'}>${body}</svg>`;
 const ICONS = {
@@ -59,12 +67,22 @@ export class FichaUI {
     el.addEventListener('pointerdown', () => (this._held = true));
     for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, () => (this._held = false), true);
     el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-detalles]')) {
+        // En el móvil no hay Mayús: este botón enseña (o esconde) lo avanzado
+        this._avBtn = !document.documentElement.classList.contains('info-avanzada');
+        setAdvanced(this._avBtn);
+        return;
+      }
       if (e.target.closest('[data-cancelar]')) onCancel?.(this.cur && this.cur.kind);
       else if (e.target.closest('[data-mejorar]')) {
         onUpgrade?.();
         this._at = 0;
       } else if (e.target.closest('[data-cerrar]')) this.hide();
       else if (this.cur && (this.cur.mode === 'press' || this.cur.mode === 'bono')) this.hide();
+    });
+    // Al pulsar o soltar Mayús cambia su altura: se vuelve a colocar
+    document.addEventListener('info-avanzada', () => {
+      if (this.cur) requestAnimationFrame(() => this.cur && this._place());
     });
   }
 
@@ -85,6 +103,10 @@ export class FichaUI {
   hide() {
     if (!this.cur) return;
     this.cur = null;
+    if (this._avBtn) {
+      this._avBtn = false;
+      setAdvanced(false);
+    }
     this.el.classList.remove('visible');
     clearTimeout(this._hideTimer);
     this._hideTimer = setTimeout(() => {
@@ -163,14 +185,17 @@ export class FichaUI {
       ? '<b>Máx.</b>'
       : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>${c.troops ? `<small class="${shortT ? 'falta' : 'tropas'}">+ ${fmtTroops(c.troops)} tropas</small>` : ''}`;
     const meta = [c.time ? `${ICONS.reloj}${seconds(c.time)} de obra` : '', c.key ? `<kbd>${esc(c.key)}</kbd>` : ''].filter(Boolean).join('');
+    // Lo esencial a la vista; lo avanzado (.av) con Mayús o «Detalles» (la
+    // hoja de la capital, que se abre a propósito, lo enseña todo)
+    const AV = mode === 'sheet' ? '' : ' av';
     const gives = c.gives
       .map(
-        (g) => `<li><i class="fi">${ICONS[g.icon] || ''}</i><span class="fd-txt"><span class="fd-l">${esc(g.label)}</span>${g.note ? `<small>${esc(g.note)}</small>` : ''}</span>${g.value ? `<b class="fd-v">${esc(g.value)}</b>` : ''}</li>`,
+        (g) => `<li><i class="fi">${ICONS[g.icon] || ''}</i><span class="fd-txt"><span class="fd-l">${esc(g.label)}</span>${g.note ? `<small class="${AV.trim()}">${esc(g.note)}</small>` : ''}</span>${g.value ? `<b class="fd-v">${esc(g.value)}</b>` : ''}</li>`,
       )
       .join('');
     const next =
       c.next && c.next.rows.length && mode !== 'dock'
-        ? `<section class="ficha-sec"><h4>${esc(c.next.title)}</h4><div class="ficha-niv">${c.next.rows
+        ? `<section class="ficha-sec${AV}"><h4>${esc(c.next.title)}</h4><div class="ficha-niv">${c.next.rows
             .map((r) => `<div class="fn-fila"><span class="fn-l">${esc(r.label)}</span>${r.from ? `<span class="fn-de">${esc(r.from)}</span><i class="fn-a">→</i>` : ''}<b>${esc(r.to)}</b></div>`)
             .join('')}</div></section>`
         : '';
@@ -183,7 +208,7 @@ export class FichaUI {
     if (c.perks && mode !== 'dock') {
       const list = mode === 'sheet' ? c.perks : c.perks.filter((x) => x.state !== 'hecho').slice(0, 3);
       if (list.length) {
-        perks = `<section class="ficha-sec"><h4>${mode === 'sheet' ? 'Premios por nivel' : 'Próximos premios'}</h4><ul class="ficha-premios">${list
+        perks = `<section class="ficha-sec${AV}"><h4>${mode === 'sheet' ? 'Premios por nivel' : 'Próximos premios'}</h4><ul class="ficha-premios">${list
           .map((x) => `<li class="${x.state}"><span class="pk-n">${x.level}</span><span class="pk-t">${esc(x.text)}</span><i class="pk-e">${x.state === 'hecho' ? ICONS.tienes : x.state === 'siguiente' ? ICONS.estrella : ICONS.candado}</i></li>`)
           .join('')}</ul></section>`;
       }
@@ -193,8 +218,15 @@ export class FichaUI {
       : '';
     const sheet = mode === 'sheet' && c.kind === 'capUp';
     const close = mode === 'sheet' ? '<button type="button" class="ficha-cerrar" data-cerrar aria-label="Cerrar">×</button>' : '';
-    const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : ''}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
-    const how = c.how ? `<div class="ficha-como">${esc(c.how)}</div>` : '';
+    const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : AV}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
+    const how = c.how ? `<div class="ficha-como${AV}">${esc(c.how)}</div>` : '';
+    // La primera frase del resumen; el resto, con lo avanzado
+    const sum = String(c.summary || '');
+    const cut = sum.search(/\.\s/);
+    const summary = cut > 0 && cut < sum.length - 2 ? `${esc(sum.slice(0, cut + 1))}<span class="av"> ${esc(sum.slice(cut + 2))}</span>` : esc(sum);
+    const more = mode === 'sheet' ? '' : mode === 'hover'
+      ? '<div class="ficha-mas solo-resumen">Mantén <kbd>Mayús</kbd> para ver más detalles</div>'
+      : '<button type="button" class="ficha-detalles" data-detalles><span class="solo-resumen">Más detalles</span><span class="av">Menos detalles</span></button>';
     const cancel = mode === 'dock' ? '<button type="button" class="ficha-cancelar" data-cancelar>Cancelar</button>' : '';
     return `
       <div class="ficha-cab">
@@ -205,14 +237,15 @@ export class FichaUI {
       ${close}
       ${pips}
       ${sheet ? upgrade : ''}
-      ${!sheet && meta ? `<div class="ficha-meta">${meta}</div>` : ''}
-      ${!sheet ? `<p class="ficha-resumen">${esc(c.summary)}</p>` : ''}
+      ${!sheet && meta ? `<div class="ficha-meta av">${meta}</div>` : ''}
+      ${!sheet ? `<p class="ficha-resumen">${summary}</p>` : ''}
       ${gives && !sheet ? `<section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>` : ''}
-      ${c.payback ? `<p class="ficha-amort" title="Orientativo: con tu oro de ahora; cambia con tu territorio y tus bonos">${ICONS.reloj}<span>Se paga en <b>~${esc(minSec(c.payback.seconds))}</b> de funcionar · ${esc(minSec(c.payback.withBuild))} contando la obra${c.payback.note && mode !== 'dock' ? `<small>${esc(c.payback.note)}</small>` : ''}</span></p>` : ''}
+      ${c.payback ? `<p class="ficha-amort${AV}" title="Orientativo: con tu oro de ahora; cambia con tu territorio y tus bonos">${ICONS.reloj}<span>Se paga en <b>~${esc(minSec(c.payback.seconds))}</b> de funcionar · ${esc(minSec(c.payback.withBuild))} contando la obra${c.payback.note && mode !== 'dock' ? `<small>${esc(c.payback.note)}</small>` : ''}</span></p>` : ''}
       ${next}
       ${perks}
       ${have}
       ${sheet ? (c.maxed ? how : '') : how}
+      ${more}
       ${cancel}`;
   }
 

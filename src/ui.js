@@ -497,10 +497,58 @@ export class UI {
     wide?.addEventListener?.('change', layout);
     // Su altura real, para que los avisos se coloquen encima cuando no caben al lado
     if (typeof ResizeObserver !== 'undefined') {
+      const pie = $('pie-centro') || panel;
       new ResizeObserver(() => {
-        document.documentElement.style.setProperty('--pj-alto', `${Math.round(panel.offsetHeight)}px`);
-      }).observe(panel);
+        document.documentElement.style.setProperty('--pj-alto', `${Math.round(pie.offsetHeight)}px`);
+      }).observe(pie);
+      // Y la del banco (el minimapa va encima); 0 si no hay capital
+      new ResizeObserver(() => {
+        document.documentElement.style.setProperty('--banco-alto', `${Math.round($('pj-banco').offsetHeight)}px`);
+      }).observe($('pj-banco'));
     }
+
+    // Clasificación: los 3 primeros y tú; «Ver todas» la amplía (se recuerda)
+    const lb = $('clasificacion');
+    let wideLb = false;
+    try {
+      wideLb = localStorage.getItem('trinchera.clasifAmpliada') === '1';
+    } catch {
+      wideLb = false;
+    }
+    const setWideLb = (on) => {
+      lb.classList.toggle('lb-ampliada', on);
+      $('lb-ver').setAttribute('aria-expanded', String(on));
+      this._lbVerTxt = '';
+      try {
+        localStorage.setItem('trinchera.clasifAmpliada', on ? '1' : '0');
+      } catch {
+        // sin almacenamiento
+      }
+    };
+    setWideLb(wideLb);
+    $('lb-ver').addEventListener('click', () => setWideLb(!lb.classList.contains('lb-ampliada')));
+
+    // Zoom con botones (junto al minimapa)
+    $('zoom-mas')?.addEventListener('click', () => this.handlers.onZoom?.(1.45));
+    $('zoom-menos')?.addEventListener('click', () => this.handlers.onZoom?.(1 / 1.45));
+
+    // Información avanzada: mientras se mantiene Mayús (en el móvil, el botón
+    // «Detalles» de cada ficha). Lo marcado con .av solo se ve entonces
+    const setAdvanced = (on) => {
+      const root = document.documentElement;
+      if (root.classList.contains('info-avanzada') === on) return;
+      root.classList.toggle('info-avanzada', on);
+      document.dispatchEvent(new CustomEvent('info-avanzada', { detail: on }));
+    };
+    this.setAdvanced = setAdvanced;
+    document.addEventListener('info-avanzada', () => (this._tipSize = null));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift' && !e.repeat) setAdvanced(true);
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift') setAdvanced(false);
+    });
+    window.addEventListener('blur', () => setAdvanced(false));
 
     $('lista-clasificacion').addEventListener('click', (e) => {
       const li = e.target.closest('li[data-id]');
@@ -1172,6 +1220,7 @@ export class UI {
     // Economía fija (la del documento): solo tropas, sin reparto ni trabajadores
     const workersMode = human.economy === 'workers';
     $('panel-jugador').classList.toggle('economia-fija', !workersMode);
+    $('hud').classList.toggle('economia-fija', !workersMode);
     const label = workersMode ? 'Población' : 'Tropas';
     if ($('pj-pob-etq').textContent !== label) txt('pj-pob-etq', label);
     const pop = human.population();
@@ -1212,7 +1261,9 @@ export class UI {
     const goldTitle = `Oro pasivo por segundo: base +${ps(gb.base)} · territorio +${ps(gb.tax)} · pueblos +${ps(gb.villages)}${gb.workers ? ` · trabajadores +${ps(gb.workers)}` : ''} · bonos +${ps(gb.bonus)}. Comercio, pesqueros y botín llegan aparte (panel de desarrollo → Economía)`;
     const goldBox = $('pj-oro').parentElement;
     if (goldBox.title !== goldTitle) goldBox.title = goldTitle;
-    txt('pj-terr', formatShare(human.tiles, landCount));
+    // Porcentaje grande y las casillas debajo (como el resto de cifras de la barra)
+    txt('pj-terr', formatPercent(landCount > 0 ? human.tiles / landCount : 0));
+    txt('pj-cas', `${formatNumber(human.tiles)} casillas`);
     txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
     txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
     // Banco de la capital: cuánto hay guardado y cuánto cabe
@@ -2018,6 +2069,11 @@ export class UI {
     if (rank >= 10) rows.push(human);
     const pl = placement(game, human);
     $('cab-puesto').textContent = `${pl.place}.º`;
+    const verTxt = $('clasificacion').classList.contains('lb-ampliada') ? 'Ver menos ‹' : `Ver las ${alive.length} naciones ›`;
+    if (this._lbVerTxt !== verTxt) {
+      this._lbVerTxt = verTxt;
+      $('lb-ver').textContent = verTxt;
+    }
     const colTxt = colonies ? `${colonies} ${colonies === 1 ? 'colonia' : 'colonias'} en pie (no cuentan en el puesto)` : '';
     if ($('lb-colonias').textContent !== colTxt) $('lb-colonias').textContent = colTxt;
     $('lb-colonias').hidden = !colonies;
@@ -2151,7 +2207,7 @@ export class UI {
     const lg = game.lugarNear ? game.lugarNear(tile) : null;
     if (lg) {
       const def = LUGARES[lg.kind];
-      return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave">· ${def.desc}</span></div>`;
+      return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave av">· ${def.desc}</span></div>`;
     }
     const pt = game.pointNear(tile);
     if (!pt) return '';
@@ -2173,11 +2229,11 @@ export class UI {
     if (troops < 1) return '';
     const pv = game.attackPreview(h, tile, troops);
     const lines = [];
-    lines.push(`<div class="tip-orden ${targetId ? 'ataque' : 'expansion'}">${targetId ? '⚔ Ataque' : '➜ Expansión'}: envías ${fmtTroops(pv.send)} · te quedan ${fmtTroops(pv.reserve)} en casa</div>`);
-    lines.push(`<div class="tip-estim">Previsión: ~${formatNumber(pv.tiles)} cas.${targetId ? ` · riesgo ${pv.risk}` : ''}${pv.uncertain ? ' (incierta)' : ''}</div>`);
+    lines.push(`<div class="tip-orden ${targetId ? 'ataque' : 'expansion'}">${targetId ? '⚔' : '➜'} ${fmtTroops(pv.send)} · ~${formatNumber(pv.tiles)} cas.${targetId ? ` · riesgo ${pv.risk}` : ''}<span class="av"> · te quedan ${fmtTroops(pv.reserve)} en casa${pv.uncertain ? ' · previsión incierta' : ''}</span></div>`);
     const mods = defenseText(pv.defense);
-    if (mods) lines.push(`<div class="tip-mods">${targetId ? 'Defensa aquí' : 'Terreno'}: ${mods}</div>`);
-    if (pv.incoming) lines.push(`<div class="tip-expo ${pv.exposure}">⚠ Te atacan con ${fmtTroops(pv.incoming)}${pv.attackers > 1 ? ` en ${pv.attackers} frentes` : ''}: ${pv.exposure === 'alta' ? 'tu reserva no les alcanza' : `exposición ${pv.exposure}`}</div>`);
+    if (mods) lines.push(`<div class="tip-mods av">${targetId ? 'Defensa aquí' : 'Terreno'}: ${mods}</div>`);
+    if (pv.incoming) lines.push(`<div class="tip-expo ${pv.exposure}${pv.exposure === 'alta' ? '' : ' av'}">⚠ Te atacan con ${fmtTroops(pv.incoming)}${pv.attackers > 1 ? ` en ${pv.attackers} frentes` : ''}: ${pv.exposure === 'alta' ? 'tu reserva no les alcanza' : `exposición ${pv.exposure}`}</div>`);
+    lines.push('<div class="tip-mas">Mayús: más datos</div>');
     return lines.join('');
   }
 
@@ -2235,8 +2291,8 @@ export class UI {
     const map = game.map;
     if (!map.isLand(tile)) {
       return map.navigable(tile)
-        ? '<b>Río</b> <span class="suave">· navegable: puertos en sus orillas y barcos</span>'
-        : '<b>Río</b> <span class="suave">· frontera: no se cruza por tierra</span>';
+        ? '<b>Río</b> <span class="suave">· navegable</span><span class="suave av">: puertos en sus orillas y barcos</span>'
+        : '<b>Río</b> <span class="suave">· frontera</span><span class="suave av">: no se cruza por tierra</span>';
     }
     const terrain = TERRAIN_NAMES[map.terrain[tile]];
     const o = game.owner[tile];
@@ -2246,6 +2302,7 @@ export class UI {
       const p = game.players[o];
       const b = game.buildingNear(tile, 2 * RES);
       const extra = [];
+      const extraAv = [];
       if (b) {
         if (b.kind === 'capital') extra.push(`🏰 Capital${b.up ? ` ★${b.up}` : ''}${b.bank >= 1 ? ` · banco ${fmtTroops(b.bank)}` : ''}`);
         else extra.push(`${BUILDINGS[b.kind].name}${b.level > 1 ? ` ${b.level}` : ''}${b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : ''}`);
@@ -2254,13 +2311,13 @@ export class UI {
       if (def > 1 && !(b && b.kind === 'capital')) {
         const zone = game.capitalZone ? game.capitalZone(p, tile) : 0;
         const wall = game.wallMultiplier(p, tile);
-        extra.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
+        extraAv.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
       }
       const human = game.human;
       const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
-      return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o, tile)}`;
+      return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${extraAv.length ? `<span class="suave av">${extra.length ? ' · ' : '<br>'}${extraAv.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o, tile)}`;
     }
-    return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0, tile)}`;
+    return `<b>Tierra libre</b> <span class="suave av">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0, tile)}`;
   }
 }
 

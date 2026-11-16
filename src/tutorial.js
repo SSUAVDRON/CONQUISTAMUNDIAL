@@ -29,8 +29,8 @@ const STEPS = [
   },
   {
     text: (s) =>
-      `Bien. Tus tropas crecen solas (ahora +${troopsPerSecond(s.human)}; más rápido cuanto más cerca del 42 % de tu techo) y ganas oro cada segundo (+${goldPerSecond(s.human)}): lo ves en el panel de abajo. Pulsa «Empezar» cuando quieras: la IA no se mueve hasta entonces.`,
-    highlight: '#panel-jugador',
+      `Bien. Tus tropas crecen solas (ahora +${troopsPerSecond(s.human)}; más rápido cuanto más cerca del 42 % de tu techo) y ganas oro cada segundo (+${goldPerSecond(s.human)}): lo ves en la barra de arriba. Mantén Mayús sobre cualquier ficha para ver más detalles. Pulsa «Empezar» cuando quieras: la IA no se mueve hasta entonces.`,
+    highlight: '#barra-superior .bs-datos',
     info: true,
     next: 'Empezar',
     pause: true,

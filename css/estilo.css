@@ -5518,3 +5518,291 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
 .ficha-sec h4 { color: #c9a75e; }
 .ficha-sec h4::after { background: linear-gradient(90deg, rgba(227, 194, 122, 0.35), transparent); }
 .ficha-icono { border-radius: 8px; box-shadow: 0 0 0 1px #000, inset 0 0 10px var(--g-glow); }
+
+/* =====================================================================
+   HUD de partida (hud3): barra superior con lo esencial, clasificación
+   corta, banco abajo a la izquierda, fuerza de ataque sobre los edificios
+   y lo avanzado (.av) solo con Mayús. Mismo estilo que el menú: oscuro con
+   filetes dorados. Los selectores llevan «body #hud.hud3» para mandar
+   sobre las capas anteriores.
+   ===================================================================== */
+:root { --hud-top: calc(44px + env(safe-area-inset-top, 0px)); }
+html:not(.info-avanzada) #hud .av { display: none !important; }
+html.info-avanzada #hud .solo-resumen { display: none !important; }
+
+/* ---------- Barra superior ---------- */
+body #hud.hud3 #barra-superior {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--hud-top);
+  padding: env(safe-area-inset-top, 0px) calc(10px + env(safe-area-inset-right, 0px)) 0 calc(12px + env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid rgba(180, 138, 58, 0.55);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(20, 24, 36, 0.97), rgba(9, 11, 19, 0.95));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 -2px 0 rgba(0, 0, 0, 0.55);
+  z-index: 8;
+}
+#hud.hud3 .bs-marca { flex: none; font-family: var(--serif); font-size: 17px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--oro-200); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); padding-right: 12px; border-right: 1px solid rgba(255, 255, 255, 0.1); }
+#hud.hud3 .bs-nacion { flex: 0 1 auto; display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 190px; }
+#hud.hud3 .bs-nacion .muestra { flex: none; width: 13px; height: 13px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(255, 255, 255, 0.18); }
+#hud.hud3 #pj-nombre { min-width: 0; font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud.hud3 #pj-estado { margin: 0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud.hud3 #pj-estado:empty { display: none; }
+#hud.hud3 .bs-datos { flex: none; display: flex; align-items: stretch; height: 100%; }
+#hud.hud3 .bs-dato {
+  display: grid;
+  grid-template-columns: 20px auto auto;
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 6px;
+  row-gap: 1px;
+  padding: 0 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#hud.hud3 .bs-ic { grid-row: 1 / 3; align-self: center; width: 19px; height: 19px; color: var(--oro-500); }
+#hud.hud3 .cifra-pob { grid-template-rows: auto auto auto; }
+#hud.hud3 .cifra-pob .bs-ic { grid-row: 1 / 4; }
+#hud.hud3 .bs-etq { grid-column: 2 / 4; font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-3); line-height: 1.1; }
+#hud.hud3 .bs-valor { grid-column: 2; font-size: 14px; font-weight: 800; color: #fff; line-height: 1.15; }
+#hud.hud3 .bs-valor .max { font-size: 12px; font-weight: 600; color: var(--texto-2); }
+#hud.hud3 .bs-ritmo { grid-column: 3; font-size: 11px; font-weight: 700; color: var(--ok); line-height: 1.15; }
+#hud.hud3 .bs-ritmo .sub-comp { margin-left: 5px; color: #ff9f8f; }
+#hud.hud3 .bs-terr .bs-ritmo { color: var(--texto-2); font-weight: 600; }
+#hud.hud3 .bs-terr .bs-valor { min-width: 44px; }
+#hud.hud3 .bs-barra { grid-column: 2 / 4; height: 3px; margin: 2px 0 0; border-radius: 2px; background: rgba(255, 255, 255, 0.1); box-shadow: none; }
+#hud.hud3 .bs-barra #pj-barra { border-radius: inherit; }
+body #hud.hud3.economia-fija .cifra-soldados, body #hud.hud3.economia-fija #panel-jugador .reparto { display: none; }
+#hud.hud3 #pj-oro { transform-origin: left center; }
+#hud.hud3 .pj-bonos { flex: 0 1 auto; order: 0; margin: 0; flex-wrap: nowrap; }
+#hud.hud3 .bs-hueco { flex: 1 1 0; min-width: 4px; }
+#hud.hud3 .bs-reloj { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--texto-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud.hud3 .bs-reloj svg { width: 15px; height: 15px; }
+#hud.hud3 .bs-acciones { display: inline-flex; align-items: center; gap: 6px; }
+body #hud.hud3 #barra-superior button { height: 30px; min-height: 0; padding: 0 10px; font-size: 13px; border-radius: 8px; }
+body #hud.hud3 #barra-superior .btn-sonido, body #hud.hud3 #barra-superior .btn-desarrollo { width: 32px; padding: 0; }
+body #hud.hud3 #barra-superior .btn-mi-nacion { border-color: rgba(227, 194, 122, 0.45); color: var(--oro-200); }
+body #hud.hud3 #btn-salir { border-color: rgba(255, 255, 255, 0.16); }
+
+/* ---------- Columnas: todo empieza bajo la barra ---------- */
+body #hud.hud3 #columna-izquierda { top: calc(var(--hud-top) + 8px); left: calc(8px + env(safe-area-inset-left, 0px)); width: 236px; max-height: calc(100vh - var(--hud-top) - var(--banco-alto, 0px) - 200px); }
+body #hud.hud3 #columna-derecha { top: calc(var(--hud-top) + 8px); right: calc(8px + env(safe-area-inset-right, 0px)); }
+body #hud.hud3 .despliegue { top: calc(var(--hud-top) + 10px); bottom: auto; }
+body #hud.hud3 #aviso { top: calc(var(--hud-top) + 12px); }
+
+/* ---------- Clasificación corta: los 3 primeros y tú ---------- */
+body #hud.hud3 #clasificacion { width: 100%; }
+body #hud.hud3:not(.x) #lista-clasificacion li { grid-template-columns: 16px 15px minmax(0, 1fr) 48px; padding: 2px 4px; font-size: 12px; }
+body #hud.hud3 #lista-clasificacion .oro, body #hud.hud3 #lista-clasificacion .tro { display: none; }
+body #hud.hud3 #clasificacion .lb-cab { display: none; }
+body #hud.hud3 #clasificacion:not(.lb-ampliada) #lista-clasificacion li:nth-child(n+4):not(.yo) { display: none; }
+/* Ampliada (o con Mayús): diez filas con oro y tropas */
+body #hud.hud3 #clasificacion.lb-ampliada .lb-cab, html.info-avanzada body #hud.hud3 #clasificacion .lb-cab { display: grid; grid-template-columns: 16px 15px minmax(0, 1fr) 48px 46px 44px; }
+body #hud.hud3 #clasificacion.lb-ampliada #lista-clasificacion li, html.info-avanzada body #hud.hud3 #lista-clasificacion li { grid-template-columns: 16px 15px minmax(0, 1fr) 48px 46px 44px; }
+body #hud.hud3 #clasificacion.lb-ampliada #lista-clasificacion .oro, body #hud.hud3 #clasificacion.lb-ampliada #lista-clasificacion .tro,
+html.info-avanzada body #hud.hud3 #lista-clasificacion .oro, html.info-avanzada body #hud.hud3 #lista-clasificacion .tro { display: block; text-align: right; font-size: 11px; }
+body #hud.hud3 #lista-clasificacion .oro { color: var(--oro-200); }
+body #hud.hud3:has(#clasificacion.lb-ampliada) #columna-izquierda, html.info-avanzada body #hud.hud3 #columna-izquierda { width: 330px; }
+#hud.hud3 .lb-pie { display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 4px 4px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+#hud.hud3 .dato-lider { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--texto-3); white-space: nowrap; overflow: hidden; }
+#hud.hud3 .dato-lider span { overflow: hidden; text-overflow: ellipsis; }
+#hud.hud3 .dato-lider svg { flex: none; width: 13px; height: 13px; color: var(--oro-500); }
+#hud.hud3 .dato-lider.cerca { color: #ff9f8f; }
+body #hud.hud3 .lb-ver { flex: none; height: auto; min-height: 0; padding: 2px 4px; border: 0; background: none; font-size: 11px; font-weight: 700; color: var(--oro-200); }
+body #hud.hud3 .lb-ver:hover { background: none; color: #fff; text-decoration: underline; }
+#hud.hud3 .lb-colonias { margin: 3px 4px 0; font-size: 10.5px; }
+
+/* ---------- Pie central: fuerza de ataque encima de los edificios ---------- */
+#hud.hud3 .pie-centro {
+  position: fixed;
+  left: 50%;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 16px);
+  pointer-events: none;
+}
+#hud.hud3 .pie-centro > * { pointer-events: auto; }
+body #hud.hud3 #pie-centro #panel-jugador {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  transform: none;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  display: block;
+  padding: 5px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 138, 58, 0.5);
+  background: linear-gradient(180deg, rgba(22, 26, 40, 0.95), rgba(10, 12, 20, 0.95));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+body #hud.hud3 #pie-centro #barra-obras {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  max-width: 100%;
+  width: auto;
+  border-color: rgba(180, 138, 58, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+body #hud.hud3 #pie-centro #barra-obras[hidden] { display: none; }
+body #hud.hud3 #pj-plegar { display: none; }
+body #hud.hud3 #panel-jugador .pj-ataque { display: flex; align-items: center; gap: 16px; padding: 0; margin: 0; border: 0; }
+body #hud.hud3 #panel-jugador .ratio { display: flex; flex-direction: row; align-items: center; gap: 10px; margin: 0; min-width: 0; font-size: 12px; }
+body #hud.hud3 #panel-jugador .ratio-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-2); white-space: nowrap; }
+body #hud.hud3 #panel-jugador .ratio-titulo::before { content: "⚔"; font-size: 13px; color: var(--oro-500); letter-spacing: 0; }
+body #hud.hud3 #panel-jugador .reparto .ratio-titulo::before { content: "⚒"; }
+body #hud.hud3 #panel-jugador .ratio-cifra { display: contents; }
+body #hud.hud3 #panel-jugador .ratio-cifra strong { order: 1; min-width: 40px; font-size: 15px; font-weight: 900; text-align: right; }
+body #hud.hud3 #panel-jugador .ratio input { order: 2; width: clamp(110px, 16vw, 200px); margin: 0; }
+body #hud.hud3 #panel-jugador .ratio-cifra span { order: 3; padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px; color: var(--texto-2); white-space: nowrap; }
+body #hud.hud3 #panel-jugador .pj-obras { margin: 0; }
+
+/* ---------- Banco: abajo a la izquierda ---------- */
+body #hud.hud3 #pj-banco {
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  width: 236px;
+  margin: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-areas: "em info" "bot bot";
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 138, 58, 0.5);
+  background: linear-gradient(180deg, rgba(22, 26, 40, 0.95), rgba(10, 12, 20, 0.95));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+body #hud.hud3 #pj-banco[hidden] { display: none; }
+#hud.hud3 #pj-banco .cap-emblema { grid-area: em; width: 46px; height: 46px; }
+#hud.hud3 #pj-banco .cap-emblema canvas { width: 48px; height: 48px; }
+#hud.hud3 #pj-banco .cap-info { grid-area: info; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#hud.hud3 #pj-banco .cap-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+#hud.hud3 #pj-banco .banco-etq { font-family: var(--serif); font-size: 12px; letter-spacing: 0.08em; color: var(--oro-200); }
+#hud.hud3 #pj-banco .cap-def { font-size: 10.5px; font-weight: 700; color: #9be38f; white-space: nowrap; }
+#hud.hud3 #pj-banco .banco-cifra { font-size: 12px; margin: 0; text-align: left; align-self: flex-start; }
+#hud.hud3 #pj-banco .banco-cifra strong { font-size: 15px; font-weight: 900; }
+#hud.hud3 #pj-banco .banco-barra { flex: none; width: 100%; height: 5px; }
+#hud.hud3 #pj-banco .cap-botones { grid-area: bot; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+body #hud.hud3 #pj-banco .banco-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 28px; margin: 0; padding: 0 8px; font-size: 12px; font-weight: 800; }
+#hud.hud3 #pj-banco .banco-btn svg { width: 13px; height: 13px; }
+body #hud.hud3 #banco-guardar { background: linear-gradient(180deg, #f6c95e, #d99a2b); border-color: #8a5d14; color: #2a1a02; }
+body #hud.hud3 #banco-guardar:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* ---------- Minimapa (encima del banco) con zoom ---------- */
+body #hud.hud3 ~ .minimapa, body #hud.hud3 .minimapa { left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(var(--banco-alto, 0px) + 16px + env(safe-area-inset-bottom, 0px)); }
+#hud.hud3 .mapa-zoom { position: absolute; right: -40px; bottom: 0; display: flex; flex-direction: column; gap: 4px; line-height: 1; }
+body #hud.hud3 .mapa-zoom button { width: 32px; height: 32px; min-height: 0; padding: 0; display: grid; place-items: center; border-radius: 8px; font-size: 18px; font-weight: 700; background: rgba(12, 16, 28, 0.92); border: 1px solid rgba(180, 138, 58, 0.45); color: var(--oro-200); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); }
+#hud.hud3 .minimapa.plegado .mapa-zoom { display: none; }
+
+/* ---------- Avisos: más pequeños ---------- */
+body #hud.hud3 #avisos { right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: 250px; max-height: 210px; overflow: hidden; }
+body #hud.hud3 #avisos .evento { font-size: 12px; }
+body #hud.hud3 .tip-mas { margin-top: 3px; font-size: 10px; color: var(--texto-3); }
+html.info-avanzada body #hud.hud3 .tip-mas { display: none; }
+
+/* ---------- Fichas: aviso de Mayús y botón de detalles ---------- */
+.ficha-mas { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 10.5px; color: var(--texto-3); }
+.ficha-mas kbd { margin: 0 2px; display: inline-grid; min-width: 0; height: 16px; padding: 0 4px; font-size: 9.5px; }
+.ficha-detalles { display: block; width: 100%; height: 30px; margin-top: 8px; border-radius: 8px; border: 1px solid rgba(227, 194, 122, 0.35); background: rgba(227, 194, 122, 0.08); color: var(--oro-200); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* ---------- Pantallas medianas (sin la barra de escritorio) ---------- */
+@media (max-width: 1239px) {
+  #hud.hud3 .bs-marca { display: none; }
+  body #hud.hud3 #barra-superior .btn-mi-nacion span { display: none; }
+  body #hud.hud3 #barra-superior .btn-mi-nacion { width: 32px; padding: 0; }
+  body #hud.hud3 #pie-centro { width: min(600px, calc(100vw - 2 * 250px)); }
+  body #hud.hud3 #pie-centro #panel-jugador { width: 100%; padding: 6px 10px 8px; }
+  body #hud.hud3 #panel-jugador .pj-ataque { gap: 10px; }
+  body #hud.hud3 #panel-jugador .ratio { flex: 1 1 auto; }
+  body #hud.hud3 #panel-jugador .ratio input { flex: 1 1 auto; width: auto; min-width: 70px; }
+  body #hud.hud3 #panel-jugador .pj-obras { margin-top: 6px; }
+}
+
+/* ---------- Móvil en vertical ---------- */
+@media (max-width: 720px) {
+  :root { --hud-top: calc(40px + env(safe-area-inset-top, 0px)); }
+  body #hud.hud3 #barra-superior { gap: 6px; padding-left: calc(8px + env(safe-area-inset-left, 0px)); padding-right: calc(6px + env(safe-area-inset-right, 0px)); }
+  #hud.hud3 #pj-nombre, #hud.hud3 #pj-estado, #hud.hud3 .pj-bonos { display: none; }
+  #hud.hud3 .bs-nacion { flex: none; }
+  #hud.hud3 .bs-dato { grid-template-columns: 15px auto; column-gap: 4px; padding: 0 6px; }
+  #hud.hud3 .bs-ic { width: 15px; height: 15px; }
+  #hud.hud3 .bs-etq, #hud.hud3 .bs-ritmo { display: none; }
+  #hud.hud3 .bs-valor { font-size: 12.5px; }
+  #hud.hud3 .bs-valor .max { font-size: 10.5px; }
+  #hud.hud3 .bs-barra { grid-column: 2; }
+  #hud.hud3 .cifra-pob { grid-template-rows: auto auto; }
+  #hud.hud3 .cifra-pob .bs-ic { grid-row: 1 / 3; }
+  #hud.hud3 .bs-reloj { font-size: 11.5px; }
+  #hud.hud3 .bs-datos { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+  #hud.hud3 .bs-reloj svg { display: none; }
+  body #hud.hud3 #barra-superior #btn-salir { padding: 0 8px; font-size: 12px; height: 28px; }
+  /* Sonido, desarrollo y tu nación: columna a la derecha, bajo la barra */
+  #hud.hud3 .bs-acciones { position: absolute; top: calc(100% + 8px); right: calc(8px + env(safe-area-inset-right, 0px)); flex-direction: column; gap: 6px; }
+  body #hud.hud3 .bs-acciones button { width: 38px; height: 38px; border-radius: 50%; padding: 0; background: rgba(12, 16, 28, 0.92); border: 1px solid rgba(180, 138, 58, 0.45); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); }
+  body #hud.hud3 #columna-izquierda { width: 168px; max-height: calc(100vh - var(--hud-top) - var(--pj-alto, 120px) - 160px); }
+  body #hud.hud3:has(#clasificacion.lb-ampliada) #columna-izquierda, html.info-avanzada body #hud.hud3 #columna-izquierda { width: min(300px, calc(100vw - 60px)); }
+  body #hud.hud3 #lista-clasificacion li { grid-template-columns: 14px 14px minmax(0, 1fr) 42px; font-size: 11.5px; }
+  #hud.hud3 .dato-lider { display: none; }
+  #hud.hud3 .lb-pie { justify-content: flex-end; }
+  #hud.hud3 .pie-centro { left: calc(6px + env(safe-area-inset-left, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); transform: none; align-items: stretch; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  body #hud.hud3 #pie-centro { width: auto; }
+  body #hud.hud3 #pie-centro #panel-jugador { width: auto; padding: 6px 8px 7px; }
+  body #hud.hud3 #panel-jugador .ratio-titulo { font-size: 0; gap: 0; }
+  body #hud.hud3 #panel-jugador .ratio-titulo::before { font-size: 15px; }
+  body #hud.hud3 #panel-jugador .ratio-cifra span { padding-left: 6px; font-size: 11px; }
+  /* Banco: una fila encima del pie, a la izquierda */
+  body #hud.hud3 #pj-banco { left: calc(6px + env(safe-area-inset-left, 0px)); bottom: calc(var(--pj-alto, 110px) + 12px + env(safe-area-inset-bottom, 0px)); width: auto; grid-template-columns: 32px auto auto; grid-template-areas: "em info bot"; gap: 8px; padding: 5px 6px 5px 6px; }
+  #hud.hud3 #pj-banco .cap-emblema { width: 32px; height: 32px; }
+  #hud.hud3 #pj-banco .cap-emblema canvas { width: 34px; height: 34px; }
+  #hud.hud3 #pj-banco .cap-def { display: none; }
+  #hud.hud3 #pj-banco .cap-info { width: 74px; }
+  #hud.hud3 #pj-banco .cap-botones { display: flex; flex-direction: row; gap: 4px; }
+  body #hud.hud3 #pj-banco .banco-btn { width: 34px; height: 32px; padding: 0; font-size: 0; gap: 0; }
+  #hud.hud3 #pj-banco .banco-btn svg { width: 15px; height: 15px; }
+  body #hud.hud3 ~ .minimapa, body #hud.hud3 .minimapa { left: calc(6px + env(safe-area-inset-left, 0px)); bottom: calc(var(--pj-alto, 110px) + var(--banco-alto, 0px) + 18px + env(safe-area-inset-bottom, 0px)); }
+  #hud.hud3 .mapa-zoom { display: none; }
+  body #hud.hud3 .despliegue { top: auto; bottom: calc(var(--pj-alto, 110px) + 12px + env(safe-area-inset-bottom, 0px)); }
+  body #hud.hud3 #avisos { right: calc(6px + env(safe-area-inset-right, 0px)); bottom: calc(var(--pj-alto, 110px) + 12px + env(safe-area-inset-bottom, 0px)); width: min(190px, calc(100vw - 210px)); max-height: 150px; }
+}
+
+/* ---------- Móvil en horizontal (poca altura) ---------- */
+@media (max-height: 500px) {
+  :root { --hud-top: calc(36px + env(safe-area-inset-top, 0px)); }
+  #hud.hud3 .bs-marca { display: none; }
+  #hud.hud3 .bs-etq { display: none; }
+  #hud.hud3 .cifra-pob { grid-template-rows: auto auto; }
+  #hud.hud3 .cifra-pob .bs-ic, #hud.hud3 .bs-ic { grid-row: 1 / 3; }
+  body #hud.hud3 #barra-superior button { height: 28px; }
+  body #hud.hud3 #columna-izquierda { width: 180px; max-height: calc(100vh - var(--hud-top) - 70px); }
+  body #hud.hud3 #pie-centro { width: min(520px, calc(100vw - 2 * 200px)); bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+  body #hud.hud3 #pie-centro #panel-jugador { padding: 4px 8px 5px; }
+  body #hud.hud3 #panel-jugador .ratio-titulo { font-size: 0; gap: 0; }
+  body #hud.hud3 #panel-jugador .ratio-titulo::before { font-size: 14px; }
+  body #hud.hud3 #panel-jugador .pj-obras { margin-top: 4px; }
+  body #hud.hud3 #pj-banco { width: 190px; bottom: calc(4px + env(safe-area-inset-bottom, 0px)); grid-template-columns: 32px auto; padding: 5px 7px; gap: 4px 8px; }
+  #hud.hud3 #pj-banco .cap-emblema { width: 32px; height: 32px; }
+  #hud.hud3 #pj-banco .cap-emblema canvas { width: 34px; height: 34px; }
+  body #hud.hud3 #pj-banco .banco-btn { height: 24px; }
+  body #hud.hud3 ~ .minimapa, body #hud.hud3 .minimapa { display: none; }
+  body #hud.hud3 #avisos { width: 190px; bottom: calc(4px + env(safe-area-inset-bottom, 0px)); max-height: 120px; }
+}

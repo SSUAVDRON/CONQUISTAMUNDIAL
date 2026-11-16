@@ -1984,6 +1984,7 @@ const input = new Input(canvas, camera, {
 });
 
 ui.on({
+  onZoom: (f) => camera.zoomToward(camera.viewW / 2, camera.viewH / 2, f),
   onRatio: setRatio,
   onShare: (share) => humanIntent({ type: 'share', share }),
   // Banco de tropas de la capital: guarda el 25 % de tus soldados o lo saca todo
