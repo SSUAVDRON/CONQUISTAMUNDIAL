@@ -23,6 +23,20 @@ function play(rules) {
   return { game, h };
 }
 
+/**
+ * Sin los puntos estratégicos (Clásico también los tiene desde clasico-12):
+ * para comprobar las fórmulas base sin el bono de la capital que controla.
+ */
+function sinPuntos(game) {
+  for (const pt of game.points) game.pointAt.delete(pt.tile);
+  game.points.length = 0;
+  for (const p of game.players) {
+    if (!p) continue;
+    p.capitalTile = -1;
+    game._refreshMods(p);
+  }
+}
+
 test('perfiles: un perfil guardado antiguo (reglas sin perfil) sigue en Trinchera; uno nuevo, en Clásico', () => {
   // Así guardaba el juego los ajustes antes de los perfiles (copia real de localStorage)
   const old = {
@@ -47,13 +61,13 @@ test('perfiles: un perfil guardado antiguo (reglas sin perfil) sigue en Trincher
   assert.equal(profileOf({ profile: 'raro' }).id, PROFILES.trinchera.id);
 });
 
-test('perfil Clásico: sin capitales (ni victoria por capitales ni botín), sin tecnologías, regeneración y oro base exactos', () => {
+test('perfil Clásico: con puntos estratégicos (sin victoria por capitales), sin tecnologías, regeneración y oro base exactos', () => {
   assert.equal(cleanRules({ profile: 'clasico', victory: 'capitales' }).victory, 'dominio', 'la victoria por capitales sería inalcanzable');
   assert.equal(cleanRules({ profile: 'trinchera', victory: 'capitales' }).victory, 'capitales');
   const { game, h } = play({ profile: 'clasico' });
-  assert.equal(game.profile.id, 'clasico-11');
-  assert.equal(game.points.length, 0, 'sin puntos estratégicos: ni capitales ni su botín');
-  assert.equal(h.capitalTile, -1);
+  assert.equal(game.profile.id, 'clasico-12');
+  assert.ok(game.points.some((pt) => pt.kind !== 'capital'), 'con puntos estratégicos (núcleos, puertos clave, pasos)');
+  sinPuntos(game);
   h.gold = 1e7;
   assert.equal(game.startResearch(h, 'agricultura'), false, 'sin tecnologías');
   assert.equal(game.setSpec(h, 'industria'), false, 'sin especialización');
@@ -90,13 +104,14 @@ test('multijugador: la sala no empieza si el anfitrión simula con otra versión
 test('diagnóstico (?diag=1): registra turnos, envíos, frentes y reembolsos con cifras internas y visibles', async () => {
   const { Diagnostico } = await import('../src/diagnostico.js');
   const { game, h } = play({ profile: 'clasico' });
+  sinPuntos(game);
   const diag = new Diagnostico(game, { build: 'test', mechVersion: MECH.version || 'doc', ruleset: rulesetId(game.rules) });
   game.launchAttack(h, 0, 4000);
   for (let i = 0; i < 5; i++) game.tick();
   game.retreat(h.attacks.get(0));
   for (let i = 0; i < 30; i++) game.tick();
   const data = diag.exportar(false);
-  assert.equal(data.perfil, 'clasico-11');
+  assert.equal(data.perfil, 'clasico-12');
   const kinds = new Set(data.eventos.map((e) => e.t));
   for (const k of ['turno', 'envio', 'frente', 'fin']) assert.ok(kinds.has(k), `hay eventos «${k}»`);
   const envio = data.eventos.find((e) => e.t === 'envio');

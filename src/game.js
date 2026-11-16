@@ -1,6 +1,7 @@
 // Simulación de la partida. No toca el DOM: se puede ejecutar en Node (tests) o
 // en el navegador. Es determinista: misma semilla + mismas acciones = misma partida.
-import { AREA, BUILDINGS, CONFIG, EMOJIS, GRID, GRID2, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } from './config.js';
+import { AREA, BUILDINGS, CONFIG, GRID, GRID2, RES, STRUCTURE_KINDS, TICK_MS, cleanRules } from './config.js';
+import { EMOJI_CHARS } from './emojis.js';
 import { fmtTroops, formatNumber } from './format.js';
 import { Rng, hashString } from './rng.js';
 import { MinHeap } from './heap.js';
@@ -1024,6 +1025,8 @@ export class Game {
     winner.troops += troops;
     b.bank = 0;
     winner.stats.capitals = (winner.stats.capitals || 0) + 1;
+    // Quien toma una capital lo celebra; quien la pierde, se queja (a todos)
+    if (!this._botEmote(winner, ['😎', '🔥', '🏆', '👑'], 0, 0.8)) this._botEmote(victim, ['😢', '😱', '😠'], 0, 0.8);
     const extra = troops >= 1 ? ` y ${fmtTroops(troops)} tropas de su banco` : '';
     if (winner === this.human) this._emit(`🏰 Has tomado la capital de ${victim.name}: +${formatNumber(loot)} de oro${extra}`, 'good', { sfx: 'conquerColony' });
     else if (victim === this.human) this._emit(`🏰 ${winner.name} ha tomado tu capital y se lleva ${formatNumber(share)} de oro${extra}: la corte se traslada`, 'danger', { sfx: 'fall' });
@@ -1575,6 +1578,14 @@ export class Game {
       this.attacks.push(atk);
       if (target && target === this.human) this._emit(`⚔ ${p.name} te ataca con ${fmtTroops(troops)} tropas`, 'danger', { sfx: 'war' });
       else if (p === this.human && target) this._emit(`⚔ Atacas a ${target.name} con ${fmtTroops(troops)} tropas`, 'info');
+      // Un jugador ataca a una nación de la IA por primera vez: se enfada (con un emoji)
+      if (p.isHuman && target && !target.isHuman) {
+        target.emoteFoes ??= new Set();
+        if (!target.emoteFoes.has(p.id)) {
+          target.emoteFoes.add(p.id);
+          this._botEmote(target, ['😠', '⚔️', '🔥'], p.id, 0.7);
+        }
+      }
     }
     if (deduct) p.troops -= troops;
 
@@ -4483,6 +4494,8 @@ export class Game {
     b.allies.add(a.id);
     a.stats.alliances++;
     b.stats.alliances++;
+    // La IA celebra la alianza con un jugador
+    if (a.isHuman !== b.isHuman) this._botEmote(a.isHuman ? b : a, ['🤝', '❤️', '👍'], (a.isHuman ? a : b).id, 0.8);
     this.requests = this.requests.filter((r) => !((r.from === a.id && r.to === b.id) || (r.from === b.id && r.to === a.id)));
     // La paz detiene los ataques entre ambos y devuelve las tropas
     const ab = a.attacks.get(b.id);
@@ -4534,13 +4547,36 @@ export class Game {
     return true;
   }
 
+  /**
+   * Emoji de `p` (a una nación, `targetId`, o a todos, 0): sale en un globo
+   * sobre su nación. No cambia la partida (no gasta azar); como mucho uno
+   * cada CONFIG.emojiCooldownTicks.
+   */
   sendEmoji(p, targetId, emoji) {
-    if (!EMOJIS.includes(emoji) || this.ticks - p.lastEmojiTick < CONFIG.emojiCooldownTicks) return false;
+    if (!p || !p.alive || !EMOJI_CHARS.has(emoji) || this.ticks - p.lastEmojiTick < CONFIG.emojiCooldownTicks) return false;
     p.lastEmojiTick = this.ticks;
     this.emojis.push({ from: p.id, to: targetId || 0, emoji, tick: this.ticks });
     const target = this.players[targetId];
-    if (target && target === this.human) this._emit(`${p.name} te envía ${emoji}`, 'info');
+    if (target && target === this.human) this._emit(`${p.name} te envía ${emoji}`, 'info', { emoji: true });
+    // A todos, de otra persona (en línea): también en los avisos
+    else if (!targetId && p.isHuman && p !== this.human) this._emit(`${p.name}: ${emoji}`, 'info', { emoji: true });
     if (target) this.brains.get(target.id)?.onEmoji(p, emoji);
+    return true;
+  }
+
+  /**
+   * La IA reacciona con un emoji a lo que pasa (la atacan, toma o pierde una
+   * capital, firma una alianza). Sin gastar el azar de la partida (un hash del
+   * turno), como mucho uno cada 30 s por nación y uno cada 2 s entre todas.
+   */
+  _botEmote(p, emojis, toId = 0, chance = 1) {
+    if (!p || p.isHuman || p.weak || !p.alive) return false;
+    if (this.ticks - (p.lastEmojiTick ?? -1e9) < 300 || this.ticks - (this._botEmoteAt ?? -1e9) < 20) return false;
+    const h = (Math.imul(this.ticks + 1, 2654435761) ^ Math.imul(p.id + 7, 40503) ^ Math.imul(toId + 3, 69069)) >>> 0;
+    if ((h % 1000) / 1000 >= chance) return false;
+    const list = Array.isArray(emojis) ? emojis : [emojis];
+    if (!this.sendEmoji(p, toId, list[(h >>> 10) % list.length])) return false;
+    this._botEmoteAt = this.ticks;
     return true;
   }
 

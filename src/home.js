@@ -12,7 +12,10 @@ import { paintMapPreview } from './terreno.js';
 import { CoverArt } from './portada.js';
 import { drawHeroScene, drawModeArt, drawNewsArt } from './ilustraciones.js';
 import { hexToRgb } from './colors.js';
-import { FLAG_CATALOG, PATTERN_FNS, drawBuildingReal, drawEmblem, drawFrame, flagCss, flagName } from './icons.js';
+import { FLAG_CATALOG, PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawEmblem, drawFrame, drawMedallion, drawPointIcon, flagCss, flagName } from './icons.js';
+import { POI_TYPES } from './estrategia.js';
+import { EMOJI_ITEMS } from './emojis.js';
+import { LUGARES, lugarSpan } from './lugares.js';
 import { drawTransport, drawWarship } from './barcos.js';
 import { drawMissileSprite } from './fx.js';
 import { formatNumber, formatPercent, formatTime } from './format.js';
@@ -45,11 +48,12 @@ const COLLECTION = [
   { cat: 'edificios', col: 'edificios', name: 'Edificios', type: 'Aspecto de edificios', list: BUILDING_SKINS, desc: '' },
   { cat: 'barcos', col: 'barcos', name: 'Barcos', type: 'Aspecto de barcos', list: SHIP_SKINS, desc: '' },
   { cat: 'bombas', col: 'bombas', name: 'Bombas', type: 'Aspecto de bombas', list: BOMB_SKINS, desc: '' },
+  { cat: 'emoji', col: 'emoji', name: 'Emojis', type: 'Emoji de partida', list: EMOJI_ITEMS, desc: 'Se manda en la partida y sale en un globo sobre tu nación (también en línea).' },
 ];
 const CATALOG = new Map(COLLECTION.map((c) => [c.cat, c]));
 /** Pestañas de la colección (Aspecto). */
 const COL_TABS = [
-  ['emblema', 'Emblema'], ['marco', 'Marco'], ['estandarte', 'Estandarte'], ['patron', 'Patrón'], ['nombre', 'Nombre'], ['titulo', 'Título'], ['edificios', 'Edificios'], ['barcos', 'Barcos'], ['bombas', 'Bombas'],
+  ['emblema', 'Emblema'], ['marco', 'Marco'], ['estandarte', 'Estandarte'], ['patron', 'Patrón'], ['nombre', 'Nombre'], ['titulo', 'Título'], ['edificios', 'Edificios'], ['barcos', 'Barcos'], ['bombas', 'Bombas'], ['emoji', 'Emojis'],
 ];
 
 /** Plazas que se ofrecen: hasta el mayor aforo validado (DEV06). */
@@ -63,6 +67,9 @@ const SWATCHES = [
 
 /** Lo que se muestra en el arsenal: dibujo del juego, nombre y para qué sirve (según las reglas). */
 const ARSENAL = {
+  capital: { name: 'Fundar capital', text: 'Tu primer edificio: murallas, banco de tropas y escudo antimisiles. Sin ella no construyes nada', price: 'Gratis', detail: 'Al empezar la conquista, pulsa «Fundar capital» y elige dónde, dentro de tu territorio. Lejos de la frontera es más difícil de tomar; si cae, la corte se traslada con la mitad de sus mejoras.' },
+  capUp: { name: 'Mejorar la capital', text: '+20 % de oro, más banco y murallas más fuertes por nivel (hasta 12)', price: '150k oro + tropas' },
+  village: { text: 'Barato: +300 de oro/s y +6 000 de techo por nivel' },
   city: { text: '+25 000 de techo de tropas por nivel' },
   port: { text: 'Mercantes: oro para ti y para el puerto de destino' },
   factory: { text: 'Vías y trenes: 10 000 de oro por tren (35 000 si es aliado)' },
@@ -77,13 +84,16 @@ const ARSENAL = {
 };
 /** Categorías del arsenal (portada y vista «Arsenal»). */
 const ARSENAL_CATS = [
-  { id: 'economia', name: 'Economía', text: 'Más tropas, comercio y trenes', icon: 'factory', items: ['city', 'port', 'factory'] },
+  { id: 'economia', name: 'Economía', text: 'Tu capital, oro, tropas, comercio y trenes', icon: 'factory', items: ['capital', 'capUp', 'village', 'city', 'port', 'factory'] },
   { id: 'defensa', name: 'Defensa', text: 'Protege tus fronteras y tu cielo', icon: 'fort', items: ['fort', 'sam', 'warship'] },
   { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Partida', title: 'Emojis en la partida', text: 'Pulsa 😀 arriba (o la tecla Y) y manda un emoji a todos: sale en un globo sobre tu nación, también en línea. Desde la ficha de una nación, solo a ella. La IA también contesta y reacciona: se enfada si la atacas, celebra las alianzas y presume al tomar una capital. Hay 10 de serie, más por nivel y por gestas, y 14 en la tienda (Perfil → Aspecto → Emojis).', art: 1 },
+  { tag: 'Mapa', title: 'Puntos de interés, más claros', text: 'Los puntos estratégicos vuelven a Partida rápida (capitales, núcleos industriales, puertos clave y pasos de montaña) y hay el triple. Ahora son medallones del color de su tipo con una etiqueta de lo que dan («+15 % oro», «Defensa ×1,6»), y los lugares de interés brillan con su premio. El Arsenal tiene una sección con todos ellos, y también la capital y los pueblos.', art: 2 },
+  { tag: 'Perfil', title: 'Tu nombre, tu color y tu bandera', text: 'Tu nombre se escribe en la cabecera del perfil y el color se elige justo al lado. En el emblema puedes poner una bandera eligiéndola por su dibujo: comunidades autónomas, Euskal Herria y sus territorios, la II República, reinos históricos, regiones y casi todos los países del mundo. Y sale contigo en la partida.', art: 0 },
   { tag: 'Partida', title: 'Funda tu capital', text: 'Ahora cada jugador coloca su capital como un edificio: al empezar la conquista, pulsa «Fundar capital» y elige dónde, dentro de tu territorio (es gratis y ves sus murallas antes de colocarla). Hasta tenerla no puedes construir nada más. Las naciones de la IA nacen con la suya.', art: 2 },
   { tag: 'Competitivo', title: 'Tu escuadra y emblemas nuevos', text: 'Competitivo renovado: tu estandarte en el centro y cuatro huecos para tu escuadra. Pulsa «+» para invitar con un enlace (sin cuenta) o a tus amigos, y buscad partida juntos. Mientras buscas puedes moverte por el menú: un aviso flotante te sigue. Insignias de liga redibujadas y una guía de los PL con lo que te daría tu próxima partida.', art: 1 },
   { tag: 'Diseño', title: 'Pantallas de carga renovadas', text: 'Los pasos de la carga (cuartel, banderas, mapa, terreno…) son ahora insignias con su icono que se doran con un sello al terminar, unidas por una línea que se llena. Barra dorada con punta luminosa, mapa con marco y rosa de los vientos, y antes de cada partida, la vista previa de tu mapa con las banderas de sus países.', art: 2 },
@@ -435,7 +445,7 @@ function rulesEditor(prefix, rules, onChange, ctx) {
   const syncProfileNote = () => {
     const P = PROFILES[rules.profile] || PROFILES.trinchera;
     profileNote.textContent = rules.profile === 'clasico'
-      ? 'Ritmo ágil, sin puntos estratégicos ni tecnologías'
+      ? 'Ritmo ágil, con puntos estratégicos y sin tecnologías'
       : 'Ritmo lento, con puntos estratégicos y tecnologías';
     profileNote.title = `Versión de las reglas: ${P.id}`;
   };
@@ -1429,7 +1439,8 @@ export class Home {
     const ctx = c.getContext('2d');
     const m = size / 2;
     const color = '#2f7dff';
-    if (kind === 'warship') drawWarship(ctx, m, m, -0.5, size * 0.39, color, true, -0.9, 0);
+    if (kind === 'capUp') drawCapitalEmblem(ctx, m, m + size * 0.02, size * 0.62, 5, {});
+    else if (kind === 'warship') drawWarship(ctx, m, m, -0.5, size * 0.39, color, true, -0.9, 0);
     else if (kind === 'transporte') drawTransport(ctx, m, m, -0.5, size * 0.57, color, true, 0);
     else if (kind === 'missile') drawMissileSprite(ctx, m, m, -0.8, size * 0.57, '#e0483f', 0);
     else drawBuildingReal(ctx, kind, m, m, size * 0.75, { ring: kind === 'hbomb' ? '#ff7a45' : kind === 'mirv' ? '#b05cff' : color });
@@ -1459,7 +1470,7 @@ export class Home {
           el(
             'div',
             { class: 'arsenal-cat-fichas' },
-            ...cat.items.slice(0, 4).map((kind) => el('span', { class: 'ficha-arma', title: `${nameOf(kind)}: ${ARSENAL[kind].text}` }, this._weaponArt(kind, 72), el('small', { text: nameOf(kind) }))),
+            ...cat.items.filter((k) => k !== 'capUp').slice(0, 4).map((kind) => el('span', { class: 'ficha-arma', title: `${nameOf(kind)}: ${ARSENAL[kind].text}` }, this._weaponArt(kind, 72), el('small', { text: nameOf(kind) }))),
           ),
           el('button', { type: 'button', class: 'enlace-ini', onclick: () => this.setView('arsenal') }, 'Ver todo ', el('span', { 'aria-hidden': 'true', text: '›' })),
         ),
@@ -1468,7 +1479,7 @@ export class Home {
     let n = 0;
     $('arsenal').replaceChildren(
       el('h2', { class: 'titulo-seccion' }, el('span', { text: 'Arsenal' })),
-      el('p', { class: 'arsenal-intro', text: 'Todo lo que puedes construir y lanzar en una partida, con su precio inicial. Subir de nivel cuesta lo mismo que uno nuevo.' }),
+      el('p', { class: 'arsenal-intro', text: 'Todo lo que puedes construir y lanzar en una partida, con su precio inicial, en los mismos grupos que la barra de la partida. Lo primero, fundar tu capital. Subir de nivel cuesta lo mismo que uno nuevo.' }),
       // Cada familia en su bloque: Economía y Defensa lado a lado, Ataque a lo ancho
       ...ARSENAL_CATS.map((cat) =>
         el(
@@ -1488,13 +1499,52 @@ export class Home {
                 el('span', { class: 'arma-texto', text: ARSENAL[kind].text }),
                 el('span', { class: 'arma-precio', text: priceOf(kind) }),
                 // Detalle al pasar el ratón o al tocar (enfocar) la tarjeta
-                el('span', { class: 'arma-detalle', 'aria-hidden': 'true' }, el('strong', { text: nameOf(kind) }), el('span', { text: BUILDINGS[kind]?.desc || 'Haz clic en una costa enemiga o libre sin frontera por tierra: sale un barco con tropas desde tu costa (máximo 3 a la vez).' }), el('small', { text: keyOf(kind) })),
+                el('span', { class: 'arma-detalle', 'aria-hidden': 'true' }, el('strong', { text: nameOf(kind) }), el('span', { text: ARSENAL[kind].detail || BUILDINGS[kind]?.desc || 'Haz clic en una costa enemiga o libre sin frontera por tierra: sale un barco con tropas desde tu costa (máximo 3 a la vez).' }), el('small', { text: kind === 'capital' ? 'Tecla Z (o el botón de la capital) al empezar' : keyOf(kind) })),
               ),
             ),
           ),
         ),
       ),
+      this._arsenalPoints(),
     );
+  }
+
+  /**
+   * Arsenal: los puntos del mapa que se conquistan por lo que dan. Puntos
+   * estratégicos (para quien los controle) y lugares de interés (un premio
+   * al tomarlos; luego aparece otro en otro sitio).
+   */
+  _arsenalPoints() {
+    const art = (draw) => {
+      const c = el('canvas', { width: '96', height: '96', 'aria-hidden': 'true' });
+      draw(c.getContext('2d'));
+      return c;
+    };
+    const card = (color, canvas, name, chip, text, extra) =>
+      el('div', { class: 'punto-ficha', style: `--c:${color}` },
+        el('div', { class: 'pf-dibujo' }, canvas),
+        el('strong', { text: name }),
+        el('span', { class: 'pf-chip', text: chip }),
+        el('p', { text }),
+        extra ? el('small', { text: extra }) : null);
+    const pois = ['industria', 'puerto', 'paso', 'capital'].map((k) => {
+      const T = POI_TYPES[k];
+      return card(T.color, art((g) => drawPointIcon(g, k, 48, 48, 58)), T.name, T.short, T.desc, k === 'capital' ? 'Una por nación: donde está su capital' : 'Mientras lo controles');
+    });
+    const lugares = Object.entries(LUGARES).map(([k, d]) =>
+      card(d.color, art((g) => drawMedallion(g, 48, 48, 58, d.color, (x, s) => {
+        x.font = `${Math.round(s * 2.05)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+        x.textAlign = 'center';
+        x.textBaseline = 'middle';
+        x.fillText(d.icon, 0, s * 0.1);
+      })), d.name, `${d.short} · ${lugarSpan(d)}`, d.desc, 'Al tomarlo; luego sale otro en otro sitio'),
+    );
+    return el('section', { class: 'arsenal-familia arsenal-puntos' },
+      el('h3', { class: 'arsenal-grupo cat-puntos' }, el('span', { text: 'Puntos de interés del mapa' }), el('small', { text: 'Conquístalos por lo que dan (en el mapa, un medallón con una etiqueta)' })),
+      el('h4', { class: 'pf-sub', text: 'Puntos estratégicos · para quien los controle' }),
+      el('div', { class: 'puntos-rejilla' }, ...pois),
+      el('h4', { class: 'pf-sub', text: 'Lugares de interés · un premio al tomarlos' }),
+      el('div', { class: 'puntos-rejilla' }, ...lugares));
   }
 
   /** Muestras de color rápidas junto a cada selector de color. */
@@ -1624,6 +1674,8 @@ export class Home {
         drawMissileSprite(c.getContext('2d'), px * 1.2, px * 0.82, -0.62, px * 1.2, p.color, 0.3, look || item.look);
         return c;
       }
+      case 'emoji':
+        return el('span', { class: 'titulo-icono', style: `font-size:${Math.round(px * 0.7)}px`, text: item.e });
       default:
         return el('span');
     }
@@ -1669,7 +1721,8 @@ export class Home {
     const C = CATALOG.get(item.cat);
     const ok = isUnlocked(p, item);
     const lines = [];
-    if (this._equippedId(item.cat) === item.id) lines.push({ text: '✔ Equipado', tone: 'bien' });
+    if (item.cat === 'emoji' && ok) lines.push({ text: 'Es tuyo · mándalo en partida con 😀 (tecla Y) o desde la ficha de una nación', tone: 'bien' });
+    else if (this._equippedId(item.cat) === item.id) lines.push({ text: '✔ Equipado', tone: 'bien' });
     else if (ok) lines.push({ text: 'Es tuyo · clic para equipar', tone: 'bien' });
     else if (item.unlock && item.unlock.price) {
       const have = p.monedas || 0;
@@ -2769,6 +2822,12 @@ export class Home {
       this._openBuy(item);
       return;
     }
+    if (item.cat === 'emoji') {
+      // Los emojis no se equipan: todos los tuyos salen en el panel de la partida
+      const btn = document.querySelector(`#sel-emojis [data-k="${itemKey(item)}"]`);
+      btn?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
+      return;
+    }
     equip();
     this.h.sound?.('equipar');
     this._profileChanged();
@@ -2819,6 +2878,7 @@ export class Home {
     if (item.cat === 'patron') return patternCanvas(item.id, p.color, 192, 96);
     if (item.cat === 'color') return el('span', { class: 'compra-nombre', style: `color:${item.color || nameColorOf(p)}`, text: p.nombre || 'Mi nación' });
     if (item.cat === 'titulo') return el('span', { class: 'compra-titulo-txt' }, el('strong', { text: p.nombre || 'Mi nación' }), el('span', { text: item.name }));
+    if (item.cat === 'emoji') return el('span', { class: 'compra-emoji', 'aria-hidden': 'true', text: item.e });
     const c = el('canvas', { width: 192, height: 192, class: 'emblema', 'aria-hidden': 'true' });
     c.style.width = c.style.height = '96px';
     const cx = c.getContext('2d');
@@ -2860,6 +2920,7 @@ export class Home {
     $('in-emb-figura').value = p.emblema.fg;
 
     this._renderFlagPicker();
+    this._renderEmojiShop();
 
     this._renderSelector($('sel-formas'), SHAPES, p.emblema.shape, (item) => ({ ...p.emblema, shape: item.id }), (id) => {
       p.emblema.shape = id;
@@ -2925,6 +2986,25 @@ export class Home {
         ? [el('i', { class: 'bandera', style: flagCss(cur, 20), 'aria-hidden': 'true' }), el('strong', { text: flagName(cur) || cur }), el('button', { type: 'button', class: 'btn-mini', text: 'Quitar', onclick: () => pick('') })]
         : [el('small', { text: 'Ninguna: se ven la forma y el símbolo' })]),
     );
+  }
+
+  /** Emojis de partida en la colección: los tuyos, los que se ganan y los que se compran. */
+  _renderEmojiShop() {
+    const box = $('sel-emojis');
+    if (!box) return;
+    box.replaceChildren(
+      ...EMOJI_ITEMS.map((item) => {
+        const s = this._shop(item);
+        return el(
+          'button',
+          { type: 'button', class: `opcion opcion-emoji${s.ok ? ' tuyo' : ''}${s.cls}`, 'data-k': itemKey(item), title: s.ok ? `${item.name}: tuyo` : s.title, 'aria-label': `${item.e} ${item.name}: ${s.ok ? 'tuyo' : s.label}`, onclick: () => this._pick(item, () => {}) },
+          el('span', { class: 'oe-glifo', 'aria-hidden': 'true', text: item.e }),
+          el('span', { class: 'oe-nombre', text: item.name }),
+          el('span', { class: 'oe-estado', text: s.ok ? '✓ Tuyo' : s.label }),
+        );
+      }),
+    );
+    this._decorateCollection(box);
   }
 
   _renderSelector(box, items, current, preview, apply) {

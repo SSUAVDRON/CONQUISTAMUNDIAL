@@ -8,6 +8,7 @@ import { normalizeConfig } from './configurador.js';
 import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS } from './skins.js';
 import { newRank, normalizeRank, splitRanks } from './rangos.js';
 import { Rng, hashString } from './rng.js';
+import { EMOJI_ITEMS } from './emojis.js';
 
 // (Las claves conservan el nombre de la primera versión para no perder perfiles.)
 const KEY = 'dominia.perfil.v1';
@@ -167,14 +168,14 @@ export const TITLES = [
 ];
 
 /** Cada objeto sabe a qué catálogo pertenece (para comprarlo y guardarlo). */
-for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'estandarte'], [FRAMES, 'marco'], [NAME_COLORS, 'color'], [PATTERNS, 'patron'], [TITLES, 'titulo'], [BUILDING_SKINS, 'edificios'], [SHIP_SKINS, 'barcos'], [BOMB_SKINS, 'bombas']]) {
+for (const [list, cat] of [[SHAPES, 'forma'], [SYMBOLS, 'simbolo'], [BANNERS, 'estandarte'], [FRAMES, 'marco'], [NAME_COLORS, 'color'], [PATTERNS, 'patron'], [TITLES, 'titulo'], [BUILDING_SKINS, 'edificios'], [SHIP_SKINS, 'barcos'], [BOMB_SKINS, 'bombas'], [EMOJI_ITEMS, 'emoji']]) {
   for (const item of list) item.cat = cat;
 }
 export const itemKey = (item) => `${item.cat}:${item.id}`;
 
 /** Precio en monedas de cada objeto de la tienda, por su clave. */
 const PRICE_BY_KEY = new Map(
-  [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
+  [SHAPES, SYMBOLS, BANNERS, FRAMES, NAME_COLORS, PATTERNS, TITLES, BUILDING_SKINS, SHIP_SKINS, BOMB_SKINS, EMOJI_ITEMS].flatMap((list) => list.filter((it) => it.unlock && it.unlock.price).map((it) => [itemKey(it), it.unlock.price])),
 );
 
 /** Mejores puntos de la clasificatoria (esta temporada o las anteriores). */
@@ -356,8 +357,8 @@ export function rewardsOf(achId) {
   const out = [];
   const ach = ACHIEVEMENTS.find((a) => a.id === achId);
   if (ach && ach.coins) out.push(`🪙 ${ach.coins}`);
-  for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre'], [BUILDING_SKINS, 'Edificios'], [SHIP_SKINS, 'Barcos'], [BOMB_SKINS, 'Bombas']]) {
-    for (const item of list) if (item.unlock && item.unlock.ach === achId) out.push(`${kind}: ${item.name}`);
+  for (const [list, kind] of [[SYMBOLS, 'Símbolo'], [PATTERNS, 'Patrón'], [TITLES, 'Título'], [BANNERS, 'Estandarte'], [FRAMES, 'Marco'], [NAME_COLORS, 'Color de nombre'], [BUILDING_SKINS, 'Edificios'], [SHIP_SKINS, 'Barcos'], [BOMB_SKINS, 'Bombas'], [EMOJI_ITEMS, 'Emoji']]) {
+    for (const item of list) if (item.unlock && item.unlock.ach === achId) out.push(`${kind}: ${item.e ? `${item.e} ` : ''}${item.name}`);
   }
   return out;
 }
@@ -637,6 +638,11 @@ export function grantAchievement(profile, id) {
   profile.stats.monedasGanadas = (profile.stats.monedasGanadas || 0) + (ach.coins || 0);
   saveProfile(profile);
   return ach;
+}
+
+/** Los emojis de partida que tienes (de serie, por nivel o gestas, o comprados). */
+export function ownedEmojis(profile) {
+  return EMOJI_ITEMS.filter((it) => isUnlocked(profile, it));
 }
 
 export function isUnlocked(profile, item) {

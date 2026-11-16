@@ -127,7 +127,7 @@ export const SECTIONS = [
       { key: 'banderas', type: 'toggle', label: 'Banderas junto a los nombres', desc: 'La bandera o el emblema de cada nación delante de su nombre.' },
       { key: 'marcadores', type: 'toggle', label: 'Tropas de cada ataque', desc: 'Una pastilla con las tropas que quedan en cada frente.' },
       { key: 'puntero', type: 'toggle', label: 'Puntero hacia tu nación', desc: 'La marca «TÚ» y una flecha en el borde cuando tu país no se ve.' },
-      { key: 'emojis', type: 'toggle', label: 'Burbujas de emoji', desc: 'Los emojis que se mandan las naciones, sobre el mapa.' },
+      { key: 'emojis', type: 'toggle', label: 'Burbujas de emoji', desc: 'Los globos de emoji que se mandan las naciones y la IA, sobre el mapa. Los tuyos los mandas con 😀 o la tecla Y.' },
       { key: 'alerta', type: 'toggle', label: 'Borde rojo al ser atacado', desc: 'La pantalla se tiñe de rojo por el lado del ataque.' },
     ],
   },

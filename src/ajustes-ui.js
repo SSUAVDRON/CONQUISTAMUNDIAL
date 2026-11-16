@@ -81,6 +81,7 @@ function shortcuts() {
     ['Construir varias veces', [...kbd('Mayús'), ' + clic']],
     ['Plegar el panel de abajo', kbd('V')],
     ['Desarrollo e investigación', kbd('I')],
+    ['Mandar un emoji a todos', kbd('Y')],
     ['Silenciar el sonido', kbd('N')],
     ['Menú de la partida', kbd('Esc')],
   ];

@@ -10,10 +10,13 @@ export const POI_TYPES = {
   capital: {
     name: 'Capital',
     desc: 'Capital de una nación. Conquistarla da un gran botín y su dueño crece un 15 % menos hasta recuperarla. Cada capital que controles: +5 % de oro y de crecimiento',
+    short: '+5 % oro y crecimiento',
+    color: '#f2c14e',
   },
-  industria: { name: 'Núcleo industrial', desc: '+15 % de oro pasivo para quien lo controle' },
-  puerto: { name: 'Puerto clave', desc: '+1 barco de transporte y +25 % de oro de trenes y mercantes' },
-  paso: { name: 'Paso de montaña', desc: 'Conquistar alrededor cuesta un 60 % más a quien ataque a su dueño' },
+  // `short`: lo que da en pocas palabras (la etiqueta del mapa); `color`: el de su medallón
+  industria: { name: 'Núcleo industrial', desc: '+15 % de oro pasivo para quien lo controle', short: '+15 % oro', color: '#f08a3c' },
+  puerto: { name: 'Puerto clave', desc: '+1 barco de transporte y +25 % de oro de trenes y mercantes', short: '+1 barco · +25 % comercio', color: '#34c3d6' },
+  paso: { name: 'Paso de montaña', desc: 'Conquistar alrededor cuesta un 60 % más a quien ataque a su dueño', short: 'Defensa ×1,6', color: '#b99467' },
 };
 
 /** Efectos (los usa Game._refreshMods; el del paso se aplica en el coste de cada casilla). */
@@ -29,15 +32,16 @@ export const POI = {
 };
 
 /**
- * Coloca los puntos neutrales de un mapa: unos 1 por cada 75.000 casillas de
- * tierra con RES 2 (la misma superficie con más resolución: × AREA / 4),
- * entre 8 y 36, separados entre sí, en masas de tierra grandes.
+ * Coloca los puntos neutrales de un mapa: unos 1 por cada 25.000 casillas de
+ * tierra con RES 2 (la misma superficie con más resolución: × AREA / 4; antes
+ * uno cada 75.000, y en el mundo apenas había 8), entre 10 y 48, separados
+ * entre sí, en masas de tierra grandes.
  * Mezcla: ~45 % núcleos industriales, ~30 % puertos clave (en la costa) y
  * ~25 % pasos (en colinas o montañas que lindan con terreno más bajo).
  */
 export function placePoints(map, seed) {
   const rng = new Rng((seed ^ 0x9e3779b9) >>> 0);
-  const total = Math.max(8, Math.min(36, Math.round(map.landCount / ((75000 * AREA) / 4))));
+  const total = Math.max(10, Math.min(48, Math.round(map.landCount / ((25000 * AREA) / 4))));
   const minBody = 150 * AREA;
   const bigLand = (t) => map.landBodySizes[map.landBody[t]] >= minBody;
   const minDist = Math.max(12 * RES, Math.sqrt(map.landCount / total) * 0.55);

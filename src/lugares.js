@@ -14,13 +14,20 @@ import { AREA } from './config.js';
  * que da en pocas palabras (el rótulo del mapa y los bonos del panel).
  */
 export const LUGARES = {
-  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)', short: 'Oro al momento' },
-  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)', short: '+20 % tropas' },
-  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s', short: '+60 % crecimiento' },
-  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s', short: 'Ataques −30 %' },
-  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre', short: '+4 % oro siempre' },
-  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre', short: '+5 % techo siempre' },
+  tesoro: { name: 'Tesoro escondido', icon: '💰', weight: 3, instant: 'gold', desc: 'Oro al momento (más cuanto más ingresas)', short: 'Oro al momento', color: '#f2c14e' },
+  mercenarios: { name: 'Campamento de mercenarios', icon: '⚔️', weight: 2, instant: 'troops', desc: '+20 % de tropas al momento (sin pasar del techo)', short: '+20 % tropas', color: '#e0574c' },
+  granero: { name: 'Granero', icon: '🌾', weight: 2, buff: { growth: 0.6 }, ticks: 600, desc: '+60 % de crecimiento de tropas durante 60 s', short: '+60 % crecimiento', color: '#7cc65a' },
+  forja: { name: 'Forja antigua', icon: '🔥', weight: 2, buff: { attackCost: -0.3 }, ticks: 450, desc: 'Atacar cuesta un 30 % menos de tropas durante 45 s', short: 'Ataques −30 %', color: '#f08a3c' },
+  ruinas: { name: 'Ruinas antiguas', icon: '🏛️', weight: 1, perm: { gold: 0.04 }, desc: '+4 % de oro para siempre', short: '+4 % oro', color: '#a77bf0' },
+  fortaleza: { name: 'Fortaleza olvidada', icon: '🛡️', weight: 1, perm: { cap: 0.05 }, desc: '+5 % de techo de tropas para siempre', short: '+5 % techo', color: '#5aa0f0' },
 };
+
+/** Cuánto dura lo que da un lugar: «al momento», «60 s» o «para siempre». */
+export function lugarSpan(def) {
+  if (def.instant) return 'al momento';
+  if (def.perm) return 'para siempre';
+  return `${Math.round(def.ticks / 10)} s`;
+}
 export const LUGAR_IDS = Object.keys(LUGARES);
 
 /** Parámetros: cuántos hay (uno cada `landPer` casillas de tierra, entre min y max) y cada cuánto reaparecen. */

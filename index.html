@@ -10,8 +10,8 @@
   <script type="importmap">
   {
     "imports": {
-      "./src/ajustes-ui.js": "./src/ajustes-ui.js?v=3f8dc8f766",
-      "./src/ajustes.js": "./src/ajustes.js?v=c5ddbaf87a",
+      "./src/ajustes-ui.js": "./src/ajustes-ui.js?v=48a4c39e1c",
+      "./src/ajustes.js": "./src/ajustes.js?v=b96c90c968",
       "./src/attack.js": "./src/attack.js?v=43652095f7",
       "./src/banderas-extra.js": "./src/banderas-extra.js?v=1722e94924",
       "./src/banderas.js": "./src/banderas.js?v=079a0c12a9",
@@ -27,30 +27,31 @@
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=c42820ffba",
       "./src/cuenta.js": "./src/cuenta.js?v=23ae310e71",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
+      "./src/emojis.js": "./src/emojis.js?v=ef56f6a09b",
       "./src/emparejamiento.js": "./src/emparejamiento.js?v=af4606d81b",
       "./src/errores.js": "./src/errores.js?v=d6981c22f3",
-      "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
+      "./src/estrategia.js": "./src/estrategia.js?v=3bcf02e99c",
       "./src/ficha-ui.js": "./src/ficha-ui.js?v=73fc2d2f38",
       "./src/fichas.js": "./src/fichas.js?v=1f6b66400a",
       "./src/fin.js": "./src/fin.js?v=8ad71316f7",
       "./src/format.js": "./src/format.js?v=3a70a55999",
       "./src/fx.js": "./src/fx.js?v=3db8335f88",
-      "./src/game.js": "./src/game.js?v=f06ae58fb8",
-      "./src/guia.js": "./src/guia.js?v=c25aeaab82",
+      "./src/game.js": "./src/game.js?v=d28b8b97a5",
+      "./src/guia.js": "./src/guia.js?v=a3c94709b9",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=a2d76c9e4e",
-      "./src/icons.js": "./src/icons.js?v=301dfec96f",
+      "./src/home.js": "./src/home.js?v=e6ebcd0719",
+      "./src/icons.js": "./src/icons.js?v=abdbcb1fe4",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
       "./src/input.js": "./src/input.js?v=03eed180fc",
       "./src/ladder.js": "./src/ladder.js?v=fae0703183",
       "./src/loading.js": "./src/loading.js?v=a6d871f13d",
-      "./src/lugares.js": "./src/lugares.js?v=4a2b8221d0",
-      "./src/main.js": "./src/main.js?v=e66de81299",
+      "./src/lugares.js": "./src/lugares.js?v=554cb7b327",
+      "./src/main.js": "./src/main.js?v=87ba9608f9",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=87bade7d81",
-      "./src/mecanicas.js": "./src/mecanicas.js?v=09ef720dab",
+      "./src/mecanicas.js": "./src/mecanicas.js?v=699ee64c80",
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ab2918104e",
       "./src/mqtt.js": "./src/mqtt.js?v=25e77d24f7",
@@ -62,9 +63,9 @@
       "./src/player.js": "./src/player.js?v=38b65c9db6",
       "./src/portada.js": "./src/portada.js?v=92e46a1eb5",
       "./src/presentacion.js": "./src/presentacion.js?v=c8fb35cdb1",
-      "./src/profile.js": "./src/profile.js?v=c495c86f1c",
+      "./src/profile.js": "./src/profile.js?v=b70c28701d",
       "./src/rangos.js": "./src/rangos.js?v=eca497afe9",
-      "./src/render.js": "./src/render.js?v=9739c725aa",
+      "./src/render.js": "./src/render.js?v=066bc28f5e",
       "./src/repeticion.js": "./src/repeticion.js?v=5d726656a5",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
@@ -80,12 +81,12 @@
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=1f51d9dc6f",
-      "./src/ui.js": "./src/ui.js?v=cce3b9d5e0"
+      "./src/ui.js": "./src/ui.js?v=ab38ef6fee"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=ff5d73e642">
+  <link rel="stylesheet" href="css/estilo.css?v=6cea8c2120">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo, siluetas e iconos de las pantallas de carga) -->
@@ -616,6 +617,11 @@
                   <div class="muestras" id="mu-emb-figura" data-campo="in-emb-figura" role="group" aria-label="Colores de símbolo rápidos"></div>
                 </div>
               </div>
+              <div class="bloque rpg-panel col-bloque" data-col="emoji">
+                <h2>Emojis de partida</h2>
+                <p class="nota">Se mandan en la partida con el botón 😀 de la barra de arriba (a todos) o desde la ficha de una nación (solo a ella), y salen en un globo sobre tu nación; también en línea. Los de serie ya son tuyos; otros se ganan subiendo de nivel o con gestas, o se compran.</p>
+                <div id="sel-emojis" class="selector selector-emojis" role="group" aria-label="Emojis"></div>
+              </div>
               <div class="bloque rpg-panel col-bloque" data-col="marco">
                 <h2>Marco del emblema</h2>
                 <div id="sel-marcos" class="selector" role="radiogroup" aria-label="Marco"></div>
@@ -998,7 +1004,14 @@
         <span>Mi nación</span>
       </button>
       </span>
+      <!-- Emojis: a todos, sobre tu nación (los tuyos; más en la tienda) -->
+      <button type="button" id="btn-emojis" class="btn-emojis" title="Mandar un emoji a todos (tecla Y)" aria-label="Emojis" aria-expanded="false" aria-controls="emoji-panel">😀</button>
       <button type="button" id="btn-salir" title="Volver al menú">Menú</button>
+      <div id="emoji-panel" class="emoji-panel" role="dialog" aria-label="Mandar un emoji a todos" hidden>
+        <div class="ep-cab"><strong>Emojis</strong><small>Los ven todos sobre tu nación</small></div>
+        <div class="ep-rejilla" id="ep-rejilla"></div>
+        <small class="ep-pie">Más en la tienda (Perfil → Aspecto → Emojis). A una sola nación: desde su ficha.</small>
+      </div>
     </div>
 
     <!-- Puntero: aparece en el borde cuando tu nación queda fuera de la vista -->

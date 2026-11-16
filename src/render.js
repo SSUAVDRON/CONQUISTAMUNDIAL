@@ -6,14 +6,15 @@
 import { BUILDINGS, CONFIG, RES, TICK_MS } from './config.js';
 import { rgbToCss, shadeRgb, territoryRgb, vividRgb } from './colors.js';
 import { fmtTroops, fmtTroopsCount, formatNumber, formatTroops } from './format.js';
-import { PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawEmblem, drawFlag, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
+import { PATTERN_FNS, drawBuildingReal, drawCapitalEmblem, drawCapitalFx, drawEmblem, drawFlag, drawMedallion, drawPointIcon, emblemFor, flagReady, hasFlag } from './icons.js';
 import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { forgetTerrain, paintTerrain } from './terreno.js';
 import { MECH, startOffsets } from './mecanicas.js';
 import { Fx, drawMissileSprite, resetFxSprites } from './fx.js';
 import { drawCargo, drawFishing, drawTransport, drawWarship } from './barcos.js';
 import { skinLook } from './skins.js';
-import { LUGARES } from './lugares.js';
+import { LUGARES, lugarSpan } from './lugares.js';
+import { POI_TYPES } from './estrategia.js';
 /** Zona inicial (desplazamientos desde la casilla de salida), para la vista previa del despliegue. */
 const START_ZONE = startOffsets();
 
@@ -1648,45 +1649,112 @@ export class Renderer {
   }
 
   /**
-   * Lugares de interés (doc-1.6): un disco dorado que late con su icono,
-   * siempre a la vista; de cerca, con su nombre.
+   * Etiqueta de lo que da un punto o lugar: píldora oscura con un punto del
+   * color de su tipo y el texto (cacheada por texto, color y densidad).
+   */
+  _chipSprite(text, color, sub = '') {
+    const key = `chip|${text}|${color}|${sub}|${this.dpr}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const d = this.dpr;
+      const font = `800 ${10.5 * d}px system-ui, sans-serif`;
+      const subFont = `600 ${9 * d}px system-ui, sans-serif`;
+      const m = makeCanvas(1, 1).getContext('2d');
+      m.font = font;
+      const tw = m.measureText(text).width;
+      m.font = subFont;
+      const sw = sub ? m.measureText(sub).width + 6 * d : 0;
+      const h = 17 * d;
+      const w = Math.ceil(tw + sw + 22 * d);
+      c = makeCanvas(w + 2 * d, h + 2 * d);
+      const g = c.getContext('2d');
+      g.translate(d, d);
+      g.beginPath();
+      g.roundRect(0, 0, w, h, h / 2);
+      g.fillStyle = 'rgba(10, 13, 22, 0.88)';
+      g.fill();
+      g.lineWidth = d;
+      g.strokeStyle = color;
+      g.globalAlpha = 0.85;
+      g.stroke();
+      g.globalAlpha = 1;
+      g.beginPath();
+      g.arc(9 * d, h / 2, 3.2 * d, 0, Math.PI * 2);
+      g.fillStyle = color;
+      g.fill();
+      g.textBaseline = 'middle';
+      g.font = font;
+      g.fillStyle = '#ffffff';
+      g.fillText(text, 16 * d, h / 2 + 0.5 * d);
+      if (sub) {
+        g.font = subFont;
+        g.fillStyle = 'rgba(255, 255, 255, 0.62)';
+        g.fillText(sub, 16 * d + tw + 6 * d, h / 2 + 0.5 * d);
+      }
+      this._sprites.set(key, c);
+    }
+    return c;
+  }
+
+  /** Dibuja una etiqueta (sprite) centrada en x, con su borde superior en y. */
+  _blitChip(spr, x, y) {
+    const w = spr.width / this.dpr;
+    const h = spr.height / this.dpr;
+    this.ctx.drawImage(spr, Math.round(x - w / 2), Math.round(y), w, h);
+    return h;
+  }
+
+  /** Nombre corto con contorno, encima de su etiqueta. */
+  _markerName(text, x, y, color = '#ffe3a1') {
+    const { ctx } = this;
+    ctx.font = '800 10.5px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(10, 14, 24, 0.85)';
+    ctx.fillStyle = color;
+    ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
+  }
+
+  /**
+   * Lugares de interés (doc-1.6): un medallón del color de su tipo con su
+   * icono, que flota y late; debajo, lo que da y cuánto dura («+20 % tropas ·
+   * al momento») y, de cerca, su nombre.
    */
   _drawLugares(now) {
     const { ctx, game, camera } = this;
     if (!game.lugares || !game.lugares.length) return;
-    const size = clamp(camera.zoom * RES * 4, 15, 30);
-    const named = camera.zoom * RES >= 1.8;
+    const zr = camera.zoom * RES;
+    const size = clamp(zr * 5, 18, 34);
+    const chips = zr >= 0.9;
+    const named = zr >= 2;
     const k = this.anim ? 0.5 + 0.5 * Math.sin(now / 360) : 0.5;
     for (const l of game.lugares) {
-      const [sx, sy] = camera.worldToScreen(l.x + 0.5, l.y + 0.5);
-      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size * 2) continue;
-      // Halo que late
-      ctx.fillStyle = `rgba(255, 210, 90, ${0.18 + 0.16 * k})`;
+      const [sx, sy0] = camera.worldToScreen(l.x + 0.5, l.y + 0.5);
+      if (sx < -size * 3 || sy0 < -size * 2 || sx > camera.viewW + size * 3 || sy0 > camera.viewH + size * 2) continue;
+      const def = LUGARES[l.kind];
+      const sy = sy0 - (this.anim ? 2 * Math.sin(now / 520 + l.id) : 0);
+      // Halo del color de su tipo que late
+      ctx.globalAlpha = 0.22 + 0.2 * k;
+      ctx.fillStyle = def.color || '#ffd25a';
       ctx.beginPath();
-      ctx.arc(sx, sy, size * (0.78 + 0.16 * k), 0, Math.PI * 2);
+      ctx.arc(sx, sy, size * (0.72 + 0.18 * k), 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
       const spr = this._lugarSprite(l.kind, size);
       const w = spr.width / this.dpr;
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
+      if (!chips) continue;
+      let y = sy + size * 0.56;
       if (named) {
-        const def = LUGARES[l.kind];
-        ctx.font = '700 10px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(10, 14, 24, 0.8)';
-        ctx.fillStyle = '#ffe3a1';
-        ctx.strokeText(def.name, sx, sy + size * 0.62);
-        ctx.fillText(def.name, sx, sy + size * 0.62);
-        // Debajo, lo que da (doc-1.7: antes solo el nombre y no se sabía)
-        if (def.short) {
-          ctx.font = '600 9.5px system-ui, sans-serif';
-          ctx.fillStyle = '#9be38f';
-          ctx.strokeText(def.short, sx, sy + size * 0.62 + 12);
-          ctx.fillText(def.short, sx, sy + size * 0.62 + 12);
-        }
+        this._markerName(def.name, sx, y);
+        y += 13;
       }
+      this._blitChip(this._chipSprite(def.short, def.color || '#ffd25a', lugarSpan(def)), sx, y);
     }
   }
 
@@ -1697,51 +1765,43 @@ export class Renderer {
     let c = this._sprites.get(key);
     if (!c) {
       if (this._sprites.size > 600) this._sprites.clear();
-      const S = Math.ceil(px * 1.2);
+      const S = Math.ceil(px * 1.3);
       c = makeCanvas(S, S);
-      const g = c.getContext('2d');
-      const r = px / 2;
-      const grad = g.createRadialGradient(S / 2, S / 2 - r * 0.3, r * 0.1, S / 2, S / 2, r);
-      grad.addColorStop(0, '#fff2c4');
-      grad.addColorStop(1, '#d9a12e');
-      g.beginPath();
-      g.arc(S / 2, S / 2, r, 0, Math.PI * 2);
-      g.fillStyle = grad;
-      g.fill();
-      g.lineWidth = Math.max(1.5, px * 0.07);
-      g.strokeStyle = '#5b3a0a';
-      g.stroke();
-      g.font = `${Math.round(px * 0.56)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      g.fillText(LUGARES[kind].icon, S / 2, S / 2 + px * 0.03);
+      const def = LUGARES[kind];
+      drawMedallion(c.getContext('2d'), S / 2, S / 2, px, def.color || '#f2c14e', (g, s) => {
+        g.font = `${Math.round(s * 2.05)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(def.icon, 0, s * 0.1);
+      });
       this._sprites.set(key, c);
     }
     return c;
   }
 
   /**
-   * Puntos estratégicos: siempre visibles (también alejado), en rombo con el
-   * borde del color de su dueño (dorado si no es de nadie). De cerca, con su
-   * nombre debajo. Los tuyos laten suavemente.
+   * Puntos estratégicos: medallón del color de su tipo con el anillo de su
+   * dueño; debajo, lo que da («+15 % oro») y, de cerca, su nombre.
    */
   _drawPoints(now) {
     const { ctx, game, camera } = this;
     if (!game.points.length) return;
-    const big = Math.max(13, Math.min(30, camera.zoom * RES * 3.2));
-    const named = camera.zoom * RES >= 2.4;
+    const zr = camera.zoom * RES;
+    const big = Math.max(15, Math.min(32, zr * 3.6));
+    const chips = zr >= 1.3;
+    const named = zr >= 2.4;
     const human = game.human;
     // Capitales: más pequeñas y, de lejos, solo las que importan (la tuya, las
     // de tus aliados, las conquistadas) salvo en la victoria por capitales
-    const allCaps = game.rules.victory === 'capitales' || camera.zoom * RES >= 1.2;
+    const allCaps = game.rules.victory === 'capitales' || zr >= 1.2;
     for (const pt of game.points) {
       const o = game.owner[pt.tile];
       const p = o ? game.players[o] : null;
       const capital = pt.kind === 'capital';
       if (capital && !allCaps && !(human && (pt.nation === human.id || o === human.id || human.allies.has(pt.nation))) && o === pt.nation) continue;
-      const size = capital ? Math.max(10, big * 0.75) : big;
+      const size = capital ? Math.max(11, big * 0.72) : big;
       const [sx, sy] = camera.worldToScreen(pt.x + 0.5, pt.y + 0.5);
-      if (sx < -size || sy < -size || sx > camera.viewW + size || sy > camera.viewH + size * 2) continue;
+      if (sx < -size * 4 || sy < -size * 2 || sx > camera.viewW + size * 4 || sy > camera.viewH + size * 2) continue;
       const spr = this._pointSprite(pt.kind, p, size);
       const w = spr.width / this.dpr;
       const mine = human && p === human;
@@ -1749,22 +1809,19 @@ export class Renderer {
         const k = 0.5 + 0.5 * Math.sin(now / 420);
         ctx.fillStyle = `rgba(255, 220, 120, ${0.18 + 0.14 * k})`;
         ctx.beginPath();
-        ctx.arc(sx, sy, size * (0.75 + 0.12 * k), 0, Math.PI * 2);
+        ctx.arc(sx, sy, size * (0.78 + 0.12 * k), 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.drawImage(spr, sx - w / 2, sy - w / 2, w, w);
-      if (named && !capital) {
-        ctx.font = '700 10px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(10, 14, 24, 0.8)';
-        ctx.fillStyle = p ? '#ffffff' : '#f6d27a';
-        const label = pt.kind === 'capital' ? pt.name : pt.name.replace(/ de .*/, '');
-        ctx.strokeText(label, sx, sy + size * 0.62);
-        ctx.fillText(label, sx, sy + size * 0.62);
+      // Las capitales, solo el medallón (hay una por nación: lo que dan, en su ficha)
+      if (!chips || capital) continue;
+      const T = POI_TYPES[pt.kind];
+      let y = sy + size * 0.6;
+      if (named) {
+        this._markerName(T.name, sx, y, p ? '#ffffff' : '#f6d27a');
+        y += 13;
       }
+      this._blitChip(this._chipSprite(T.short, T.color, mine ? 'tuyo' : ''), sx, y);
     }
   }
 

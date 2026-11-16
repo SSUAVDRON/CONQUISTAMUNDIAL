@@ -3179,6 +3179,7 @@ body.sin-animaciones .sala-esqueleto span { animation: none; }
 .compra-nombre { font-family: var(--serif); font-weight: 800; font-size: 26px; text-shadow: 0 0 3px #000; }
 .compra-titulo-txt { display: flex; flex-direction: column; gap: 2px; }
 .compra-titulo-txt strong { font-size: 18px; }
+.compra-emoji { font-size: 64px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45)); }
 .compra-titulo-txt span { color: var(--oro-200); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 13px; }
 .compra-texto { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .compra-precio { font-size: 24px; font-weight: 900; color: var(--oro-200); }
@@ -6377,3 +6378,50 @@ body.sin-animaciones :is(.insignias li.activo .ins-medalla::before, .insignias l
   #inicio .bandera-opcion { height: 42px; }
   .bandera-opcion .bandera { width: 42px; height: 31.5px; }
 }
+
+/* Ficha del mapa: punto estratégico o lugar de interés (qué da y cómo se consigue) */
+#tooltip .tip-punto { display: flex; align-items: flex-start; gap: 7px; margin-top: 4px; padding: 5px 7px; border-top: 0; border-radius: 7px; background: color-mix(in srgb, var(--c, #f2c14e) 16%, transparent); box-shadow: inset 3px 0 0 var(--c, #f2c14e); max-width: 260px; white-space: normal; }
+#tooltip .tip-punto .tp-ico { flex: none; font-size: 15px; line-height: 1.2; }
+#tooltip .tip-punto b { display: block; color: #fff; }
+#tooltip .tip-punto .tp-da { display: block; color: #fff3cf; font-size: 11.5px; line-height: 1.35; }
+#tooltip .tip-punto .tp-como { display: block; margin-top: 2px; color: rgba(255, 255, 255, 0.6); font-size: 10.5px; }
+
+/* Arsenal: cada grupo a lo ancho (Economía tiene seis) y los puntos de interés del mapa */
+.arsenal-vista { grid-template-columns: minmax(0, 1fr); }
+.arsenal-familia .arsenal { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.arsenal-puntos { margin-top: 6px; }
+.pf-sub { margin: 4px 0 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-3); }
+.puntos-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.punto-ficha { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 12px 14px; border-radius: 14px; text-align: center; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--c) 22%, transparent), transparent 70%), rgba(255, 255, 255, 0.03); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
+.pf-dibujo canvas { width: 64px; height: 64px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45)); }
+.punto-ficha strong { font-size: 14.5px; color: var(--texto-1); }
+.pf-chip { padding: 2px 10px; border-radius: 999px; background: rgba(10, 13, 22, 0.85); border: 1px solid var(--c); color: #fff; font-size: 12px; font-weight: 800; }
+.punto-ficha p { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--texto-2); }
+.punto-ficha small { color: var(--texto-3); font-size: 11px; }
+
+/* Emojis en la partida: botón en la barra de arriba y su panel (a todos) */
+#barra-superior { position: relative; }
+.btn-emojis { display: inline-grid; place-items: center; width: 34px; padding: 3px 0; font-size: 17px; line-height: 1; }
+.btn-emojis[aria-expanded="true"] { background: rgba(233, 185, 85, 0.22); box-shadow: inset 0 0 0 1px rgba(233, 185, 85, 0.55); }
+.emoji-panel { position: absolute; top: calc(100% + 8px); right: 8px; z-index: 30; width: min(300px, calc(100vw - 16px)); padding: 10px; border-radius: 14px; background: rgba(10, 13, 22, 0.96); border: 1px solid rgba(233, 185, 85, 0.45); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); animation: tpColores 0.16s ease-out both; }
+.ep-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.ep-cab strong { font-size: 14px; color: var(--oro-claro, #ffe08a); }
+.ep-cab small { font-size: 11px; color: var(--texto-3, #8a93a6); }
+.ep-rejilla { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; }
+.ep-rejilla button { min-height: 0; aspect-ratio: 1; padding: 0; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.04); box-shadow: none; font-size: 22px; line-height: 1; cursor: pointer; transition: transform 0.12s; }
+.ep-rejilla button:hover { transform: scale(1.18); background: rgba(233, 185, 85, 0.16); }
+/* La barra de arriba pone sus botones a 30 px y 13 px: aquí, casillas cuadradas con el emoji grande */
+body #hud #barra-superior .ep-rejilla button { height: auto; min-height: 0; aspect-ratio: 1; padding: 0; font-size: 24px; line-height: 1; border-radius: 10px; }
+body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px; }
+.ep-pie { display: block; margin-top: 8px; font-size: 10.5px; line-height: 1.35; color: var(--texto-3, #8a93a6); }
+.emojis { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); max-height: 120px; overflow-y: auto; }
+
+/* Tienda: emojis de partida */
+.selector-emojis { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.selector-emojis .opcion-emoji { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: 8px 4px 6px; border-radius: 12px; }
+.opcion-emoji .oe-glifo { font-size: 30px; line-height: 1.1; }
+.opcion-emoji .oe-nombre { font-size: 11px; color: var(--texto-2); text-align: center; line-height: 1.2; }
+.opcion-emoji .oe-estado { font-size: 10.5px; font-weight: 800; color: var(--texto-3); }
+.opcion-emoji.tuyo .oe-estado { color: var(--ok, #5fd38d); }
+.opcion-emoji.bloqueada .oe-glifo { filter: grayscale(0.85) opacity(0.55); }
+.opcion-emoji.en-venta .oe-estado { color: var(--oro-claro, #ffe08a); }

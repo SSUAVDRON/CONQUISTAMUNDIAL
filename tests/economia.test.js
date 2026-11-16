@@ -8,6 +8,7 @@ import { Game } from '../src/game.js';
 import { CONFIG, RES } from '../src/config.js';
 import { MECH, bankShare, capitalPerks, capitalPrice, territoryGold } from '../src/mecanicas.js';
 import { LUGARES } from '../src/lugares.js';
+import { POI } from '../src/estrategia.js';
 import { buildNow, fundarCapitales } from './ayuda.js';
 
 function play(rules = {}) {
@@ -237,7 +238,8 @@ test('capital: si cae, quien la toma se lleva botín (oro y tropas del banco) y 
   game.setOwner(tile, o.id);
   assert.ok(!game.buildingAt.has(tile) || game.buildingAt.get(tile).kind !== 'capital', 'la capital cae');
   assert.equal(h.capital, null);
-  const loot = 0.2 * 1000000 + MECH.capital.lootBase;
+  // (y, con puntos estratégicos, la recompensa por tomar una capital ajena)
+  const loot = 0.2 * 1000000 + MECH.capital.lootBase + (game.pointAt.get(tile)?.kind === 'capital' ? POI.capitalBounty * o.goldMult : 0);
   assert.ok(Math.abs(o.gold - oGold - loot) < 1, 'botín: el 20 % de su oro y una recompensa');
   assert.ok(Math.abs(o.troops - oTroops - 4000) < 1, 'y la mitad de su banco');
   assert.ok(Math.abs(h.gold - 800000) < 1);

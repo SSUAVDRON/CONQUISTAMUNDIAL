@@ -2,6 +2,7 @@
 // mapa y en los botones de construcción, así siempre coinciden.
 import { CAPITAL_TIERS, capitalTier } from './capital-tier.js';
 import { FLAG_COLS, FLAG_H, FLAG_INDEX, FLAG_SPRITE, FLAG_W } from './banderas.js';
+import { POI_TYPES } from './estrategia.js';
 import { EXTRA_COLS, EXTRA_H, EXTRA_INDEX, EXTRA_SPRITE, EXTRA_W, FLAG_CATALOG } from './banderas-extra.js';
 
 const TAU = Math.PI * 2;
@@ -1388,81 +1389,104 @@ export function installFlagSprite(root) {
   extraSprite();
 }
 
+/** Un color «#rrggbb» aclarado (k > 0) u oscurecido (k < 0). */
+function shadeHex(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)));
+  return `rgb(${ch.join(',')})`;
+}
+
 /**
- * Icono de un punto estratégico: rombo con borde (dorado si no tiene dueño,
- * del color del dueño si lo tiene) y un símbolo blanco: corona (capital),
- * engranaje (núcleo industrial), timón (puerto clave) o montañas (paso).
+ * Medallón de un punto o lugar del mapa: anillo (del color de su dueño o
+ * oscuro si no tiene), disco del color de su tipo con brillo y un símbolo
+ * blanco con sombra. `symbol(ctx, s)` lo dibuja en (0, 0) con radio `s`.
  */
-export function drawPointIcon(ctx, kind, cx, cy, size, { ring = null } = {}) {
+export function drawMedallion(ctx, cx, cy, size, color, symbol, { ring = null } = {}) {
   const r = size / 2;
   ctx.save();
   ctx.translate(cx, cy);
-  // Rombo con las esquinas redondeadas
   ctx.beginPath();
-  const k = r * 1.08;
-  const c = r * 0.22;
-  ctx.moveTo(0, -k + c);
-  ctx.quadraticCurveTo(0, -k, c, -k + c);
-  ctx.lineTo(k - c, -c);
-  ctx.quadraticCurveTo(k, 0, k - c, c);
-  ctx.lineTo(c, k - c);
-  ctx.quadraticCurveTo(0, k, -c, k - c);
-  ctx.lineTo(-k + c, c);
-  ctx.quadraticCurveTo(-k, 0, -k + c, -c);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(16, 22, 36, 0.92)';
+  ctx.arc(0, r * 0.14, r * 1.04, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
   ctx.fill();
-  ctx.lineWidth = Math.max(1.5, size * 0.11);
-  ctx.strokeStyle = ring || '#f2c14e';
-  ctx.stroke();
-  // Símbolo
-  const s = r * 0.62;
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
   ctx.beginPath();
-  if (kind === 'capital') {
-    ctx.moveTo(-s, s * 0.55);
-    ctx.lineTo(-s, -s * 0.45);
-    ctx.lineTo(-s * 0.5, s * 0.05);
-    ctx.lineTo(0, -s * 0.7);
-    ctx.lineTo(s * 0.5, s * 0.05);
-    ctx.lineTo(s, -s * 0.45);
-    ctx.lineTo(s, s * 0.55);
-    ctx.closePath();
-    ctx.fill();
-  } else if (kind === 'industria') {
-    const teeth = 8;
-    for (let i = 0; i < teeth * 2; i++) {
-      const a = (i / (teeth * 2)) * Math.PI * 2;
-      const rr = i % 2 ? s * 0.72 : s;
-      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(0, 0, s * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(16, 22, 36, 0.92)';
-    ctx.fill();
-  } else if (kind === 'puerto') {
-    ctx.lineWidth = Math.max(1.2, s * 0.22);
-    ctx.arc(0, 0, s * 0.62, 0, Math.PI * 2);
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      ctx.moveTo(Math.cos(a) * s * 0.2, Math.sin(a) * s * 0.2);
-      ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
-    }
-    ctx.stroke();
-  } else {
-    // Paso de montaña: dos picos
-    ctx.moveTo(-s, s * 0.6);
-    ctx.lineTo(-s * 0.35, -s * 0.55);
-    ctx.lineTo(0, s * 0.05);
-    ctx.lineTo(s * 0.35, -s * 0.75);
-    ctx.lineTo(s, s * 0.6);
-    ctx.closePath();
-    ctx.fill();
-  }
+  ctx.arc(0, 0, r * 1.04, 0, Math.PI * 2);
+  ctx.fillStyle = ring || 'rgba(22, 16, 8, 0.92)';
+  ctx.fill();
+  const g = ctx.createRadialGradient(-r * 0.32, -r * 0.4, r * 0.08, 0, 0, r * 0.9);
+  g.addColorStop(0, shadeHex(color, 0.5));
+  g.addColorStop(0.55, color);
+  g.addColorStop(1, shadeHex(color, -0.38));
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, r * 0.08);
+  ctx.strokeStyle = 'rgba(255, 245, 220, 0.55)';
+  ctx.stroke();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = Math.max(1, r * 0.18);
+  ctx.shadowOffsetY = Math.max(0.5, r * 0.06);
+  symbol(ctx, r * 0.5, shadeHex(color, -0.45));
   ctx.restore();
+}
+
+/**
+ * Icono de un punto estratégico: un medallón del color de su tipo (dorado la
+ * capital, naranja el núcleo industrial, turquesa el puerto clave, piedra el
+ * paso) con su símbolo; el anillo, del color de su dueño (oscuro si no tiene).
+ */
+export function drawPointIcon(ctx, kind, cx, cy, size, { ring = null } = {}) {
+  const T = POI_TYPES[kind];
+  drawMedallion(ctx, cx, cy, size, T ? T.color : '#f2c14e', (g, s, dark) => {
+    g.fillStyle = '#ffffff';
+    g.strokeStyle = '#ffffff';
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+    g.beginPath();
+    if (kind === 'capital') {
+      g.moveTo(-s, s * 0.55);
+      g.lineTo(-s, -s * 0.45);
+      g.lineTo(-s * 0.5, s * 0.05);
+      g.lineTo(0, -s * 0.7);
+      g.lineTo(s * 0.5, s * 0.05);
+      g.lineTo(s, -s * 0.45);
+      g.lineTo(s, s * 0.55);
+      g.closePath();
+      g.fill();
+    } else if (kind === 'industria') {
+      const teeth = 8;
+      for (let i = 0; i < teeth * 2; i++) {
+        const a = (i / (teeth * 2)) * Math.PI * 2;
+        const rr = i % 2 ? s * 0.72 : s;
+        g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      g.closePath();
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.beginPath();
+      g.arc(0, 0, s * 0.3, 0, Math.PI * 2);
+      g.fillStyle = dark;
+      g.fill();
+    } else if (kind === 'puerto') {
+      // Timón: aro y radios
+      g.lineWidth = Math.max(1.2, s * 0.22);
+      g.arc(0, 0, s * 0.62, 0, Math.PI * 2);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        g.moveTo(Math.cos(a) * s * 0.2, Math.sin(a) * s * 0.2);
+        g.lineTo(Math.cos(a) * s, Math.sin(a) * s);
+      }
+      g.stroke();
+    } else {
+      // Paso de montaña: dos picos con nieve
+      g.moveTo(-s, s * 0.6);
+      g.lineTo(-s * 0.35, -s * 0.55);
+      g.lineTo(0, s * 0.05);
+      g.lineTo(s * 0.35, -s * 0.75);
+      g.lineTo(s, s * 0.6);
+      g.closePath();
+      g.fill();
+    }
+  }, { ring });
 }

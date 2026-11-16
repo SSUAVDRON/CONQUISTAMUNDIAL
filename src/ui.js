@@ -221,14 +221,13 @@ export class UI {
     });
     $('pn-env-tropas').addEventListener('click', () => this.handlers.onDonate?.(this.nationId, 'troops'));
     $('pn-env-oro').addEventListener('click', () => this.handlers.onDonate?.(this.nationId, 'gold'));
-    for (const emoji of EMOJIS) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = emoji;
-      b.setAttribute('aria-label', `Enviar ${emoji}`);
-      b.addEventListener('click', () => this.handlers.onEmoji?.(this.nationId, emoji));
-      $('pn-emojis').append(b);
-    }
+    // Emojis: los tuyos (de serie, ganados o comprados), en la ficha de una nación y en el panel de la barra
+    this.setEmojis(EMOJIS);
+    $('btn-emojis').addEventListener('click', () => this.toggleEmojis());
+    document.addEventListener('pointerdown', (e) => {
+      if ($('emoji-panel').hidden || e.target.closest?.('#emoji-panel, #btn-emojis')) return;
+      this.toggleEmojis(false);
+    });
 
     // Diplomacia ampliada: pacto (romperlo pide confirmación), paz y ayuda
     this._pactArmedUntil = 0;
@@ -2271,19 +2270,50 @@ export class UI {
     }
   }
 
+  /**
+   * Los emojis que puedes mandar (los tuyos): en la ficha de una nación (a
+   * esa nación) y en el panel del botón de la barra (a todos).
+   */
+  setEmojis(list) {
+    const key = list.join('');
+    if (key === this._emojiKey) return;
+    this._emojiKey = key;
+    const button = (emoji, to) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = emoji;
+      b.setAttribute('aria-label', `Enviar ${emoji}`);
+      b.addEventListener('click', () => {
+        this.handlers.onEmoji?.(to(), emoji);
+        if (!to()) this.toggleEmojis(false);
+      });
+      return b;
+    };
+    $('pn-emojis').replaceChildren(...list.map((e) => button(e, () => this.nationId)));
+    $('ep-rejilla').replaceChildren(...list.map((e) => button(e, () => 0)));
+  }
+
+  /** Abre o cierra el panel de emojis de la barra de arriba. */
+  toggleEmojis(open = $('emoji-panel').hidden) {
+    $('emoji-panel').hidden = !open;
+    $('btn-emojis').setAttribute('aria-expanded', String(open));
+  }
+
   /** Línea del tooltip con el punto estratégico cercano y su efecto. */
   _pointTip(game, tile) {
     // Lugar de interés (doc-1.6): qué da al tomarlo
     const lg = game.lugarNear ? game.lugarNear(tile) : null;
     if (lg) {
       const def = LUGARES[lg.kind];
-      return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave av">· ${def.desc}</span></div>`;
+      return `<div class="tip-punto" style="--c:${def.color}"><span class="tp-ico">${def.icon}</span><span><b>${def.name}</b><span class="tp-da">${def.desc}</span><span class="tp-como av">Conquista su casilla para llevártelo; luego aparece otro en otro sitio</span></span></div>`;
     }
     const pt = game.pointNear(tile);
     if (!pt) return '';
+    const T = POI_TYPES[pt.kind];
     const o = game.owner[pt.tile];
-    const who = o ? ` · de ${escapeHtml(game.players[o].name)}` : ' · sin dueño';
-    return `<div class="tip-punto">⭐ <b>${escapeHtml(pt.name)}</b>${who}</div>`;
+    const h = game.human;
+    const who = !o ? 'Sin dueño: conquístalo para conseguirlo' : h && o === h.id ? 'Es tuyo: ya lo tienes' : `De ${escapeHtml(game.players[o].name)}: quítaselo para conseguirlo`;
+    return `<div class="tip-punto" style="--c:${T.color}"><span class="tp-ico">⭐</span><span><b>${escapeHtml(pt.kind === 'capital' ? pt.name : T.name)}</b><span class="tp-da">${T.desc}</span><span class="tp-como">${who}</span></span></div>`;
   }
 
   /**

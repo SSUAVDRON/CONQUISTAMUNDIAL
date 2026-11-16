@@ -33,7 +33,7 @@ const TABS = [
     items: [
       ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
       ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de tierra (52 casillas del documento: 87 de las de ahora, más pequeñas) y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
-      ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: ocultar la barra de abajo. I: desarrollo. Mayús (mantenida): más detalles en las fichas, el tooltip y la clasificación. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
+      ['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: ocultar la barra de abajo. I: desarrollo. Y: emojis. Mayús (mantenida): más detalles en las fichas, el tooltip y la clasificación. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
       ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z fundar y luego mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
       ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
     ],
@@ -70,11 +70,11 @@ const TABS = [
     id: 'diplomacia',
     name: 'Diplomacia',
     items: [
-      ['manos', 'Alianzas', 'En la ficha de otra nación: proponer o romper alianzas, enviar tropas u oro y mandar emojis. Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s.'],
+      ['manos', 'Alianzas', 'En la ficha de otra nación: proponer o romper alianzas, enviar tropas u oro y mandarle un emoji (a todos, con 😀 arriba o la tecla Y; la IA también contesta y reacciona). Los aliados no pueden atacarse. Romper una alianza te marca como traidor 60 s.'],
       ['pergamino', 'Pactos y paz', 'Pacto de no agresión de 5 minutos, paz (con un tributo si quieres) y «Pedir ayuda» a tus aliados contra quien más te ataca.'],
       ['corona', 'Amigos y clanes', 'En la web, con tu cuenta: en Perfil › Amigos tienes tu código de amigo; búscalos por el nombre de su nación o por su código y verás si están en línea, en una sala o jugando. Con una sala abierta, invítales y les saldrá un aviso para unirse. En Perfil › Clan puedes fundar uno con su etiqueta e insignia o unirte a otro (abierto o con solicitud): el líder y los oficiales aceptan solicitudes y gestionan los rangos.'],
       ['corona', 'Victoria', 'Según la partida: dominación (el 70 % de la tierra), capitales, economía o supervivencia. También ganas si solo quedáis en pie tú y tus aliados.'],
-      ['reloj', 'Perfiles de reglas', 'Clásico: ritmo ágil, sin puntos estratégicos ni tecnologías. Trinchera: más lento, con puntos estratégicos (capitales, núcleos industriales, puertos clave y pasos de montaña) y tecnologías.'],
+      ['reloj', 'Perfiles de reglas', 'Clásico: ritmo ágil, con puntos estratégicos (capitales, núcleos industriales, puertos clave y pasos de montaña) y sin tecnologías. Trinchera: más lento, con puntos estratégicos y tecnologías.'],
     ],
   },
 ];

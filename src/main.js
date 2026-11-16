@@ -13,7 +13,7 @@ import { installFlagSprite, loadFlags } from './icons.js';
 import { hashString } from './rng.js';
 import { fmtTroops, formatNumber, formatPercent, formatTime } from './format.js';
 
-import { grantAchievement, levelInfo, loadProfile, mergeProfiles, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
+import { grantAchievement, levelInfo, loadProfile, mergeProfiles, ownedEmojis, recordGame, saveProfile, titleName, nameColorOf } from './profile.js';
 import { bootLoader, withLoading } from './loading.js';
 import { loadMapData } from './mapas-carga.js';
 import { paintMapPreview, paintTerrain } from './terreno.js';
@@ -557,12 +557,16 @@ function toggleMute() {
 document.getElementById('btn-sonido')?.addEventListener('click', toggleMute);
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyN' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) toggleMute();
+  // Y: el panel de emojis (a todos)
+  if (e.code === 'KeyY' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement) && state.game && !state.demo && state.game.phase === 'playing') ui.toggleEmojis();
   // X: guardar tropas en la capital; Mayús+X: sacarlas
   if (e.code === 'KeyX' && !e.ctrlKey && !e.metaKey && !e.repeat && !(e.target instanceof HTMLInputElement) && state.game && !state.demo) bankTroops(e.shiftKey ? 'out' : 'in');
 });
 
 function applySettings() {
   const a = profile.ajustes;
+  // Los emojis que tienes (de serie, ganados o comprados), para mandarlos en la partida
+  ui.setEmojis(ownedEmojis(profile).map((x) => x.e));
   sound.setOptions({
     music: a.musica !== false,
     sfx: a.efectos !== false,
