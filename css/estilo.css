@@ -6425,3 +6425,20 @@ body #hud #barra-superior .btn-emojis { width: 34px; padding: 0; font-size: 17px
 .opcion-emoji.tuyo .oe-estado { color: var(--ok, #5fd38d); }
 .opcion-emoji.bloqueada .oe-glifo { filter: grayscale(0.85) opacity(0.55); }
 .opcion-emoji.en-venta .oe-estado { color: var(--oro-claro, #ffe08a); }
+
+/* Móvil, al colocar: una franja de una línea encima del panel (la ficha entera, al mantener pulsado) */
+.ficha.ficha-dock { padding: 6px 6px 6px 7px; max-width: 460px; border-radius: 14px; }
+.ficha.ficha-dock::before { left: 22px; right: 22px; }
+.dock-fila { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dock-fila .ficha-icono { width: 34px; height: 34px; border-radius: 10px; }
+.dock-fila .ficha-icono img { width: 25px; height: 25px; }
+.dock-textos { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.15; }
+.dock-textos strong { font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-textos small { font-size: 10.5px; color: var(--texto-2, #b9c2d6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-precio { flex: none; padding: 3px 8px; border-radius: 999px; background: rgba(242, 193, 78, 0.16); border: 1px solid rgba(242, 193, 78, 0.45); color: #ffe08a; font: 800 12px/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.dock-precio.caro { background: rgba(255, 107, 107, 0.14); border-color: rgba(255, 107, 107, 0.5); color: #ffb3b3; }
+.dock-cancelar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.07); color: var(--texto-1, #eef2fa); font: 800 14px/1 system-ui, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dock-cancelar:active { transform: scale(0.94); }
+/* Mientras arrastras un edificio al mapa, la bandeja se aparta */
+#hud.arrastrando-obra .bandeja-obras { opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.12s, transform 0.12s; }
+#hud .obra { touch-action: none; }

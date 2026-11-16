@@ -2610,22 +2610,44 @@ export class Game {
   }
 
   /**
-   * Los puertos no exigen atinar en la orilla: si el clic no es una casilla
-   * costera propia y libre, se usa la más cercana (hasta CONFIG.portSnap
-   * casillas, también si se hace clic en el agua). Determinista.
+   * No hace falta atinar: si donde se toca no cabe el edificio (otro edificio
+   * demasiado cerca), se usa la casilla libre propia más cercana, hasta
+   * CONFIG.buildSnap casillas (doc-2.1). Los puertos, además, se pegan a la
+   * orilla propia más cercana (hasta CONFIG.portSnap, también desde el
+   * agua). Tocar sobre (o junto a) uno tuyo del mismo tipo lo sube de nivel.
+   * Determinista; lo usan la orden y la vista previa (cada fotograma), así
+   * que solo mira los edificios de alrededor.
    */
   snapBuildTile(p, kind, tile) {
     const def = BUILDINGS[kind];
     const map = this.map;
-    if (!def || !def.coastal || tile < 0 || tile >= map.size) return tile;
-    // Clic sobre (o junto a) un puerto propio: se sube de nivel ese puerto
+    if (!def || tile < 0 || tile >= map.size || def.unit) return tile;
     const up = this.upgradeTarget(p, kind, tile);
     if (up) return up.tile;
-    const free = (t) => map.coastal[t] && this.owner[t] === p.id && !this.buildingNear(t, CONFIG.buildingMinDist);
-    if (free(tile)) return tile;
-    const R = CONFIG.portSnap;
+    // Lejos de tu territorio no se busca (el aviso dirá por qué); el puerto, sí, desde el agua
+    if (!def.coastal && this.owner[tile] !== p.id) return tile;
+    const R = def.coastal ? CONFIG.portSnap : CONFIG.buildSnap;
+    const D = CONFIG.buildingMinDist;
     const x0 = map.x(tile);
     const y0 = map.y(tile);
+    // Solo los edificios que pueden estorbar (a menos de R + D)
+    const reach = (R + D) * (R + D);
+    const near = [];
+    for (const b of this.buildings) {
+      const bx = map.x(b.tile);
+      const by = map.y(b.tile);
+      if ((bx - x0) ** 2 + (by - y0) ** 2 < reach) near.push(bx, by, b.kind === 'capital' ? Math.min(D, CONFIG.capitalClearance) : D);
+    }
+    const free = (t, x, y) => {
+      if (this.owner[t] !== p.id || (def.coastal && !map.coastal[t]) || (kind === 'capital' && this.pointAt.has(t))) return false;
+      for (let i = 0; i < near.length; i += 3) {
+        const dx = near[i] - x;
+        const dy = near[i + 1] - y;
+        if (dx * dx + dy * dy < near[i + 2] * near[i + 2]) return false;
+      }
+      return true;
+    };
+    if (free(tile, x0, y0)) return tile;
     let best = -1;
     let bestD = Infinity;
     for (let dy = -R; dy <= R; dy++) {
@@ -2633,7 +2655,7 @@ export class Game {
         const d = dx * dx + dy * dy;
         if (d > R * R || d >= bestD || !map.inBounds(x0 + dx, y0 + dy)) continue;
         const t = map.index(x0 + dx, y0 + dy);
-        if (!free(t)) continue;
+        if (!free(t, x0 + dx, y0 + dy)) continue;
         best = t;
         bestD = d;
       }

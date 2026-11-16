@@ -408,3 +408,39 @@ test('reglas personalizadas: cualquier oro inicial y número de colonias', async
   game.start();
   assert.equal(p.gold, 5000000);
 });
+
+test('edificios más juntos (3 · RES) y, si donde tocas no caben, al hueco libre más cercano', () => {
+  const { map, game, human } = setup();
+  human.gold = 1e8;
+  // Territorio holgado
+  for (let i = 0; i < 12; i++) {
+    human.troops = 2e5;
+    game.launchAttack(human, 0, 100000);
+    for (let k = 0; k < 20; k++) game.tick();
+  }
+  assert.equal(CONFIG.buildingMinDist, 3 * RES);
+  const center = human.spawnTile;
+  assert.ok(buildNow(game, human, 'city', center));
+  const dist = (a, b) => Math.hypot(map.x(a) - map.x(b), map.y(a) - map.y(b));
+  const mine = ownTiles(game, human);
+  // Justo a la distancia mínima ya se puede (antes hacían falta 5 · RES)
+  const fits = mine.find((t) => dist(t, center) >= CONFIG.buildingMinDist && dist(t, center) < CONFIG.buildingMinDist + 1.5 && game.canBuild(human, 'fort', t).ok);
+  assert.ok(fits !== undefined, 'a 3 · RES de otro edificio cabe');
+  // Tocar al lado de la ciudad: no cabe ahí, pero se ajusta al hueco más cercano
+  const close = mine.find((t) => dist(t, center) >= 2 && dist(t, center) <= RES);
+  assert.equal(game.canBuild(human, 'fort', close).ok, false);
+  const snapped = game.snapBuildTile(human, 'fort', close);
+  assert.notEqual(snapped, close);
+  assert.ok(game.canBuild(human, 'fort', snapped).ok);
+  assert.ok(dist(snapped, center) >= CONFIG.buildingMinDist);
+  assert.ok(dist(snapped, close) <= CONFIG.buildSnap + 0.01, 'cerca de donde se tocó');
+  // La orden hace lo mismo (determinista)
+  game.queueIntent({ type: 'build', playerId: human.id, kind: 'fort', tile: close });
+  game.tick();
+  assert.ok(game.sites.some((b) => b.kind === 'fort' && b.tile === snapped), 'el puesto se construye en el hueco');
+  // Tocar sobre tu ciudad con «ciudad» sigue siendo subirla de nivel
+  assert.equal(game.snapBuildTile(human, 'city', close), center);
+  // Fuera de tu territorio no se busca hueco (el aviso explica por qué)
+  const wild = map.landTiles.find((t) => game.owner[t] !== human.id);
+  assert.equal(game.snapBuildTile(human, 'fort', wild), wild);
+});

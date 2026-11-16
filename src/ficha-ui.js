@@ -3,7 +3,7 @@
 // móvil, mientras colocas uno (en el móvil, encima del panel) y al tocar un
 // bono activo. Las cifras salen de fichas.js; aquí solo se pinta y se coloca.
 
-import { BUILD_GROUPS, TICK_MS } from './config.js';
+import { BUILDINGS, BUILD_GROUPS, TICK_MS } from './config.js';
 import { fmtTroops, formatNumber } from './format.js';
 import { buildingCard, minSec } from './fichas.js';
 
@@ -181,6 +181,7 @@ export class FichaUI {
   _buildingHtml(c, p, mode, check = null) {
     const group = this._group(c.kind);
     const icon = this.iconFor ? this.iconFor(c.kind) : '';
+    if (mode === 'dock') return this._dockHtml(c, p, icon);
     const short = p.gold < c.cost && !c.maxed;
     const shortT = c.troops && p.troops < c.troops;
     const price = c.maxed
@@ -249,6 +250,33 @@ export class FichaUI {
       ${sheet ? (c.maxed ? how : '') : how}
       ${more}
       ${cancel}`;
+  }
+
+  /**
+   * Al colocar en el móvil: una franja de una línea encima del panel (qué
+   * colocas, cuánto cuesta, qué hacer y cancelar). La ficha entera sale al
+   * mantener pulsado su botón; así no tapa medio mapa.
+   */
+  _dockHtml(c, p, icon) {
+    const def = BUILDINGS[c.kind] || {};
+    const short = p.gold < c.cost && !c.maxed;
+    const what = c.kind === 'capital'
+      ? 'Toca dentro de tu territorio (gratis)'
+      : def.unit === 'missile'
+        ? 'Toca el objetivo enemigo'
+        : def.unit === 'ship'
+          ? 'Toca el mar donde patrullará'
+          : def.coastal
+            ? 'Toca tu costa o arrástralo al mapa'
+            : 'Toca tu territorio o arrástralo al mapa';
+    const price = c.kind === 'capital' ? 'Gratis' : c.maxed ? 'Máx.' : formatNumber(c.cost);
+    return `
+      <div class="dock-fila">
+        <span class="ficha-icono">${icon ? `<img src="${icon}" alt="">` : ''}</span>
+        <span class="dock-textos"><strong>${esc(c.name)}</strong><small>${esc(short ? `Te faltan ${formatNumber(c.cost - p.gold)} de oro` : what)}</small></span>
+        <span class="dock-precio${short ? ' caro' : ''}">${esc(price)}</span>
+        <button type="button" class="dock-cancelar" data-cancelar aria-label="Cancelar">✕</button>
+      </div>`;
   }
 
   _bonusHtml(b) {

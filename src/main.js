@@ -70,6 +70,9 @@ const state = {
   last: performance.now(),
   lastHud: 0,
   hover: { tile: -1, x: 0, y: 0 },
+  // Edificio arrastrado desde la bandeja (con el dedo) y el último sitio donde no cupo
+  drag: null,
+  buildFail: null,
   buildMode: null,
   endShown: false,
   defeatShown: false,
@@ -296,6 +299,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   applySettings();
   state.acc = 0;
   state.buildMode = null;
+  state.drag = null;
+  state.buildFail = null;
   state.endShown = false;
   state.defeatShown = false;
   state.recorded = false;
@@ -2143,6 +2148,93 @@ function setBuildMode(kind) {
   ui.update(game, human, state.ratio, state.buildMode);
 }
 
+/**
+ * Coloca el edificio elegido donde se toca (o se suelta al arrastrarlo). Si
+ * ahí no cabe, se ajusta al hueco libre más cercano (game.snapBuildTile); si
+ * aun así no se puede, sigues en modo construir: el fantasma se queda en rojo
+ * un momento y el aviso dice por qué.
+ */
+function placeBuilding(tile, { keep = false } = {}) {
+  const { game, human } = state;
+  const kind = state.buildMode;
+  if (!game || !human || !kind || tile < 0) return false;
+  const at = game.snapBuildTile(human, kind, tile);
+  const check = game.canBuild(human, kind, at);
+  if (!check.ok) {
+    state.buildFail = { tile: at, until: performance.now() + 1800 };
+    ui.hint(check.reason, 'warn');
+    sound.play('error', 0.7, 300);
+    return false;
+  }
+  humanIntent({ type: 'build', tile: at, kind });
+  state.buildFail = null;
+  if (!keep) state.buildMode = null; // Mayús mantiene el modo para construir varios
+  const m = game.map;
+  state.ping = { x: m.x(at) + 0.5, y: m.y(at) + 0.5, t: performance.now(), danger: false, small: true };
+  return true;
+}
+
+/** El fantasma sale este trozo por encima del dedo, para verlo al arrastrar. */
+const DRAG_LIFT = 56;
+
+/**
+ * Arrastrar un edificio desde la bandeja hasta el mapa (con el dedo): el
+ * fantasma sigue al dedo (un poco por encima) en verde o en rojo y al soltar
+ * se construye ahí. Soltarlo sobre los paneles lo cancela; cerca del borde,
+ * el mapa se desplaza.
+ */
+function buildDrag(phase, kind, cx, cy) {
+  const { game, human } = state;
+  if (phase === 'start') {
+    if (state.demo || !game || !human || !human.alive || game.phase !== 'playing') return false;
+    if (BUILDINGS[kind]?.unit === 'capital') return false; // la mejora de la capital no se coloca
+    if (needsCapital(game, human)) kind = 'capital';
+    state.buildMode = kind;
+    state.buildFail = null;
+    state.drag = { kind, tile: -1, x: cx, y: cy };
+    ui.update(game, human, state.ratio, state.buildMode);
+    return true;
+  }
+  const d = state.drag;
+  if (!d) return false;
+  const r = canvas.getBoundingClientRect();
+  const over = document.elementFromPoint(cx, cy);
+  const onMap = over === canvas;
+  d.x = cx - r.left;
+  d.y = cy - r.top;
+  d.tile = onMap ? tileAt(d.x, d.y - DRAG_LIFT) : -1;
+  if (phase === 'move') return true;
+  state.drag = null;
+  if (phase === 'end' && d.tile >= 0) placeBuilding(d.tile);
+  else state.buildMode = null; // soltado fuera del mapa: se cancela
+  if (game && human) ui.update(game, human, state.ratio, state.buildMode);
+  return true;
+}
+
+/** Mientras se arrastra un edificio cerca del borde de la pantalla, el mapa se desplaza. */
+function dragEdgePan(dt) {
+  const d = state.drag;
+  if (!d) return;
+  const m = 48;
+  const v = 420 * Math.min(0.05, dt / 1000);
+  let dx = 0;
+  let dy = 0;
+  if (d.x < m) dx = v;
+  else if (d.x > camera.viewW - m) dx = -v;
+  if (d.y - DRAG_LIFT < m) dy = v;
+  if (dx || dy) {
+    camera.pan(dx, dy);
+    d.tile = tileAt(d.x, d.y - DRAG_LIFT);
+  }
+}
+
+/** Dónde se dibuja la vista previa del edificio: el dedo que arrastra, el último sitio sin hueco o el ratón. */
+function buildPreviewTile(now) {
+  if (state.drag) return state.drag.tile;
+  if (state.buildFail && now < state.buildFail.until) return state.buildFail.tile;
+  return TOUCH ? -1 : state.hover.tile;
+}
+
 /** Parte de tus soldados que guarda cada pulsación de «Guardar» (o X). */
 const BANK_STEP = 0.25;
 
@@ -2154,8 +2246,7 @@ const input = new Input(canvas, camera, {
     let tile = tileAt(sx, sy);
     if (tile < 0) return;
     if (state.buildMode) {
-      humanIntent({ type: 'build', tile, kind: state.buildMode });
-      if (!shift) state.buildMode = null; // Mayús mantiene el modo para construir varios
+      placeBuilding(tile, { keep: shift });
       return;
     }
     if (state.game.phase === 'playing') {
@@ -2228,6 +2319,7 @@ ui.on({
   // Banco de tropas de la capital: guarda el 25 % de tus soldados o lo saca todo
   onBank: bankTroops,
   onUpgradeCapital: () => setBuildMode('capUp'),
+  onBuildDrag: buildDrag,
   // Desarrollo y diplomacia ampliada
   onSpec: (spec) => humanIntent({ type: 'spec', spec }),
   onResearch: (tech) => humanIntent({ type: 'research', tech }),
@@ -2354,7 +2446,8 @@ function frame(now) {
   // (en el menú no hay partida que dibujar)
   if (!state.demo) {
     try {
-      state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: state.hover.tile, ping: state.ping, spawn: state.spawnPreview });
+      dragEdgePan(dt);
+      state.renderer?.draw(now, { buildMode: state.buildMode, hoverTile: buildPreviewTile(now), ping: state.ping, spawn: state.spawnPreview, dragging: !!state.drag });
     } catch (err) {
       reportError(err, 'dibujo del mapa');
     }

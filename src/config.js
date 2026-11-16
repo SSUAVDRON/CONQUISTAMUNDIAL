@@ -86,7 +86,8 @@ export const CONFIG = {
   colonyMax: 300, // …hasta este máximo
 
   // Edificios
-  buildingMinDist: 5 * RES, // casillas mínimas entre dos edificios
+  buildingMinDist: 3 * RES, // casillas mínimas entre dos edificios (doc-2.1: antes 5 · RES; los iconos ya no se tocan)
+  buildSnap: 3 * RES, // al tocar donde no cabe, el edificio se coloca en el hueco libre más cercano (hasta esta distancia)
   portSnap: 6 * RES, // el puerto se coloca en la orilla propia más cercana al clic (hasta esta distancia)
   fortRadius: 12 * RES,
   capitalWallRadius: 10 * RES, // murallas de la capital (casillas; mecánica en MECH.capital; doc-1.7: antes 7)

@@ -65,7 +65,7 @@ test('perfil Clásico: con puntos estratégicos (sin victoria por capitales), si
   assert.equal(cleanRules({ profile: 'clasico', victory: 'capitales' }).victory, 'dominio', 'la victoria por capitales sería inalcanzable');
   assert.equal(cleanRules({ profile: 'trinchera', victory: 'capitales' }).victory, 'capitales');
   const { game, h } = play({ profile: 'clasico' });
-  assert.equal(game.profile.id, 'clasico-12');
+  assert.equal(game.profile.id, 'clasico-13');
   assert.ok(game.points.some((pt) => pt.kind !== 'capital'), 'con puntos estratégicos (núcleos, puertos clave, pasos)');
   sinPuntos(game);
   h.gold = 1e7;
@@ -111,7 +111,7 @@ test('diagnóstico (?diag=1): registra turnos, envíos, frentes y reembolsos con
   game.retreat(h.attacks.get(0));
   for (let i = 0; i < 30; i++) game.tick();
   const data = diag.exportar(false);
-  assert.equal(data.perfil, 'clasico-12');
+  assert.equal(data.perfil, 'clasico-13');
   const kinds = new Set(data.eventos.map((e) => e.t));
   for (const k of ['turno', 'envio', 'frente', 'fin']) assert.ok(kinds.has(k), `hay eventos «${k}»`);
   const envio = data.eventos.find((e) => e.t === 'envio');

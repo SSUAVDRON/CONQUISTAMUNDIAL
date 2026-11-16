@@ -1288,6 +1288,7 @@ export class Renderer {
     this._drawEmojis();
     if (game.phase === 'spawn' && overlay.spawn) this._drawSpawnZone(overlay.spawn);
     if (game.phase === 'spawn') this._drawSpawnMarker(now);
+    if (overlay.buildMode) this._drawBuildZones(overlay.buildMode);
     if (overlay.buildMode && overlay.hoverTile >= 0) this._drawBuildPreview(overlay.buildMode, overlay.hoverTile);
     if (overlay.ping) this._drawPing(now, overlay.ping);
   }
@@ -2688,6 +2689,39 @@ export class Renderer {
     ctx.fillText(note, sx, sy - 30);
   }
 
+  /**
+   * Al elegir un edificio: alrededor de los que ya hay, un círculo rojo
+   * tenue con el espacio que ocupan (ahí no cabe otro; se ve dónde hay hueco).
+   */
+  _drawBuildZones(kind) {
+    const def = BUILDINGS[kind];
+    if (!def || def.unit) return;
+    const { ctx, game, camera } = this;
+    const map = game.map;
+    const z = camera.zoom;
+    const R = CONFIG.buildingMinDist * z;
+    if (R < 7) return;
+    const capR = Math.min(CONFIG.buildingMinDist, CONFIG.capitalClearance) * z;
+    ctx.beginPath();
+    let any = false;
+    for (const b of game.buildings) {
+      const r = b.kind === 'capital' ? capR : R;
+      const [sx, sy] = camera.worldToScreen(map.x(b.tile) + 0.5, map.y(b.tile) + 0.5);
+      if (sx < -r || sy < -r || sx > camera.viewW + r || sy > camera.viewH + r) continue;
+      ctx.moveTo(sx + r, sy);
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      any = true;
+    }
+    if (!any) return;
+    ctx.fillStyle = 'rgba(255, 92, 92, 0.10)';
+    ctx.fill();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(255, 140, 140, 0.55)';
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   _drawBuildPreview(kind, tile) {
     const { ctx, game, camera } = this;
     const human = game.human;
@@ -2791,6 +2825,22 @@ export class Renderer {
     ctx.globalAlpha = 0.9;
     drawBuildingReal(ctx, kind, sx, sy, size, { ring: color });
     ctx.globalAlpha = 1;
+    if (!check.upgrade) {
+      // Encima del fantasma: qué es y cuánto cuesta, o por qué no se puede
+      const def = BUILDINGS[kind];
+      const text = ok ? (check.cost ? `${def.short || def.name} · ${formatNumber(check.cost)}` : def.short || def.name) : String(check.reason || 'Aquí no').replace(/^Demasiado cerca de otro edificio.*$/, 'Sin hueco: hay otro edificio al lado');
+      ctx.font = '800 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const w = Math.min(camera.viewW - 16, ctx.measureText(text).width + 14);
+      const top = sy - size * 0.5 - 24;
+      ctx.beginPath();
+      ctx.roundRect(sx - w / 2, top, w, 18, 9);
+      ctx.fillStyle = ok ? 'rgba(20, 110, 62, 0.94)' : 'rgba(150, 36, 36, 0.94)';
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(text, sx, top + 9.5, w - 8);
+    }
     if (check.upgrade) {
       // Flecha de «subir de nivel»
       ctx.font = '800 12px system-ui, sans-serif';

@@ -362,13 +362,47 @@ export class UI {
           if (e.pointerType === 'mouse') return;
           clearTimeout(this._pressTimer);
           this._pressedKind = null;
+          // Con el dedo: mantener pulsado enseña su ficha; arrastrarlo al mapa lo coloca
+          this._drag = { kind, id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false };
           this._pressTimer = setTimeout(() => {
-            if (!this._game || !this._human) return;
+            if (!this._game || !this._human || this._drag?.active) return;
             this._pressedKind = kind;
             this._ficha.showBuilding(this._game, this._human, kind, btn, 'press');
           }, 420);
         });
-        for (const ev of ['pointerup', 'pointercancel']) btn.addEventListener(ev, () => clearTimeout(this._pressTimer));
+        btn.addEventListener('pointermove', (e) => {
+          const d = this._drag;
+          if (!d || d.id !== e.pointerId || d.kind !== kind) return;
+          if (!d.active) {
+            if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 14) return;
+            clearTimeout(this._pressTimer);
+            if (this._ficha.cur?.mode === 'press') this._ficha.hide();
+            if (this.handlers.onBuildDrag?.('start', kind, e.clientX, e.clientY) !== true) {
+              this._drag = null;
+              return;
+            }
+            d.active = true;
+            this._pressedKind = kind; // el clic que llega al soltar no lo vuelve a elegir
+            try {
+              btn.setPointerCapture(e.pointerId);
+            } catch {}
+            // La bandeja se aparta (sin quitar el botón, que lleva el dedo)
+            $('hud').classList.add('arrastrando-obra');
+          }
+          this.handlers.onBuildDrag?.('move', kind, e.clientX, e.clientY);
+        });
+        const endDrag = (e, phase) => {
+          clearTimeout(this._pressTimer);
+          const d = this._drag;
+          if (!d || d.id !== e.pointerId) return;
+          this._drag = null;
+          if (!d.active) return;
+          $('hud').classList.remove('arrastrando-obra');
+          this.handlers.onBuildDrag?.(phase, kind, e.clientX, e.clientY);
+          this.openGroup(null);
+        };
+        btn.addEventListener('pointerup', (e) => endDrag(e, 'end'));
+        btn.addEventListener('pointercancel', (e) => endDrag(e, 'cancel'));
         btn.addEventListener('contextmenu', (e) => e.preventDefault());
         list.append(btn);
         this._buildButtons.set(kind, btn);
