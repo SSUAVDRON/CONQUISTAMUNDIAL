@@ -108,7 +108,7 @@ export const SECTIONS = [
     items: [
       { key: 'calidad', type: 'presets', label: 'Calidad' },
       { key: 'resolucion', type: 'seg', label: 'Resolución del mapa', desc: 'Automática la baja sola si el equipo no llega a ~40 fps y la vuelve a subir si va sobrado.', options: [['auto', 'Automática'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']] },
-      { key: 'fpsMax', type: 'seg', label: 'Límite de fotogramas', desc: 'Con 30 fps el móvil gasta menos batería y se calienta menos.', options: [[0, 'Sin límite'], [60, '60 fps'], [30, '30 fps']] },
+      { key: 'fpsMax', type: 'seg', label: 'Límite de fotogramas', desc: 'Con 30 fps el móvil gasta menos batería y se calienta menos. En el móvil, «Sin límite» llega como mucho a 60.', options: [[0, 'Sin límite'], [60, '60 fps'], [30, '30 fps']] },
       { key: 'efectosMapa', type: 'toggle', label: 'Animaciones del mapa', desc: 'Olas, brillos, estelas de los barcos, humo y el avance suave del territorio.' },
       { key: 'particulas', type: 'seg', label: 'Partículas', desc: 'Chispas de los frentes, humo y restos de las explosiones.', options: [['alta', 'Muchas'], ['normal', 'Normales'], ['baja', 'Pocas']] },
       { key: 'temblor', type: 'toggle', label: 'Temblor y destellos', desc: 'La cámara tiembla y la pantalla destella con las explosiones cercanas.' },

@@ -84,7 +84,7 @@ const state = {
  * menos píxeles si el equipo no llega a ~40 fps (y se vuelve a subir si va
  * sobrado). Los paneles (HTML) siguen nítidos; solo cambia el mapa.
  */
-const quality = { level: 0, slowMs: 0, fastMs: 0, ema: 16.7, drops: 0 };
+const quality = { level: 0, slowMs: 0, fastMs: 0, ema: 16.7, drops: 0, liteMs: 0, lite: false };
 // Pantalla táctil como puntero principal (móvil o tableta): el lienzo empieza
 // a 1,5× como mucho (en pantallas de 2,5-3× apenas se nota en el mapa y cuesta
 // el triple de píxeles), baja antes si va justo y no hay tooltip que calcular
@@ -114,6 +114,16 @@ function adaptQuality(dt) {
       resize();
     }
   } else quality.slowMs = 0;
+  // Móvil con la resolución ya al mínimo y aún lento (más de ~30 ms por
+  // fotograma unos segundos): en esta partida, efectos del mapa y partículas
+  // al mínimo (como el preajuste «Ahorro», pero sin tocar tus ajustes)
+  if (TOUCH && !quality.lite && quality.level >= steps.length - 1 && quality.ema > 30) {
+    quality.liteMs += dt;
+    if (quality.liteMs > 3000) {
+      quality.lite = true;
+      applySettings();
+    }
+  } else quality.liteMs = 0;
   // Subir otra vez solo si va muy holgado un buen rato (y no tras dos bajadas)
   if (quality.ema < 17.5 && quality.level > 0 && quality.drops < 2) {
     quality.fastMs += dt;
@@ -296,6 +306,8 @@ function newGame({ seed, mapSize, bots, difficulty, humans, localIndex, rules = 
   // la del dispositivo): si no, el mapa salía desplazado y los toques no
   // caían donde se veía
   state.renderer.setDpr(currentDpr());
+  quality.lite = false; // los efectos bajados por lentitud valen para una partida
+  quality.liteMs = 0;
   applySettings();
   state.acc = 0;
   state.buildMode = null;
@@ -594,14 +606,14 @@ function applySettings() {
       badges: a.marcadores !== false,
       emojis: a.emojis !== false,
       pointer: state.pointerOn,
-      animations: a.efectosMapa !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+      animations: a.efectosMapa !== false && !quality.lite && !matchMedia('(prefers-reduced-motion: reduce)').matches,
       shake: a.temblor !== false,
       vignette: a.vineta !== false,
       names: a.nombres,
       flags: a.banderas !== false,
       nameColor: nameColorOf(profile),
     };
-    const P = PARTICLES[a.particulas] || PARTICLES.normal;
+    const P = quality.lite ? PARTICLES.baja || PARTICLES.normal : PARTICLES[a.particulas] || PARTICLES.normal;
     state.renderer.fx.max = P.max;
     state.renderer.fx.keep = P.keep;
     // Con nombres o banderas distintos, las placas se vuelven a dibujar
@@ -2397,8 +2409,10 @@ const NET_SLICE = { ms: SIM_SLICE_MS, behindMs: SIM_SLICE_BEHIND_MS, catchupMs: 
 function frame(now) {
   requestAnimationFrame(frame);
   // Ajuste «Límite de fotogramas»: los que sobran se saltan enteros (con 3 ms
-  // de margen, para no perder uno por el temblor del reloj)
-  const cap = profile.ajustes.fpsMax;
+  // de margen, para no perder uno por el temblor del reloj). En el móvil,
+  // «sin límite» es 60: en pantallas de 90-120 Hz pintaba el doble para nada
+  // (más calor y batería, y menos tiempo para la partida)
+  const cap = profile.ajustes.fpsMax || (TOUCH ? 60 : 0);
   if (cap && now - (state.shownAt || 0) < 1000 / cap - 3) return;
   state.shownAt = now;
   countFps(now);

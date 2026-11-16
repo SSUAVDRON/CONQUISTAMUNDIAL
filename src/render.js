@@ -724,6 +724,32 @@ export class Renderer {
     // El brillo solo se ve con casillas de más de un píxel y dentro de la pantalla
     const glowOn = this.anim && this.camera.zoom * this.dpr >= 1.2;
     const q = this._q;
+    // Cada casilla que cambia repinta ella y sus vecinas; en un frente
+    // compacto la misma casilla salía hasta 9 veces. Se apuntan sin repetir y
+    // se pintan una vez al final (mismo resultado: solo depende de `shown`)
+    const size = shown.length;
+    if (!this._rpMark || this._rpMark.length !== size) {
+      this._rpMark = new Uint32Array(size);
+      this._rpList = new Int32Array(4096);
+      this._rpStamp = 0;
+    }
+    if (++this._rpStamp > 0xfffffff0) {
+      this._rpMark.fill(0);
+      this._rpStamp = 1;
+    }
+    const mark = this._rpMark;
+    const stamp = this._rpStamp;
+    let rpN = 0;
+    const add = (i) => {
+      if (i < 0 || i >= size || mark[i] === stamp) return;
+      mark[i] = stamp;
+      if (rpN >= this._rpList.length) {
+        const a = new Int32Array(this._rpList.length * 2);
+        a.set(this._rpList);
+        this._rpList = a;
+      }
+      this._rpList[rpN++] = i;
+    };
     let pending = 0;
     for (let r = 0; r < runs; r++) {
       const a = this._runA[r];
@@ -738,22 +764,22 @@ export class Renderer {
         shown[t] = o;
         // La casilla y sus 8 vecinas: la frontera de cada una depende de las
         // de alrededor (también en diagonal, por las esquinas)
-        this._repaint(t);
-        this._repaint(t - 1);
-        this._repaint(t + 1);
-        this._repaint(t - W);
-        this._repaint(t + W);
-        this._repaint(t - W - 1);
-        this._repaint(t - W + 1);
-        this._repaint(t + W - 1);
-        this._repaint(t + W + 1);
+        add(t);
+        add(t - 1);
+        add(t + 1);
+        add(t - W);
+        add(t + W);
+        add(t - W - 1);
+        add(t - W + 1);
+        add(t + W - 1);
+        add(t + W + 1);
         if (this.ts === 1) {
           // A 1 píxel por casilla tu frontera lleva una segunda franja: también
           // cambian las casillas a dos de distancia
-          this._repaint(t - 2);
-          this._repaint(t + 2);
-          this._repaint(t - 2 * W);
-          this._repaint(t + 2 * W);
+          add(t - 2);
+          add(t + 2);
+          add(t - 2 * W);
+          add(t + 2 * W);
         }
         const x = t % W;
         const y = (t / W) | 0;
@@ -770,6 +796,12 @@ export class Renderer {
       pending += len - this._runD[r];
     }
     if (!pending) this._runN = 0;
+    const list = this._rpList;
+    for (let j = 0; j < rpN; j++) {
+      const i = list[j];
+      this._paintTile(i);
+      this._markChunk(i % W, (i / W) | 0);
+    }
     // El brillo se pinta al final: así no lo pisa el repintado de los vecinos
     const g = this._glow;
     for (let j = glowFrom; j !== g.head; j = (j + 1) % GLOW_N) {
@@ -1708,17 +1740,32 @@ export class Renderer {
   }
 
   /** Nombre corto con contorno, encima de su etiqueta. */
+  /** Nombre bajo un marcador, con su contorno; como imagen guardada (el texto con contorno cuesta en cada fotograma). */
   _markerName(text, x, y, color = '#ffe3a1') {
-    const { ctx } = this;
-    ctx.font = '800 10.5px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(10, 14, 24, 0.85)';
-    ctx.fillStyle = color;
-    ctx.strokeText(text, x, y);
-    ctx.fillText(text, x, y);
+    const key = `name|${text}|${color}|${this.dpr}`;
+    this._sprites ??= new Map();
+    let c = this._sprites.get(key);
+    if (!c) {
+      if (this._sprites.size > 600) this._sprites.clear();
+      const d = this.dpr;
+      const font = `800 ${10.5 * d}px system-ui, sans-serif`;
+      const m = makeCanvas(1, 1).getContext('2d');
+      m.font = font;
+      const w = Math.ceil(m.measureText(text).width + 6 * d);
+      c = makeCanvas(w, Math.ceil(16 * d));
+      const g = c.getContext('2d');
+      g.font = font;
+      g.textAlign = 'center';
+      g.textBaseline = 'top';
+      g.lineJoin = 'round';
+      g.lineWidth = 3 * d;
+      g.strokeStyle = 'rgba(10, 14, 24, 0.85)';
+      g.fillStyle = color;
+      g.strokeText(text, w / 2, 1.5 * d);
+      g.fillText(text, w / 2, 1.5 * d);
+      this._sprites.set(key, c);
+    }
+    this._blitChip(c, x, y - 1.5);
   }
 
   /**
@@ -3266,7 +3313,9 @@ export class Renderer {
     if (!atk.inFrontier.size) return null;
     const tick = this.game.ticks;
     let f = this._attackFronts.get(atk);
-    if (!f || f.tick !== tick) {
+    // Cada 3 turnos basta: la pastilla se desliza suave hacia su sitio y
+    // recorrer un frente de miles de casillas en cada turno costaba
+    if (!f || tick - f.tick >= 3 || tick < f.tick) {
       const W = this.game.map.width;
       const n = atk.inFrontier.size;
       const stride = Math.max(1, Math.ceil(n / 160));
