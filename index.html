@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Trinchera</title>
-<meta name="trinchera-build" content="8977338 2026-11-16 17:34 UTC">
+<meta name="trinchera-build" content="18a8d7e 2026-11-16 18:03 UTC">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&display=swap">
 <style>
 /* ===================================================== Sistema de diseño
@@ -5528,6 +5528,294 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
 .ficha-sec h4::after { background: linear-gradient(90deg, rgba(227, 194, 122, 0.35), transparent); }
 .ficha-icono { border-radius: 8px; box-shadow: 0 0 0 1px #000, inset 0 0 10px var(--g-glow); }
 
+/* =====================================================================
+   HUD de partida (hud3): barra superior con lo esencial, clasificación
+   corta, banco abajo a la izquierda, fuerza de ataque sobre los edificios
+   y lo avanzado (.av) solo con Mayús. Mismo estilo que el menú: oscuro con
+   filetes dorados. Los selectores llevan «body #hud.hud3» para mandar
+   sobre las capas anteriores.
+   ===================================================================== */
+:root { --hud-top: calc(44px + env(safe-area-inset-top, 0px)); }
+html:not(.info-avanzada) #hud .av { display: none !important; }
+html.info-avanzada #hud .solo-resumen { display: none !important; }
+
+/* ---------- Barra superior ---------- */
+body #hud.hud3 #barra-superior {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--hud-top);
+  padding: env(safe-area-inset-top, 0px) calc(10px + env(safe-area-inset-right, 0px)) 0 calc(12px + env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid rgba(180, 138, 58, 0.55);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(20, 24, 36, 0.97), rgba(9, 11, 19, 0.95));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 -2px 0 rgba(0, 0, 0, 0.55);
+  z-index: 8;
+}
+#hud.hud3 .bs-marca { flex: none; font-family: var(--serif); font-size: 17px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--oro-200); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); padding-right: 12px; border-right: 1px solid rgba(255, 255, 255, 0.1); }
+#hud.hud3 .bs-nacion { flex: 0 1 auto; display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 190px; }
+#hud.hud3 .bs-nacion .muestra { flex: none; width: 13px; height: 13px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(255, 255, 255, 0.18); }
+#hud.hud3 #pj-nombre { min-width: 0; font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud.hud3 #pj-estado { margin: 0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hud.hud3 #pj-estado:empty { display: none; }
+#hud.hud3 .bs-datos { flex: none; display: flex; align-items: stretch; height: 100%; }
+#hud.hud3 .bs-dato {
+  display: grid;
+  grid-template-columns: 20px auto auto;
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 6px;
+  row-gap: 1px;
+  padding: 0 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#hud.hud3 .bs-ic { grid-row: 1 / 3; align-self: center; width: 19px; height: 19px; color: var(--oro-500); }
+#hud.hud3 .cifra-pob { grid-template-rows: auto auto auto; }
+#hud.hud3 .cifra-pob .bs-ic { grid-row: 1 / 4; }
+#hud.hud3 .bs-etq { grid-column: 2 / 4; font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-3); line-height: 1.1; }
+#hud.hud3 .bs-valor { grid-column: 2; font-size: 14px; font-weight: 800; color: #fff; line-height: 1.15; }
+#hud.hud3 .bs-valor .max { font-size: 12px; font-weight: 600; color: var(--texto-2); }
+#hud.hud3 .bs-ritmo { grid-column: 3; font-size: 11px; font-weight: 700; color: var(--ok); line-height: 1.15; }
+#hud.hud3 .bs-ritmo .sub-comp { margin-left: 5px; color: #ff9f8f; }
+#hud.hud3 .bs-terr .bs-ritmo { color: var(--texto-2); font-weight: 600; }
+#hud.hud3 .bs-terr .bs-valor { min-width: 44px; }
+#hud.hud3 .bs-barra { grid-column: 2 / 4; height: 3px; margin: 2px 0 0; border-radius: 2px; background: rgba(255, 255, 255, 0.1); box-shadow: none; }
+#hud.hud3 .bs-barra #pj-barra { border-radius: inherit; }
+body #hud.hud3.economia-fija .cifra-soldados, body #hud.hud3.economia-fija #panel-jugador .reparto { display: none; }
+#hud.hud3 #pj-oro { transform-origin: left center; }
+#hud.hud3 .pj-bonos { flex: 0 1 auto; order: 0; margin: 0; flex-wrap: nowrap; }
+#hud.hud3 .bs-hueco { flex: 1 1 0; min-width: 4px; }
+#hud.hud3 .bs-reloj { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--texto-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud.hud3 .bs-reloj svg { width: 15px; height: 15px; }
+#hud.hud3 .bs-acciones { display: inline-flex; align-items: center; gap: 6px; }
+body #hud.hud3 #barra-superior button { height: 30px; min-height: 0; padding: 0 10px; font-size: 13px; border-radius: 8px; }
+body #hud.hud3 #barra-superior .btn-sonido, body #hud.hud3 #barra-superior .btn-desarrollo { width: 32px; padding: 0; }
+body #hud.hud3 #barra-superior .btn-mi-nacion { border-color: rgba(227, 194, 122, 0.45); color: var(--oro-200); }
+body #hud.hud3 #btn-salir { border-color: rgba(255, 255, 255, 0.16); }
+
+/* ---------- Columnas: todo empieza bajo la barra ---------- */
+body #hud.hud3 #columna-izquierda { top: calc(var(--hud-top) + 8px); left: calc(8px + env(safe-area-inset-left, 0px)); width: 236px; max-height: calc(100vh - var(--hud-top) - var(--banco-alto, 0px) - 200px); }
+body #hud.hud3 #columna-derecha { top: calc(var(--hud-top) + 8px); right: calc(8px + env(safe-area-inset-right, 0px)); }
+body #hud.hud3 .despliegue { top: calc(var(--hud-top) + 10px); bottom: auto; }
+body #hud.hud3 #aviso { top: calc(var(--hud-top) + 12px); }
+
+/* ---------- Clasificación corta: los 3 primeros y tú ---------- */
+body #hud.hud3 #clasificacion { width: 100%; }
+body #hud.hud3:not(.x) #lista-clasificacion li { grid-template-columns: 16px 15px minmax(0, 1fr) 48px; padding: 2px 4px; font-size: 12px; }
+body #hud.hud3 #lista-clasificacion .oro, body #hud.hud3 #lista-clasificacion .tro { display: none; }
+body #hud.hud3 #clasificacion .lb-cab { display: none; }
+body #hud.hud3 #clasificacion:not(.lb-ampliada) #lista-clasificacion li:nth-child(n+4):not(.yo) { display: none; }
+/* Ampliada (o con Mayús): diez filas con oro y tropas */
+body #hud.hud3 #clasificacion.lb-ampliada .lb-cab, html.info-avanzada body #hud.hud3 #clasificacion .lb-cab { display: grid; grid-template-columns: 16px 15px minmax(0, 1fr) 48px 46px 44px; }
+body #hud.hud3 #clasificacion.lb-ampliada #lista-clasificacion li, html.info-avanzada body #hud.hud3 #lista-clasificacion li { grid-template-columns: 16px 15px minmax(0, 1fr) 48px 46px 44px; }
+body #hud.hud3 #clasificacion.lb-ampliada #lista-clasificacion .oro, body #hud.hud3 #clasificacion.lb-ampliada #lista-clasificacion .tro,
+html.info-avanzada body #hud.hud3 #lista-clasificacion .oro, html.info-avanzada body #hud.hud3 #lista-clasificacion .tro { display: block; text-align: right; font-size: 11px; }
+body #hud.hud3 #lista-clasificacion .oro { color: var(--oro-200); }
+body #hud.hud3:has(#clasificacion.lb-ampliada) #columna-izquierda, html.info-avanzada body #hud.hud3 #columna-izquierda { width: 330px; }
+#hud.hud3 .lb-pie { display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 4px 4px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+#hud.hud3 .dato-lider { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--texto-3); white-space: nowrap; overflow: hidden; }
+#hud.hud3 .dato-lider span { overflow: hidden; text-overflow: ellipsis; }
+#hud.hud3 .dato-lider svg { flex: none; width: 13px; height: 13px; color: var(--oro-500); }
+#hud.hud3 .dato-lider.cerca { color: #ff9f8f; }
+body #hud.hud3 .lb-ver { flex: none; height: auto; min-height: 0; padding: 2px 4px; border: 0; background: none; font-size: 11px; font-weight: 700; color: var(--oro-200); }
+body #hud.hud3 .lb-ver:hover { background: none; color: #fff; text-decoration: underline; }
+#hud.hud3 .lb-colonias { margin: 3px 4px 0; font-size: 10.5px; }
+
+/* ---------- Pie central: fuerza de ataque encima de los edificios ---------- */
+#hud.hud3 .pie-centro {
+  position: fixed;
+  left: 50%;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 16px);
+  pointer-events: none;
+}
+#hud.hud3 .pie-centro > * { pointer-events: auto; }
+body #hud.hud3 #pie-centro #panel-jugador {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  transform: none;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  display: block;
+  padding: 5px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 138, 58, 0.5);
+  background: linear-gradient(180deg, rgba(22, 26, 40, 0.95), rgba(10, 12, 20, 0.95));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+body #hud.hud3 #pie-centro #barra-obras {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  max-width: 100%;
+  width: auto;
+  border-color: rgba(180, 138, 58, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+body #hud.hud3 #pie-centro #barra-obras[hidden] { display: none; }
+body #hud.hud3 #pj-plegar { display: none; }
+body #hud.hud3 #panel-jugador .pj-ataque { display: flex; align-items: center; gap: 16px; padding: 0; margin: 0; border: 0; }
+body #hud.hud3 #panel-jugador .ratio { display: flex; flex-direction: row; align-items: center; gap: 10px; margin: 0; min-width: 0; font-size: 12px; }
+body #hud.hud3 #panel-jugador .ratio-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-2); white-space: nowrap; }
+body #hud.hud3 #panel-jugador .ratio-titulo::before { content: "⚔"; font-size: 13px; color: var(--oro-500); letter-spacing: 0; }
+body #hud.hud3 #panel-jugador .reparto .ratio-titulo::before { content: "⚒"; }
+body #hud.hud3 #panel-jugador .ratio-cifra { display: contents; }
+body #hud.hud3 #panel-jugador .ratio-cifra strong { order: 1; min-width: 40px; font-size: 15px; font-weight: 900; text-align: right; }
+body #hud.hud3 #panel-jugador .ratio input { order: 2; width: clamp(110px, 16vw, 200px); margin: 0; }
+body #hud.hud3 #panel-jugador .ratio-cifra span { order: 3; padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px; color: var(--texto-2); white-space: nowrap; }
+body #hud.hud3 #panel-jugador .pj-obras { margin: 0; }
+
+/* ---------- Banco: abajo a la izquierda ---------- */
+body #hud.hud3 #pj-banco {
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  width: 236px;
+  margin: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-areas: "em info" "bot bot";
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 138, 58, 0.5);
+  background: linear-gradient(180deg, rgba(22, 26, 40, 0.95), rgba(10, 12, 20, 0.95));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+body #hud.hud3 #pj-banco[hidden] { display: none; }
+#hud.hud3 #pj-banco .cap-emblema { grid-area: em; width: 46px; height: 46px; }
+#hud.hud3 #pj-banco .cap-emblema canvas { width: 48px; height: 48px; }
+#hud.hud3 #pj-banco .cap-info { grid-area: info; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#hud.hud3 #pj-banco .cap-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+#hud.hud3 #pj-banco .banco-etq { font-family: var(--serif); font-size: 12px; letter-spacing: 0.08em; color: var(--oro-200); }
+#hud.hud3 #pj-banco .cap-def { font-size: 10.5px; font-weight: 700; color: #9be38f; white-space: nowrap; }
+#hud.hud3 #pj-banco .banco-cifra { font-size: 12px; margin: 0; text-align: left; align-self: flex-start; }
+#hud.hud3 #pj-banco .banco-cifra strong { font-size: 15px; font-weight: 900; }
+#hud.hud3 #pj-banco .banco-barra { flex: none; width: 100%; height: 5px; }
+#hud.hud3 #pj-banco .cap-botones { grid-area: bot; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+body #hud.hud3 #pj-banco .banco-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 28px; margin: 0; padding: 0 8px; font-size: 12px; font-weight: 800; }
+#hud.hud3 #pj-banco .banco-btn svg { width: 13px; height: 13px; }
+body #hud.hud3 #banco-guardar { background: linear-gradient(180deg, #f6c95e, #d99a2b); border-color: #8a5d14; color: #2a1a02; }
+body #hud.hud3 #banco-guardar:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* ---------- Minimapa (encima del banco) con zoom ---------- */
+body #hud.hud3 ~ .minimapa, body #hud.hud3 .minimapa { left: calc(8px + env(safe-area-inset-left, 0px)); bottom: calc(var(--banco-alto, 0px) + 16px + env(safe-area-inset-bottom, 0px)); }
+#hud.hud3 .mapa-zoom { position: absolute; right: -40px; bottom: 0; display: flex; flex-direction: column; gap: 4px; line-height: 1; }
+body #hud.hud3 .mapa-zoom button { width: 32px; height: 32px; min-height: 0; padding: 0; display: grid; place-items: center; border-radius: 8px; font-size: 18px; font-weight: 700; background: rgba(12, 16, 28, 0.92); border: 1px solid rgba(180, 138, 58, 0.45); color: var(--oro-200); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); }
+#hud.hud3 .minimapa.plegado .mapa-zoom { display: none; }
+
+/* ---------- Avisos: más pequeños ---------- */
+body #hud.hud3 #avisos { right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: 250px; max-height: 210px; overflow: hidden; }
+body #hud.hud3 #avisos .evento { font-size: 12px; }
+body #hud.hud3 .tip-mas { margin-top: 3px; font-size: 10px; color: var(--texto-3); }
+html.info-avanzada body #hud.hud3 .tip-mas { display: none; }
+
+/* ---------- Fichas: aviso de Mayús y botón de detalles ---------- */
+.ficha-mas { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 10.5px; color: var(--texto-3); }
+.ficha-mas kbd { margin: 0 2px; display: inline-grid; min-width: 0; height: 16px; padding: 0 4px; font-size: 9.5px; }
+.ficha-detalles { display: block; width: 100%; height: 30px; margin-top: 8px; border-radius: 8px; border: 1px solid rgba(227, 194, 122, 0.35); background: rgba(227, 194, 122, 0.08); color: var(--oro-200); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* ---------- Pantallas medianas (sin la barra de escritorio) ---------- */
+@media (max-width: 1239px) {
+  #hud.hud3 .bs-marca { display: none; }
+  body #hud.hud3 #barra-superior .btn-mi-nacion span { display: none; }
+  body #hud.hud3 #barra-superior .btn-mi-nacion { width: 32px; padding: 0; }
+  body #hud.hud3 #pie-centro { width: min(600px, calc(100vw - 2 * 250px)); }
+  body #hud.hud3 #pie-centro #panel-jugador { width: 100%; padding: 6px 10px 8px; }
+  body #hud.hud3 #panel-jugador .pj-ataque { gap: 10px; }
+  body #hud.hud3 #panel-jugador .ratio { flex: 1 1 auto; }
+  body #hud.hud3 #panel-jugador .ratio input { flex: 1 1 auto; width: auto; min-width: 70px; }
+  body #hud.hud3 #panel-jugador .pj-obras { margin-top: 6px; }
+}
+
+/* ---------- Móvil en vertical ---------- */
+@media (max-width: 720px) {
+  :root { --hud-top: calc(40px + env(safe-area-inset-top, 0px)); }
+  body #hud.hud3 #barra-superior { gap: 6px; padding-left: calc(8px + env(safe-area-inset-left, 0px)); padding-right: calc(6px + env(safe-area-inset-right, 0px)); }
+  #hud.hud3 #pj-nombre, #hud.hud3 #pj-estado, #hud.hud3 .pj-bonos { display: none; }
+  #hud.hud3 .bs-nacion { flex: none; }
+  #hud.hud3 .bs-dato { grid-template-columns: 15px auto; column-gap: 4px; padding: 0 6px; }
+  #hud.hud3 .bs-ic { width: 15px; height: 15px; }
+  #hud.hud3 .bs-etq, #hud.hud3 .bs-ritmo { display: none; }
+  #hud.hud3 .bs-valor { font-size: 12.5px; }
+  #hud.hud3 .bs-valor .max { font-size: 10.5px; }
+  #hud.hud3 .bs-barra { grid-column: 2; }
+  #hud.hud3 .cifra-pob { grid-template-rows: auto auto; }
+  #hud.hud3 .cifra-pob .bs-ic { grid-row: 1 / 3; }
+  #hud.hud3 .bs-reloj { font-size: 11.5px; }
+  #hud.hud3 .bs-datos { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+  #hud.hud3 .bs-reloj svg { display: none; }
+  body #hud.hud3 #barra-superior #btn-salir { padding: 0 8px; font-size: 12px; height: 28px; }
+  /* Sonido, desarrollo y tu nación: columna a la derecha, bajo la barra */
+  #hud.hud3 .bs-acciones { position: absolute; top: calc(100% + 8px); right: calc(8px + env(safe-area-inset-right, 0px)); flex-direction: column; gap: 6px; }
+  body #hud.hud3 .bs-acciones button { width: 38px; height: 38px; border-radius: 50%; padding: 0; background: rgba(12, 16, 28, 0.92); border: 1px solid rgba(180, 138, 58, 0.45); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); }
+  body #hud.hud3 #columna-izquierda { width: 168px; max-height: calc(100vh - var(--hud-top) - var(--pj-alto, 120px) - 160px); }
+  body #hud.hud3:has(#clasificacion.lb-ampliada) #columna-izquierda, html.info-avanzada body #hud.hud3 #columna-izquierda { width: min(300px, calc(100vw - 60px)); }
+  body #hud.hud3 #lista-clasificacion li { grid-template-columns: 14px 14px minmax(0, 1fr) 42px; font-size: 11.5px; }
+  #hud.hud3 .dato-lider { display: none; }
+  #hud.hud3 .lb-pie { justify-content: flex-end; }
+  #hud.hud3 .pie-centro { left: calc(6px + env(safe-area-inset-left, 0px)); right: calc(6px + env(safe-area-inset-right, 0px)); transform: none; align-items: stretch; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  body #hud.hud3 #pie-centro { width: auto; }
+  body #hud.hud3 #pie-centro #panel-jugador { width: auto; padding: 6px 8px 7px; }
+  body #hud.hud3 #panel-jugador .ratio-titulo { font-size: 0; gap: 0; }
+  body #hud.hud3 #panel-jugador .ratio-titulo::before { font-size: 15px; }
+  body #hud.hud3 #panel-jugador .ratio-cifra span { padding-left: 6px; font-size: 11px; }
+  /* Banco: una fila encima del pie, a la izquierda */
+  body #hud.hud3 #pj-banco { left: calc(6px + env(safe-area-inset-left, 0px)); bottom: calc(var(--pj-alto, 110px) + 12px + env(safe-area-inset-bottom, 0px)); width: auto; grid-template-columns: 32px auto auto; grid-template-areas: "em info bot"; gap: 8px; padding: 5px 6px 5px 6px; }
+  #hud.hud3 #pj-banco .cap-emblema { width: 32px; height: 32px; }
+  #hud.hud3 #pj-banco .cap-emblema canvas { width: 34px; height: 34px; }
+  #hud.hud3 #pj-banco .cap-def { display: none; }
+  #hud.hud3 #pj-banco .cap-info { width: 74px; }
+  #hud.hud3 #pj-banco .cap-botones { display: flex; flex-direction: row; gap: 4px; }
+  body #hud.hud3 #pj-banco .banco-btn { width: 34px; height: 32px; padding: 0; font-size: 0; gap: 0; }
+  #hud.hud3 #pj-banco .banco-btn svg { width: 15px; height: 15px; }
+  body #hud.hud3 ~ .minimapa, body #hud.hud3 .minimapa { left: calc(6px + env(safe-area-inset-left, 0px)); bottom: calc(var(--pj-alto, 110px) + var(--banco-alto, 0px) + 18px + env(safe-area-inset-bottom, 0px)); }
+  #hud.hud3 .mapa-zoom { display: none; }
+  body #hud.hud3 .despliegue { top: auto; bottom: calc(var(--pj-alto, 110px) + 12px + env(safe-area-inset-bottom, 0px)); }
+  body #hud.hud3 #avisos { right: calc(6px + env(safe-area-inset-right, 0px)); bottom: calc(var(--pj-alto, 110px) + 12px + env(safe-area-inset-bottom, 0px)); width: min(190px, calc(100vw - 210px)); max-height: 150px; }
+}
+
+/* ---------- Móvil en horizontal (poca altura) ---------- */
+@media (max-height: 500px) {
+  :root { --hud-top: calc(36px + env(safe-area-inset-top, 0px)); }
+  #hud.hud3 .bs-marca { display: none; }
+  #hud.hud3 .bs-etq { display: none; }
+  #hud.hud3 .cifra-pob { grid-template-rows: auto auto; }
+  #hud.hud3 .cifra-pob .bs-ic, #hud.hud3 .bs-ic { grid-row: 1 / 3; }
+  body #hud.hud3 #barra-superior button { height: 28px; }
+  body #hud.hud3 #columna-izquierda { width: 180px; max-height: calc(100vh - var(--hud-top) - 70px); }
+  body #hud.hud3 #pie-centro { width: min(520px, calc(100vw - 2 * 200px)); bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+  body #hud.hud3 #pie-centro #panel-jugador { padding: 4px 8px 5px; }
+  body #hud.hud3 #panel-jugador .ratio-titulo { font-size: 0; gap: 0; }
+  body #hud.hud3 #panel-jugador .ratio-titulo::before { font-size: 14px; }
+  body #hud.hud3 #panel-jugador .pj-obras { margin-top: 4px; }
+  body #hud.hud3 #pj-banco { width: 190px; bottom: calc(4px + env(safe-area-inset-bottom, 0px)); grid-template-columns: 32px auto; padding: 5px 7px; gap: 4px 8px; }
+  #hud.hud3 #pj-banco .cap-emblema { width: 32px; height: 32px; }
+  #hud.hud3 #pj-banco .cap-emblema canvas { width: 34px; height: 34px; }
+  body #hud.hud3 #pj-banco .banco-btn { height: 24px; }
+  body #hud.hud3 ~ .minimapa, body #hud.hud3 .minimapa { display: none; }
+  body #hud.hud3 #avisos { width: 190px; bottom: calc(4px + env(safe-area-inset-bottom, 0px)); max-height: 120px; }
+}
+
 </style>
 <link rel="preload" href="mapas-871f2c30c5db.json" as="fetch" crossorigin="anonymous">
 </head>
@@ -6269,7 +6557,7 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
   </div>
 
   <!-- Interfaz de partida -->
-  <div id="hud" hidden>
+  <div id="hud" class="hud3" hidden>
     <div id="alerta-roja" aria-hidden="true"></div>
     <!-- Columna izquierda: clasificación y, debajo, los combates en curso. Ambos se pliegan -->
     <div id="columna-izquierda">
@@ -6280,7 +6568,15 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
         <div class="cuerpo-plegable"><div>
           <div class="lb-cab" aria-hidden="true"><span class="pos">#</span><span></span><span class="nom">Nación</span><span class="pct">Tierra</span><span class="oro">Oro</span><span class="tro">Tropas</span></div>
           <ol id="lista-clasificacion"></ol>
-          <p id="lb-colonias" class="lb-colonias" hidden></p>
+          <div class="lb-pie">
+            <span class="dato dato-lider" id="dato-lider-caja" title="Nación con más territorio y meta de victoria">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              <span id="dato-lider">—</span>
+            </span>
+            <span id="dato-puesto-caja" hidden><span id="dato-puesto">—</span></span>
+            <button type="button" id="lb-ver" class="lb-ver" aria-expanded="false">Ver todas ›</button>
+          </div>
+          <p id="lb-colonias" class="lb-colonias av" hidden></p>
         </div></div>
       </aside>
       <!-- Combates en curso: quién ataca a quién y con cuántas tropas (clic = ir allí) -->
@@ -6292,23 +6588,52 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
       </section>
     </div>
 
+    <!-- Barra superior: tu nación y lo esencial (tropas, oro, territorio); lo avanzado sale con Mayús -->
     <div id="barra-superior" class="panel">
-      <span class="dato" title="Tiempo de partida">
+      <span class="bs-marca" aria-hidden="true">Trinchera</span>
+      <span class="bs-nacion" title="Tu nación">
+        <span id="pj-color" class="muestra"></span>
+        <strong id="pj-nombre"></strong>
+        <span id="pj-estado"></span>
+      </span>
+      <div class="bs-datos">
+        <div class="bs-dato cifra-pob" title="Tropas y su techo">
+          <svg class="bs-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <small class="bs-etq" id="pj-pob-etq">Tropas</small>
+          <span class="bs-valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span>
+          <small class="bs-ritmo"><span id="pj-crec"></span><span id="pj-comprometidas" class="sub-comp av" title="Tropas en tus ataques y barcos: ya no defienden"></span></small>
+          <div class="barra bs-barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido hacia el 42 % del techo"><div id="pj-barra"></div></div>
+        </div>
+        <div class="bs-dato cifra-soldados" title="Soldados: atacan y defienden. Trabajadores: producen oro extra (cada trabajador, ~1 de oro por segundo)">
+          <svg class="bs-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <small class="bs-etq">Soldados</small>
+          <span class="bs-valor" id="pj-tropas">0</span>
+          <small class="bs-ritmo" id="pj-trab"></small>
+        </div>
+        <div class="bs-dato bs-oro">
+          <svg class="bs-ic" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <small class="bs-etq">Oro</small>
+          <span class="bs-valor" id="pj-oro">0</span>
+          <small class="bs-ritmo" id="pj-oro-ritmo"></small>
+        </div>
+        <div class="bs-dato bs-terr">
+          <svg class="bs-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          <small class="bs-etq">Territorio</small>
+          <span class="bs-valor" id="pj-terr">0%</span>
+          <small class="bs-ritmo"><span id="pj-cas"></span><span class="av" title="Barcos de transporte en el mar / máximo, y buques de guerra"> · <span id="pj-barcos">0</span> barcos<span id="pj-buques"></span></span></small>
+        </div>
+      </div>
+      <span id="pj-bonos" class="pj-bonos" aria-label="Bonos activos"></span>
+      <span class="bs-hueco"></span>
+      <span class="dato bs-reloj" title="Tiempo de partida">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9V6.2M6.5 2h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span id="reloj">0:00</span>
-      </span>
-      <span class="dato" id="dato-puesto-caja" title="Tu puesto entre las naciones (el mismo que en el informe final); las colonias se cuentan aparte">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5h7v3a3.5 3.5 0 0 1-7 0zM8 9v3M5.5 13.5h5M4.5 3.5H2.5a2 2 0 0 0 2 2.5M11.5 3.5h2a2 2 0 0 1-2 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
-        <span id="dato-puesto">—</span>
-      </span>
-      <span class="dato dato-lider" id="dato-lider-caja" title="Nación con más territorio y meta de victoria">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5h11l-1-7-3 3L8 4 6.5 8.5l-3-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        <span id="dato-lider">—</span>
       </span>
       <!-- Solo al mirar la partida después de perder (sin conexión): ir más deprisa -->
       <span id="velocidad" class="velocidad" role="group" aria-label="Velocidad al mirar" hidden>
         <button type="button" data-v="1" class="activo">×1</button><button type="button" data-v="2">×2</button><button type="button" data-v="4">×4</button>
       </span>
+      <span class="bs-acciones">
       <button type="button" id="btn-sonido" class="btn-sonido" title="Silenciar o activar el sonido (tecla N)" aria-pressed="false">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3H2.5z" fill="currentColor"/><path class="ondas" d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12 3.8a6 6 0 0 1 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path class="tachado" d="M10.5 5.5l4 5M14.5 5.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       </button>
@@ -6320,6 +6645,7 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/><path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span>Mi nación</span>
       </button>
+      </span>
       <button type="button" id="btn-salir" title="Volver al menú">Menú</button>
     </div>
 
@@ -6357,27 +6683,12 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
       <div class="cuerpo-plegable"><div><div id="eventos" aria-live="polite"></div></div></div>
     </section>
 
-    <!-- En el ordenador, los edificios van en su propia barra, abajo en el centro (ver ui.js) -->
-    <section id="barra-obras" class="panel barra-obras" aria-label="Construir" hidden></section>
+    <!-- Pie: fuerza de ataque encima de los edificios (en el ordenador, en su propia barra; ver ui.js) -->
+    <div id="pie-centro" class="pie-centro">
     <section id="panel-jugador" class="panel">
       <button type="button" id="pj-plegar" class="pj-plegar" aria-expanded="true" title="Minimizar el panel (tecla V)">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div class="pj-col pj-resumen">
-      <div class="cabecera">
-        <span id="pj-color" class="muestra"></span>
-        <strong id="pj-nombre"></strong>
-        <span id="pj-estado"></span>
-        <span id="pj-bonos" class="pj-bonos" aria-label="Bonos activos"></span>
-      </div>
-      <div class="barra" title="Tropas / techo (con trabajadores: dorado soldados, verde azulado trabajadores). Se regeneran más rápido en la franja marcada, hacia el 42 % del techo"><div id="pj-barra"></div></div>
-      <div class="cifras">
-        <div class="cifra-pob" title="Tropas (o población, con trabajadores) y su techo: 2 × (casillas^0,6 × 100 + 5000) + 25 000 por nivel de ciudad. Se regeneran más rápido hacia el 42 % del techo"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="5.5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13c0-2.5 1.8-4 4-4s4 1.5 4 4M9 9.3c.6-.2 1.3-.3 2-.3 2 0 3.5 1.3 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="pj-pob-etq">Tropas</span></span><span class="valor"><span id="pj-pob">0</span><span class="max"> / <span id="pj-tropas-max">0</span></span></span><small class="sub sub-tropas"><span id="pj-crec"></span><span id="pj-comprometidas" class="sub-comp" title="Tropas en tus ataques y barcos: ya no defienden"></span></small></div>
-        <div class="cifra-soldados" title="Soldados: atacan y defienden. Trabajadores: producen oro extra (cada trabajador, ~1 de oro por segundo)"><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 L11 5 M5 14 L13 6 M10.5 3.5 L13.5 2.5 L12.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Soldados</span><span class="valor" id="pj-tropas">0</span><small class="sub sub-trab" id="pj-trab"></small></div>
-        <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="5" rx="5" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V5M3 8c0 1.2 2.2 2.2 5 2.2S13 9.2 13 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Oro</span><span class="valor" id="pj-oro">0</span><small class="sub" id="pj-oro-ritmo"></small></div>
-        <div><span class="etq"><svg class="etq-icono" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 14V2.5M4 3h8l-2 3 2 3H4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Territorio</span><span class="valor" id="pj-terr">0%</span><small class="sub sub-barcos" title="Barcos de transporte en el mar / máximo, y buques de guerra"><span id="pj-barcos">0</span> barcos<span id="pj-buques"></span></small></div>
-      </div>
-      </div>
       <div class="pj-col pj-ataque">
       <label class="ratio">
         <span class="ratio-titulo">Fuerza de ataque</span>
@@ -6389,8 +6700,15 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
         <span class="ratio-cifra"><strong id="reparto-valor">70%</strong> <span id="reparto-txt">soldados</span></span>
         <input id="reparto" type="range" min="5" max="100" step="5" value="70">
       </label>
+      </div>
+      <div class="pj-col pj-obras">
+      <div id="construir" role="group" aria-label="Construir"></div>
+      </div>
+    </section>
+    <section id="barra-obras" class="panel barra-obras" aria-label="Construir" hidden></section>
+    </div>
       <!-- Capital (doc-1.8): su emblema (abre su ficha de niveles y premios), el banco y el botón para guardar -->
-      <div class="pj-banco" id="pj-banco" hidden>
+      <div class="pj-banco panel" id="pj-banco" hidden>
         <button type="button" class="cap-emblema" id="cap-emblema" aria-label="Tu capital: niveles, mejoras y premios">
           <canvas id="cap-icono" width="112" height="112" aria-hidden="true"></canvas>
           <span class="cap-nivel" id="cap-nivel">0</span>
@@ -6402,14 +6720,9 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
         </div>
         <div class="cap-botones">
           <button type="button" id="banco-guardar" class="banco-btn" title="Guarda en la capital el 25 % de tus soldados (tecla X): no atacan, no frenan tu regeneración y hacen más fuertes las murallas"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7.2 8 10.7l3.5-3.5M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Guardar</button>
-          <button type="button" id="banco-sacar" class="banco-btn" title="Saca todas las tropas del banco (Mayús + X)">Sacar todo</button>
+          <button type="button" id="banco-sacar" class="banco-btn" title="Saca todas las tropas del banco (Mayús + X)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V3M4.5 6.3 8 2.8l3.5 3.5M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Retirar</button>
         </div>
       </div>
-      </div>
-      <div class="pj-col pj-obras">
-      <div id="construir" role="group" aria-label="Construir"></div>
-      </div>
-    </section>
 
     <div id="columna-derecha">
     <!-- Propuestas de alianza recibidas -->
@@ -6455,6 +6768,10 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
     <!-- Minimapa: el mapa entero; clic o arrastrar = ir allí -->
     <div id="minimapa" class="panel minimapa">
       <canvas id="minimapa-lienzo" aria-label="Minimapa: haz clic para ir a ese punto"></canvas>
+      <span class="mapa-zoom" role="group" aria-label="Zoom">
+        <button type="button" id="zoom-mas" title="Acercar (rueda del ratón)" aria-label="Acercar">+</button>
+        <button type="button" id="zoom-menos" title="Alejar (rueda del ratón)" aria-label="Alejar">−</button>
+      </span>
       <button type="button" id="minimapa-plegar" class="minimapa-plegar" title="Ocultar o mostrar el minimapa" aria-label="Ocultar el minimapa">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4l4-1.5 4 1.5 4-1.5v9.5l-4 1.5-4-1.5-4 1.5z M6 2.5v9.5 M10 4v9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
       </button>
@@ -6700,7 +7017,7 @@ button.pc-nodo:hover, button.pc-nodo:focus-visible { transform: translateY(-2px)
       </div>
     </div>
   </div>
-<script>window.__TRINCHERA_BUILD = "8977338 2026-11-16 17:34 UTC";</script>
+<script>window.__TRINCHERA_BUILD = "18a8d7e 2026-11-16 18:03 UTC";</script>
 <script>window.__TRINCHERA_MAPAS = "mapas-871f2c30c5db.json";</script>
 <script>
 (function () {
@@ -9028,6 +9345,12 @@ const { BUILD_GROUPS, TICK_MS } = __require('config');
 const { fmtTroops, formatNumber } = __require('format');
 const { buildingCard, minSec } = __require('fichas');
 const GROUP_NAMES = Object.fromEntries(BUILD_GROUPS.map((g) => [g.id, g.name]));
+function setAdvanced(on) {
+const root = document.documentElement;
+if (root.classList.contains('info-avanzada') === on) return;
+root.classList.toggle('info-avanzada', on);
+document.dispatchEvent(new CustomEvent('info-avanzada', { detail: on }));
+}
 const svg = (body, fill = false) =>
 `<svg viewBox="0 0 16 16" aria-hidden="true" ${fill ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"'}>${body}</svg>`;
 const ICONS = {
@@ -9069,12 +9392,20 @@ this._held = false;
 el.addEventListener('pointerdown', () => (this._held = true));
 for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, () => (this._held = false), true);
 el.addEventListener('click', (e) => {
+if (e.target.closest('[data-detalles]')) {
+this._avBtn = !document.documentElement.classList.contains('info-avanzada');
+setAdvanced(this._avBtn);
+return;
+}
 if (e.target.closest('[data-cancelar]')) onCancel?.(this.cur && this.cur.kind);
 else if (e.target.closest('[data-mejorar]')) {
 onUpgrade?.();
 this._at = 0;
 } else if (e.target.closest('[data-cerrar]')) this.hide();
 else if (this.cur && (this.cur.mode === 'press' || this.cur.mode === 'bono')) this.hide();
+});
+document.addEventListener('info-avanzada', () => {
+if (this.cur) requestAnimationFrame(() => this.cur && this._place());
 });
 }
 get open() {
@@ -9091,6 +9422,10 @@ this._render(this._bonusHtml(bonus));
 hide() {
 if (!this.cur) return;
 this.cur = null;
+if (this._avBtn) {
+this._avBtn = false;
+setAdvanced(false);
+}
 this.el.classList.remove('visible');
 clearTimeout(this._hideTimer);
 this._hideTimer = setTimeout(() => {
@@ -9160,14 +9495,15 @@ const price = c.maxed
 ? '<b>Máx.</b>'
 : `<b>${formatNumber(c.cost)}</b><small>${short ? `te faltan ${formatNumber(c.cost - p.gold)}` : 'de oro'}</small>${c.troops ? `<small class="${shortT ? 'falta' : 'tropas'}">+ ${fmtTroops(c.troops)} tropas</small>` : ''}`;
 const meta = [c.time ? `${ICONS.reloj}${seconds(c.time)} de obra` : '', c.key ? `<kbd>${esc(c.key)}</kbd>` : ''].filter(Boolean).join('');
+const AV = mode === 'sheet' ? '' : ' av';
 const gives = c.gives
 .map(
-(g) => `<li><i class="fi">${ICONS[g.icon] || ''}</i><span class="fd-txt"><span class="fd-l">${esc(g.label)}</span>${g.note ? `<small>${esc(g.note)}</small>` : ''}</span>${g.value ? `<b class="fd-v">${esc(g.value)}</b>` : ''}</li>`,
+(g) => `<li><i class="fi">${ICONS[g.icon] || ''}</i><span class="fd-txt"><span class="fd-l">${esc(g.label)}</span>${g.note ? `<small class="${AV.trim()}">${esc(g.note)}</small>` : ''}</span>${g.value ? `<b class="fd-v">${esc(g.value)}</b>` : ''}</li>`,
 )
 .join('');
 const next =
 c.next && c.next.rows.length && mode !== 'dock'
-? `<section class="ficha-sec"><h4>${esc(c.next.title)}</h4><div class="ficha-niv">${c.next.rows
+? `<section class="ficha-sec${AV}"><h4>${esc(c.next.title)}</h4><div class="ficha-niv">${c.next.rows
 .map((r) => `<div class="fn-fila"><span class="fn-l">${esc(r.label)}</span>${r.from ? `<span class="fn-de">${esc(r.from)}</span><i class="fn-a">→</i>` : ''}<b>${esc(r.to)}</b></div>`)
 .join('')}</div></section>`
 : '';
@@ -9178,7 +9514,7 @@ let perks = '';
 if (c.perks && mode !== 'dock') {
 const list = mode === 'sheet' ? c.perks : c.perks.filter((x) => x.state !== 'hecho').slice(0, 3);
 if (list.length) {
-perks = `<section class="ficha-sec"><h4>${mode === 'sheet' ? 'Premios por nivel' : 'Próximos premios'}</h4><ul class="ficha-premios">${list
+perks = `<section class="ficha-sec${AV}"><h4>${mode === 'sheet' ? 'Premios por nivel' : 'Próximos premios'}</h4><ul class="ficha-premios">${list
 .map((x) => `<li class="${x.state}"><span class="pk-n">${x.level}</span><span class="pk-t">${esc(x.text)}</span><i class="pk-e">${x.state === 'hecho' ? ICONS.tienes : x.state === 'siguiente' ? ICONS.estrella : ICONS.candado}</i></li>`)
 .join('')}</ul></section>`;
 }
@@ -9188,8 +9524,14 @@ const upgrade = mode === 'sheet' && c.kind === 'capUp' && !c.maxed
 : '';
 const sheet = mode === 'sheet' && c.kind === 'capUp';
 const close = mode === 'sheet' ? '<button type="button" class="ficha-cerrar" data-cerrar aria-label="Cerrar">×</button>' : '';
-const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : ''}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
-const how = c.how ? `<div class="ficha-como">${esc(c.how)}</div>` : '';
+const have = c.have && (mode !== 'dock' || c.haveWarn) ? `<div class="ficha-tienes${c.haveWarn ? ' falta' : AV}"><i class="fi">${c.haveWarn ? ICONS.falta : ICONS.tienes}</i><span>${esc(c.have)}</span></div>` : '';
+const how = c.how ? `<div class="ficha-como${AV}">${esc(c.how)}</div>` : '';
+const sum = String(c.summary || '');
+const cut = sum.search(/\.\s/);
+const summary = cut > 0 && cut < sum.length - 2 ? `${esc(sum.slice(0, cut + 1))}<span class="av"> ${esc(sum.slice(cut + 2))}</span>` : esc(sum);
+const more = mode === 'sheet' ? '' : mode === 'hover'
+? '<div class="ficha-mas solo-resumen">Mantén <kbd>Mayús</kbd> para ver más detalles</div>'
+: '<button type="button" class="ficha-detalles" data-detalles><span class="solo-resumen">Más detalles</span><span class="av">Menos detalles</span></button>';
 const cancel = mode === 'dock' ? '<button type="button" class="ficha-cancelar" data-cancelar>Cancelar</button>' : '';
 return `
       <div class="ficha-cab">
@@ -9200,14 +9542,15 @@ return `
       ${close}
       ${pips}
       ${sheet ? upgrade : ''}
-      ${!sheet && meta ? `<div class="ficha-meta">${meta}</div>` : ''}
-      ${!sheet ? `<p class="ficha-resumen">${esc(c.summary)}</p>` : ''}
+      ${!sheet && meta ? `<div class="ficha-meta av">${meta}</div>` : ''}
+      ${!sheet ? `<p class="ficha-resumen">${summary}</p>` : ''}
       ${gives && !sheet ? `<section class="ficha-sec"><h4>${esc(c.givesTitle || 'Qué te da')}</h4><ul class="ficha-da">${gives}</ul></section>` : ''}
-      ${c.payback ? `<p class="ficha-amort" title="Orientativo: con tu oro de ahora; cambia con tu territorio y tus bonos">${ICONS.reloj}<span>Se paga en <b>~${esc(minSec(c.payback.seconds))}</b> de funcionar · ${esc(minSec(c.payback.withBuild))} contando la obra${c.payback.note && mode !== 'dock' ? `<small>${esc(c.payback.note)}</small>` : ''}</span></p>` : ''}
+      ${c.payback ? `<p class="ficha-amort${AV}" title="Orientativo: con tu oro de ahora; cambia con tu territorio y tus bonos">${ICONS.reloj}<span>Se paga en <b>~${esc(minSec(c.payback.seconds))}</b> de funcionar · ${esc(minSec(c.payback.withBuild))} contando la obra${c.payback.note && mode !== 'dock' ? `<small>${esc(c.payback.note)}</small>` : ''}</span></p>` : ''}
       ${next}
       ${perks}
       ${have}
       ${sheet ? (c.maxed ? how : '') : how}
+      ${more}
       ${cancel}`;
 }
 _bonusHtml(b) {
@@ -14192,7 +14535,7 @@ name: 'Controles',
 items: [
 ['raton', 'Ratón y dedo', 'Arrastra para moverte y usa la rueda (o pellizca) para el zoom. Clic (o toque) en tierra libre, en un vecino o en su nombre: atacar. Clic derecho o mantener pulsado sobre otra nación: su ficha.'],
 ['bandera', 'Despliegue', 'Tienes 30 segundos para hacer clic donde quieras empezar: un disco de 52 casillas y 2500 tropas. «Elegir por mí» busca un buen sitio.'],
-['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: plegar el panel de abajo. I: desarrollo. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
+['teclado', 'Teclas', '1–9 y 0: fuerza de ataque del 10 al 100 % (o Mayús + rueda). C: ir a tu nación. V: ocultar la barra de abajo. I: desarrollo. Mayús (mantenida): más detalles en las fichas, el tooltip y la clasificación. N: silenciar. + y −: zoom. Esc: cancelar o abrir el menú.'],
 ['ciudad', 'Construir', 'Los edificios van en tres grupos: Economía (Z mejorar la capital · B pueblo · Q ciudad · E puerto · F fábrica), Defensa (R puesto defensivo · H antimisiles · T buque) y Ataque (G silo · M bomba atómica · J bomba H · K MIRV). En el móvil, toca un grupo y elige en la bandeja. Luego, clic en el mapa. Mayús + clic construye varios seguidos. Pasa el ratón por un edificio (o mantenlo pulsado en el móvil) para ver su ficha: qué te da con tus cifras, qué tienes ya y qué cambia al subir de nivel.'],
 ['mapa', 'Minimapa y combates', 'El minimapa (abajo a la izquierda) lleva a cualquier sitio con un clic. Clic en una tarjeta de combate: la cámara vuela a ese frente.'],
 ],
@@ -14437,6 +14780,7 @@ const ARSENAL_CATS = [
 { id: 'ataque', name: 'Ataque', text: 'Desembarcos y bombas', icon: 'missile', items: ['transporte', 'silo', 'missile', 'hbomb', 'mirv'] },
 ];
 const NEWS = [
+{ tag: 'Partida', title: 'Interfaz de partida más limpia', text: 'Tus tropas, oro y territorio en una barra arriba; la clasificación con los tres primeros y tú; el banco aparte y la fuerza de ataque encima de los edificios. Las fichas enseñan lo esencial: mantén Mayús (o toca «Más detalles» en el móvil) para ver todo.', art: 2 },
 { tag: 'Novedades', title: 'Aspectos, gestas y ficha del comandante', text: 'Aspectos nuevos para tus edificios, barcos y bombas, que también ven los demás online. Todo lo coleccionable tiene rareza (común, poco común, rara, épica y legendaria) y una ficha al pasar el ratón o mantener pulsado. Perfil con tu ficha de comandante y Progreso renovado: camino de recompensas, diario de campaña, «casi lo tienes» y gestas por categorías con puntos.', art: 1 },
 { tag: 'Batalla', title: 'Interceptores y fábricas en red', text: 'Los misiles vuelan más despacio y los antimisiles lanzan un proyectil que se ve subir y los revienta en el aire. Cada fábrica tiende vías a varias estaciones a la vez, aprovecha la vía que pisa y, cuantas más fábricas, más trenes y más oro.', art: 2 },
 { tag: 'Novedades', title: 'Salas de 32 y rangos por cola', text: 'Salas de hasta 32 jugadores con accesos a 4, 8, 16, 24 y 32 plazas; el anfitrión edita las reglas en borrador y las aplica de una vez. La clasificatoria contra la IA y la de en línea tienen ahora rangos separados (tu rango de antes queda como histórico). Y más: salidas explicadas, previsión de cada ataque, amortización en las fichas y repetir tu última partida tal cual.', art: 1 },
@@ -21823,6 +22167,7 @@ onRatioStep: (d) => setRatio(state.ratio + d),
 onCenter: centerOnHuman,
 });
 ui.on({
+onZoom: (f) => camera.zoomToward(camera.viewW / 2, camera.viewH / 2, f),
 onRatio: setRatio,
 onShare: (share) => humanIntent({ type: 'share', share }),
 onBank: bankTroops,
@@ -33071,8 +33416,8 @@ check: (s) => s.human.spawned,
 },
 {
 text: (s) =>
-`Bien. Tus tropas crecen solas (ahora +${troopsPerSecond(s.human)}; más rápido cuanto más cerca del 42 % de tu techo) y ganas oro cada segundo (+${goldPerSecond(s.human)}): lo ves en el panel de abajo. Pulsa «Empezar» cuando quieras: la IA no se mueve hasta entonces.`,
-highlight: '#panel-jugador',
+`Bien. Tus tropas crecen solas (ahora +${troopsPerSecond(s.human)}; más rápido cuanto más cerca del 42 % de tu techo) y ganas oro cada segundo (+${goldPerSecond(s.human)}): lo ves en la barra de arriba. Mantén Mayús sobre cualquier ficha para ver más detalles. Pulsa «Empezar» cuando quieras: la IA no se mueve hasta entonces.`,
+highlight: '#barra-superior .bs-datos',
 info: true,
 next: 'Empezar',
 pause: true,
@@ -33652,10 +33997,49 @@ else if (!desk && obras.parentElement !== panel) panel.append(obras);
 layout();
 wide?.addEventListener?.('change', layout);
 if (typeof ResizeObserver !== 'undefined') {
+const pie = $('pie-centro') || panel;
 new ResizeObserver(() => {
-document.documentElement.style.setProperty('--pj-alto', `${Math.round(panel.offsetHeight)}px`);
-}).observe(panel);
+document.documentElement.style.setProperty('--pj-alto', `${Math.round(pie.offsetHeight)}px`);
+}).observe(pie);
+new ResizeObserver(() => {
+document.documentElement.style.setProperty('--banco-alto', `${Math.round($('pj-banco').offsetHeight)}px`);
+}).observe($('pj-banco'));
 }
+const lb = $('clasificacion');
+let wideLb = false;
+try {
+wideLb = localStorage.getItem('trinchera.clasifAmpliada') === '1';
+} catch {
+wideLb = false;
+}
+const setWideLb = (on) => {
+lb.classList.toggle('lb-ampliada', on);
+$('lb-ver').setAttribute('aria-expanded', String(on));
+this._lbVerTxt = '';
+try {
+localStorage.setItem('trinchera.clasifAmpliada', on ? '1' : '0');
+} catch {
+}
+};
+setWideLb(wideLb);
+$('lb-ver').addEventListener('click', () => setWideLb(!lb.classList.contains('lb-ampliada')));
+$('zoom-mas')?.addEventListener('click', () => this.handlers.onZoom?.(1.45));
+$('zoom-menos')?.addEventListener('click', () => this.handlers.onZoom?.(1 / 1.45));
+const setAdvanced = (on) => {
+const root = document.documentElement;
+if (root.classList.contains('info-avanzada') === on) return;
+root.classList.toggle('info-avanzada', on);
+document.dispatchEvent(new CustomEvent('info-avanzada', { detail: on }));
+};
+this.setAdvanced = setAdvanced;
+document.addEventListener('info-avanzada', () => (this._tipSize = null));
+window.addEventListener('keydown', (e) => {
+if (e.key === 'Shift' && !e.repeat) setAdvanced(true);
+});
+window.addEventListener('keyup', (e) => {
+if (e.key === 'Shift') setAdvanced(false);
+});
+window.addEventListener('blur', () => setAdvanced(false));
 $('lista-clasificacion').addEventListener('click', (e) => {
 const li = e.target.closest('li[data-id]');
 if (li) this.handlers.onFocusPlayer?.(Number(li.dataset.id));
@@ -34204,6 +34588,7 @@ const roleName = coop?.role === 'militar' ? 'Mando militar' : coop?.role === 'ec
 txt('pj-estado', !human.alive ? 'Derrotado · modo espectador' : coop ? `${roleName ? `${roleName} · ` : ''}con ${coop.partnerName}` : '');
 const workersMode = human.economy === 'workers';
 $('panel-jugador').classList.toggle('economia-fija', !workersMode);
+$('hud').classList.toggle('economia-fija', !workersMode);
 const label = workersMode ? 'Población' : 'Tropas';
 if ($('pj-pob-etq').textContent !== label) txt('pj-pob-etq', label);
 const pop = human.population();
@@ -34239,7 +34624,8 @@ const ps = (v) => formatNumber(v * perSecond);
 const goldTitle = `Oro pasivo por segundo: base +${ps(gb.base)} · territorio +${ps(gb.tax)} · pueblos +${ps(gb.villages)}${gb.workers ? ` · trabajadores +${ps(gb.workers)}` : ''} · bonos +${ps(gb.bonus)}. Comercio, pesqueros y botín llegan aparte (panel de desarrollo → Economía)`;
 const goldBox = $('pj-oro').parentElement;
 if (goldBox.title !== goldTitle) goldBox.title = goldTitle;
-txt('pj-terr', formatShare(human.tiles, landCount));
+txt('pj-terr', formatPercent(landCount > 0 ? human.tiles / landCount : 0));
+txt('pj-cas', `${formatNumber(human.tiles)} casillas`);
 txt('pj-barcos', `${human.boatCount}/${human.maxBoats()}`);
 txt('pj-buques', human.buildings.warship ? ` · ${human.buildings.warship} buque${human.buildings.warship > 1 ? 's' : ''}` : '');
 const capB = human.capital && game.buildingAt.get(human.capital.tile) === human.capital ? human.capital : null;
@@ -34934,6 +35320,11 @@ const rank = alive.indexOf(human);
 if (rank >= 10) rows.push(human);
 const pl = placement(game, human);
 $('cab-puesto').textContent = `${pl.place}.º`;
+const verTxt = $('clasificacion').classList.contains('lb-ampliada') ? 'Ver menos ‹' : `Ver las ${alive.length} naciones ›`;
+if (this._lbVerTxt !== verTxt) {
+this._lbVerTxt = verTxt;
+$('lb-ver').textContent = verTxt;
+}
 const colTxt = colonies ? `${colonies} ${colonies === 1 ? 'colonia' : 'colonias'} en pie (no cuentan en el puesto)` : '';
 if ($('lb-colonias').textContent !== colTxt) $('lb-colonias').textContent = colTxt;
 $('lb-colonias').hidden = !colonies;
@@ -35049,7 +35440,7 @@ _pointTip(game, tile) {
 const lg = game.lugarNear ? game.lugarNear(tile) : null;
 if (lg) {
 const def = LUGARES[lg.kind];
-return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave">· ${def.desc}</span></div>`;
+return `<div class="tip-punto">${def.icon} <b>${def.name}</b> <span class="suave av">· ${def.desc}</span></div>`;
 }
 const pt = game.pointNear(tile);
 if (!pt) return '';
@@ -35064,11 +35455,11 @@ const troops = this.nextSend(h);
 if (troops < 1) return '';
 const pv = game.attackPreview(h, tile, troops);
 const lines = [];
-lines.push(`<div class="tip-orden ${targetId ? 'ataque' : 'expansion'}">${targetId ? '⚔ Ataque' : '➜ Expansión'}: envías ${fmtTroops(pv.send)} · te quedan ${fmtTroops(pv.reserve)} en casa</div>`);
-lines.push(`<div class="tip-estim">Previsión: ~${formatNumber(pv.tiles)} cas.${targetId ? ` · riesgo ${pv.risk}` : ''}${pv.uncertain ? ' (incierta)' : ''}</div>`);
+lines.push(`<div class="tip-orden ${targetId ? 'ataque' : 'expansion'}">${targetId ? '⚔' : '➜'} ${fmtTroops(pv.send)} · ~${formatNumber(pv.tiles)} cas.${targetId ? ` · riesgo ${pv.risk}` : ''}<span class="av"> · te quedan ${fmtTroops(pv.reserve)} en casa${pv.uncertain ? ' · previsión incierta' : ''}</span></div>`);
 const mods = defenseText(pv.defense);
-if (mods) lines.push(`<div class="tip-mods">${targetId ? 'Defensa aquí' : 'Terreno'}: ${mods}</div>`);
-if (pv.incoming) lines.push(`<div class="tip-expo ${pv.exposure}">⚠ Te atacan con ${fmtTroops(pv.incoming)}${pv.attackers > 1 ? ` en ${pv.attackers} frentes` : ''}: ${pv.exposure === 'alta' ? 'tu reserva no les alcanza' : `exposición ${pv.exposure}`}</div>`);
+if (mods) lines.push(`<div class="tip-mods av">${targetId ? 'Defensa aquí' : 'Terreno'}: ${mods}</div>`);
+if (pv.incoming) lines.push(`<div class="tip-expo ${pv.exposure}${pv.exposure === 'alta' ? '' : ' av'}">⚠ Te atacan con ${fmtTroops(pv.incoming)}${pv.attackers > 1 ? ` en ${pv.attackers} frentes` : ''}: ${pv.exposure === 'alta' ? 'tu reserva no les alcanza' : `exposición ${pv.exposure}`}</div>`);
+lines.push('<div class="tip-mas">Mayús: más datos</div>');
 return lines.join('');
 }
 updateTooltip(game, tile, sx, sy, zoom = 1) {
@@ -35116,8 +35507,8 @@ _tipHtml(game, tile) {
 const map = game.map;
 if (!map.isLand(tile)) {
 return map.navigable(tile)
-? '<b>Río</b> <span class="suave">· navegable: puertos en sus orillas y barcos</span>'
-: '<b>Río</b> <span class="suave">· frontera: no se cruza por tierra</span>';
+? '<b>Río</b> <span class="suave">· navegable</span><span class="suave av">: puertos en sus orillas y barcos</span>'
+: '<b>Río</b> <span class="suave">· frontera</span><span class="suave av">: no se cruza por tierra</span>';
 }
 const terrain = TERRAIN_NAMES[map.terrain[tile]];
 const o = game.owner[tile];
@@ -35125,6 +35516,7 @@ if (o) {
 const p = game.players[o];
 const b = game.buildingNear(tile, 2 * RES);
 const extra = [];
+const extraAv = [];
 if (b) {
 if (b.kind === 'capital') extra.push(`🏰 Capital${b.up ? ` ★${b.up}` : ''}${b.bank >= 1 ? ` · banco ${fmtTroops(b.bank)}` : ''}`);
 else extra.push(`${BUILDINGS[b.kind].name}${b.level > 1 ? ` ${b.level}` : ''}${b.target ? ` · obras ${Math.round(game.buildProgress(b) * 100)} %` : ''}`);
@@ -35133,13 +35525,13 @@ const def = game.fortMultiplier(p, tile);
 if (def > 1 && !(b && b.kind === 'capital')) {
 const zone = game.capitalZone ? game.capitalZone(p, tile) : 0;
 const wall = game.wallMultiplier(p, tile);
-extra.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
+extraAv.push(zone && wall >= def ? `${zone === 2 ? 'murallas' : 'afueras'} ×${def.toFixed(1)}` : `defensa ×${def.toFixed(1)}`);
 }
 const human = game.human;
 const tag = p === human ? ' <span class="suave">(tú)</span>' : human && human.allies.has(p.id) ? ' 🤝' : game.isTraitor(p) ? ' ⚠' : p.weak ? ' <span class="suave">· colonia</span>' : '';
-return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o, tile)}`;
+return `<b>${escapeHtml(p.name)}</b>${tag}<br>${fmtTroops(p.troops)} · ${formatShare(p.tiles, map.landCount)}${extra.length ? `<br><span class="suave">${extra.join(' · ')}</span>` : ''}${extraAv.length ? `<span class="suave av">${extra.length ? ' · ' : '<br>'}${extraAv.join(' · ')}</span>` : ''}${this._pointTip(game, tile)}${this._attackTip(game, o, tile)}`;
 }
-return `<b>Tierra libre</b> <span class="suave">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0, tile)}`;
+return `<b>Tierra libre</b> <span class="suave av">· ${terrain}</span>${this._pointTip(game, tile)}${this._attackTip(game, 0, tile)}`;
 }
 }
 function txt(id, text) {
