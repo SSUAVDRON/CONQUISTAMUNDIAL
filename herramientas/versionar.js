@@ -27,7 +27,9 @@ export async function versionedIndex() {
   const map = `${START}\n  <script type="importmap">\n  ${JSON.stringify({ imports }, null, 2).replace(/\n/g, '\n  ')}\n  </script>\n  ${END}`;
   let out = html.includes(START) ? html.replace(new RegExp(`${START}[\\s\\S]*?${END}`), map) : html.replace('<link rel="stylesheet" href="css/estilo.css', `${map}\n  <link rel="stylesheet" href="css/estilo.css`);
   out = out.replace(/href="css\/estilo\.css(\?v=[0-9a-f]+)?"/, `href="css/estilo.css?v=${css}"`);
-  out = out.replace(/<script type="module" src="src\/main\.js(\?v=[0-9a-f]+)?"><\/script>/, `<script type="module" src="${imports['./src/main.js']}"></script>`);
+  // (con o sin «./»: tras la primera pasada queda «./src/…» y antes no se
+  // volvía a encontrar, así que la huella de main.js se quedaba vieja)
+  out = out.replace(/<script type="module" src="(?:\.\/)?src\/main\.js(\?v=[0-9a-f]+)?"><\/script>/, `<script type="module" src="${imports['./src/main.js']}"></script>`);
   return { html, out };
 }
 
