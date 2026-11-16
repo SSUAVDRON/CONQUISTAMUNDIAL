@@ -10,6 +10,8 @@
   <script type="importmap">
   {
     "imports": {
+      "./src/ajustes-ui.js": "./src/ajustes-ui.js?v=3f8dc8f766",
+      "./src/ajustes.js": "./src/ajustes.js?v=c5ddbaf87a",
       "./src/attack.js": "./src/attack.js?v=43652095f7",
       "./src/banderas.js": "./src/banderas.js?v=079a0c12a9",
       "./src/barcos.js": "./src/barcos.js?v=c1385c50b7",
@@ -26,23 +28,23 @@
       "./src/emparejamiento.js": "./src/emparejamiento.js?v=af4606d81b",
       "./src/errores.js": "./src/errores.js?v=d6981c22f3",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
-      "./src/ficha-ui.js": "./src/ficha-ui.js?v=ac21b445ce",
+      "./src/ficha-ui.js": "./src/ficha-ui.js?v=73fc2d2f38",
       "./src/fichas.js": "./src/fichas.js?v=49d1818ad8",
       "./src/fin.js": "./src/fin.js?v=8ad71316f7",
       "./src/format.js": "./src/format.js?v=3a70a55999",
-      "./src/fx.js": "./src/fx.js?v=0284ac6f42",
+      "./src/fx.js": "./src/fx.js?v=3db8335f88",
       "./src/game.js": "./src/game.js?v=507c1f7ebb",
       "./src/guia.js": "./src/guia.js?v=10004c72c0",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=dac2e8aa65",
+      "./src/home.js": "./src/home.js?v=4ef874e8bd",
       "./src/icons.js": "./src/icons.js?v=72c24ddc2d",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
-      "./src/input.js": "./src/input.js?v=41a1d9c9f5",
+      "./src/input.js": "./src/input.js?v=03eed180fc",
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=5bc4ea131e",
       "./src/lugares.js": "./src/lugares.js?v=4a2b8221d0",
-      "./src/main.js": "./src/main.js?v=6102473a67",
+      "./src/main.js": "./src/main.js?v=421414f877",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=87bade7d81",
@@ -58,9 +60,9 @@
       "./src/player.js": "./src/player.js?v=38b65c9db6",
       "./src/portada.js": "./src/portada.js?v=92e46a1eb5",
       "./src/presentacion.js": "./src/presentacion.js?v=c8fb35cdb1",
-      "./src/profile.js": "./src/profile.js?v=1d36fd38c9",
+      "./src/profile.js": "./src/profile.js?v=dfe5d9a3a0",
       "./src/rangos.js": "./src/rangos.js?v=7985ed4b2a",
-      "./src/render.js": "./src/render.js?v=0eb67d8c65",
+      "./src/render.js": "./src/render.js?v=1110a1d9dc",
       "./src/repeticion.js": "./src/repeticion.js?v=5d726656a5",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
       "./src/reto.js": "./src/reto.js?v=c7d7c47571",
@@ -71,17 +73,17 @@
       "./src/skins.js": "./src/skins.js?v=db3be1034f",
       "./src/social-ui.js": "./src/social-ui.js?v=c32781a4a4",
       "./src/social.js": "./src/social.js?v=3ff812027b",
-      "./src/sonido.js": "./src/sonido.js?v=9eb19f354e",
+      "./src/sonido.js": "./src/sonido.js?v=96350cb517",
       "./src/tecnologias.js": "./src/tecnologias.js?v=e5f4d0a332",
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=10c35c997f",
-      "./src/ui.js": "./src/ui.js?v=22984f6071"
+      "./src/ui.js": "./src/ui.js?v=9a7a6b6f31"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=c72f80ba38">
+  <link rel="stylesheet" href="css/estilo.css?v=fac7ce0cae">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -647,54 +649,36 @@
         </div>
       </section>
 
-      <!-- Ajustes: agrupados -->
+      <!-- Ajustes: secciones (ajustes-ui.js genera las opciones; «Más» va aquí) -->
       <section class="vista" data-vista="ajustes" role="tabpanel" aria-labelledby="tab-ajustes" hidden>
-        <div class="ajustes-rejilla">
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">⚔</span>Partida</h2>
-            <div class="interruptores columna">
-              <label class="interruptor"><input type="checkbox" id="aj-alerta"><span>Borde rojo en la pantalla cuando te atacan</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-puntero"><span>Puntero hacia tu nación (marca «TÚ» y flecha en el borde)</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-marcadores"><span>Tropas de cada ataque sobre el mapa</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-emojis"><span>Burbujas de emoji en el mapa</span></label>
-              <label class="interruptor"><input type="checkbox" id="aj-consejos"><span>Consejos durante la partida (💡 población al máximo, oro sin usar, vecinos peligrosos…)</span></label>
-            </div>
-          </div>
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">✦</span>Interfaz</h2>
-            <div class="interruptores columna">
-              <label class="interruptor"><input type="checkbox" id="aj-animaciones"><span>Animaciones y transiciones de los menús</span></label>
-            </div>
-            <p class="nota">Si tu sistema pide reducir el movimiento, las animaciones se quitan igualmente.</p>
-          </div>
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">♪</span>Sonido</h2>
-            <div class="aj-sonido">
-              <label class="interruptor"><input type="checkbox" id="aj-musica"><span>Música de fondo</span></label>
-              <label class="campo aj-volumen"><span>Volumen <strong id="out-vol-musica">50</strong></span>
-                <input id="aj-vol-musica" type="range" min="0" max="100" value="50"></label>
-            </div>
-            <div class="aj-sonido">
-              <label class="interruptor"><input type="checkbox" id="aj-efectos"><span>Efectos de sonido</span></label>
-              <label class="campo aj-volumen"><span>Volumen <strong id="out-vol-efectos">80</strong></span>
-                <input id="aj-vol-efectos" type="range" min="0" max="100" value="80"></label>
-            </div>
-          </div>
-          <div class="bloque aj-grupo">
-            <h2><span class="aj-icono" aria-hidden="true">…</span>Más</h2>
-            <div class="botones-izq">
-              <button type="button" id="aj-tutorial" class="btn-sec">Repetir el tutorial</button>
-              <button type="button" id="aj-guia" class="btn-sec">📖 Guía del juego</button>
-              <button type="button" id="aj-restablecer" class="btn-peligro">Restablecer ajustes</button>
-            </div>
-            <p class="nota">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
-            <p class="nota version-reglas" id="version-reglas"></p>
-            <details class="ultimo-error" id="aj-error" hidden>
-              <summary>Último error</summary>
-              <p class="nota">Si algo ha ido mal, cópialo y envíalo: ayuda a arreglarlo.</p>
-              <pre id="aj-error-texto"></pre>
-              <button type="button" id="aj-error-copiar" class="btn-sec">Copiar</button>
-            </details>
+        <div class="aj-pagina">
+          <nav class="aj-nav" id="aj-nav" role="tablist" aria-label="Secciones de los ajustes"></nav>
+          <div class="aj-contenido" id="aj-contenido">
+            <section class="aj-seccion" data-sec="mas" role="tabpanel" hidden>
+              <header class="aj-cab"><div><h2><span class="aj-icono" aria-hidden="true">…</span>Más</h2><p>Ayuda, restablecer y créditos.</p></div></header>
+              <div class="aj-lista">
+                <div class="aj-fila">
+                  <div class="aj-texto"><span class="aj-titulo">Tutorial</span><span class="aj-desc">Una partida guiada paso a paso, desde el despliegue.</span></div>
+                  <div class="aj-control"><button type="button" id="aj-tutorial" class="btn-sec">Repetir el tutorial</button></div>
+                </div>
+                <div class="aj-fila">
+                  <div class="aj-texto"><span class="aj-titulo">Guía del juego</span><span class="aj-desc">Tropas, oro, edificios, ataques, barcos y diplomacia.</span></div>
+                  <div class="aj-control"><button type="button" id="aj-guia" class="btn-sec">📖 Abrir la guía</button></div>
+                </div>
+                <div class="aj-fila">
+                  <div class="aj-texto"><span class="aj-titulo">Restablecer todo</span><span class="aj-desc">Todos los ajustes como venían. Tu perfil, tus monedas y tu rango no cambian.</span></div>
+                  <div class="aj-control"><button type="button" id="aj-restablecer" class="btn-peligro">Restablecer ajustes</button></div>
+                </div>
+              </div>
+              <p class="nota aj-creditos">Créditos: mapas de Natural Earth (dominio público) y banderas de flag-icons (licencia MIT).</p>
+              <p class="nota version-reglas" id="version-reglas"></p>
+              <details class="ultimo-error" id="aj-error" hidden>
+                <summary>Último error</summary>
+                <p class="nota">Si algo ha ido mal, cópialo y envíalo: ayuda a arreglarlo.</p>
+                <pre id="aj-error-texto"></pre>
+                <button type="button" id="aj-error-copiar" class="btn-sec">Copiar</button>
+              </details>
+            </section>
           </div>
         </div>
       </section>
@@ -953,6 +937,7 @@
     </div>
     <!-- Últimos segundos del despliegue (5-4-3-2-1) y «¡Comienza!» -->
     <div id="cuenta-atras" class="cuenta-atras" aria-hidden="true" hidden></div>
+    <div id="fps-contador" class="fps-contador" aria-hidden="true" hidden></div>
     <div id="aviso" hidden><span id="aviso-texto"></span></div>
     <!-- Respuesta breve a tus acciones (no es un aviso importante) -->
     <div id="pista" class="pista" hidden role="status"></div>
@@ -1224,12 +1209,15 @@
       <div class="dialogo-cuerpo">
         <button type="button" class="principal grande mp-continuar" id="mp-continuar" data-cerrar>Continuar</button>
         <p class="mp-nota" id="mp-nota">La partida sigue mientras tanto.</p>
+        <h3>Calidad gráfica</h3>
+        <div id="mp-calidad"></div>
         <h3>Ajustes rápidos</h3>
         <div class="interruptores columna mp-ajustes">
           <label class="interruptor"><input type="checkbox" id="mp-musica" data-ajuste="musica"><span>Música</span></label>
           <label class="interruptor"><input type="checkbox" id="mp-efectos" data-ajuste="efectos"><span>Efectos de sonido</span></label>
-          <label class="interruptor"><input type="checkbox" id="mp-animaciones" data-ajuste="animaciones"><span>Animaciones</span></label>
+          <label class="interruptor"><input type="checkbox" id="mp-animaciones" data-ajuste="efectosMapa"><span>Animaciones del mapa</span></label>
           <label class="interruptor"><input type="checkbox" id="mp-puntero" data-ajuste="puntero"><span>Puntero hacia tu nación</span></label>
+          <label class="interruptor"><input type="checkbox" id="mp-fps" data-ajuste="contadorFps"><span>Contador de fps</span></label>
         </div>
         <div class="mp-botones">
           <button type="button" class="btn-sec" id="mp-guia">📖 Guía</button>

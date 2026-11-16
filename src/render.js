@@ -1222,7 +1222,7 @@ export class Renderer {
     this.fx.update(this._dt);
 
     // Temblor de cámara tras una explosión cercana
-    const sh = this.anim ? this.fx.shake : 0;
+    const sh = this.anim && this.options.shake !== false ? this.fx.shake : 0;
     // Temblor con ondas suaves (no un salto al azar en cada fotograma: así no
     // depende de los fps y no «vibra» en pantallas de 120 Hz)
     const ts = now / 1000;
@@ -1275,7 +1275,7 @@ export class Renderer {
     this._drawMissiles(now);
     this._drawInterceptors(now);
     this._drawVignette();
-    if (this.fx.flash > 0.01 && this.anim) {
+    if (this.fx.flash > 0.01 && this.anim && this.options.shake !== false) {
       // Destello blanco de toda la pantalla tras una explosión cercana
       ctx.fillStyle = `rgba(255, 244, 220, ${this.fx.flash * 0.45})`;
       ctx.fillRect(-20, -20, camera.viewW + 40, camera.viewH + 40);
@@ -1364,7 +1364,7 @@ export class Renderer {
    */
   _drawVignette() {
     // En el móvil (modo ligero) no: es una capa a pantalla completa más
-    if (this.lite) return;
+    if (this.lite || this.options.vignette === false) return;
     const { ctx, camera } = this;
     const w = camera.viewW;
     const h = camera.viewH;
@@ -2739,6 +2739,16 @@ export class Renderer {
     }
   }
 
+  /** Las 24 naciones de la IA con más territorio (para «Naciones grandes»); se recalcula cada segundo. */
+  _bigNations() {
+    const t = performance.now();
+    if (this._big && t - this._bigAt < 1000) return this._big;
+    const list = this.game.players.filter((p) => p && p.alive && !p.weak && !p.isHuman).sort((a, b) => b.tiles - a.tiles);
+    this._big = new Set(list.slice(0, 24));
+    this._bigAt = t;
+    return this._big;
+  }
+
   _drawLabels() {
     this._glideLabels();
     const { ctx, camera } = this;
@@ -2788,6 +2798,9 @@ export class Renderer {
       // al alejar no (eran cientos de placas). Un poco de margen para el que
       // ya se veía, así no aparece y desaparece en el límite
       if (!allied && !player) {
+        // Ajuste «Nombres de los países»: solo jugadores, o las naciones grandes
+        const names = this.options.names;
+        if (names === 'jugadores' || (names === 'grandes' && !this._bigNations().has(p))) continue;
         const k = L.was ? 0.85 : 1;
         const minR = (p.weak ? COLONY_LABEL_R : BOT_LABEL_R) * k;
         const minZoom = (p.weak ? COLONY_LABEL_ZOOM : BOT_LABEL_ZOOM) * k;
@@ -2938,7 +2951,9 @@ export class Renderer {
     const e = this._labelEntry(p).name;
     const color = me ? this.options.nameColor || '#ffd23f' : '';
     const flag = flagReady() && hasFlag(p.flag);
-    const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${this.dpr}`;
+    // Ajuste «Banderas junto a los nombres» (la insignia de los jugadores sigue)
+    const icons = this.options.flags !== false;
+    const key = `${p.name}|${size}|${me}|${allied}|${traitor}|${player}|${color}|${flag}|${icons}|${this.dpr}`;
     if (e.key === key) return e;
     e.key = key;
     e.size = size;
@@ -2950,7 +2965,7 @@ export class Renderer {
     const lw = Math.max(2.5, size / (me ? 4 : 6));
     const blur = me ? Math.min(16, size * 0.6) : 0;
     const pad = Math.ceil(lw + blur / this.dpr + 2);
-    const iconW = player || size >= 11 ? size * 1.45 : 0;
+    const iconW = player || (icons && size >= 11) ? size * 1.45 : 0;
     e.w = w;
     e.iconW = iconW;
     e.cw = iconW + w + pad * 2;
@@ -2975,7 +2990,7 @@ export class Renderer {
     g.fillText(name, e.tx, e.ty);
     g.shadowBlur = 0;
     g.shadowColor = 'transparent';
-    if (player && flag) {
+    if (player && flag && icons) {
       // Jugador con la bandera de un país como emblema: la bandera y una insignia pequeña de persona
       const fx = e.tx - w / 2 - size * 0.85;
       drawFlag(g, p.flag, fx, e.ty, size * 0.8);

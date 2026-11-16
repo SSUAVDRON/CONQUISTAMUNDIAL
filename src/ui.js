@@ -568,14 +568,21 @@ export class UI {
       document.dispatchEvent(new CustomEvent('info-avanzada', { detail: on }));
     };
     this.setAdvanced = setAdvanced;
+    // Ajuste «Información avanzada siempre»: Mayús ya no hace falta, y al soltarla sigue a la vista
+    this.alwaysAdvanced = false;
+    this.setAlwaysAdvanced = (on) => {
+      this.alwaysAdvanced = !!on;
+      document.documentElement.dataset.avSiempre = on ? '1' : '';
+      setAdvanced(this.alwaysAdvanced);
+    };
     document.addEventListener('info-avanzada', () => (this._tipSize = null));
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Shift' && !e.repeat) setAdvanced(true);
     });
     window.addEventListener('keyup', (e) => {
-      if (e.key === 'Shift') setAdvanced(false);
+      if (e.key === 'Shift') setAdvanced(this.alwaysAdvanced);
     });
-    window.addEventListener('blur', () => setAdvanced(false));
+    window.addEventListener('blur', () => setAdvanced(this.alwaysAdvanced));
 
     $('lista-clasificacion').addEventListener('click', (e) => {
       const li = e.target.closest('li[data-id]');

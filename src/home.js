@@ -29,6 +29,8 @@ import { coopSlots, seatsSummary, settingsDiff } from './configurador.js';
 import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS, rarityOf, skinLook } from './skins.js';
 import { ACH_CATEGORIES, achCategory, achPoints, attachTip, esc, hideTip, itemTipHtml } from './rpg.js';
 import { LOBBY_WAIT_MS } from './emparejamiento.js';
+import { SECTIONS, sectionKeys } from './ajustes.js';
+import { SettingsUI } from './ajustes-ui.js';
 
 /** Todo lo coleccionable, por catálogo (para contar la colección y buscar recompensas). */
 const COLLECTION = [
@@ -81,6 +83,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Ajustes', title: 'Ajustes gráficos y más fluidez', text: 'Ajustes renovados por secciones: calidad gráfica en un toque (Ahorro, Rendimiento, Equilibrada o Máxima), resolución del mapa, límite de fps, partículas, temblor, viñeta y contador de fps; qué nombres se ven en el mapa, tamaño de los paneles, volumen general, velocidad de la cámara y atajos de teclado. Y la partida va más fluida: el turno se reparte entre fotogramas, salir al menú es instantáneo y la conexión se recupera antes tras un corte.', art: 0 },
   { tag: 'Mapas', title: 'Mapas con más píxeles', text: 'Todos los mapas tienen ahora 1,78 veces más casillas (el mundo, 4000 × 2000) con la misma geografía: costas, ríos y fronteras más finos. La partida va al mismo ritmo: el techo de tropas, la zona inicial y el coste de conquistar cuentan superficie, no píxeles.', art: 2 },
   { tag: 'Competitivo', title: 'Clasificatorias con amigos', text: 'Al encontrar partida, la sala espera 30 s a que entre más gente de tu rango. Juega con amigos: abre una clasificatoria de grupo, invítales y busca rivales. Salas de competición sin código, rangos animados que estallan al subir y menos texto: lo demás, al pasar el ratón. En partida, la clasificación también por economía.', art: 1 },
   { tag: 'Partida', title: 'Interfaz de partida más limpia', text: 'Tus tropas, oro y territorio en una barra arriba; la clasificación con los tres primeros y tú; el banco aparte y la fuerza de ataque encima de los edificios. Las fichas enseñan lo esencial: mantén Mayús (o toca «Más detalles» en el móvil) para ver todo.', art: 2 },
@@ -808,36 +811,16 @@ export class Home {
       this.h.onQuickPlay?.(opts);
     });
 
-    // Ajustes
-    const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos' };
-    for (const [id, key] of Object.entries(toggles)) {
-      $(id).checked = this.profile.ajustes[key] !== false;
-      $(id).addEventListener('change', () => {
-        this.profile.ajustes[key] = $(id).checked;
-        this.h.onProfileChange?.(false);
+    // Ajustes: la página por secciones (ajustes-ui.js). Cada cambio se guarda y se aplica al momento
+    this.settingsUI = new SettingsUI(this.profile, {
+      onChange: (key, live) => {
+        // Mientras se arrastra un volumen, solo se aplica (se guarda al soltarlo)
+        if (!live) this.h.onProfileChange?.(false);
         this.h.onSettings?.();
-      });
-    }
-    // Sonido: interruptores y volúmenes (0-100 en pantalla, 0-1 en el perfil)
-    for (const [id, key] of Object.entries({ 'aj-musica': 'musica', 'aj-efectos': 'efectos' })) {
-      $(id).checked = this.profile.ajustes[key] !== false;
-      $(id).addEventListener('change', () => {
-        this.profile.ajustes[key] = $(id).checked;
-        this._syncVolumes();
-        this.h.onProfileChange?.(false);
-      });
-    }
-    for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
-      const v = Math.round((this.profile.ajustes[key] ?? def) * 100);
-      $(id).value = String(v);
-      $(out).textContent = String(v);
-      $(id).addEventListener('input', () => {
-        $(out).textContent = $(id).value;
-        this.profile.ajustes[key] = Number($(id).value) / 100;
-        this.h.onSettings?.();
-      });
-      $(id).addEventListener('change', () => this.h.onProfileChange?.(false));
-    }
+      },
+      info: () => this.h.graphicsInfo?.(),
+      onFlash: (text) => this._flash(text, true),
+    });
     $('aj-tutorial').addEventListener('click', () => this.h.onTutorial?.());
     $('aj-guia').addEventListener('click', () => abrirGuia());
     $('btn-guia').addEventListener('click', () => abrirGuia());
@@ -860,7 +843,6 @@ export class Home {
       cerrarDialogo($('dialogo-restablecer'));
       this._flash('Ajustes restablecidos.', true);
     });
-    this._syncVolumes();
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
@@ -2882,20 +2864,13 @@ export class Home {
     );
   }
 
-  /** Ajustes: el volumen de la música o de los efectos se apaga con su sonido. */
-  _syncVolumes() {
-    for (const [tog, vol] of [['aj-musica', 'aj-vol-musica'], ['aj-efectos', 'aj-vol-efectos']]) {
-      const on = $(tog).checked;
-      $(vol).disabled = !on;
-      $(vol).closest('.aj-volumen')?.classList.toggle('apagado', !on);
-    }
-  }
-
-  /** «Restablecer ajustes»: opciones de partida, interfaz y sonido como venían (el perfil no cambia). */
+  /** «Restablecer ajustes»: todas las opciones como venían (el perfil, las monedas y el rango no cambian). */
   _resetSettings() {
     const d = defaultProfile().ajustes;
     const a = this.profile.ajustes;
-    for (const k of ['alerta', 'puntero', 'marcadores', 'emojis', 'animaciones', 'consejos', 'musica', 'efectos', 'volMusica', 'volEfectos', 'silencio']) {
+    const keys = new Set(['silencio', 'minimapa']);
+    for (const s of SECTIONS) for (const k of sectionKeys(s.id)) keys.add(k);
+    for (const k of keys) {
       if (k in d) a[k] = d[k];
       else delete a[k];
     }
@@ -2906,15 +2881,7 @@ export class Home {
 
   /** Pone los controles de Ajustes según el perfil (tras cambiarlos desde el menú en partida o al restablecer). */
   syncSettings() {
-    const a = this.profile.ajustes;
-    const toggles = { 'aj-alerta': 'alerta', 'aj-puntero': 'puntero', 'aj-marcadores': 'marcadores', 'aj-emojis': 'emojis', 'aj-animaciones': 'animaciones', 'aj-consejos': 'consejos', 'aj-musica': 'musica', 'aj-efectos': 'efectos' };
-    for (const [id, key] of Object.entries(toggles)) $(id).checked = a[key] !== false;
-    for (const [id, key, out, def] of [['aj-vol-musica', 'volMusica', 'out-vol-musica', 0.5], ['aj-vol-efectos', 'volEfectos', 'out-vol-efectos', 0.8]]) {
-      const v = Math.round((a[key] ?? def) * 100);
-      $(id).value = String(v);
-      $(out).textContent = String(v);
-    }
-    this._syncVolumes();
+    this.settingsUI?.sync();
   }
 
   setCloudNote(text) {

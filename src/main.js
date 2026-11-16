@@ -32,6 +32,8 @@ import { Diagnostico } from './diagnostico.js';
 const DIAG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('diag') === '1';
 import { Sound } from './sonido.js';
 import { Minimap } from './minimapa.js';
+import { PARTICLES, applyPreset, fixedDpr } from './ajustes.js';
+import { presetPicker, syncPresetPicker } from './ajustes-ui.js';
 import { abrirDialogo, cerrarDialogo, hayDialogo, ondasAlPulsar } from './movimiento.js';
 import { TAP_RADIUS_MAX, TAP_RADIUS_PX, nearestTileOf, resolveTap } from './toque.js';
 import { installGlobalHandlers, reportError, setErrorContext, setErrorNotifier } from './errores.js';
@@ -89,11 +91,15 @@ function dprSteps() {
   return [...new Set([native, 1.5, 1.25, 1].filter((d) => d <= native))];
 }
 function currentDpr() {
+  // Ajuste «Resolución del mapa»: fija, o la automática (según los fps)
+  const fixed = fixedDpr(profile.ajustes.resolucion, dprSteps()[0]);
+  if (fixed) return fixed;
   const steps = dprSteps();
   return steps[Math.min(quality.level, steps.length - 1)];
 }
 function adaptQuality(dt) {
   if (dt > 200 || state.demo || !state.game) return; // pestaña oculta o menú
+  if (profile.ajustes.resolucion !== 'auto') return; // resolución elegida a mano
   quality.ema += (dt - quality.ema) * 0.05;
   const steps = dprSteps();
   if (quality.ema > 25 && quality.level < steps.length - 1) {
@@ -116,7 +122,19 @@ function adaptQuality(dt) {
   } else quality.fastMs = 0;
 }
 
+/**
+ * Ajuste «Tamaño de los paneles»: más pequeño, siempre; más grande, solo lo
+ * que quepa (los paneles de abajo y el minimapa piden ~1440 px de ancho a
+ * tamaño normal; si no, se pisarían).
+ */
+function applyUiScale() {
+  const want = profile.ajustes.escalaUI || 1;
+  const fit = want <= 1 ? want : Math.max(1, Math.min(want, window.innerWidth / 1440, window.innerHeight / 860));
+  document.documentElement.style.setProperty('--escala-ui', String(Math.round(fit * 100) / 100));
+}
+
 function resize() {
+  applyUiScale();
   const dpr = currentDpr();
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -548,6 +566,7 @@ function applySettings() {
     sfx: a.efectos !== false,
     musicVol: a.volMusica ?? 0.5,
     sfxVol: a.volEfectos ?? 0.8,
+    masterVol: a.volGeneral ?? 1,
     muted: !!a.silencio,
   });
   const muteBtn = document.getElementById('btn-sonido');
@@ -564,10 +583,27 @@ function applySettings() {
       badges: a.marcadores !== false,
       emojis: a.emojis !== false,
       pointer: state.pointerOn,
-      animations: a.animaciones !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+      animations: a.efectosMapa !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
+      shake: a.temblor !== false,
+      vignette: a.vineta !== false,
+      names: a.nombres,
+      flags: a.banderas !== false,
       nameColor: nameColorOf(profile),
     };
+    const P = PARTICLES[a.particulas] || PARTICLES.normal;
+    state.renderer.fx.max = P.max;
+    state.renderer.fx.keep = P.keep;
+    // Con nombres o banderas distintos, las placas se vuelven a dibujar
+    state.renderer.lastLabelTime = 0;
   }
+  // Resolución del mapa: si cambia, el lienzo se rehace con la nueva
+  if (canvas.width !== Math.round(window.innerWidth * currentDpr())) resize();
+  if (fpsBox) fpsBox.hidden = !a.contadorFps;
+  input.panSpeed = a.velCamara || 1;
+  input.zoomSpeed = a.zoomRueda || 1;
+  input.invertWheel = !!a.invertirRueda;
+  ui.setAlwaysAdvanced?.(!!a.infoAvanzada);
+  applyUiScale();
   document.documentElement.style.setProperty('--color-nombre', nameColorOf(profile));
   ui.redAlert = a.alerta !== false;
   ui.tips = a.consejos !== false;
@@ -1532,6 +1568,8 @@ const home = new Home(profile, {
     startGame({ tutorial: true, title: 'Tutorial', mapSize: 'pequeno', bots: 5, difficulty: 'facil', seed: 'trinchera-tutorial', rules: DEFAULT_RULES });
   },
   onSettings: applySettings,
+  /** Para Ajustes → Gráficos: densidad de la pantalla, la del mapa y los fps medios de la última partida. */
+  graphicsInfo: () => ({ pantalla: window.devicePixelRatio || 1, mapa: currentDpr(), auto: profile.ajustes.resolucion === 'auto', fps: state.lastFps || 0 }),
   sound: (name) => sound.play(name, 0.9, 0),
   /** «Buscar partida» en línea (cola de emparejamiento): entrar o cancelar. */
   onFindMatch() {
@@ -2175,6 +2213,12 @@ const NET_SLICE = { ms: SIM_SLICE_MS, behindMs: SIM_SLICE_BEHIND_MS, catchupMs: 
  */
 function frame(now) {
   requestAnimationFrame(frame);
+  // Ajuste «Límite de fotogramas»: los que sobran se saltan enteros (con 3 ms
+  // de margen, para no perder uno por el temblor del reloj)
+  const cap = profile.ajustes.fpsMax;
+  if (cap && now - (state.shownAt || 0) < 1000 / cap - 3) return;
+  state.shownAt = now;
+  countFps(now);
   const dt = Math.min(250, now - state.last);
   state.last = now;
   const game = state.game;
@@ -2259,6 +2303,30 @@ function frame(now) {
   }
 }
 
+/**
+ * Contador de fps (ajuste «Contador de fps»): fotogramas de cada medio
+ * segundo. La media de la partida queda para la página de Ajustes.
+ */
+const fpsBox = document.getElementById('fps-contador');
+const fpsStat = { n: 0, at: 0, sum: 0, samples: 0 };
+function countFps(now) {
+  fpsStat.n++;
+  if (!fpsStat.at) fpsStat.at = now;
+  const span = now - fpsStat.at;
+  if (span < 500) return;
+  const fps = (fpsStat.n * 1000) / span;
+  fpsStat.n = 0;
+  fpsStat.at = now;
+  if (state.demo || !state.game || document.hidden) return;
+  fpsStat.sum += fps;
+  fpsStat.samples++;
+  state.lastFps = Math.round(fpsStat.sum / fpsStat.samples);
+  if (fpsBox && !fpsBox.hidden) {
+    fpsBox.textContent = `${Math.round(fps)} fps`;
+    fpsBox.classList.toggle('justo', fps < 40);
+  }
+}
+
 /** Lo que va entre la simulación y el dibujo: resumen, cuenta atrás, demo, cámara y paneles vivos. */
 function frameWorld(now, dt, game) {
   // (con el turno a medias se espera a que termine: el resumen ve turnos enteros)
@@ -2304,6 +2372,18 @@ function stillPlaying() {
 function openGameMenu() {
   const a = profile.ajustes;
   for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) input.checked = a[input.dataset.ajuste] !== false;
+  // Calidad gráfica: los mismos preajustes que en Ajustes, al momento
+  const mpQ = document.getElementById('mp-calidad');
+  mpQ.replaceChildren(
+    presetPicker(a, (id) => {
+      applyPreset(profile.ajustes, id);
+      saveProfile(profile);
+      applySettings();
+      home.syncSettings();
+      syncPresetPicker(mpQ.firstElementChild, profile.ajustes);
+    }, { compact: true }),
+  );
+  syncPresetPicker(mpQ.firstElementChild, a);
   document.getElementById('mp-salir').textContent = stillPlaying() ? 'Abandonar' : 'Volver al menú';
   document.getElementById('mp-nota').textContent = state.online ? 'La partida sigue para todos mientras tanto.' : 'La partida sigue mientras tanto.';
   abrirDialogo(document.getElementById('menu-partida'), { foco: '#mp-continuar' });
@@ -2314,6 +2394,7 @@ for (const input of document.querySelectorAll('#menu-partida [data-ajuste]')) {
     saveProfile(profile);
     applySettings();
     home.syncSettings();
+    syncPresetPicker(document.getElementById('mp-calidad').firstElementChild, profile.ajustes);
   });
 }
 document.getElementById('mp-guia').addEventListener('click', () => abrirGuia());

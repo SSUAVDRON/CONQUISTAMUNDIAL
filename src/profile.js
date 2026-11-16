@@ -2,6 +2,7 @@
 // experiencia y nivel, estadísticas, historial y logros. Se guarda en este
 // navegador y, si la plataforma lo permite, también en la nube (cloud.js).
 
+import { SETTINGS_DEFAULTS, normalizeSettingsExtra } from './ajustes.js';
 import { DEFAULT_RULES, migrateRules } from './config.js';
 import { normalizeConfig } from './configurador.js';
 import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS } from './skins.js';
@@ -440,6 +441,9 @@ export function defaultProfile() {
       volMusica: 0.5,
       volEfectos: 0.8,
       silencio: false, // botón de la barra superior
+      consejos: true,
+      // Gráficos, mapa, interfaz, sonido general y controles (ver ajustes.js)
+      ...SETTINGS_DEFAULTS,
     },
     tutorial: false,
     rango: newRank(new Date(), 'ia'), // clasificatorias contra la IA (ver rangos.js; la tabla global)
@@ -521,6 +525,9 @@ function ranksOf(p) {
  */
 function normalizeSettings(defaults, saved) {
   const a = { ...defaults, ...(saved || {}), reglas: { ...defaults.reglas, ...(migrateRules(saved && saved.reglas) || {}) } };
+  // (sin `saved`, efectosMapa viene de los valores por defecto; con él, se mira lo de antes)
+  if (saved && saved.efectosMapa === undefined) delete a.efectosMapa;
+  normalizeSettingsExtra(a);
   const legacy = { bots: a.bots, mapa: a.mapa, dificultad: a.dificultad, reglas: a.reglas };
   a.ia = normalizeConfig(saved && saved.ia, legacy);
   a.online = normalizeConfig(saved && saved.online, legacy);

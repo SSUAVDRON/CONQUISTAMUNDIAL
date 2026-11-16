@@ -154,8 +154,9 @@ export class Input {
     }
     // Zoom suave: cada golpe de rueda acumula sobre el objetivo. Trackpads y
     // ratones con «líneas» o «páginas» dan lo mismo por la misma distancia
-    const dy = e.deltaY * (WHEEL_UNIT[e.deltaMode] || 1);
-    this.camera.zoomToward(x, y, Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0018));
+    // Ajustes: sensibilidad (zoomSpeed) y sentido (invertWheel)
+    const dy = e.deltaY * (WHEEL_UNIT[e.deltaMode] || 1) * (this.invertWheel ? -1 : 1);
+    this.camera.zoomToward(x, y, Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0018 * (this.zoomSpeed || 1)));
   }
 
   _key(e, down) {
@@ -182,7 +183,7 @@ export class Input {
 
   /** Desplazamiento continuo con WASD / flechas; se llama cada frame. */
   update(dt) {
-    const speed = 0.8 * dt;
+    const speed = 0.8 * dt * (this.panSpeed || 1); // ajuste «Velocidad de la cámara»
     let dx = 0;
     let dy = 0;
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) dx += speed;

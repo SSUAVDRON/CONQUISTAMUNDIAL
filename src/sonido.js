@@ -144,7 +144,7 @@ export class Sound {
     const o = this.opts;
     // La música, por debajo de los efectos; los efectos, bien audibles (el
     // compresor del final evita que se saturen cuando coinciden varios)
-    this.master.gain.setTargetAtTime(o.muted ? 0 : 1, t, 0.08);
+    this.master.gain.setTargetAtTime(o.muted ? 0 : (o.masterVol ?? 1), t, 0.08);
     this.musicBus.gain.setTargetAtTime(o.music ? 0.36 * o.musicVol : 0, t, 0.4);
     this.sfxBus.gain.setTargetAtTime(o.sfx ? 1.1 * o.sfxVol : 0, t, 0.05);
     this.music?.setEnabled(o.music && !o.muted && !this._hold);

@@ -107,6 +107,8 @@ export class FichaUI {
       this._avBtn = false;
       setAdvanced(false);
     }
+    // Con «Información avanzada siempre», al cerrar la ficha vuelve a verse
+    if (document.documentElement.dataset.avSiempre === '1') setAdvanced(true);
     this.el.classList.remove('visible');
     clearTimeout(this._hideTimer);
     this._hideTimer = setTimeout(() => {

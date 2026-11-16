@@ -107,6 +107,8 @@ export class Fx {
     this.decals = [];
     this.scripts = [];
     this.max = 1600;
+    // Ajuste «Partículas»: parte de las de adorno que entra (las de las explosiones, siempre)
+    this.keep = 1;
     this.shake = 0;
     this.flash = 0; // destello de toda la pantalla (0-1)
     sprites();
@@ -131,6 +133,7 @@ export class Fx {
    * a0 (opacidad), sprite | spark | ring | chunk, color.
    */
   add(p) {
+    if (this.keep < 1 && !this._priority && Math.random() > this.keep) return;
     if (this.parts.length >= this.max) {
       // Lleno (p. ej. de chispas de los frentes): lo importante (explosiones)
       // entra igualmente, quitando la partícula más vieja
