@@ -27,7 +27,8 @@ import {
 } from './profile.js';
 import { coopSlots, seatsSummary, settingsDiff } from './configurador.js';
 import { BOMB_SKINS, BUILDING_SKINS, SHIP_SKINS, rarityOf, skinLook } from './skins.js';
-import { ACH_CATEGORIES, achCategory, achPoints, attachTip, hideTip, itemTipHtml } from './rpg.js';
+import { ACH_CATEGORIES, achCategory, achPoints, attachTip, esc, hideTip, itemTipHtml } from './rpg.js';
+import { LOBBY_WAIT_MS } from './emparejamiento.js';
 
 /** Todo lo coleccionable, por catálogo (para contar la colección y buscar recompensas). */
 const COLLECTION = [
@@ -80,6 +81,7 @@ const ARSENAL_CATS = [
 
 /** Novedades: las tres primeras salen en el carrusel de la portada; «Ver todas», la lista entera. */
 const NEWS = [
+  { tag: 'Competitivo', title: 'Clasificatorias con amigos', text: 'Al encontrar partida, la sala espera 30 s a que entre más gente de tu rango. Juega con amigos: abre una clasificatoria de grupo, invítales y busca rivales. Salas de competición sin código, rangos animados que estallan al subir y menos texto: lo demás, al pasar el ratón. En partida, la clasificación también por economía.', art: 1 },
   { tag: 'Partida', title: 'Interfaz de partida más limpia', text: 'Tus tropas, oro y territorio en una barra arriba; la clasificación con los tres primeros y tú; el banco aparte y la fuerza de ataque encima de los edificios. Las fichas enseñan lo esencial: mantén Mayús (o toca «Más detalles» en el móvil) para ver todo.', art: 2 },
   { tag: 'Novedades', title: 'Aspectos, gestas y ficha del comandante', text: 'Aspectos nuevos para tus edificios, barcos y bombas, que también ven los demás online. Todo lo coleccionable tiene rareza (común, poco común, rara, épica y legendaria) y una ficha al pasar el ratón o mantener pulsado. Perfil con tu ficha de comandante y Progreso renovado: camino de recompensas, diario de campaña, «casi lo tienes» y gestas por categorías con puntos.', art: 1 },
   { tag: 'Batalla', title: 'Interceptores y fábricas en red', text: 'Los misiles vuelan más despacio y los antimisiles lanzan un proyectil que se ve subir y los revienta en el aire. Cada fábrica tiende vías a varias estaciones a la vez, aprovecha la vía que pisa y, cuantas más fábricas, más trenes y más oro.', art: 2 },
@@ -964,6 +966,8 @@ export class Home {
 
     // Sala
     $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
+    $('btn-rivales').addEventListener('click', () => this.h.onSearchRivals?.());
+    $('cp-amigos')?.addEventListener('click', () => this.h.onRankedGroup?.());
     $('btn-empezar').addEventListener('click', () => {
       // Con cambios a medias no se empieza: o se aplican (y los invitados confirman) o se descartan
       if (this.draftPending()) {
@@ -2085,6 +2089,7 @@ export class Home {
     $('cp-nivel').textContent = `Nivel ${levelInfo(p.xp).level}`;
     // El rango: insignia grande con su luz, liga, PL y victorias
     paintBadge($('cp-insignia'), r);
+    this._rankMotion(r, placing, k);
     const col = placing ? [196, 170, 120] : k.league.color;
     const band = document.querySelector('.cp-portada');
     band.style.setProperty('--liga', col.join(', '));
@@ -2113,11 +2118,48 @@ export class Home {
   }
 
   /**
+   * Animación del rango: si has subido de división o de liga desde la última
+   * vez que lo viste, la insignia estalla en luz; la barra de PL crece desde
+   * donde estaba. Se recuerda por cola.
+   */
+  _rankMotion(r, placing, k) {
+    const key = `trinchera.cpVisto.${this.queue}`;
+    let seen = null;
+    try {
+      seen = JSON.parse(localStorage.getItem(key) || 'null');
+    } catch {
+      seen = null;
+    }
+    const step = placing ? -1 : k.index * 10 + (5 - k.div);
+    const band = document.querySelector('.cp-rango');
+    if (seen && seen.t === r.temporada && step > seen.step && !sinMovimiento()) {
+      band.classList.remove('ascenso');
+      void band.offsetWidth;
+      band.classList.add('ascenso');
+      this.h.sound?.('nivel');
+      clearTimeout(this._ascensoT);
+      this._ascensoT = setTimeout(() => band.classList.remove('ascenso'), 2600);
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify({ t: r.temporada, step, pts: r.puntos }));
+    } catch {
+      /* sin almacenamiento */
+    }
+  }
+
+  /**
    * Cómo se obtiene el puesto en la cola elegida y, si lo hay, el rango mixto
-   * de antes de separar las colas (histórico, DEV07).
+   * de antes de separar las colas (histórico, DEV07). El texto va en la
+   * ficha emergente del «?» de «Buscar partida»; a la vista, solo el histórico.
    */
   _renderHow(r) {
     const online = this.queue === 'sala';
+    if (!this._howTip) {
+      this._howTip = true;
+      attachTip($('cp-info'), () => `<div class="rt-cab"><strong class="rt-nombre" style="color:#ffe08a">Cómo se puntúa</strong><div class="rt-fila"><span>${this.queue === 'sala' ? 'En línea' : 'Contra la IA'}</span><span class="rt-tipo">${esc(seasonName(this._queueRank().temporada))}</span></div></div><p class="rt-desc">${esc($('cp-como').textContent)}</p><p class="rt-linea">${esc(this._queueNote || '')}</p>`);
+    }
+    $('cp-como').closest('section').hidden = !this.profile.rangoHistorico;
+    $('cp-como').hidden = true;
     $('cp-como').textContent = online
       ? `En línea: tus puntos salen de quién queda por delante de quién entre las personas de la sala (Elo, con el nivel de cada una) y, un poco, de tu puesto entre todas las naciones. Abandonar cuenta como quedar el último. Si se pierde al anfitrión, la partida se anula: no cuenta para nadie. Las ${PLACEMENT_GAMES} primeras partidas de la temporada son de colocación.`
       : `Contra la IA: cuenta tu puesto final entre las ${RANKED_AI.bots + 1} naciones, comparado con lo que se espera de tu nivel frente a esa dificultad (la IA se ajusta a tu liga). Abandonar cuenta como quedar el último. Es el rango de la tabla de la temporada. Las ${PLACEMENT_GAMES} primeras partidas son de colocación.`;
@@ -2140,7 +2182,9 @@ export class Home {
     const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
     const btn = $('cp-buscar');
     if (this.queue === 'ia') {
-      $('cp-cola-nota').textContent = `${mapLabel(RANKED_AI.mapSize)}, ${RANKED_AI.bots} naciones, perfil Clásico, contra la IA ${dif}. Cuenta tu puesto final; abandonar cuenta como derrota.`;
+      this._queueNote = `${mapLabel(RANKED_AI.mapSize)}, ${RANKED_AI.bots} naciones, perfil Clásico, contra la IA ${dif}. Cuenta tu puesto final; abandonar cuenta como derrota.`;
+      $('cp-cola-nota').textContent = `🗺 ${mapLabel(RANKED_AI.mapSize)} · ${RANKED_AI.bots} naciones · IA ${dif}`;
+      $('cp-amigos').hidden = true;
       $('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
       btn.disabled = false;
       btn.textContent = 'Buscar partida';
@@ -2155,11 +2199,13 @@ export class Home {
     btn.classList.toggle('secundario', searching);
     btn.classList.toggle('principal', !searching);
     btn.classList.toggle('btn-brillo', !searching);
-    $('cp-cola-nota').textContent = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores.`;
+    this._queueNote = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores. Al encontrar sala, se espera 30 s a que entre más gente.`;
+    $('cp-cola-nota').textContent = `🗺 ${mapLabel(RANKED_ROOM.mapSize)} · ${RANKED_ROOM.bots} naciones · hasta 8 jugadores`;
+    $('cp-amigos').hidden = searching || !net || net === 'none' || net === 'connecting';
     if (searching) {
       btn.disabled = false;
       btn.textContent = 'Cancelar búsqueda';
-      $('cp-cola-extra').textContent = 'Te emparejamos con jugadores de rango parecido; cuanto más esperas, más se abre el margen. Puedes moverte por el menú mientras tanto.';
+      $('cp-cola-extra').textContent = 'Puedes moverte por el menú mientras buscas.';
       return;
     }
     if (!net || net === 'none') {
@@ -2170,7 +2216,7 @@ export class Home {
       $('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
     } else {
       btn.disabled = false;
-      $('cp-cola-extra').textContent = 'Entrarás en la cola: te juntamos con jugadores de rango parecido y la partida empieza sola.';
+      $('cp-cola-extra').textContent = 'Rivales de rango parecido; la partida empieza sola.';
     }
     btn.textContent = 'Buscar partida';
   }
@@ -2224,11 +2270,12 @@ export class Home {
         c.setAttribute('aria-hidden', 'true');
         drawBadge(c.getContext('2d'), c.width / 2, c.height * 0.54, c.height * 0.72, L, 0);
         const state = i === cur ? 'actual' : i < cur ? 'superada' : 'pendiente';
-        return el('li', { class: `cp-liga-item ${state}${i === best && !placing ? ' mejor' : ''}`, style: `--liga: ${L.color.join(', ')}`, title: `${L.name}: desde ${formatNumber(L.base)} puntos` },
+        const li = el('li', { class: `cp-liga-item ${state}${i === best && !placing ? ' mejor' : ''}`, style: `--liga: ${L.color.join(', ')}`, tabindex: '0' },
           i === cur ? el('span', { class: 'cp-tu', text: 'TÚ' }) : null,
           c,
-          el('strong', { text: L.name }),
-          el('small', { text: L.apex ? `${formatNumber(L.base)}+` : `IV → I` }));
+          el('strong', { text: L.name }));
+        attachTip(li, () => `<div class="rt-cab"><strong class="rt-nombre" style="color:rgb(${L.color.join(',')})">${esc(L.name)}</strong><div class="rt-fila"><span>${L.apex ? 'Liga más alta' : 'Divisiones IV → I'}</span><span class="rt-tipo">desde ${formatNumber(L.base)} puntos</span></div></div><p class="rt-linea ${state === 'superada' ? 'bien' : state === 'actual' ? 'oro' : ''}">${state === 'actual' ? 'Estás aquí' : state === 'superada' ? 'Superada' : 'Por alcanzar'}${i === best && !placing ? ' · tu mejor de la temporada' : ''}</p>`);
+        return li;
       }),
     );
   }
@@ -2253,8 +2300,7 @@ export class Home {
     const ring = el('span', { class: 'cp-anillo', style: `--p: ${pct / 100}`, 'aria-hidden': 'true' }, el('span', { text: `${pct}%` }));
     const card = (label, value, extra = null) => el('div', { class: 'cp-cifra' }, extra, el('strong', { text: value }), el('small', { text: label }));
     $('cp-stats').replaceChildren(
-      card('% de victorias', `${r.victorias}/${r.partidas}`, ring),
-      card('Partidas', String(r.partidas)),
+      card(`victorias de ${r.partidas}`, String(r.victorias), ring),
       card('Puesto medio', avg ? avg.toFixed(1).replace('.', ',') : '—'),
       card('Racha', streak ? `${streak} ${sign > 0 ? (streak === 1 ? 'buena' : 'buenas') : streak === 1 ? 'mala' : 'malas'}` : '—'),
       card('Mejor rango', r.partidas ? rankOf(Math.max(r.mejor, r.puntos)).label : '—'),
@@ -2310,11 +2356,14 @@ export class Home {
         const cls = h.anulada ? 'neutra' : h.abandono ? 'derrota' : won ? 'victoria' : good ? 'buena' : h.delta < 0 ? 'derrota' : 'neutra';
         const title = h.anulada ? 'Anulada' : h.abandono ? 'Abandono' : won ? 'Victoria' : h.puesto ? `${h.puesto}.º de ${h.de}` : '—';
         const delta = h.anulada ? 'No cuenta' : h.delta ? `${h.delta > 0 ? '+' : '−'}${Math.abs(h.delta)} PL` : 'Colocación';
-        return el('li', { class: `cp-partida ${cls}` },
-          el('span', { class: 'cp-res', title: h.anulada ? h.motivo || '' : '' }, el('strong', { text: title }), el('small', { text: `${h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA'}${h.previa ? ' · rango mixto' : ''}${h.anulada && h.motivo ? ` · ${h.motivo}` : ''}` })),
-          el('span', { class: 'cp-tras' }, badgeCanvas(h.puntos, 18), el('small', { text: rankOf(h.puntos).label })),
+        const detail = `${h.tipo === 'sala' ? `En línea · ${h.rivales || 1} rival${h.rivales === 1 ? '' : 'es'}` : 'Contra la IA'}${h.previa ? ' · rango mixto' : ''}${h.anulada && h.motivo ? ` · ${h.motivo}` : ''}`;
+        const li = el('li', { class: `cp-partida ${cls}`, tabindex: '0' },
+          el('span', { class: 'cp-res' }, el('strong', { text: title })),
+          el('span', { class: 'cp-tras' }, badgeCanvas(h.puntos, 18)),
           el('span', { class: 'cp-delta', text: delta }),
           el('small', { class: 'cp-cuando', text: ago(h.fecha) }));
+        attachTip(li, () => `<div class="rt-cab"><strong class="rt-nombre" style="color:#fff">${esc(title)}</strong><div class="rt-fila"><span>${esc(rankOf(h.puntos).label)}</span><span class="rt-tipo">${esc(delta)}</span></div></div><p class="rt-linea">${esc(detail)}</p><p class="rt-linea">${esc(new Date(h.fecha).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</p>`);
+        return li;
       }),
     );
   }
@@ -3635,7 +3684,13 @@ export class Home {
     const st = sala.status();
     const info = sala.roomInfo();
     const s = sala.isHost ? sala.settings : sala.hostSettings();
-    $('sala-nombre').textContent = info.nombre;
+    // Clasificatoria: aspecto de competición, sin código ni enlace (se entra
+    // por la cola o por invitación de un amigo)
+    const rankedRoom = !!(s && s.clasificatoria);
+    $('sala').classList.toggle('sala-competitiva', rankedRoom);
+    const section = document.querySelector('#sala .sala-seccion');
+    if (section) section.textContent = rankedRoom ? 'Competitivo' : 'Multijugador';
+    $('sala-nombre').textContent = rankedRoom ? (info.grupo ? 'Clasificatoria en grupo' : 'Clasificatoria') : info.nombre;
     $('sala-visibilidad').hidden = false;
     $('sala-visibilidad').textContent = info.visibilidad === 'publica' ? '🌐 Pública' : '🔒 Solo con enlace';
     $('sala-codigo').textContent = sala.code.toUpperCase();
@@ -3663,18 +3718,27 @@ export class Home {
       const tag = p.host ? ['Anfitrión', 'anfitrion'] : !p.versionOk ? ['Otra versión', 'error'] : p.stale ? ['Reconectando…', 'aviso'] : p.ready ? ['Listo', 'listo'] : ['Preparando', 'preparando'];
       const fresh = seen && !seen.has(p.peer);
       const pop = wasReady && p.ready && !wasReady.has(p.peer);
-      return el(
+      // Lo justo a la vista (emblema, nombre, rango y si está listo); nivel,
+      // título y rango completo, en su ficha emergente
+      const hasRank = claim && Number.isFinite(claim.puntos);
+      const rk = hasRank ? rankOf(claim.puntos) : null;
+      const li = el(
         'li',
-        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''} fila-boton`, tabindex: '0', title: 'Ver su ficha', onclick: card, onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), card()) },
-        el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, 34)),
-        el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), el('small', { text: `Nivel ${p.level}${p.title ? ` · ${p.title}` : ''}${slots[i] ? (slots[i].solo ? ' · nación en solitario' : ` · pareja ${slots[i].pair}`) : ''}` })),
+        { class: `${p.isMe ? 'yo' : ''}${p.stale ? ' desconectado' : ''}${fresh ? ' entra' : ''}${pop ? ' pop' : ''} fila-boton`, tabindex: '0', onclick: card, onkeydown: (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), card()) },
+        el('span', { class: 'sala-escudo' }, emblemCanvas(p.emblem, rankedRoom ? 56 : 34)),
+        el('span', { class: 'sala-nombre' }, el('strong', { text: `${p.name}${p.isMe ? ' (tú)' : ''}` }), slots[i] ? el('small', { text: slots[i].solo ? 'Nación en solitario' : `Pareja ${slots[i].pair}` }) : el('small', { class: 'sala-nivel', text: `Nv ${p.level}` })),
+        hasRank ? el('span', { class: 'sala-rango', style: `--liga: ${rk.league.color.join(', ')}` }, badgeCanvas(claim.puntos, rankedRoom ? 46 : 22), rankedRoom ? el('small', { text: rk.label }) : null) : rankedRoom ? el('span', { class: 'sala-rango sin', text: 'Sin rango' }) : null,
         el('span', { class: `tag-sala ${tag[1]}`, text: tag[0] }),
         el('span', { class: `check-sala${p.ready ? ' si' : ''}`, 'aria-label': p.ready ? 'Preparado' : 'Sin preparar', text: p.ready ? '✓' : '' }),
       );
+      attachTip(li, () => `<div class="rt-cab"><strong class="rt-nombre" style="color:#fff">${esc(p.name)}</strong><div class="rt-fila"><span style="color:${hasRank ? `rgb(${rk.league.color.join(',')})` : '#c9cdd3'}">${esc(hasRank ? rk.label : 'Sin rango')}</span><span class="rt-tipo">Nivel ${p.level}</span></div></div>${p.title ? `<p class="rt-desc">${esc(p.title)}</p>` : ''}<p class="rt-linea">${esc(tag[0])} · clic para ver su ficha</p>`);
+      return li;
     });
     // Las plazas libres, en una sola fila (con 32 plazas, la lista no se alarga)
     const free = st.seats - st.players.length;
-    if (free > 0) rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: free === 1 ? '1 plaza libre' : `${free} plazas libres` }), el('small', { text: 'Comparte el código o el enlace para que entren' }))));
+    // Clasificatoria: cada plaza libre es una tarjeta que «busca» rival
+    if (rankedRoom) for (let i = 0; i < Math.min(free, 12); i++) rows.push(el('li', { class: 'libre buscando', 'aria-hidden': 'true' }, el('span', { class: 'sala-radar' }, el('i'), el('i')), el('small', { text: info.espera > 0 ? 'Buscando…' : 'Plaza libre' })));
+    else if (free > 0) rows.push(el('li', { class: 'libre' }, el('span', { class: 'sala-escudo libre', text: '+' }), el('span', { class: 'sala-nombre' }, el('strong', { text: free === 1 ? '1 plaza libre' : `${free} plazas libres` }), el('small', { text: 'Comparte el código o el enlace para que entren' }))));
     $('sala-jugadores').replaceChildren(...rows);
     // Con muchas plazas, filas compactas (y a dos columnas en el ordenador)
     $('sala-jugadores').classList.toggle('muchos', st.players.length > 8);
@@ -3707,6 +3771,7 @@ export class Home {
       $('btn-listo').classList.toggle('principal', !ready);
       motivo = !st.host ? 'Esperando al anfitrión…' : !hostOk ? 'Otra versión del juego: recarga la página' : waiting ? 'La sala está llena' : ready ? 'Esperando a que el anfitrión inicie' : sala.ready ? 'Las reglas han cambiado: revisa y confirma de nuevo' : 'Revisa la configuración y pulsa «Estoy listo»';
     }
+    motivo = this._rankedLobby(sala, st, s, motivo);
     $('sala-motivo').textContent = motivo;
     $('sala-motivo').classList.toggle('ok', sala.isHost && st.canStart);
     // Reglas: solo el anfitrión las edita
@@ -3737,6 +3802,59 @@ export class Home {
     else if (change) this._notice(change, 'aviso');
     else if (kind === 'local') this._notice('Prueba entre pestañas: solo pueden entrar otras pestañas de este navegador. Copia el código y ábrelo en otra pestaña.', 'aviso');
     else this._notice('');
+  }
+
+  /**
+   * Sala clasificatoria en línea: la espera de 30 s a que entren más
+   * jugadores (cuenta atrás con aro y plazas) y, en la de amigos, invitar y
+   * «Buscar rivales». Devuelve el texto del pie (el motivo).
+   */
+  _rankedLobby(sala, st, s, motivo) {
+    const info = sala.roomInfo ? sala.roomInfo() : sala.info;
+    const ranked = !!(s && s.clasificatoria);
+    const group = ranked && !!info.grupo;
+    const waiting = ranked && info.espera > 0;
+    const box = $('sala-clasif');
+    box.hidden = !(waiting || group);
+    $('sala-amigos').hidden = !(group && sala.isHost && !waiting);
+    $('btn-rivales').hidden = !(group && sala.isHost && !waiting);
+    $('btn-rivales').disabled = !!sala.countdown;
+    if (ranked && (waiting || group) && sala.isHost) $('btn-empezar').hidden = true;
+    // Plazas: un punto por plaza, lleno si hay alguien
+    $('sc-plazas').replaceChildren(...Array.from({ length: Math.min(st.seats, 12) }, (_, i) => el('i', { class: i < st.total ? 'lleno' : '' })));
+    const paint = () => {
+      const left = Math.max(0, (info.espera || 0) - Date.now());
+      const secs = Math.ceil(left / 1000);
+      box.classList.toggle('espera', waiting);
+      if (waiting) {
+        $('sc-segundos').textContent = String(secs);
+        $('sc-aro').style.setProperty('--p', Math.min(1, left / LOBBY_WAIT_MS).toFixed(3));
+        $('sc-titulo').textContent = secs > 0 ? `La partida empieza en ${secs} s` : 'Empezando…';
+        $('sc-texto').textContent = st.total >= st.seats ? 'Sala llena' : `Buscando más jugadores de tu rango · ${st.total}/${st.seats}`;
+      } else {
+        $('sc-segundos').textContent = '👥';
+        $('sc-aro').style.setProperty('--p', '1');
+        $('sc-titulo').textContent = 'Clasificatoria con amigos';
+        $('sc-texto').textContent = sala.isHost ? 'Invita a tus amigos y pulsa «Buscar rivales»: completamos la sala con jugadores de rango parecido durante 30 s.' : 'Esperando a que el anfitrión busque rivales…';
+      }
+      return left;
+    };
+    paint();
+    clearInterval(this._esperaTimer);
+    if (waiting) {
+      this._esperaTimer = setInterval(() => {
+        if ($('sala').hidden || paint() <= 0) clearInterval(this._esperaTimer);
+      }, 250);
+    }
+    // Amigos: la lista se pide al abrirse y cada 10 s
+    if (!$('sala-amigos').hidden && (!this._amigosAt || performance.now() - this._amigosAt > 10000)) {
+      this._amigosAt = performance.now();
+      this.h.onInvitePicker?.($('sala-amigos-lista'));
+    } else if ($('sala-amigos').hidden) this._amigosAt = 0;
+    if (!ranked) return motivo;
+    if (waiting) return sala.isHost ? 'Empieza sola al acabar la cuenta atrás (o al llenarse)' : motivo;
+    if (group && sala.isHost) return st.total > 1 ? `${st.total - 1} amigo${st.total === 2 ? '' : 's'} en tu grupo` : 'Aún estás solo: invita a alguien o busca rivales';
+    return motivo;
   }
 
   /**

@@ -159,6 +159,10 @@ export function cleanRoomInfo(raw, fallbackName = 'Sala') {
     nombre: name || String(fallbackName).slice(0, 28),
     visibilidad: VISIBILITIES.includes(r.visibilidad) ? r.visibilidad : 'enlace',
     plazas: Number.isFinite(seats) ? Math.max(MIN_HUMANS, Math.min(MAX_HUMANS, seats)) : 4,
+    // Clasificatoria: cuándo empieza sola (ms de reloj; 0 = sin espera en marcha)
+    espera: Number.isFinite(Number(r.espera)) && Number(r.espera) > 0 ? Math.round(Number(r.espera)) : 0,
+    // Clasificatoria con amigos: el anfitrión la abre para su grupo y luego busca rivales
+    grupo: r.grupo === true,
   };
 }
 

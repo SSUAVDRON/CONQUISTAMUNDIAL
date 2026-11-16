@@ -809,6 +809,28 @@ export class Game {
     return Math.round(capitalPrice(lvl) * this.rules.priceMult);
   }
 
+  /**
+   * Valor económico (clasificación de la partida): el oro más lo que costaría
+   * levantar hoy sus edificios terminados (cada nivel al precio de su
+   * escalera, desde cero), sus buques y las mejoras de su capital. Solo lee.
+   */
+  economicValue(p) {
+    let v = 0;
+    const n = {};
+    for (const k of ['city', 'port', 'factory', 'fort', 'sam', 'village', 'silo']) {
+      const count = p.levels[k] || 0;
+      for (let i = 0; i < count; i++) {
+        v += priceFor(k, n);
+        n[k] = (n[k] || 0) + 1;
+      }
+    }
+    let ships = 0;
+    for (const ws of this.warships) if (ws.owner === p.id && !ws.dead) v += priceFor('warship', { warship: ships++ });
+    const up = p.capital ? p.capital.up || 0 : 0;
+    for (let l = 0; l < up; l++) v += capitalPrice(l);
+    return Math.max(0, p.gold) + v * this.rules.priceMult;
+  }
+
   /** Tropas que cuesta el siguiente nivel de la capital: (6 % + 3 % × nivel) del techo (doc-1.8). */
   capitalTroopCost(p) {
     const lvl = p.capital ? p.capital.up || 0 : 0;

@@ -21,6 +21,14 @@ export const MATCH_WAIT_MS = 12000;
 export const LEADER_SETTLE_MS = 3000;
 /** Tiempo para que los avisados entren en la sala. */
 export const INVITE_MS = 15000;
+/**
+ * La sala formada espera esto con los jugadores dentro antes de empezar (o
+ * hasta llenarse): mientras, sigue cogiendo de la cola a quien tenga un rango
+ * parecido.
+ */
+export const LOBBY_WAIT_MS = 30000;
+/** Plazas de una sala del emparejamiento (las que se llenan con la cola). */
+export const MATCH_SEATS = 8;
 
 /** Margen de MMR según lo que lleva esperando (se abre poco a poco). */
 export function mmrWindow(waitMs) {
@@ -75,6 +83,24 @@ export function planMatch(entries, me, now) {
   const size = near.length + 1;
   if (size >= MATCH_TARGET || (size >= MIN_HUMANS && waited >= MATCH_WAIT_MS)) return { action: 'host', members: near.map((e) => e.peer), window: win };
   return { action: 'wait', leader: me, window: win, ahead: 0 };
+}
+
+/**
+ * A quién más avisar mientras la sala formada espera (función pura): los que
+ * siguen en la cola sin sala ni aviso, con un MMR parecido al del anfitrión
+ * (con el margen de lo que lleva esperando cada uno), los más parecidos
+ * primero y como mucho `slots`. `para`: los ya avisados.
+ */
+export function planRecruit(entries, me, now, { mmr, since, slots, para = [] }) {
+  if (slots <= 0) return [];
+  const taken = new Set(para);
+  for (const e of entries) if (e.sala && e.peer !== me) for (const p of e.sala.para) taken.add(p);
+  const win = mmrWindow(now - since);
+  return entries
+    .filter((e) => e.peer !== me && !e.sala && !taken.has(e.peer) && Math.abs(e.mmr - mmr) <= Math.max(win, mmrWindow(now - e.since)))
+    .sort((a, b) => Math.abs(a.mmr - mmr) - Math.abs(b.mmr - mmr) || byAge(a, b))
+    .slice(0, slots)
+    .map((e) => e.peer);
 }
 
 function byAge(a, b) {
@@ -147,13 +173,47 @@ export class Matchmaker {
     } else if (plan.action === 'host' && mine && !mine.sala) {
       this.done = true;
       const code = this.newCode();
-      // Aviso a los elegidos (sigo en la cola con la sala hasta que entren)
-      this._announce({ code, para: plan.members, hasta: now + INVITE_MS });
+      // Aviso a los elegidos y sigo en la cola con la sala: durante la espera
+      // de la sala (LOBBY_WAIT_MS) entra más gente de rango parecido
       clearInterval(this._timer);
       this.onHost?.(code, plan.members);
-      // El aviso se quita solo al cabo de un rato (ya están en la sala o no vendrán)
-      this._clearTimer = setTimeout(() => this.stop(), INVITE_MS + 2000);
+      this.recruit(code, { para: plan.members, until: now + LOBBY_WAIT_MS });
     }
+  }
+
+  /**
+   * Anfitrión de una sala que espera: se queda anunciado en la cola con su
+   * sala y, cada medio segundo, avisa a más jugadores de rango parecido hasta
+   * llenarla o hasta `until`. `onRecruit(peers)` con los nuevos avisados.
+   */
+  recruit(code, { para = [], until, seats = MATCH_SEATS, onRecruit = null } = {}) {
+    this.active = true;
+    this.done = true;
+    this.hosting = { code, para: [...para], until, seats };
+    if (onRecruit) this.onRecruit = onRecruit;
+    this._announce({ code, para: this.hosting.para, hasta: until + INVITE_MS });
+    clearInterval(this._timer);
+    this._timer = setInterval(() => this._recruitTick(), 500);
+    this._recruitTick();
+  }
+
+  _recruitTick() {
+    const h = this.hosting;
+    if (!this.active || !h) return;
+    const now = Date.now();
+    if (now > h.until + INVITE_MS) {
+      this.stop();
+      return;
+    }
+    if (now > h.until) return; // la sala ya va a empezar: no se avisa a nadie más
+    const me = this._me();
+    if (!me) return;
+    const slots = h.seats - 1 - h.para.length;
+    const fresh = planRecruit(this.entries(), me, now, { mmr: this.mmr, since: this.since, slots, para: h.para });
+    if (!fresh.length) return;
+    h.para.push(...fresh);
+    this._announce({ code: h.code, para: h.para, hasta: h.until + INVITE_MS });
+    this.onRecruit?.(fresh);
   }
 
   /** Sale de la cola (y deja de anunciarse). */

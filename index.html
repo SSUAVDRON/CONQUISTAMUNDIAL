@@ -23,7 +23,7 @@
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=c42820ffba",
       "./src/cuenta.js": "./src/cuenta.js?v=b7a3d60681",
       "./src/diagnostico.js": "./src/diagnostico.js?v=e5a8fdb869",
-      "./src/emparejamiento.js": "./src/emparejamiento.js?v=9aa2bffef5",
+      "./src/emparejamiento.js": "./src/emparejamiento.js?v=af4606d81b",
       "./src/errores.js": "./src/errores.js?v=d6981c22f3",
       "./src/estrategia.js": "./src/estrategia.js?v=b65a12e29e",
       "./src/ficha-ui.js": "./src/ficha-ui.js?v=ac21b445ce",
@@ -31,10 +31,10 @@
       "./src/fin.js": "./src/fin.js?v=8ad71316f7",
       "./src/format.js": "./src/format.js?v=3a70a55999",
       "./src/fx.js": "./src/fx.js?v=0284ac6f42",
-      "./src/game.js": "./src/game.js?v=4341d52a91",
+      "./src/game.js": "./src/game.js?v=f00e5a8070",
       "./src/guia.js": "./src/guia.js?v=efe1c8a1a8",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=ede468746f",
+      "./src/home.js": "./src/home.js?v=33dd255075",
       "./src/icons.js": "./src/icons.js?v=72c24ddc2d",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
@@ -42,7 +42,7 @@
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=d2c1e53b57",
       "./src/lugares.js": "./src/lugares.js?v=5289949ba5",
-      "./src/main.js": "./src/main.js?v=ff7c28785f",
+      "./src/main.js": "./src/main.js?v=57f1c8b071",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=78a6275257",
@@ -50,7 +50,7 @@
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ab2918104e",
       "./src/mqtt.js": "./src/mqtt.js?v=822e5b7211",
-      "./src/multiplayer.js": "./src/multiplayer.js?v=d9e53e9f63",
+      "./src/multiplayer.js": "./src/multiplayer.js?v=88dfafde08",
       "./src/musica.js": "./src/musica.js?v=1c7e053d4e",
       "./src/names.js": "./src/names.js?v=a3419d11bb",
       "./src/net.js": "./src/net.js?v=4c4fd542c2",
@@ -69,19 +69,19 @@
       "./src/rpg.js": "./src/rpg.js?v=6d8bbfee1b",
       "./src/salida.js": "./src/salida.js?v=e58982c21b",
       "./src/skins.js": "./src/skins.js?v=f86a1972b8",
-      "./src/social-ui.js": "./src/social-ui.js?v=e1891126dd",
+      "./src/social-ui.js": "./src/social-ui.js?v=c32781a4a4",
       "./src/social.js": "./src/social.js?v=5a8905016d",
       "./src/sonido.js": "./src/sonido.js?v=9eb19f354e",
       "./src/tecnologias.js": "./src/tecnologias.js?v=e5f4d0a332",
       "./src/terreno.js": "./src/terreno.js?v=f092a64d9b",
       "./src/toque.js": "./src/toque.js?v=46a01b2ac7",
       "./src/tutorial.js": "./src/tutorial.js?v=10c35c997f",
-      "./src/ui.js": "./src/ui.js?v=6b0aee96ed"
+      "./src/ui.js": "./src/ui.js?v=22984f6071"
     }
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=508985157d">
+  <link rel="stylesheet" href="css/estilo.css?v=167c2b2d6c">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo) -->
@@ -335,7 +335,7 @@
             <span id="cp-nivel" class="cp-nivel"></span>
           </div>
           <div class="cp-rango">
-            <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><canvas id="cp-insignia" width="300" height="300"></canvas></div>
+            <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><span class="cp-chispas"><i></i><i></i><i></i><i></i><i></i><i></i></span><canvas id="cp-insignia" width="300" height="300"></canvas><span class="cp-brillo"></span></div>
             <small id="cp-cola-rango" class="cp-cola-rango"></small>
             <strong id="cp-liga" class="cp-liga"></strong>
             <span id="cp-pl" class="cp-pl"></span>
@@ -343,7 +343,7 @@
             <small id="cp-vd" class="cp-vd"></small>
           </div>
           <div class="cp-cola">
-            <h2>Buscar partida</h2>
+            <h2>Buscar partida <button type="button" class="cp-info" id="cp-info" aria-label="Cómo se puntúa">?</button></h2>
             <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
             <p id="cp-cola-nota" class="cp-cola-nota"></p>
             <div class="cp-buscando" id="cp-buscando" hidden>
@@ -351,6 +351,7 @@
               <span class="cp-busca-textos"><strong>Buscando partida <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
             </div>
             <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
+            <button type="button" class="secundario cp-amigos" id="cp-amigos" hidden>👥 Jugar con amigos</button>
             <small id="cp-cola-extra" class="cp-cola-extra"></small>
           </div>
         </div>
@@ -792,6 +793,16 @@
         <button type="button" id="btn-copiar-codigo">Copiar código</button>
       </div>
       <p class="sala-aviso" id="sala-aviso" role="status" hidden></p>
+      <!-- Clasificatoria: la espera a más jugadores (cuenta atrás) o, con amigos, invitar y buscar rivales -->
+      <section class="sala-clasif" id="sala-clasif" hidden aria-live="polite">
+        <span class="sc-reloj" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="sc-aro-fondo" cx="24" cy="24" r="20"/><circle class="sc-aro" id="sc-aro" cx="24" cy="24" r="20"/></svg><b id="sc-segundos"></b></span>
+        <span class="sc-textos"><strong id="sc-titulo"></strong><small id="sc-texto"></small></span>
+        <span class="sc-plazas" id="sc-plazas" aria-hidden="true"></span>
+      </section>
+      <section class="sala-caja sala-amigos" id="sala-amigos" hidden aria-labelledby="sala-amigos-tit">
+        <h2 id="sala-amigos-tit">Invita a tus amigos</h2>
+        <div id="sala-amigos-lista" class="sala-amigos-lista"></div>
+      </section>
       <div class="sala-rejilla" id="sala-rejilla">
         <section class="sala-caja sala-mapa">
           <div class="mapa-vista"><canvas id="sala-mapa-img" width="640" height="360" aria-hidden="true"></canvas><span class="mapa-etiqueta" id="sala-mapa-nombre"></span></div>
@@ -811,6 +822,7 @@
       <span class="sala-motivo" id="sala-motivo"></span>
       <button type="button" id="btn-listo" class="principal grande">Estoy listo</button>
       <button type="button" id="btn-empezar" class="principal grande">Iniciar partida</button>
+      <button type="button" id="btn-rivales" class="principal grande btn-brillo" hidden>⚔ Buscar rivales</button>
       <!-- Borrador del anfitrión (DEV10): lo que falta por aplicar -->
       <div class="borrador" id="sala-borrador" role="status" aria-live="polite" hidden>
         <p class="borrador-texto" id="sala-borrador-texto"></p>
@@ -830,6 +842,10 @@
           <span class="cab-titulo">Clasificación</span><span class="cab-extra" id="cab-puesto"></span><svg class="cab-flecha" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 L8 10.5 L12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="cuerpo-plegable"><div>
+          <div class="lb-modo" id="lb-modo" role="radiogroup" aria-label="Ordenar la clasificación">
+            <button type="button" role="radio" data-lb="tierra" aria-checked="true" title="Por territorio: el puesto que cuenta para ganar">Territorio</button>
+            <button type="button" role="radio" data-lb="valor" aria-checked="false" title="Por valor económico: el oro más lo que valen sus edificios, buques y mejoras de la capital">Economía</button>
+          </div>
           <div class="lb-cab" aria-hidden="true"><span class="pos">#</span><span></span><span class="nom">Nación</span><span class="pct">Tierra</span><span class="oro">Oro</span><span class="tro">Tropas</span></div>
           <ol id="lista-clasificacion"></ol>
           <div class="lb-pie">

@@ -148,6 +148,56 @@ export class SocialUI {
     }
   }
 
+  /**
+   * Lista corta para invitar a tus amigos a la sala abierta (la clasificatoria
+   * con amigos): los que están en línea primero, con «Invitar».
+   */
+  renderInvitePicker(box) {
+    const room = this.getRoom();
+    const note = (text, action = null) => box.replaceChildren(el('p', { class: 'nota', text }), action || '');
+    if (!this.available || !this.social) {
+      note('Invitar amigos funciona en la web de Trinchera con tu cuenta.');
+      return;
+    }
+    if (!this.social.ready) {
+      note('Entra en tu cuenta para invitar a tus amigos.', this.accountUI ? this._btn('Entrar', 'principal', () => this.accountUI.open?.('entrar')) : null);
+      return;
+    }
+    const d = this.social.data;
+    if (!d) {
+      note('Cargando tus amigos…');
+      this.social.refresh?.();
+      return;
+    }
+    if (!room) {
+      note('La sala aún no admite invitaciones: espera un momento.');
+      return;
+    }
+    if (!d.amigos.length) {
+      note('Aún no tienes amigos: añádelos en Perfil → Amigos con su código de amigo.');
+      return;
+    }
+    if (!this._invited || this._invited.code !== room.code) this._invited = { code: room.code, ids: new Set() };
+    const sent = this._invited.ids;
+    const now = Date.now();
+    const list = [...d.amigos].sort((a, b) => (a.estado === 'fuera') - (b.estado === 'fuera'));
+    box.replaceChildren(
+      el('div', { class: 'soc-lista soc-lista-mini' },
+        ...list.map((p) => {
+          const off = p.estado === 'fuera';
+          const done = sent.has(p.id);
+          const b = this._btn(done ? 'Invitado ✓' : off ? 'Desconectado' : 'Invitar', done ? 'btn-sec' : 'principal', async () => {
+            await this.social.invite(p.id, room.code, room.red);
+            sent.add(p.id);
+            b.textContent = 'Invitado ✓';
+            b.className = 'btn-sec';
+            b.disabled = true;
+          }, { disabled: off || done, title: off ? `${p.nombre} no está en línea` : `Invitar a ${p.nombre} a tu clasificatoria` });
+          return this._player(p, { now, actions: [b] });
+        })),
+    );
+  }
+
   /** Datos nuevos de la API (o un error). */
   update(data) {
     this._badges(data);

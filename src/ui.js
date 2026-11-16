@@ -527,6 +527,33 @@ export class UI {
     };
     setWideLb(wideLb);
     $('lb-ver').addEventListener('click', () => setWideLb(!lb.classList.contains('lb-ampliada')));
+    // Territorio o valor económico (oro + edificios); se recuerda
+    try {
+      this._lbMode = localStorage.getItem('trinchera.clasifModo') === 'valor' ? 'valor' : 'tierra';
+    } catch {
+      this._lbMode = 'tierra';
+    }
+    const paintMode = () => {
+      for (const b of document.querySelectorAll('#lb-modo [data-lb]')) b.setAttribute('aria-checked', String(b.dataset.lb === this._lbMode));
+      lb.classList.toggle('lb-valor', this._lbMode === 'valor');
+      const head = lb.querySelector('.lb-cab .pct');
+      if (head) head.textContent = this._lbMode === 'valor' ? 'Valor' : 'Tierra';
+    };
+    paintMode();
+    $('lb-modo')?.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-lb]');
+      if (!b || b.dataset.lb === this._lbMode) return;
+      this._lbMode = b.dataset.lb;
+      try {
+        localStorage.setItem('trinchera.clasifModo', this._lbMode);
+      } catch {
+        // sin almacenamiento
+      }
+      paintMode();
+      this._lbAt = 0;
+      this._lbOrder = '';
+      if (this._game && this._human) this._updateLeaderboard(this._game, this._human, this._game.map.landCount);
+    });
 
     // Zoom con botones (junto al minimapa)
     $('zoom-mas')?.addEventListener('click', () => this.handlers.onZoom?.(1.45));
@@ -2062,13 +2089,17 @@ export class UI {
     const list = $('lista-clasificacion');
     // Solo naciones (DEV08): el puesto coincide con el del informe final; las colonias, en una línea aparte
     const everyone = game.players.filter((p) => p && p.alive && p.tiles > 0);
-    const alive = everyone.filter((p) => !p.weak).sort((a, b) => b.tiles - a.tiles);
+    // Por territorio (el puesto oficial) o por valor económico: oro + edificios
+    const byValue = this._lbMode === 'valor';
+    const score = new Map();
+    for (const p of everyone) if (!p.weak) score.set(p.id, byValue ? game.economicValue(p) : p.tiles);
+    const alive = everyone.filter((p) => !p.weak).sort((a, b) => score.get(b.id) - score.get(a.id) || b.tiles - a.tiles);
     const colonies = everyone.length - alive.length;
     const rows = alive.slice(0, 10);
     const rank = alive.indexOf(human);
     if (rank >= 10) rows.push(human);
     const pl = placement(game, human);
-    $('cab-puesto').textContent = `${pl.place}.º`;
+    $('cab-puesto').textContent = byValue ? (rank >= 0 ? `${rank + 1}.º` : '—') : `${pl.place}.º`;
     const verTxt = $('clasificacion').classList.contains('lb-ampliada') ? 'Ver menos ‹' : `Ver las ${alive.length} naciones ›`;
     if (this._lbVerTxt !== verTxt) {
       this._lbVerTxt = verTxt;
@@ -2077,7 +2108,7 @@ export class UI {
     const colTxt = colonies ? `${colonies} ${colonies === 1 ? 'colonia' : 'colonias'} en pie (no cuentan en el puesto)` : '';
     if ($('lb-colonias').textContent !== colTxt) $('lb-colonias').textContent = colTxt;
     $('lb-colonias').hidden = !colonies;
-    const leaderTiles = alive.length ? alive[0].tiles : 1;
+    const leaderTiles = alive.length ? Math.max(1, score.get(alive[0].id)) : 1;
     const animate = !document.body.classList.contains('sin-animaciones');
     // Medir las filas obliga al navegador a recalcular el diseño: solo si
     // cambia el orden (casi siempre es el mismo de un segundo a otro)
@@ -2119,11 +2150,18 @@ export class UI {
       };
       set('.pos', String(rank));
       // Las cifras van hasta su nuevo valor poco a poco (se actualizan una vez por segundo)
-      this._tweenText(li.querySelector('.pct'), p.tiles / landCount, formatPercent);
+      // Al cambiar de modo la cifra se pone de golpe (no va de un % a un millón)
+      const pct = li.querySelector('.pct');
+      if (li.dataset.modo !== (byValue ? 'valor' : 'tierra')) {
+        li.dataset.modo = byValue ? 'valor' : 'tierra';
+        this._textTweens?.delete(pct);
+      }
+      if (byValue) this._tweenText(pct, score.get(p.id), formatNumber);
+      else this._tweenText(pct, p.tiles / landCount, formatPercent);
       this._tweenText(li.querySelector('.oro'), p.gold, formatNumber);
       this._tweenText(li.querySelector('.tro'), p.troops, fmtTroops);
       set('.marcas', `${human.allies.has(p.id) ? ' 🤝' : ''}${game.isTraitor(p) ? ' ⚠' : ''}`);
-      li.querySelector('.lb-barra span').style.width = `${Math.round((p.tiles / leaderTiles) * 100)}%`;
+      li.querySelector('.lb-barra span').style.width = `${Math.round((Math.max(0, score.get(p.id)) / leaderTiles) * 100)}%`;
       li.classList.toggle('yo', p === human);
       li.classList.toggle('aliado', human.allies.has(p.id));
       li.classList.toggle('colonia', !!p.weak);

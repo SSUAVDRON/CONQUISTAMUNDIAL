@@ -55,3 +55,31 @@ test('emparejamiento: entradas de la cola limpias (otra versión o datos raros, 
   const s = cleanQueueEntry('a', { v: 'y', mmr: 1200, desde: T0, sala: { code: 'ab3d5', para: ['b', 7, 'c'], hasta: T0 + 1 } }, 'y');
   assert.deepEqual(s.sala.para, ['b', 'c']);
 });
+
+test('emparejamiento: la sala formada sigue cogiendo de la cola a gente de rango parecido', async () => {
+  const { planRecruit } = await import('../src/emparejamiento.js');
+  const now = T0 + 20000;
+  const entries = [
+    e('host', 1000, T0, { code: 'abcde', para: ['b'], hasta: now + 30000 }),
+    e('b', 1020, T0 + 100),
+    e('c', 1060, T0 + 15000), // libre y parecido
+    e('d', 2600, T0 + 15000), // demasiado lejos
+    e('f', 990, T0 + 16000, null),
+    e('g', 1010, T0 + 16000), // ya avisado por otra sala
+    e('x', 1500, T0, { code: 'zzzzz', para: ['g'], hasta: now + 30000 }),
+  ];
+  const fresh = planRecruit(entries, 'host', now, { mmr: 1000, since: T0, slots: 6, para: ['b'] });
+  assert.deepEqual(fresh, ['f', 'c'], 'los más parecidos primero; ni el lejano ni los avisados por otro');
+  assert.deepEqual(planRecruit(entries, 'host', now, { mmr: 1000, since: T0, slots: 1, para: ['b'] }), ['f'], 'como mucho las plazas libres');
+  assert.deepEqual(planRecruit(entries, 'host', now, { mmr: 1000, since: T0, slots: 0, para: ['b'] }), [], 'sala llena: nadie más');
+});
+
+test('salas: la espera de la clasificatoria y el grupo de amigos viajan limpios en la info de la sala', async () => {
+  const { cleanRoomInfo } = await import('../src/multiplayer.js');
+  const a = cleanRoomInfo({ nombre: 'Clasificatoria', plazas: 8, espera: 1700000000123.4, grupo: true });
+  assert.equal(a.espera, 1700000000123);
+  assert.equal(a.grupo, true);
+  const b = cleanRoomInfo({ nombre: 'x', espera: 'mañana', grupo: 'sí' });
+  assert.equal(b.espera, 0);
+  assert.equal(b.grupo, false);
+});

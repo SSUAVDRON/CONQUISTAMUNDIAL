@@ -44,7 +44,7 @@ import { RANKED_AI, RANKED_ROOM, aiDifficultyFor, alreadyApplied, applyAiResult,
 import { cleanSkins } from './skins.js';
 import { presentMatch } from './presentacion.js';
 import { configSnapshot } from './repeticion.js';
-import { INVITE_MS, Matchmaker } from './emparejamiento.js';
+import { LOBBY_WAIT_MS, MATCH_SEATS, Matchmaker } from './emparejamiento.js';
 
 const canvas = document.getElementById('lienzo');
 const camera = new Camera();
@@ -564,6 +564,7 @@ function leaveOnline() {
   if (state.oldNet) state.oldNet.stop();
   state.oldNet = null;
   state.net = null;
+  if (sala) stopRecruiter();
   if (sala) {
     if (hostAbandon) setTimeout(() => sala.leave(), 400);
     else sala.leave();
@@ -670,15 +671,21 @@ function toggleMatchmaking() {
     newCode: newRoomCode,
     onUpdate: (info) => home.setSearch(info),
     onHost: (code, members) => {
+      // La sala espera LOBBY_WAIT_MS con los jugadores dentro: el mismo
+      // emparejador sigue avisando a más gente de la cola (recruiter)
+      const deadline = Date.now() + LOBBY_WAIT_MS;
+      state.recruiter = state.mm;
+      state.recruiter.onRecruit = (peers) => state.match?.code === code && state.match.expect.push(...peers);
       state.mm = null;
-      state.match = { code, host: true, expect: members, deadline: Date.now() + INVITE_MS };
+      state.match = { code, host: true, expect: [...members], deadline };
       home.setSearch(null, 'encontrada');
       sound.play('listo', 0.9, 0);
       openSala(code, true, {
-        settings: { bots: RANKED_ROOM.bots, mapSize: RANKED_ROOM.mapSize, difficulty: RANKED_ROOM.difficulty, rules: { ...DEFAULT_RULES, profile: RANKED_ROOM.profile }, clasificatoria: true },
-        info: { nombre: 'Clasificatoria', visibilidad: 'enlace', plazas: Math.max(2, Math.min(8, members.length + 1)) },
+        settings: rankedRoomSettings(),
+        info: { nombre: 'Clasificatoria', visibilidad: 'enlace', plazas: MATCH_SEATS, espera: deadline },
       }).catch(() => {
         state.match = null;
+        stopRecruiter();
         home.flash?.('No se ha podido crear la sala. Vuelve a buscar partida.');
       });
     },
@@ -699,6 +706,59 @@ function stopMatchmaking() {
   home.setSearch(null);
 }
 
+/** Deja de avisar a gente de la cola para la sala que espera. */
+function stopRecruiter() {
+  state.recruiter?.stop();
+  state.recruiter = null;
+}
+
+/** Configuración fija de una sala clasificatoria en línea. */
+function rankedRoomSettings() {
+  return { bots: RANKED_ROOM.bots, mapSize: RANKED_ROOM.mapSize, difficulty: RANKED_ROOM.difficulty, rules: { ...DEFAULT_RULES, profile: RANKED_ROOM.profile }, clasificatoria: true };
+}
+
+/**
+ * Clasificatoria con amigos: abres una sala clasificatoria para tu grupo,
+ * invitas a tus amigos y, cuando estéis, «Buscar rivales» la llena con gente
+ * de la cola de rango parecido (30 s) y empieza sola.
+ */
+function startRankedGroup() {
+  if (!transport) {
+    home.flash?.('Sin conexión con el servidor de salas.');
+    return;
+  }
+  if (state.mm) stopMatchmaking();
+  const code = newRoomCode();
+  state.match = { code, host: true, group: true, expect: [], deadline: 0 };
+  openSala(code, true, {
+    settings: rankedRoomSettings(),
+    info: { nombre: `Clasificatoria de ${roomName(profile.nombre, RECRUIT_TAG)}`.slice(0, 28), visibilidad: 'enlace', plazas: MATCH_SEATS, grupo: true },
+  }).catch(() => {
+    state.match = null;
+    home.flash?.('No se ha podido crear la sala.');
+  });
+}
+
+/** Sala clasificatoria con amigos: el anfitrión busca rivales en la cola (30 s) y empieza solo. */
+function searchRivals() {
+  const sala = state.sala;
+  const m = state.match;
+  if (!sala || !sala.isHost || !m || m.code !== sala.code || m.deadline) return;
+  const r = profile.rangoOnline;
+  const deadline = Date.now() + LOBBY_WAIT_MS;
+  m.deadline = deadline;
+  // Un grupo cuenta con la media de su MMR (los demás, firmados en la sala)
+  const claims = sala.rankClaims ? [...sala.rankClaims().values()] : [];
+  const mmrs = [r.mmr, ...claims.map((c) => c.mmr).filter(Number.isFinite)];
+  const mmr = mmrs.reduce((a, b) => a + b, 0) / mmrs.length;
+  const already = sala.status().players.filter((p) => !p.isMe).map((p) => p.peer);
+  stopRecruiter();
+  state.recruiter = new Matchmaker(transport, { version: RULES_FINGERPRINT, mmr, newCode: newRoomCode });
+  state.recruiter.recruit(sala.code, { para: already, until: deadline, seats: sala.info.plazas, onRecruit: (peers) => state.match?.code === sala.code && state.match.expect.push(...peers) });
+  sala.setInfo({ espera: deadline });
+  sound.play('listo', 0.7, 0);
+}
+
 /**
  * Sala formada por el emparejamiento: los invitados se marcan listos solos y
  * el anfitrión empieza en cuanto están todos (o, pasado el plazo, con los que
@@ -711,14 +771,19 @@ function autoMatch(sala) {
     if (!sala.observer && !sala.myReadyValid()) sala.setReady(true);
     return;
   }
+  // Clasificatoria con amigos: espera a que el anfitrión pulse «Buscar rivales»
+  if (!m.deadline) return;
   const st = sala.status();
-  const others = st.players.filter((p) => !p.isMe);
-  const allHere = m.expect.every((peer) => others.some((p) => p.peer === peer && p.ready));
-  const late = Date.now() > m.deadline;
-  if (st.canStart && (allHere || (late && st.total >= 2))) sala.beginCountdown();
-  else if (late && st.total < 2) {
+  // Espera a que entre más gente (LOBBY_WAIT_MS) salvo que la sala se llene
+  const full = st.total >= st.seats;
+  const late = Date.now() >= m.deadline;
+  if (st.canStart && st.total >= 2 && (full || late)) {
+    stopRecruiter();
+    sala.beginCountdown();
+  } else if (late && st.total < 2 && Date.now() >= m.deadline + 3000) {
     // No ha venido nadie: fuera de la sala y otra vez a la cola
     state.match = null;
+    stopRecruiter();
     leaveOnline();
     home.show();
     home.go('competitivo', { replace: true });
@@ -775,6 +840,7 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
     }, 1000);
   }
   sala.onStart = (payload, hostPeer) => {
+    stopRecruiter();
     home.hideCountdown();
     beginOnlineGame(sala, payload, hostPeer);
   };
@@ -1432,9 +1498,13 @@ const home = new Home(profile, {
   onFindMatch() {
     toggleMatchmaking();
   },
+  /** Clasificatoria con amigos: sala de grupo, invitar y buscar rivales. */
+  onRankedGroup: () => startRankedGroup(),
+  onSearchRivals: () => searchRivals(),
+  onInvitePicker: (box) => socialUI.renderInvitePicker(box),
   /** «Jugar clasificatoria» (contra la IA) o «Sala clasificatoria» (multijugador). */
   onRanked(kind) {
-    if (kind === 'sala') home.showCreate({ ranked: true });
+    if (kind === 'sala') startRankedGroup();
     else startRanked();
   },
   onLadderRefresh: () => ladder.refresh(),
