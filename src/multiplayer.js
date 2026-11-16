@@ -163,6 +163,8 @@ export function cleanRoomInfo(raw, fallbackName = 'Sala') {
     espera: Number.isFinite(Number(r.espera)) && Number(r.espera) > 0 ? Math.round(Number(r.espera)) : 0,
     // Clasificatoria con amigos: el anfitrión la abre para su grupo y luego busca rivales
     grupo: r.grupo === true,
+    // Escuadra: quiénes iban juntos al buscar rivales (los demás que entren son rivales)
+    escuadra: Array.isArray(r.escuadra) ? r.escuadra.filter((x) => typeof x === 'string' && x.length > 0 && x.length <= 64).slice(0, MAX_HUMANS) : [],
   };
 }
 

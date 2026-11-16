@@ -634,6 +634,7 @@ function leaveOnline() {
   }
   state.sala = null;
   state.online = false;
+  if (home.party) home.renderParty(null);
 }
 
 /**
@@ -781,25 +782,48 @@ function rankedRoomSettings() {
 }
 
 /**
- * Clasificatoria con amigos: abres una sala clasificatoria para tu grupo,
- * invitas a tus amigos y, cuando estéis, «Buscar rivales» la llena con gente
- * de la cola de rango parecido (30 s) y empieza sola.
+ * Escuadra (clasificatoria con amigos): una sala clasificatoria para tu
+ * grupo que vive en la propia página Competitivo (tú en el centro, tus amigos
+ * a los lados). Invitas con «+» y, cuando estéis, «Buscar partida» la llena
+ * con gente de la cola de rango parecido (30 s) y empieza sola. Mientras,
+ * puedes moverte por el menú.
  */
 function startRankedGroup() {
+  if (state.sala && home.party) return;
   if (!transport) {
-    home.flash?.('Sin conexión con el servidor de salas.');
+    home.flash?.(connecting ? 'Conectando con el servidor de salas… inténtalo en un momento.' : 'Sin conexión con el servidor de salas.');
+    home.renderParty(null);
     return;
   }
-  if (state.mm) stopMatchmaking();
+  if (state.mm) {
+    stopMatchmaking();
+    home.flash?.('Búsqueda cancelada: invita a tu escuadra y buscad juntos.');
+  }
   const code = newRoomCode();
   state.match = { code, host: true, group: true, expect: [], deadline: 0 };
   openSala(code, true, {
     settings: rankedRoomSettings(),
-    info: { nombre: `Clasificatoria de ${roomName(profile.nombre, RECRUIT_TAG)}`.slice(0, 28), visibilidad: 'enlace', plazas: MATCH_SEATS, grupo: true },
+    info: { nombre: `Escuadra de ${roomName(profile.nombre, RECRUIT_TAG)}`.slice(0, 28), visibilidad: 'enlace', plazas: MATCH_SEATS, grupo: true },
+    party: true,
   }).catch(() => {
     state.match = null;
-    home.flash?.('No se ha podido crear la sala.');
+    home.renderParty(null);
+    home.flash?.('No se ha podido crear la escuadra. Revisa la conexión y vuelve a intentarlo.');
   });
+}
+
+/** «Buscar partida» del líder de la escuadra: con amigos, rivales para la sala; solo, la cola normal. */
+function searchAsParty() {
+  const sala = state.sala;
+  if (!sala || !sala.isHost || !home.party) return;
+  if (sala.status().players.length <= 1) {
+    // Nadie más en la escuadra: mejor la cola normal (entras en las salas de los demás)
+    state.match = null;
+    leaveOnline();
+    toggleMatchmaking();
+    return;
+  }
+  searchRivals();
 }
 
 /** Sala clasificatoria con amigos: el anfitrión busca rivales en la cola (30 s) y empieza solo. */
@@ -818,8 +842,10 @@ function searchRivals() {
   stopRecruiter();
   state.recruiter = new Matchmaker(transport, { version: RULES_FINGERPRINT, mmr, newCode: newRoomCode });
   state.recruiter.recruit(sala.code, { para: already, until: deadline, seats: sala.info.plazas, onRecruit: (peers) => state.match?.code === sala.code && state.match.expect.push(...peers) });
-  sala.setInfo({ espera: deadline });
+  // Quién va en la escuadra: los que entren después son rivales
+  sala.setInfo({ espera: deadline, escuadra: sala.status().players.map((p) => p.peer) });
   sound.play('listo', 0.7, 0);
+  if (home.party) home.renderParty(sala, transport.kind);
 }
 
 /**
@@ -860,7 +886,7 @@ function autoMatch(sala) {
  * Invitado: entra como observador y, si se puede, ocupa su plaza (con
  * `auto`, al momento; desde un enlace, tras pulsar «Unirme» en la ficha).
  */
-async function openSala(code, isHost, { settings = null, info = null, auto = true } = {}) {
+async function openSala(code, isHost, { settings = null, info = null, auto = true, party = false } = {}) {
   if (!transport) throw new Error('Sin conexión para el multijugador.');
   if (state.match?.code !== code) {
     state.match = null;
@@ -879,6 +905,14 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
     /* sin WebCrypto: sin firma (cuenta como 1000) */
   }
   const kind = transport.kind;
+  // ¿Es una escuadra? La tuya o, de invitado, la clasificatoria en grupo de un
+  // amigo (no la de un rival que te ha traído la cola): se ve en Competitivo
+  const isParty = () => {
+    if (party) return true;
+    if (sala.isHost || (state.match && state.match.code === code)) return false;
+    const s = sala.hostSettings();
+    return !!(s && s.clasificatoria && sala.roomInfo().grupo);
+  };
   const render = (status = '') => {
     if (state.sala !== sala || sala.started) return;
     if (sala.observer) {
@@ -888,6 +922,24 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
         return;
       }
       home.renderEntry(sala, entry);
+    } else if (isParty()) {
+      // En la escuadra se está listo sin más (el líder busca la partida)
+      if (!sala.isHost && !sala.myReadyValid()) sala.setReady(true);
+      if (!home.party) {
+        // Entrar por el enlace ya está hecho: fuera de la dirección (una recarga no vuelve a pedirlo)
+        state.pendingEntry = null;
+        const clean = () => {
+          if (!new URLSearchParams(location.search).has('sala')) return;
+          const url = new URL(location.href);
+          for (const k of ['sala', 'b']) url.searchParams.delete(k);
+          history.replaceState(history.state, '', url);
+        };
+        home.enterParty();
+        // (al cerrar la ficha se vuelve atrás en el historial: se limpia también después)
+        clean();
+        setTimeout(clean, 700);
+      }
+      home.renderParty(sala, kind, status);
     } else home.renderLobby(sala, kind, status);
   };
   sala.onChange = () => {
@@ -924,7 +976,8 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
     if (state.sala !== sala) return;
     render(`La sala usa otra versión del juego (${theirs}; la tuya, ${mine}). Recargad la página los dos y volved a entrar.`);
   };
-  home.showLobby();
+  if (party) home.renderParty(sala, kind, 'Preparando tu escuadra…');
+  else home.showLobby();
   if (!isHost) home.renderEntry(sala, { estado: 'buscando' });
   try {
     await sala.open({ observer: !isHost });
@@ -938,7 +991,8 @@ async function openSala(code, isHost, { settings = null, info = null, auto = tru
           ? 'Hay demasiadas salas abiertas ahora mismo. Inténtalo en un momento.'
           : 'No se ha podido abrir la sala.';
     if (isHost) {
-      home.hideLobby();
+      if (party) home.renderParty(null);
+      else home.hideLobby();
       throw new Error(why);
     }
     if (!state.pendingEntry) state.pendingEntry = code;
@@ -975,9 +1029,10 @@ function copyText(text, ok, fail) {
 
 async function beginOnlineGame(sala, payload, hostPeer) {
   if (state.sala !== sala) return;
-  // La sala del emparejamiento ya ha empezado
+  // La sala del emparejamiento ya ha empezado (y la escuadra, con ella)
   state.match = null;
   clearInterval(state.matchTimer);
+  home.renderParty(null);
   const myPeer = sala.myPeer();
   const index = payload.players.findIndex((p) => p.peer === myPeer);
   if (index < 0) {
@@ -1185,7 +1240,9 @@ function joinInvite(inv) {
   const red = /^b=\d{1,2}$/.test(inv.red || '') ? inv.red : '';
   inv = { ...inv, red };
   if (transport && (inv.red || '') === roomNet() && !(state.game && !state.demo)) {
+    // La invitación ya está aceptada: se entra sin pasar por «Unirme»
     state.pendingEntry = code;
+    state.autoEntry = code;
     home.showLobby();
     home.renderEntry(entryStub(code), { estado: 'buscando' });
     openEntry();
@@ -1579,8 +1636,22 @@ const home = new Home(profile, {
   onFindMatch() {
     toggleMatchmaking();
   },
-  /** Clasificatoria con amigos: sala de grupo, invitar y buscar rivales. */
-  onRankedGroup: () => startRankedGroup(),
+  /** Escuadra en Competitivo: crearla (al invitar), buscar partida juntos, salir y copiar el enlace. */
+  onPartyCreate: () => startRankedGroup(),
+  onPartySearch: () => searchAsParty(),
+  onPartyLeave() {
+    state.match = null;
+    leaveOnline();
+    home.renderParty(null);
+  },
+  onPartyCopy() {
+    const sala = state.sala;
+    if (!sala) return;
+    const code = sala.code.toUpperCase();
+    const link = transport && transport.kind === 'mqtt' ? inviteLink(sala) : null;
+    const text = link || (transport && transport.kind === 'local' ? code : `Únete a mi escuadra de Trinchera con el código ${code}`);
+    copyText(text, () => home.partyCopied(true), () => home.partyCopied(false, link || code));
+  },
   onSearchRivals: () => searchRivals(),
   onInvitePicker: (box) => socialUI.renderInvitePicker(box),
   /** «Jugar clasificatoria» (contra la IA) o «Sala clasificatoria» (multijugador). */
@@ -2644,7 +2715,7 @@ function openEntry() {
     home.renderEntry(entryStub(code), { estado: 'sinred' });
     return;
   }
-  openSala(code, false, { auto: false }).catch((err) => {
+  openSala(code, false, { auto: state.autoEntry === code }).catch((err) => {
     if (state.pendingEntry === code) home.renderEntry(entryStub(code), { estado: 'error', detalle: err && err.message });
   });
 }

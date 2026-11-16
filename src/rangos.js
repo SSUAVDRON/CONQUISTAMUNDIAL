@@ -339,6 +339,80 @@ export function applyRoomResult(r, place, humans, { abandon = false, partida = '
   });
 }
 
+/**
+ * Ajuste de PL por partida (de −10 a +10) cuando tu nivel oculto (MMR) va por
+ * delante (+) o por detrás (−) de tu rango.
+ */
+export function mmrLag(r) {
+  return Math.round(clamp((r.mmr - mmrFromPoints(r.puntos)) / 50, -10, 10));
+}
+
+/**
+ * Lo que te daría la próxima partida según cómo quedes, calculado sobre una
+ * copia de tu rango (el tuyo no se toca). En colocación, como si ya la
+ * hubieras acabado con tu nivel de ahora (`estimate`: ese rango estimado).
+ * kind 'ia': tu puesto entre las naciones; 'sala': entre 5 personas de tu nivel.
+ */
+export function previewResults(r, kind = 'ia') {
+  const base = normalizeRank(JSON.parse(JSON.stringify(r)), r.modalidad);
+  base.aplicadas = [];
+  const placing = inPlacement(base);
+  if (placing) {
+    base.colocacion = PLACEMENT_GAMES;
+    base.puntos = Math.max(base.puntos, pointsFromMmr(base.mmr));
+  }
+  const run = (fn) => {
+    const c = JSON.parse(JSON.stringify(base));
+    const out = fn(c);
+    return out ? out.delta : 0;
+  };
+  let rows;
+  if (kind === 'sala') {
+    const total = RANKED_ROOM.bots + 5;
+    // Tú y 4 personas de tu nivel; tu puesto entre ellas y, aproximado, entre todas las naciones
+    const spots = [
+      { human: 1, place: 1, label: '1.º de 5', sub: 'ganas la partida' },
+      { human: 2, place: 4, label: '2.º de 5', sub: 'por delante de 3' },
+      { human: 3, place: 9, label: '3.º de 5', sub: 'a media tabla' },
+      { human: 5, place: 26, label: '5.º de 5', sub: 'el último de las personas' },
+    ];
+    rows = spots.map((sp) => ({
+      label: sp.label,
+      sub: sp.sub,
+      delta: run((c) => applyRoomResult(c, { place: sp.place, of: total }, [1, 2, 3, 4, 5].filter((h) => h !== sp.human).map((h) => ({ mmr: base.mmr, place: h < sp.human ? h : h + 30 })))),
+    }));
+    rows.push({ label: 'Abandonar', sub: 'cuenta como quedar el último', delta: run((c) => applyRoomResult(c, { place: total, of: total }, [1, 2, 3, 4].map((h) => ({ mmr: base.mmr, place: h })), { abandon: true })) });
+  } else {
+    const total = RANKED_AI.bots + 1;
+    const mid = Math.round(total / 2);
+    const spots = [
+      [1, '1.º', 'ganas la partida'],
+      [5, '5.º', 'entre los mejores'],
+      [15, '15.º', 'primer sexto'],
+      [mid, `${mid}.º`, 'a media tabla'],
+      [total, `${total}.º`, 'el último o abandonar'],
+    ];
+    rows = spots.map(([place, label, sub]) => ({ label, sub, delta: run((c) => applyAiResult(c, { place, of: total })) }));
+  }
+  return { rows, placing, estimate: placing ? rankOf(base.puntos).label : '', lag: mmrLag(base), shield: base.escudo };
+}
+
+/**
+ * Tu próximo objetivo: la división o liga siguiente y los PL que faltan
+ * (null en Leyenda: ya no hay más arriba).
+ */
+export function nextGoal(r) {
+  const k = rankOf(r.puntos);
+  if (k.league.id === 'leyenda') return null;
+  if (k.league.apex) {
+    const L = LEAGUES[k.index + 1];
+    return { label: L.name, need: L.base - k.points, league: L };
+  }
+  const nextPts = Math.floor(k.points / 100) * 100 + 100;
+  const n = rankOf(nextPts);
+  return { label: n.label, need: nextPts - k.points, league: n.league, promotion: n.index > k.index };
+}
+
 /** Texto corto del rango: «Plata II · 45 PL», «Colocación 2/5». */
 export function rankText(r) {
   if (inPlacement(r)) return `Colocación ${r.colocacion}/${PLACEMENT_GAMES}`;
@@ -350,122 +424,417 @@ export function rankText(r) {
 
 const rgb = (c, a = 1) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
 const mix = (c, k) => c.map((v) => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)));
+const TAU = Math.PI * 2;
 
 /**
- * Dibuja la insignia de una liga en (cx, cy) con alto `size`: escudo
- * facetado con el metal de la liga, alas o laureles en las altas y la
- * división en números romanos. `league` null = sin rango (colocación).
+ * Dibuja la insignia de una liga en (cx, cy) con alto `size`. Cada liga tiene
+ * su forma y sus adornos, que crecen con ella: medallón remachado (Hierro) o
+ * con un sol de ocho puntas (Bronce); escudo con laureles (Plata, Oro); alas por capas desde
+ * Platino, más grandes en Diamante; rayos, tiara o corona en las ligas sin
+ * división (Maestro, Gran Maestro, Leyenda). En el centro, una gema facetada
+ * que crece con la liga; abajo, una cinta con la división. `league` null =
+ * sin rango (colocación: medallón gris con «?»). `opts.shine` (0-1): una
+ * franja de luz que cruza el escudo (para animarla, se repinta).
  */
-export function drawBadge(ctx, cx, cy, size, league, div = 0) {
+export function drawBadge(ctx, cx, cy, size, league, div = 0, opts = {}) {
   const s = size / 100;
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(s, s);
-  const L = league || { color: [120, 130, 150], dark: [40, 46, 60], id: 'colocacion', base: -1 };
-  const tier = Math.max(0, LEAGUES.indexOf(league));
-  // Alas para Diamante y las ligas sin división; laureles desde Oro
-  if (league && tier >= 5) {
-    ctx.fillStyle = rgb(mix(L.color, -0.15));
+  const L = league || { color: [150, 158, 174], dark: [52, 58, 72], id: 'colocacion', base: -1 };
+  const tier = league ? Math.max(0, LEAGUES.indexOf(league)) : -1;
+  const C = L.color;
+  const D = L.dark;
+  const lite = mix(C, 0.55);
+  const deep = mix(D, -0.35);
+  const medal = tier <= 1; // Hierro, Bronce y colocación: medallón
+  const apex = !!(league && league.apex);
+
+  // ---- Detrás: halo y rayos
+  if (tier >= 4) {
+    const g = ctx.createRadialGradient(0, -2, 8, 0, -2, 70);
+    g.addColorStop(0, rgb(C, tier >= 6 ? 0.55 : 0.35));
+    g.addColorStop(1, rgb(C, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, -2, 70, 0, TAU);
+    ctx.fill();
+  }
+  if (apex) {
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU - Math.PI / 2;
+      const len = i % 2 ? 54 : 66;
+      const w = 0.09;
+      const g = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+      g.addColorStop(0, rgb(lite, 0.5));
+      g.addColorStop(1, rgb(lite, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a - w) * 18, Math.sin(a - w) * 18 - 2);
+      ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len - 2);
+      ctx.lineTo(Math.cos(a + w) * 18, Math.sin(a + w) * 18 - 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // ---- Alas (desde Platino): un abanico de plumas largas que sale del hombro
+  // del escudo y lo rebasa por arriba y por los lados; más plumas y más
+  // largas cuanto más alta la liga
+  if (tier >= 4) {
+    const feathers = tier >= 7 ? 7 : tier >= 5 ? 6 : 5;
+    const reach = 40 + Math.min(4, tier - 4) * 2.5;
     for (const side of [-1, 1]) {
       ctx.save();
       ctx.scale(side, 1);
-      ctx.beginPath();
-      ctx.moveTo(18, -18);
-      ctx.quadraticCurveTo(52, -40, 58, -6);
-      ctx.quadraticCurveTo(46, -10, 40, 2);
-      ctx.quadraticCurveTo(50, 6, 48, 22);
-      ctx.quadraticCurveTo(36, 12, 22, 18);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-  } else if (league && tier >= 3) {
-    ctx.strokeStyle = rgb(mix(L.color, -0.2));
-    ctx.lineWidth = 3;
-    for (const side of [-1, 1]) {
-      for (let k = 0; k < 5; k++) {
-        const a = Math.PI * 0.55 + k * 0.28;
-        const x = side * Math.cos(a) * -40;
-        const y = Math.sin(a) * 40 - 6;
+      for (let i = 0; i < feathers; i++) {
+        const t = i / (feathers - 1);
+        const rx = 22;
+        const ry = -12 + t * 6;
+        const a = -1.3 + t * 1.6;
+        const len = reach - t * 14;
+        const tx = rx + Math.cos(a) * len;
+        const ty = ry + Math.sin(a) * len;
+        const nx = -Math.sin(a);
+        const ny = Math.cos(a);
+        const w = 6.5;
+        const g = ctx.createLinearGradient(rx, ry, tx, ty);
+        g.addColorStop(0, rgb(deep));
+        g.addColorStop(0.45, rgb(C));
+        g.addColorStop(1, rgb(lite));
+        ctx.fillStyle = g;
+        ctx.strokeStyle = rgb(mix(D, -0.6), 0.95);
+        ctx.lineWidth = 1.3;
+        // Pluma: hoja larga con la punta redondeada
+        const mx = rx + (tx - rx) * 0.62;
+        const my = ry + (ty - ry) * 0.62;
         ctx.beginPath();
-        ctx.ellipse(x, y, 7, 3.2, side * (a + Math.PI / 2), 0, Math.PI * 2);
+        ctx.moveTo(rx - nx * 3, ry - ny * 3);
+        ctx.quadraticCurveTo(mx - nx * w * 1.2, my - ny * w * 1.2, tx - nx * 1.5, ty - ny * 1.5);
+        ctx.quadraticCurveTo(tx + Math.cos(a) * 4, ty + Math.sin(a) * 4, tx + nx * 2, ty + ny * 2);
+        ctx.quadraticCurveTo(mx + nx * w, my + ny * w, rx + nx * 3, ry + ny * 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Raquis
+        ctx.strokeStyle = rgb(lite, 0.55);
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(rx + Math.cos(a) * 6, ry + Math.sin(a) * 6);
+        ctx.lineTo(tx - Math.cos(a) * 4, ty - Math.sin(a) * 4);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+  } else if (tier === 2 || tier === 3) {
+    // Laureles (Plata y Oro): ramas que abrazan el escudo
+    const leaves = tier === 3 ? 7 : 6;
+    for (const side of [-1, 1]) {
+      ctx.save();
+      ctx.scale(side, 1);
+      ctx.strokeStyle = rgb(deep);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, -4, 44, Math.PI * 0.42, Math.PI * 0.92);
+      ctx.stroke();
+      for (let k = 0; k < leaves; k++) {
+        const a = Math.PI * 0.44 + (k / (leaves - 1)) * Math.PI * 0.5;
+        const x = Math.cos(a) * 44;
+        const y = Math.sin(a) * 44 - 4;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(a + Math.PI * 0.62);
+        const g = ctx.createLinearGradient(-8, 0, 8, 0);
+        g.addColorStop(0, rgb(C));
+        g.addColorStop(1, rgb(lite));
+        ctx.fillStyle = g;
+        ctx.strokeStyle = rgb(deep);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8.5, 3.6, 0, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+  } else if (tier === 1) {
+    // Bronce: un sol de ocho puntas detrás del medallón
+    ctx.strokeStyle = rgb(deep);
+    ctx.lineWidth = 1.4;
+    for (let k = 0; k < 8; k++) {
+      ctx.save();
+      ctx.rotate((k * Math.PI) / 4);
+      const g = ctx.createLinearGradient(0, -30, 0, -48);
+      g.addColorStop(0, rgb(mix(C, -0.25)));
+      g.addColorStop(1, rgb(lite));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-7, -31);
+      ctx.lineTo(0, k % 2 ? -44 : -49);
+      ctx.lineTo(7, -31);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
   }
-  // Escudo facetado
-  const shield = () => {
+
+  // ---- Cuerpo: medallón o escudo, metal con bisel
+  const body = () => {
     ctx.beginPath();
-    ctx.moveTo(0, -44);
-    ctx.lineTo(34, -30);
-    ctx.lineTo(32, 8);
-    ctx.quadraticCurveTo(26, 34, 0, 46);
-    ctx.quadraticCurveTo(-26, 34, -32, 8);
-    ctx.lineTo(-34, -30);
-    ctx.closePath();
+    if (medal) ctx.arc(0, 0, 37, 0, TAU);
+    else {
+      ctx.moveTo(0, -46);
+      ctx.bezierCurveTo(13, -46, 26, -42, 36, -36);
+      ctx.lineTo(36, -6);
+      ctx.bezierCurveTo(36, 18, 22, 36, 0, 48);
+      ctx.bezierCurveTo(-22, 36, -36, 18, -36, -6);
+      ctx.lineTo(-36, -36);
+      ctx.bezierCurveTo(-26, -42, -13, -46, 0, -46);
+      ctx.closePath();
+    }
   };
-  shield();
-  const g = ctx.createLinearGradient(-34, -44, 34, 46);
-  g.addColorStop(0, rgb(mix(L.color, 0.45)));
-  g.addColorStop(0.45, rgb(L.color));
-  g.addColorStop(1, rgb(L.dark));
-  ctx.fillStyle = g;
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-  ctx.shadowBlur = 8;
-  ctx.shadowOffsetY = 3;
+  const inset = (k, dy = 0) => {
+    ctx.save();
+    ctx.translate(0, dy);
+    ctx.scale(k, k);
+    body();
+    ctx.restore();
+  };
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 4;
+  body();
+  const metal = ctx.createLinearGradient(-30, -46, 30, 48);
+  metal.addColorStop(0, rgb(lite));
+  metal.addColorStop(0.38, rgb(C));
+  metal.addColorStop(0.72, rgb(D));
+  metal.addColorStop(1, rgb(deep));
+  ctx.fillStyle = metal;
   ctx.fill();
-  ctx.shadowColor = 'transparent';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = rgb(mix(L.dark, -0.3));
+  ctx.restore();
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = rgb(mix(D, -0.6));
+  body();
   ctx.stroke();
-  // Faceta de brillo
-  ctx.beginPath();
-  ctx.moveTo(0, -44);
-  ctx.lineTo(34, -30);
-  ctx.lineTo(0, -6);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-  ctx.fill();
-  // Interior: gema
-  ctx.beginPath();
-  ctx.moveTo(0, -22);
-  ctx.lineTo(16, -4);
-  ctx.lineTo(0, 22);
-  ctx.lineTo(-16, -4);
-  ctx.closePath();
-  ctx.fillStyle = rgb(mix(L.dark, -0.35), 0.85);
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = rgb(mix(L.color, 0.5));
+  // Bisel: borde claro por dentro
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = rgb(lite, 0.75);
+  inset(0.9, medal ? 0 : -1);
   ctx.stroke();
-  // Corona en Gran Maestro y Leyenda
-  if (league && tier >= 7) {
-    ctx.beginPath();
-    ctx.moveTo(-20, -46);
-    ctx.lineTo(-20, -60);
-    ctx.lineTo(-10, -52);
-    ctx.lineTo(0, -64);
-    ctx.lineTo(10, -52);
-    ctx.lineTo(20, -60);
-    ctx.lineTo(20, -46);
-    ctx.closePath();
-    ctx.fillStyle = rgb(mix(L.color, 0.25));
-    ctx.fill();
-    ctx.strokeStyle = rgb(L.dark);
-    ctx.lineWidth = 2;
-    ctx.stroke();
+  // Placa interior más oscura
+  inset(0.72, medal ? 0 : -2);
+  const plate = ctx.createLinearGradient(0, -34, 0, 34);
+  plate.addColorStop(0, rgb(mix(D, -0.15)));
+  plate.addColorStop(1, rgb(mix(D, -0.6)));
+  ctx.fillStyle = plate;
+  ctx.fill();
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = rgb(mix(C, 0.2), 0.55);
+  ctx.stroke();
+  // Remaches del medallón
+  if (medal) {
+    ctx.fillStyle = rgb(lite);
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * TAU;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * 32.5, Math.sin(a) * 32.5, 1.7, 0, TAU);
+      ctx.fill();
+    }
+  } else {
+    // Grabado: dos galones bajo la gema
+    ctx.strokeStyle = rgb(mix(C, 0.35), 0.4);
+    ctx.lineWidth = 1.6;
+    for (const y of [16, 22]) {
+      ctx.beginPath();
+      ctx.moveTo(-13, y - 5);
+      ctx.lineTo(0, y + 2);
+      ctx.lineTo(13, y - 5);
+      ctx.stroke();
+    }
   }
-  // División o «?» en colocación
-  const label = !league ? '?' : div ? DIVISIONS[4 - div] : '';
-  if (label) {
-    ctx.font = `900 ${label.length > 2 ? 18 : 22}px Georgia, serif`;
+
+  // ---- Gema facetada (o «?» en colocación)
+  if (!league) {
+    ctx.font = '900 34px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 4;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.strokeText(label, 0, 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, 0, 1);
+    ctx.strokeText('?', 0, 2);
+    ctx.fillStyle = '#f2f4f8';
+    ctx.fillText('?', 0, 2);
+  } else {
+    const gy = medal ? 0 : -6;
+    const sides = tier >= 6 ? 8 : tier >= 4 ? 6 : 4;
+    const R = 11 + tier * 1.25;
+    const pts = [];
+    for (let k = 0; k < sides; k++) {
+      const a = (k / sides) * TAU - Math.PI / 2;
+      const rr = sides === 8 && k % 2 ? R * 0.62 : R;
+      pts.push([Math.cos(a) * rr, gy + Math.sin(a) * rr * (sides === 4 ? 1.25 : 1)]);
+    }
+    const gLite = mix(C, 0.75);
+    const gDark = mix(D, -0.25);
+    ctx.save();
+    ctx.shadowColor = rgb(C, 0.9);
+    ctx.shadowBlur = tier >= 4 ? 14 : 6;
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fillStyle = rgb(C);
+    ctx.fill();
+    ctx.restore();
+    for (let k = 0; k < sides; k++) {
+      const [x1, y1] = pts[k];
+      const [x2, y2] = pts[(k + 1) % sides];
+      const mid = Math.atan2((y1 + y2) / 2 - gy, (x1 + x2) / 2);
+      const light = (Math.cos(mid - (-Math.PI * 0.75)) + 1) / 2; // arriba a la izquierda, más claro
+      const col = gDark.map((v, i) => Math.round(v + (gLite[i] - v) * light));
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.closePath();
+      ctx.fillStyle = rgb(col);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = rgb(mix(C, 0.85), 0.9);
+    ctx.stroke();
+    // Destello
+    const sx = -R * 0.35;
+    const sy = gy - R * 0.45;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - 5);
+    ctx.quadraticCurveTo(sx + 0.8, sy - 0.8, sx + 5, sy);
+    ctx.quadraticCurveTo(sx + 0.8, sy + 0.8, sx, sy + 5);
+    ctx.quadraticCurveTo(sx - 0.8, sy + 0.8, sx - 5, sy);
+    ctx.quadraticCurveTo(sx - 0.8, sy - 0.8, sx, sy - 5);
+    ctx.fill();
+  }
+
+  // ---- Tiara (Maestro) o corona (Gran Maestro y Leyenda)
+  if (tier === 6) {
+    ctx.fillStyle = rgb(lite);
+    ctx.strokeStyle = rgb(deep);
+    ctx.lineWidth = 1.4;
+    for (const [x, h] of [[-12, 9], [0, 15], [12, 9]]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 5, -44);
+      ctx.lineTo(x, -44 - h);
+      ctx.lineTo(x + 5, -44);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  } else if (tier >= 7) {
+    const gold = tier === 8 ? [255, 236, 170] : [255, 200, 110];
+    const g = ctx.createLinearGradient(0, -66, 0, -44);
+    g.addColorStop(0, rgb(mix(gold, 0.5)));
+    g.addColorStop(1, rgb(mix(gold, -0.35)));
+    ctx.fillStyle = g;
+    ctx.strokeStyle = rgb(mix(gold, -0.65));
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-22, -44);
+    ctx.lineTo(-24, -60);
+    ctx.lineTo(-12, -51);
+    ctx.lineTo(0, -66);
+    ctx.lineTo(12, -51);
+    ctx.lineTo(24, -60);
+    ctx.lineTo(22, -44);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = rgb(C);
+    for (const [x, y] of [[-24, -61], [0, -67], [24, -61]]) {
+      ctx.beginPath();
+      ctx.arc(x, y, 2.6, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // ---- Franja de luz (animada desde fuera)
+  const shine = Number(opts.shine);
+  if (shine >= 0 && shine <= 1) {
+    ctx.save();
+    body();
+    ctx.clip();
+    const x = -90 + shine * 180;
+    const g = ctx.createLinearGradient(x - 22, -50, x + 22, 50);
+    g.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    g.addColorStop(0.5, 'rgba(255, 255, 255, 0.42)');
+    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-60, -60, 120, 120);
+    ctx.restore();
+  }
+
+  // ---- Cinta con la división
+  const label = league && div ? DIVISIONS[4 - div] : '';
+  if (label) {
+    const y = medal ? 30 : 34;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+    const tail = (dir) => {
+      ctx.beginPath();
+      ctx.moveTo(dir * 18, y + 2);
+      ctx.lineTo(dir * 32, y + 2);
+      ctx.lineTo(dir * 27, y + 8);
+      ctx.lineTo(dir * 32, y + 14);
+      ctx.lineTo(dir * 18, y + 14);
+      ctx.closePath();
+      ctx.fillStyle = rgb(mix(D, -0.55));
+      ctx.fill();
+    };
+    tail(-1);
+    tail(1);
+    ctx.beginPath();
+    ctx.moveTo(-22, y - 1);
+    ctx.lineTo(22, y - 1);
+    ctx.lineTo(24, y + 6);
+    ctx.lineTo(22, y + 13);
+    ctx.lineTo(-22, y + 13);
+    ctx.lineTo(-24, y + 6);
+    ctx.closePath();
+    const rib = ctx.createLinearGradient(0, y - 1, 0, y + 13);
+    rib.addColorStop(0, rgb(mix(D, -0.1)));
+    rib.addColorStop(1, rgb(mix(D, -0.5)));
+    ctx.fillStyle = rib;
+    ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = rgb(lite, 0.9);
+    ctx.stroke();
+    ctx.font = '900 12px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff6dc';
+    ctx.fillText(label, 0, y + 6.5);
+  }
+
+  // ---- Destellos de Leyenda
+  if (tier === 8) {
+    ctx.fillStyle = 'rgba(255, 250, 230, 0.95)';
+    for (const [x, y, r] of [[-46, -34, 5], [48, -22, 4], [-40, 30, 3.5], [44, 34, 4.5]]) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - r);
+      ctx.quadraticCurveTo(x + r * 0.15, y - r * 0.15, x + r, y);
+      ctx.quadraticCurveTo(x + r * 0.15, y + r * 0.15, x, y + r);
+      ctx.quadraticCurveTo(x - r * 0.15, y + r * 0.15, x - r, y);
+      ctx.quadraticCurveTo(x - r * 0.15, y - r * 0.15, x, y - r);
+      ctx.fill();
+    }
   }
   ctx.restore();
 }

@@ -31,6 +31,7 @@ import { ACH_CATEGORIES, achCategory, achPoints, attachTip, esc, hideTip, itemTi
 import { LOBBY_WAIT_MS } from './emparejamiento.js';
 import { SECTIONS, sectionKeys } from './ajustes.js';
 import { SettingsUI } from './ajustes-ui.js';
+import { BadgeShine, SQUAD, emptySlot, memberCard, renderPlGuide } from './competitivo-ui.js';
 
 /** Todo lo coleccionable, por catálogo (para contar la colección y buscar recompensas). */
 const COLLECTION = [
@@ -598,6 +599,12 @@ function countryList() {
   return countryCache;
 }
 
+/** «1:05» a partir de milisegundos. */
+function clock(ms) {
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+}
+
 function emblemCanvas(emblem, size = 32) {
   const c = el('canvas', { width: size * 2, height: size * 2, class: 'emblema', 'aria-hidden': 'true' });
   c.style.width = c.style.height = `${size}px`;
@@ -847,16 +854,23 @@ export class Home {
 
     // Portada, arsenal y muestras de color
     $('btn-jugar-ya').addEventListener('click', () => this._mode('rapida'));
-    // Competitivo: cola (contra la IA o en línea) y «Buscar partida»
+    // Competitivo: cola (contra la IA o en línea), tu escuadra y «Buscar partida»
     this.queue = this.profile.ajustes.colaClasif === 'sala' ? 'sala' : 'ia';
-    segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => {
-      this.queue = v;
-      this.profile.ajustes.colaClasif = v;
-      this.h.onProfileChange?.(false);
-      // Cada cola tiene su rango (DEV07): se repinta la página entera con el suyo
-      this.renderCompetitive();
-    });
+    this.party = null;
+    segmented($('cp-colas'), [['ia', 'Contra la IA'], ['sala', 'En línea']], this.queue, (v) => this._setQueue(v));
     $('cp-buscar').addEventListener('click', () => this._findMatch());
+    $('cp-ver-pl').addEventListener('click', () => $('cp-pl-guia').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }));
+    $('cp-salir-grupo').addEventListener('click', () => this.h.onPartyLeave?.());
+    $('cp-invitar-cerrar').addEventListener('click', () => this._closeInvite());
+    $('cp-invitar-copiar').addEventListener('click', () => this.h.onPartyCopy?.());
+    // La ventana de invitar se cierra al tocar fuera o con Esc
+    document.addEventListener('pointerdown', (e) => {
+      const box = $('cp-invitar');
+      if (!box.hidden && !box.contains(e.target) && !e.target.closest?.('.cp-hueco-mas')) this._closeInvite();
+    });
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && !$('cp-invitar').hidden && this._closeInvite());
+    // Tu insignia grande: un destello la cruza de vez en cuando
+    this._shine = new BadgeShine($('cp-insignia'), () => this.view === 'competitivo' && this.menuVisible());
     this.search = null;
     $('bp-ir').addEventListener('click', () => this.go('competitivo'));
     $('bp-cancelar').addEventListener('click', () => this.h.onFindMatch?.());
@@ -951,7 +965,6 @@ export class Home {
     // Sala
     $('btn-salir-sala').addEventListener('click', () => this.h.onLeaveRoom?.());
     $('btn-rivales').addEventListener('click', () => this.h.onSearchRivals?.());
-    $('cp-amigos')?.addEventListener('click', () => this.h.onRankedGroup?.());
     $('btn-empezar').addEventListener('click', () => {
       // Con cambios a medias no se empieza: o se aplican (y los invitados confirman) o se descartan
       if (this.draftPending()) {
@@ -1902,11 +1915,13 @@ export class Home {
     this.renderAll();
     if (this.view === 'jugar' || !this.view) this.cover?.start();
     requestAnimationFrame(() => this._paintHero());
+    this._renderPill();
   }
 
   hide() {
     $('inicio').hidden = true;
     this.cover?.stop();
+    $('busqueda-pill').hidden = true;
   }
 
   setView(view) {
@@ -1939,7 +1954,7 @@ export class Home {
       if (view === 'clasificacion') this.renderTable();
       if (view === 'competitivo') this.renderCompetitive();
     };
-    if (this.search) this.setSearch(this.search);
+    this._renderPill();
     // El mapa animado de la portada solo corre mientras se ve «Jugar»
     if (view === 'jugar' && !$('inicio').hidden) this.cover?.start();
     else this.cover?.stop();
@@ -2071,8 +2086,9 @@ export class Home {
     $('cp-nombre').style.color = nameColorOf(p);
     $('cp-titulo').textContent = titleName(p) || 'Recluta';
     $('cp-nivel').textContent = `Nivel ${levelInfo(p.xp).level}`;
-    // El rango: insignia grande con su luz, liga, PL y victorias
-    paintBadge($('cp-insignia'), r);
+    // El rango: insignia grande con su luz (y un destello que la cruza), liga, PL y victorias
+    const big = $('cp-insignia');
+    this._shine.set((ctx, shine) => drawBadge(ctx, big.width / 2, big.height * 0.54, big.height * 0.72, placing ? null : k.league, placing ? 0 : k.div, { shine: placing ? NaN : shine }));
     this._rankMotion(r, placing, k);
     const col = placing ? [196, 170, 120] : k.league.color;
     const band = document.querySelector('.cp-portada');
@@ -2092,6 +2108,8 @@ export class Home {
       ` · ${pct} % de victorias`,
       r.escudo ? el('span', { class: 'cp-escudo', title: 'No bajas de división en estas partidas', text: ` · 🛡 escudo ${r.escudo}` }) : '',
     );
+    this._squadKey = null;
+    this._renderSquad();
     this.renderQueue();
     this._renderHow(r);
     this._renderLeagues(r);
@@ -2142,8 +2160,7 @@ export class Home {
       this._howTip = true;
       attachTip($('cp-info'), () => `<div class="rt-cab"><strong class="rt-nombre" style="color:#ffe08a">Cómo se puntúa</strong><div class="rt-fila"><span>${this.queue === 'sala' ? 'En línea' : 'Contra la IA'}</span><span class="rt-tipo">${esc(seasonName(this._queueRank().temporada))}</span></div></div><p class="rt-desc">${esc($('cp-como').textContent)}</p><p class="rt-linea">${esc(this._queueNote || '')}</p>`);
     }
-    $('cp-como').closest('section').hidden = !this.profile.rangoHistorico;
-    $('cp-como').hidden = true;
+    renderPlGuide(r, this.queue);
     $('cp-como').textContent = online
       ? `En línea: tus puntos salen de quién queda por delante de quién entre las personas de la sala (Elo, con el nivel de cada una) y, un poco, de tu puesto entre todas las naciones. Abandonar cuenta como quedar el último. Si se pierde al anfitrión, la partida se anula: no cuenta para nadie. Las ${PLACEMENT_GAMES} primeras partidas de la temporada son de colocación.`
       : `Contra la IA: cuenta tu puesto final entre las ${RANKED_AI.bots + 1} naciones, comparado con lo que se espera de tu nivel frente a esa dificultad (la IA se ajusta a tu liga). Abandonar cuenta como quedar el último. Es el rango de la tabla de la temporada. Las ${PLACEMENT_GAMES} primeras partidas son de colocación.`;
@@ -2159,54 +2176,102 @@ export class Home {
     );
   }
 
-  /** La cola elegida y qué hará «Buscar partida». */
+  /** Cambia de cola (DEV07: cada una con su rango). En escuadra solo hay «En línea». */
+  _setQueue(v) {
+    if (v === 'ia' && this.party) {
+      this._flash('En escuadra se juega en línea: sal de la escuadra para jugar contra la IA.');
+      v = 'sala';
+    }
+    this.queue = v;
+    for (const b of $('cp-colas').children) b.setAttribute('aria-checked', String(b === $('cp-colas').children[v === 'ia' ? 0 : 1]));
+    rodar($('cp-colas'));
+    if (this.profile.ajustes.colaClasif !== v) {
+      this.profile.ajustes.colaClasif = v;
+      this.h.onProfileChange?.(false);
+    }
+    // Se repinta la página entera con el rango de esa cola
+    this.renderCompetitive();
+  }
+
+  /** La cola elegida y qué hará «Buscar partida» (solo, en escuadra o buscando). */
   renderQueue() {
     if (!$('cp-buscar')) return;
     const r = this._queueRank();
     const dif = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', imposible: 'Imposible' }[aiDifficultyFor(r)];
     const btn = $('cp-buscar');
+    const sala = this.party?.sala || null;
+    const ia = $('cp-colas').children[0];
+    if (ia) {
+      ia.disabled = !!sala;
+      ia.title = sala ? 'En escuadra se juega en línea' : '';
+    }
+    $('cp-salir-grupo').hidden = !sala;
+    btn.hidden = false;
+    const setBtn = (text, { primary = true, disabled = false } = {}) => {
+      btn.textContent = text;
+      btn.disabled = disabled;
+      btn.classList.toggle('principal', primary);
+      btn.classList.toggle('secundario', !primary);
+      btn.classList.toggle('btn-brillo', primary && !disabled);
+    };
+    const extra = (text) => ($('cp-cola-extra').textContent = text);
     if (this.queue === 'ia') {
       this._queueNote = `${mapLabel(RANKED_AI.mapSize)}, ${RANKED_AI.bots} naciones, perfil Clásico, contra la IA ${dif}. Cuenta tu puesto final; abandonar cuenta como derrota.`;
       $('cp-cola-nota').textContent = `🗺 ${mapLabel(RANKED_AI.mapSize)} · ${RANKED_AI.bots} naciones · IA ${dif}`;
-      $('cp-amigos').hidden = true;
-      $('cp-cola-extra').textContent = inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga.';
-      btn.disabled = false;
-      btn.textContent = 'Buscar partida';
-      btn.classList.add('principal', 'btn-brillo');
-      btn.classList.remove('secundario');
+      extra(inPlacement(r) ? `Partidas de colocación: ${r.colocacion} de ${PLACEMENT_GAMES}` : 'La IA se ajusta a tu liga. Para ir con amigos, pulsa «+».');
       $('cp-buscando').hidden = true;
+      setBtn('Buscar partida');
       return;
     }
     const net = this.netKind;
-    const searching = !!this.search;
-    $('cp-buscando').hidden = !searching;
-    btn.classList.toggle('secundario', searching);
-    btn.classList.toggle('principal', !searching);
-    btn.classList.toggle('btn-brillo', !searching);
     this._queueNote = `${mapLabel(RANKED_ROOM.mapSize)}, ${RANKED_ROOM.bots} naciones, perfil Clásico. Tus puntos dependen de quién queda por delante de quién entre los jugadores. Al encontrar sala, se espera 30 s a que entre más gente.`;
     $('cp-cola-nota').textContent = `🗺 ${mapLabel(RANKED_ROOM.mapSize)} · ${RANKED_ROOM.bots} naciones · hasta 8 jugadores`;
-    $('cp-amigos').hidden = searching || !net || net === 'none' || net === 'connecting';
-    if (searching) {
-      btn.disabled = false;
-      btn.textContent = 'Cancelar búsqueda';
-      $('cp-cola-extra').textContent = 'Puedes moverte por el menú mientras buscas.';
+    if (sala) {
+      // En escuadra: el líder busca; los demás esperan (y pueden moverse por el menú)
+      const st = sala.status();
+      const members = this._squadMembers(sala, st);
+      const hunt = this._partyHunt(sala);
+      $('cp-busca-titulo').textContent = 'Buscando rivales';
+      $('cp-buscando').hidden = !hunt;
+      if (hunt) {
+        this._partyTick();
+        // Mientras busca, el recuadro con el reloj ocupa el sitio del botón (no hay nada que pulsar)
+        setBtn('Buscando rivales…', { primary: false, disabled: true });
+        btn.hidden = true;
+        extra('Puedes moverte por el menú: la partida empezará sola.');
+      } else if (sala.isHost) {
+        setBtn('Buscar partida', { disabled: !!sala.countdown });
+        extra(this.party.status || (members.length > 1 ? `Escuadra de ${members.length}: completamos la sala con rivales de rango parecido durante 30 s.` : 'Invita con «+» o busca partida tú solo.'));
+      } else {
+        setBtn('Esperando al líder…', { primary: false, disabled: true });
+        extra(this.party.status || (st.host ? 'El líder de la escuadra busca la partida. Mientras, puedes moverte por el menú.' : 'Buscando al líder de la escuadra…'));
+      }
       return;
     }
-    if (!net || net === 'none') {
-      btn.disabled = true;
-      $('cp-cola-extra').textContent = 'Sin conexión con el servidor de salas.';
+    const searching = !!this.search;
+    $('cp-busca-titulo').textContent = 'Buscando partida';
+    $('cp-buscando').hidden = !searching;
+    if (searching) {
+      setBtn('Cancelar búsqueda', { primary: false });
+      extra('Puedes moverte por el menú mientras buscas: personaliza tu perfil, mira el arsenal…');
+    } else if (!net || net === 'none') {
+      setBtn('Buscar partida', { disabled: true });
+      extra('Sin conexión con el servidor de salas.');
     } else if (net === 'connecting') {
-      btn.disabled = true;
-      $('cp-cola-extra').textContent = 'Conectando con el servidor de salas…';
+      setBtn('Buscar partida', { disabled: true });
+      extra('Conectando con el servidor de salas…');
     } else {
-      btn.disabled = false;
-      $('cp-cola-extra').textContent = 'Rivales de rango parecido; la partida empieza sola.';
+      setBtn('Buscar partida');
+      extra('Rivales de rango parecido; la partida empieza sola.');
     }
-    btn.textContent = 'Buscar partida';
   }
 
-  /** «Buscar partida»: contra la IA, al momento; en línea, la cola de emparejamiento. */
+  /** «Buscar partida»: en escuadra, la busca el líder; contra la IA, al momento; en línea, la cola. */
   _findMatch() {
+    if (this.party) {
+      this.h.onPartySearch?.();
+      return;
+    }
     if (this.queue === 'ia') {
       this.h.onRanked?.('ia');
       return;
@@ -2221,24 +2286,195 @@ export class Home {
    */
   setSearch(info, estado = '') {
     this.search = info;
-    const fmt = (ms) => {
-      const s = Math.floor(ms / 1000);
-      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    };
-    const pill = $('busqueda-pill');
     if (info) {
       const r = this.profile.rangoOnline;
       const lo = rankOf(pointsFromMmr(r.mmr - info.window)).label;
       const hi = rankOf(pointsFromMmr(r.mmr + info.window)).label;
-      $('cp-busca-tiempo').textContent = fmt(info.waited);
+      $('cp-busca-tiempo').textContent = clock(info.waited);
       $('cp-busca-info').textContent = `${lo === hi ? `Rivales de ${lo}` : `Rivales entre ${lo} y ${hi}`} · ${info.inQueue} en cola`;
-      $('bp-tiempo').textContent = fmt(info.waited);
     }
-    // El aviso flotante, solo por el menú y fuera de la página Competitivo
-    const show = !!info && this.menuVisible() && this.view !== 'competitivo';
-    if (pill.hidden === show) pill.hidden = !show;
+    this._renderPill();
     if (estado === 'encontrada') this._flash('¡Partida encontrada! Entrando en la sala…', true);
     if (this.view === 'competitivo') this.renderQueue();
+  }
+
+  /**
+   * Aviso flotante por el menú (fuera de Competitivo): buscando partida (con
+   * ✕ para cancelar), la escuadra buscando rivales o, sin más, tu escuadra.
+   */
+  _renderPill() {
+    const pill = $('busqueda-pill');
+    const sala = this.party?.sala || null;
+    const hunt = sala ? this._partyHunt(sala) : null;
+    const mode = this.search ? 'buscar' : hunt ? 'rivales' : sala ? 'escuadra' : '';
+    const show = !!mode && this.menuVisible() && this.view !== 'competitivo';
+    if (pill.hidden === show) pill.hidden = !show;
+    if (!mode) return;
+    pill.dataset.modo = mode;
+    $('bp-texto').textContent = mode === 'buscar' ? 'Buscando partida' : mode === 'rivales' ? 'Buscando rivales' : 'Tu escuadra';
+    $('bp-cancelar').hidden = mode !== 'buscar';
+    $('bp-tiempo').hidden = mode === 'escuadra';
+    const n = sala ? this._squadMembers(sala).length : 0;
+    $('bp-escuadra').hidden = !sala;
+    $('bp-escuadra').textContent = `${n}/${SQUAD}`;
+    if (mode === 'buscar') $('bp-tiempo').textContent = clock(this.search.waited);
+    else if (mode === 'rivales') $('bp-tiempo').textContent = clock(Date.now() - hunt.start);
+  }
+
+  // ------------------------------------------------ competitivo: escuadra
+
+  /** Los de tu escuadra (al buscar rivales se anota quién iba: los que entren después son rivales). */
+  _squadMembers(sala, st = sala.status()) {
+    const list = sala.roomInfo().escuadra;
+    const squad = list && list.length ? new Set(list) : null;
+    return st.players.filter((p) => p.isMe || !squad || squad.has(p.peer));
+  }
+
+  /** La escuadra buscando rivales: { start, deadline } (o null). */
+  _partyHunt(sala) {
+    const info = sala.roomInfo();
+    return info.espera > 0 ? { deadline: info.espera, start: info.espera - LOBBY_WAIT_MS } : null;
+  }
+
+  /** Reloj de «Buscando rivales» (en la página y en el aviso flotante). */
+  _partyTick() {
+    const sala = this.party?.sala;
+    const hunt = sala ? this._partyHunt(sala) : null;
+    if (!hunt) {
+      clearInterval(this._partyTimer);
+      this._partyTimer = 0;
+      return;
+    }
+    const st = sala.status();
+    const left = Math.max(0, Math.ceil((hunt.deadline - Date.now()) / 1000));
+    $('cp-busca-tiempo').textContent = clock(Date.now() - hunt.start);
+    $('cp-busca-info').textContent = `Escuadra de ${this._squadMembers(sala, st).length} · ${st.total}/${st.seats} en la sala · ${left > 0 ? `empieza en ${left} s` : 'empezando…'}`;
+    this._renderPill();
+  }
+
+  /**
+   * Tu escuadra (la sala clasificatoria en grupo, en la propia página): la
+   * pinta main cada vez que cambia la sala; `sala` null = sin escuadra.
+   */
+  renderParty(sala, kind = this.netKind, status = '') {
+    const had = !!this.party;
+    this.party = sala ? { sala, kind, status } : null;
+    if (sala && this.queue !== 'sala') {
+      this.queue = 'sala';
+      for (const b of $('cp-colas').children) b.setAttribute('aria-checked', String(b === $('cp-colas').children[1]));
+      rodar($('cp-colas'));
+      if (this.view === 'competitivo') this.renderCompetitive();
+    }
+    if (!sala) {
+      $('cp-invitar').hidden = true;
+      this._inviteWanted = false;
+    }
+    clearInterval(this._partyTimer);
+    this._partyTimer = sala && this._partyHunt(sala) ? setInterval(() => this._partyTick(), 500) : 0;
+    if (this.view === 'competitivo') {
+      this._renderSquad();
+      this.renderQueue();
+      if (!$('cp-invitar').hidden) this._renderInvite();
+    }
+    this._renderPill();
+    if (had && !sala && this.view === 'competitivo') this.renderCompetitive();
+  }
+
+  /** De la ficha de invitación (pantalla de la sala) a tu escuadra en Competitivo. */
+  enterParty() {
+    const fromLayer = !$('sala').hidden;
+    if (fromLayer) {
+      $('sala').hidden = true;
+      this.closeLayer('sala');
+    }
+    if ($('inicio').hidden) this.show();
+    if (this.view === 'competitivo') return;
+    if (fromLayer) {
+      this.setView('competitivo');
+      this.returnTo('competitivo');
+    } else this.go('competitivo');
+  }
+
+  /** Los huecos de la escuadra: tus amigos a los lados (con su estandarte e insignia) y «+» en los libres. */
+  _renderSquad() {
+    if (!$('cp-huecos-izq')) return;
+    const sala = this.party?.sala || null;
+    const st = sala ? sala.status() : null;
+    const others = sala ? this._squadMembers(sala, st).filter((p) => !p.isMe) : [];
+    const claims = sala && sala.rankClaims ? sala.rankClaims() : new Map();
+    const hunt = sala ? this._partyHunt(sala) : null;
+    const net = this.netKind;
+    const netOk = net === 'claude' || net === 'mqtt' || net === 'local';
+    $('cp-lider').hidden = !(sala && sala.isHost && others.length);
+    const key = JSON.stringify([!!sala, !!hunt, netOk, net, others.map((p) => [p.peer, p.name, p.stale, p.host, p.level, p.banner, p.frame, p.title, p.nameColor, claims.get(p.peer)?.puntos ?? null])]);
+    if (key === this._squadKey) return;
+    this._squadKey = key;
+    const seen = this._squadPeers;
+    this._squadPeers = new Set(others.map((p) => p.peer));
+    const cards = others.map((p) => {
+      const claim = claims.get(p.peer);
+      const pts = claim && Number.isFinite(claim.puntos) ? claim.puntos : null;
+      return memberCard(p, { points: pts, leader: !!p.host, fresh: !!seen && !seen.has(p.peer), onOpen: () => this.openPlayerCard({ ...p, rank: pts != null ? rankOf(pts).label : '' }, 'sala') });
+    });
+    const hint = !netOk ? (net === 'connecting' || net === undefined ? 'Conectando…' : 'Sin conexión') : hunt ? 'Buscando rivales' : '';
+    for (let i = cards.length; i < SQUAD - 1; i++) cards.push(emptySlot({ onInvite: () => this._openInvite(), disabled: !!hint, hint }));
+    // Los dos primeros, a tu izquierda (el primero, a tu lado); el resto, a tu derecha
+    $('cp-huecos-izq').replaceChildren(...cards.slice(0, 2).reverse());
+    $('cp-huecos-der').replaceChildren(...cards.slice(2));
+    if (seen && others.some((p) => !seen.has(p.peer))) this.h.sound?.('listo');
+  }
+
+  /** «+»: abre la ventana de invitar (y, si aún no hay escuadra, la crea en línea). */
+  _openInvite() {
+    if (!this.party) {
+      if (this.queue !== 'sala') this._setQueue('sala');
+      this.h.onPartyCreate?.();
+    }
+    $('cp-invitar').hidden = false;
+    this._inviteAt = 0;
+    this._renderInvite();
+  }
+
+  _closeInvite() {
+    $('cp-invitar').hidden = true;
+  }
+
+  /** Ventana de invitar: código y enlace (sirve sin cuenta) y tus amigos en línea (con cuenta). */
+  _renderInvite() {
+    const sala = this.party?.sala || null;
+    const kind = this.party?.kind || this.netKind;
+    $('cp-invitar-codigo').textContent = sala ? sala.code.toUpperCase() : '·····';
+    const copy = $('cp-invitar-copiar');
+    copy.disabled = !sala;
+    if (!this._copyPartyT) copy.textContent = kind === 'mqtt' ? 'Copiar enlace' : 'Copiar código';
+    $('cp-invitar-nota').textContent = !sala
+      ? 'Preparando tu escuadra…'
+      : kind === 'local'
+        ? 'Prueba entre pestañas: abre otra pestaña de este navegador y entra con el código en Multijugador.'
+        : kind === 'claude'
+          ? 'Pásale el código: lo escribe en Multijugador → Unirse y entra en tu escuadra.'
+          : 'Envíale el enlace: al abrirlo entra en tu escuadra, aunque no tenga cuenta.';
+    const friends = $('cp-invitar-amigos');
+    if (!sala) friends.replaceChildren();
+    else if (!this._inviteAt || performance.now() - this._inviteAt > 10000) {
+      this._inviteAt = performance.now();
+      this.h.onInvitePicker?.(friends);
+    }
+  }
+
+  /** Enlace o código de la escuadra copiado (o, si falla, a la vista para copiarlo a mano). */
+  partyCopied(ok, text = '') {
+    const b = $('cp-invitar-copiar');
+    if (ok) {
+      b.textContent = '¡Copiado!';
+      clearTimeout(this._copyPartyT);
+      this._copyPartyT = setTimeout(() => {
+        this._copyPartyT = 0;
+        this._renderInvite();
+      }, 1800);
+      return;
+    }
+    $('cp-invitar-nota').textContent = `Cópialo a mano: ${text}`;
   }
 
   /** Escalera de las nueve ligas: las superadas iluminadas, la tuya destacada y la mejor de la temporada marcada. */
@@ -3555,6 +3791,7 @@ export class Home {
     this._lobbyPeers = null;
     this._lobbyReady = null;
     $('inicio').hidden = true;
+    $('busqueda-pill').hidden = true;
     $('crear-sala').hidden = true;
     if ($('sala').hidden) {
       $('sala').hidden = false;

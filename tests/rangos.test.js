@@ -109,3 +109,37 @@ test('el rango guardado se limpia', () => {
   assert.match(r.temporada, /^\d{4}-[1-6]$/);
   assert.equal(r.historial.length, 1);
 });
+
+test('rangos: la guía de los PL calcula lo de tu próxima partida sin tocar tu rango', async () => {
+  const { previewResults, nextGoal, mmrLag } = await import('../src/rangos.js');
+  const r = ranked(1250);
+  const before = JSON.stringify(r);
+  const ia = previewResults(r, 'ia');
+  assert.equal(JSON.stringify(r), before, 'el rango no cambia');
+  assert.equal(ia.rows.length, 5);
+  // Cuanto mejor quedas, más PL; ganar suma y el último resta (con el tope de −35)
+  for (let i = 1; i < ia.rows.length; i++) assert.ok(ia.rows[i].delta <= ia.rows[i - 1].delta, 'ordenado de mejor a peor');
+  assert.ok(ia.rows[0].delta > 0 && ia.rows[0].delta <= 50);
+  assert.equal(ia.rows[ia.rows.length - 1].delta, -35);
+  // Lo mismo, de verdad: aplicar el 1.º da lo que dice la guía
+  assert.equal(applyAiResult(ranked(1250), { place: 1, of }).delta, ia.rows[0].delta);
+  const sala = previewResults(r, 'sala');
+  assert.ok(sala.rows[0].delta > sala.rows[sala.rows.length - 1].delta);
+  assert.ok(sala.rows.at(-1).label.includes('Abandonar'));
+  // Nivel oculto por delante: más PL al ganar (y el ajuste, como mucho ±10)
+  assert.equal(mmrLag(ranked(1250)), 0);
+  assert.equal(mmrLag(ranked(1250, 2400)), 10);
+  assert.equal(mmrLag(ranked(1250, 0)), -10);
+  assert.ok(previewResults(ranked(1250, 1500), 'ia').rows[0].delta > ia.rows[0].delta);
+  // En colocación: el rango estimado con tu nivel de ahora
+  const placing = { ...newRank(), mmr: 1300 };
+  const p = previewResults(placing, 'ia');
+  assert.equal(p.placing, true);
+  assert.equal(p.estimate, rankOf(1200).label);
+  // Siguiente objetivo: la división de arriba, la liga de élite siguiente o nada en Leyenda
+  assert.deepEqual([nextGoal(ranked(1250)).label, nextGoal(ranked(1250)).need], ['Oro III', 50]);
+  assert.equal(nextGoal(ranked(2399)).label, 'Maestro');
+  assert.equal(nextGoal(ranked(2399)).promotion, true);
+  assert.deepEqual([nextGoal(ranked(2450)).label, nextGoal(ranked(2450)).need], ['Gran Maestro', 150]);
+  assert.equal(nextGoal(ranked(3000)), null);
+});

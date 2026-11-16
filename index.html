@@ -20,6 +20,7 @@
       "./src/capital-tier.js": "./src/capital-tier.js?v=8c5a486702",
       "./src/cloud.js": "./src/cloud.js?v=dd85e4b504",
       "./src/colors.js": "./src/colors.js?v=d1eab0f290",
+      "./src/competitivo-ui.js": "./src/competitivo-ui.js?v=7313dda813",
       "./src/config.js": "./src/config.js?v=60cdb96b80",
       "./src/configurador.js": "./src/configurador.js?v=7075597e43",
       "./src/cuenta-ui.js": "./src/cuenta-ui.js?v=c42820ffba",
@@ -36,7 +37,7 @@
       "./src/game.js": "./src/game.js?v=507c1f7ebb",
       "./src/guia.js": "./src/guia.js?v=10004c72c0",
       "./src/heap.js": "./src/heap.js?v=31712cfa71",
-      "./src/home.js": "./src/home.js?v=1c43bf1a43",
+      "./src/home.js": "./src/home.js?v=a8b50fe1f0",
       "./src/icons.js": "./src/icons.js?v=72c24ddc2d",
       "./src/identidad.js": "./src/identidad.js?v=43838b1aba",
       "./src/ilustraciones.js": "./src/ilustraciones.js?v=70a4cd5427",
@@ -44,7 +45,7 @@
       "./src/ladder.js": "./src/ladder.js?v=f6b6006caa",
       "./src/loading.js": "./src/loading.js?v=a6d871f13d",
       "./src/lugares.js": "./src/lugares.js?v=4a2b8221d0",
-      "./src/main.js": "./src/main.js?v=080efe6906",
+      "./src/main.js": "./src/main.js?v=50ca2bbde0",
       "./src/map.js": "./src/map.js?v=3ed7498ca2",
       "./src/mapas-carga.js": "./src/mapas-carga.js?v=e7f298c37c",
       "./src/mapas-reales.js": "./src/mapas-reales.js?v=87bade7d81",
@@ -52,7 +53,7 @@
       "./src/minimapa.js": "./src/minimapa.js?v=8c32732756",
       "./src/movimiento.js": "./src/movimiento.js?v=ab2918104e",
       "./src/mqtt.js": "./src/mqtt.js?v=25e77d24f7",
-      "./src/multiplayer.js": "./src/multiplayer.js?v=55be8e06b4",
+      "./src/multiplayer.js": "./src/multiplayer.js?v=a49a0e8eb7",
       "./src/musica.js": "./src/musica.js?v=1c7e053d4e",
       "./src/names.js": "./src/names.js?v=a3419d11bb",
       "./src/net.js": "./src/net.js?v=4c4fd542c2",
@@ -61,7 +62,7 @@
       "./src/portada.js": "./src/portada.js?v=92e46a1eb5",
       "./src/presentacion.js": "./src/presentacion.js?v=c8fb35cdb1",
       "./src/profile.js": "./src/profile.js?v=dfe5d9a3a0",
-      "./src/rangos.js": "./src/rangos.js?v=7985ed4b2a",
+      "./src/rangos.js": "./src/rangos.js?v=eca497afe9",
       "./src/render.js": "./src/render.js?v=1110a1d9dc",
       "./src/repeticion.js": "./src/repeticion.js?v=5d726656a5",
       "./src/resumen.js": "./src/resumen.js?v=8953149f34",
@@ -83,7 +84,7 @@
   }
   </script>
   <!-- /versiones -->
-  <link rel="stylesheet" href="css/estilo.css?v=c407356471">
+  <link rel="stylesheet" href="css/estilo.css?v=eeb644b6b4">
 </head>
 <body class="arrancando">
   <!-- Definiciones gráficas compartidas (degradado del logotipo, siluetas e iconos de las pantallas de carga) -->
@@ -179,9 +180,11 @@
 
   <!-- Buscando partida (cola de la clasificatoria en línea): sigue mientras navegas por el menú -->
   <div id="busqueda-pill" class="busqueda-pill" hidden>
-    <button type="button" class="bp-ir" id="bp-ir"><span class="bp-punto" aria-hidden="true"></span><span>Buscando partida</span><b id="bp-tiempo">0:00</b></button>
+    <button type="button" class="bp-ir" id="bp-ir"><span class="bp-punto" aria-hidden="true"></span><span class="bp-escuadra" id="bp-escuadra" hidden></span><span id="bp-texto">Buscando partida</span><b id="bp-tiempo">0:00</b></button>
     <button type="button" class="bp-cancelar" id="bp-cancelar" aria-label="Cancelar la búsqueda">✕</button>
   </div>
+  <!-- Cuenta atrás de la partida que empieza: sobre la sala o sobre cualquier página del menú (escuadra) -->
+  <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
 
   <!-- Inicio -->
   <div id="inicio" class="pantalla-inicio">
@@ -343,38 +346,69 @@
           <div class="pagina-titulos"><small id="cp-temporada"></small><h1 id="pg-comp-h1">Competitivo</h1></div>
           <span class="pagina-extra" id="cp-fin"></span>
         </header>
-        <div class="cp-portada">
-          <div class="cp-comandante" id="cp-comandante">
-            <canvas id="cp-emblema" width="200" height="200" aria-hidden="true"></canvas>
-            <strong id="cp-nombre"></strong>
-            <span id="cp-titulo" class="cp-titulo"></span>
-            <span id="cp-nivel" class="cp-nivel"></span>
-          </div>
-          <div class="cp-rango">
-            <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><span class="cp-chispas"><i></i><i></i><i></i><i></i><i></i><i></i></span><canvas id="cp-insignia" width="300" height="300"></canvas><span class="cp-brillo"></span></div>
-            <small id="cp-cola-rango" class="cp-cola-rango"></small>
-            <strong id="cp-liga" class="cp-liga"></strong>
-            <span id="cp-pl" class="cp-pl"></span>
-            <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
-            <small id="cp-vd" class="cp-vd"></small>
-          </div>
-          <div class="cp-cola">
-            <h2>Buscar partida <button type="button" class="cp-info" id="cp-info" aria-label="Cómo se puntúa">?</button></h2>
-            <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
+        <!-- Vestíbulo: tu escuadra (tú en el centro y hasta 4 amigos), la cola y «Buscar partida» -->
+        <div class="cp-portada cp-vestibulo" id="cp-vestibulo">
+          <span class="cp-fondo-luz" aria-hidden="true"></span>
+          <div class="cp-vest-cab">
+            <div class="cp-modo">
+              <small class="cp-modo-tit">Clasificatoria</small>
+              <div class="segmentos cp-colas" id="cp-colas" role="radiogroup" aria-label="Cola"></div>
+            </div>
             <p id="cp-cola-nota" class="cp-cola-nota"></p>
+            <button type="button" class="cp-info" id="cp-info" aria-label="Cómo se puntúa">?</button>
+          </div>
+          <div class="cp-escuadra" aria-label="Tu escuadra">
+            <ol class="cp-huecos izq" id="cp-huecos-izq"></ol>
+            <article class="cp-yo" id="cp-yo">
+              <div class="cp-comandante cp-estandarte" id="cp-comandante">
+                <span class="cp-lider" id="cp-lider" hidden>Líder</span>
+                <canvas id="cp-emblema" width="200" height="200" aria-hidden="true"></canvas>
+                <strong id="cp-nombre"></strong>
+                <span id="cp-titulo" class="cp-titulo"></span>
+                <span id="cp-nivel" class="cp-nivel"></span>
+              </div>
+              <div class="cp-rango">
+                <div class="cp-halo" aria-hidden="true"><span class="cp-rayos"></span><span class="cp-chispas"><i></i><i></i><i></i><i></i><i></i><i></i></span><canvas id="cp-insignia" width="300" height="300"></canvas></div>
+                <small id="cp-cola-rango" class="cp-cola-rango"></small>
+                <strong id="cp-liga" class="cp-liga"></strong>
+                <span id="cp-pl" class="cp-pl"></span>
+                <div class="cp-barra" aria-hidden="true"><span id="cp-barra"></span></div>
+                <small id="cp-vd" class="cp-vd"></small>
+              </div>
+            </article>
+            <ol class="cp-huecos der" id="cp-huecos-der"></ol>
+          </div>
+          <div class="cp-vest-pie">
             <div class="cp-buscando" id="cp-buscando" hidden>
               <span class="cp-radar" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="cp-busca-textos"><strong>Buscando partida <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
+              <span class="cp-busca-textos"><strong><span id="cp-busca-titulo">Buscando partida</span> <b id="cp-busca-tiempo">0:00</b></strong><small id="cp-busca-info"></small></span>
             </div>
             <button type="button" class="principal grande btn-brillo cp-buscar" id="cp-buscar">Buscar partida</button>
-            <button type="button" class="secundario cp-amigos" id="cp-amigos" hidden>👥 Jugar con amigos</button>
             <small id="cp-cola-extra" class="cp-cola-extra"></small>
+            <div class="cp-pie-enlaces">
+              <button type="button" class="enlace-ini" id="cp-ver-pl">¿Cómo funcionan los PL? <span aria-hidden="true">›</span></button>
+              <button type="button" class="enlace-ini cp-salir-grupo" id="cp-salir-grupo" hidden>Salir de la escuadra</button>
+            </div>
+          </div>
+          <div class="cp-invitar" id="cp-invitar" role="dialog" aria-labelledby="cp-invitar-tit" hidden>
+            <div class="cp-invitar-cab"><strong id="cp-invitar-tit">Invita a tu escuadra</strong><button type="button" class="cp-invitar-cerrar" id="cp-invitar-cerrar" aria-label="Cerrar">✕</button></div>
+            <p class="cp-invitar-nota" id="cp-invitar-nota"></p>
+            <div class="cp-invitar-enlace" id="cp-invitar-enlace">
+              <span class="cp-invitar-codigo"><small>Código</small><b id="cp-invitar-codigo">·····</b></span>
+              <button type="button" class="secundario" id="cp-invitar-copiar">Copiar enlace</button>
+            </div>
+            <div class="cp-invitar-amigos" id="cp-invitar-amigos"></div>
           </div>
         </div>
-        <!-- Colas separadas (DEV07): cómo se obtienen los puntos y el rango mixto de antes -->
-        <section class="bloque cp-como" aria-labelledby="cp-como-tit">
-          <h2 id="cp-como-tit">Cómo se puntúa</h2>
-          <p id="cp-como" class="cp-como-texto"></p>
+        <!-- Cómo funcionan los PL: lo que te daría tu próxima partida (calculado con tu rango) y las reglas -->
+        <section class="bloque cp-guia" id="cp-pl-guia" aria-labelledby="cp-guia-tit">
+          <div class="cp-bloque-cab"><h2 id="cp-guia-tit">Cómo funcionan los PL</h2><small class="cp-guia-cola" id="cp-guia-cola"></small></div>
+          <div class="cp-guia-arriba">
+            <div class="cp-guia-ejemplos" id="cp-guia-ejemplos"></div>
+            <div class="cp-guia-meta" id="cp-guia-meta"></div>
+          </div>
+          <ol class="cp-guia-reglas" id="cp-guia-reglas"></ol>
+          <p id="cp-como" class="cp-como-texto" hidden></p>
           <div id="cp-historico" class="cp-historico" hidden></div>
         </section>
         <section class="bloque cp-escalera" aria-labelledby="cp-ligas-tit">
@@ -855,7 +889,6 @@
         <div class="borrador-botones"><button type="button" class="secundario" id="sala-descartar">Descartar</button><button type="button" class="principal" id="sala-aplicar">Aplicar cambios</button></div>
       </div>
     </footer>
-    <div class="sala-cuenta-atras" id="sala-cuenta-atras" hidden role="alert"><small>La partida empieza en</small><strong id="sala-cuenta-num">3</strong></div>
   </div>
 
   <!-- Interfaz de partida -->

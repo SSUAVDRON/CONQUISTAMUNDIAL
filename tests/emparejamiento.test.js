@@ -82,4 +82,8 @@ test('salas: la espera de la clasificatoria y el grupo de amigos viajan limpios 
   const b = cleanRoomInfo({ nombre: 'x', espera: 'mañana', grupo: 'sí' });
   assert.equal(b.espera, 0);
   assert.equal(b.grupo, false);
+  // La escuadra (quiénes iban juntos al buscar rivales): solo textos cortos, como mucho las plazas de una sala
+  assert.deepEqual(b.escuadra, []);
+  const c = cleanRoomInfo({ escuadra: ['p1', 7, '', 'x'.repeat(80), 'p2', null] });
+  assert.deepEqual(c.escuadra, ['p1', 'p2']);
 });
