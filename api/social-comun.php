@@ -97,7 +97,7 @@ function emblema_limpio($e): array {
         'bg' => color_hex($e['bg'] ?? null, '#2f7dff'),
         'fg' => color_hex($e['fg'] ?? null, '#ffffff'),
     ];
-    if (isset($e['flag']) && is_string($e['flag']) && preg_match('/^[a-z]{2,3}(-[a-z]{2,4})?$/i', $e['flag'])) $out['flag'] = strtolower($e['flag']);
+    if (isset($e['flag']) && is_string($e['flag']) && preg_match('/^[a-z]{2,3}(-[a-z0-9]{2,5})?$/i', $e['flag'])) $out['flag'] = strtolower($e['flag']);
     return $out;
 }
 
